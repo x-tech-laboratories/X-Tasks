@@ -1,5 +1,6 @@
-import { describe_rule, next_occurrence, type RuleFormat } from 'recurrence-input'
+import { describe_rule, next_from_now, next_occurrence, type RuleFormat } from 'recurrence-input'
 
+import type { RescheduleOption } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
@@ -74,6 +75,25 @@ export function describe_recurrence(schedule: TaskSchedule): string {
   return describe_rule(schedule.recurrence, rule_format(recurrence_anchor(schedule))) || 'Custom rule'
 }
 
+// Puts the anchor date at new_anchor and moves the other date by the same number of days, keeping its own time.
+function moved_dates(schedule: TaskSchedule, new_anchor: Date): Pick<TaskSchedule, 'start_at' | 'due_at'> {
+  const anchor = recurrence_anchor(schedule)
+  // A task with no dates gets a due date.
+  if (anchor === null) return { start_at: null, due_at: format_task_date(new_anchor, false) }
+
+  const anchor_date = parse_task_date(anchor)
+  function moved(task_date: string | null): string | null {
+    if (task_date === null) return null
+    if (task_date === anchor) return format_task_date(new_anchor, has_time(task_date))
+    const date = parse_task_date(task_date)
+    const moved_date = new Date(new_anchor.getFullYear(), new_anchor.getMonth(), new_anchor.getDate() + days_between(anchor_date, date))
+    moved_date.setHours(date.getHours(), date.getMinutes())
+    return format_task_date(moved_date, has_time(task_date))
+  }
+
+  return { start_at: moved(schedule.start_at), due_at: moved(schedule.due_at) }
+}
+
 // Moves a recurring task's dates to its next occurrence, keeping the gap between start and due; null once the rule has ended.
 export function next_schedule(task: Task): TaskSchedule | null {
   if (!task.recurrence) return null
@@ -88,17 +108,32 @@ export function next_schedule(task: Task): TaskSchedule | null {
   }
   if (!next) return null
 
-  const { next_date } = next
-  function moved(task_date: string | null): string | null {
-    if (task_date === null) return null
-    if (task_date === anchor) return format_task_date(next_date, has_time(task_date))
-    const date = parse_task_date(task_date)
-    const moved_date = new Date(next_date.getFullYear(), next_date.getMonth(), next_date.getDate() + days_between(anchor_date, date))
-    moved_date.setHours(date.getHours(), date.getMinutes())
-    return format_task_date(moved_date, has_time(task_date))
-  }
+  return { ...moved_dates(task, next.next_date), recurrence: next.rule }
+}
 
-  // A rule with no dates to anchor it gives the task a due date from today on.
-  const due_at = anchor === null ? format_task_date(next_date, false) : moved(task.due_at)
-  return { start_at: moved(task.start_at), due_at, recurrence: next.rule }
+// ============================================================================
+// Rescheduling
+// ============================================================================
+
+// The day an option points to, or null when its rule is unreadable or yields no date.
+export function reschedule_day(option: RescheduleOption, now = new Date()): Date | null {
+  if (option.mode === 'days') return new Date(now.getFullYear(), now.getMonth(), now.getDate() + option.days)
+
+  try {
+    const next_date = next_from_now(option.rule, rule_format(null))
+    return next_date && start_of_day(next_date)
+  } catch {
+    return null
+  }
+}
+
+// Moves the task's due date, or its start date when it has no due date, to the given day at its own time.
+export function rescheduled(task: Task, day: Date): TaskSchedule {
+  const anchor = recurrence_anchor(task)
+  const new_anchor = new Date(day)
+  if (anchor && has_time(anchor)) {
+    const anchor_date = parse_task_date(anchor)
+    new_anchor.setHours(anchor_date.getHours(), anchor_date.getMinutes())
+  }
+  return { ...moved_dates(task, new_anchor), recurrence: task.recurrence }
 }

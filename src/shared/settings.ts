@@ -17,11 +17,21 @@ export const PRIORITY_SCALE_NAMES: Record<PriorityScale, string[]> = {
   moscow: ['Must have', 'Should have', 'Could have', "Won't have"]
 }
 
+// A quick date offered by the Reschedule popup: a number of days from today, or the next date of a repeat rule counted from now.
+export interface RescheduleOption {
+  id: string
+  name: string
+  mode: 'days' | 'rule'
+  days: number
+  rule: string
+}
+
 export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
   confirm_tag_removal: boolean
   priority_scale: PriorityScale
+  reschedule_options: RescheduleOption[]
   last_view: View
 }
 
@@ -30,6 +40,12 @@ export const DEFAULT_SETTINGS: Settings = {
   launch_view: 'last',
   confirm_tag_removal: true,
   priority_scale: 'high_medium_low',
+  reschedule_options: [
+    { id: 'today', name: 'Today', mode: 'days', days: 0, rule: '' },
+    { id: 'tomorrow', name: 'Tomorrow', mode: 'days', days: 1, rule: '' },
+    { id: 'next-weekend', name: 'Next weekend', mode: 'rule', days: 0, rule: 'FREQ=WEEKLY;BYDAY=SA' },
+    { id: 'end-of-month', name: 'End of month', mode: 'rule', days: 0, rule: 'FREQ=MONTHLY;BYMONTHDAY=-1' }
+  ],
   last_view: { kind: 'all' }
 }
 

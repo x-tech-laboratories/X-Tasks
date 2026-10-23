@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'preact/hooks'
 import type { Settings } from '@shared/settings'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
+import { ReschedulePopup } from './ReschedulePopup'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
@@ -28,6 +29,7 @@ export function App() {
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
+  const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
@@ -230,6 +232,7 @@ export function App() {
 
   // The detail panel stays out of the way while the settings page is open.
   const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
+  const rescheduling_task = tasks.find((task) => task.id === rescheduling_task_id) ?? null
 
   const task_actions: TaskActions = {
     tags,
@@ -238,6 +241,7 @@ export function App() {
     on_select: (task) => set_selected_task_id(task.id),
     on_context_menu: open_context_menu,
     on_toggle: toggle_task,
+    on_reschedule: (task) => set_rescheduling_task_id(task.id),
     on_remove: remove_task,
     on_add_subtask: add_subtask,
     on_untag: untag_task,
@@ -313,8 +317,18 @@ export function App() {
           on_tag={tag_task}
           on_untag={untag_task}
           on_set_schedule={set_task_schedule}
+          on_reschedule={(task) => set_rescheduling_task_id(task.id)}
           on_remove={remove_task}
           on_close={() => set_selected_task_id(null)}
+        />
+      )}
+
+      {rescheduling_task && (
+        <ReschedulePopup
+          task={rescheduling_task}
+          options={settings.reschedule_options}
+          on_reschedule={set_task_schedule}
+          on_close={() => set_rescheduling_task_id(null)}
         />
       )}
 

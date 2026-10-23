@@ -16,6 +16,7 @@ export interface TaskActions {
   on_select: (task: Task) => void
   on_context_menu: OpenContextMenu
   on_toggle: (task: Task) => void
+  on_reschedule: (task: Task) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
   on_untag: (task: Task, tag: Tag) => void
@@ -88,6 +89,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
       { label: 'Open details', on_select: () => actions.on_select(task) },
       ...(actions.can_add_subtasks ? [{ label: 'Add subtask', on_select: () => set_is_adding_subtask(true) }] : []),
       { label: task.is_done ? 'Mark as not done' : 'Mark as done', on_select: () => actions.on_toggle(task) },
+      { label: 'Reschedule…', on_select: () => actions.on_reschedule(task) },
       { label: 'Delete', on_select: () => actions.on_remove(task), is_danger: true }
     ])
   }

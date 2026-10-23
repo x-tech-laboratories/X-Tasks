@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'preact/hooks'
 
-import type { LaunchView, PriorityScale, Settings, ThemeChoice } from '@shared/settings'
+import { describe_rule } from 'recurrence-input'
+
+import type { LaunchView, PriorityScale, RescheduleOption, Settings, ThemeChoice } from '@shared/settings'
+import { RecurrencePicker } from './RecurrencePicker'
+import { rule_format } from './schedule'
 
 // ============================================================================
 // Choices
@@ -152,6 +156,14 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
       </section>
 
       <section class="settings_group">
+        <h2 class="settings_heading">Reschedule</h2>
+        <RescheduleOptionsEditor
+          options={settings.reschedule_options}
+          on_change={(options) => on_change('reschedule_options', options)}
+        />
+      </section>
+
+      <section class="settings_group">
         <h2 class="settings_heading">Storage</h2>
 
         <div class="setting_row">
@@ -162,6 +174,104 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>
         </div>
       </section>
+    </>
+  )
+}
+
+// ============================================================================
+// Reschedule options
+// ============================================================================
+
+interface RescheduleOptionsEditorProps {
+  options: RescheduleOption[]
+  on_change: (options: RescheduleOption[]) => void
+}
+
+// The quick days the Reschedule popup offers, in the order shown here.
+function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditorProps) {
+  const [picking_rule_id, set_picking_rule_id] = useState<string | null>(null)
+  const picking_option = options.find((option) => option.id === picking_rule_id)
+
+  function update(id: string, change: Partial<RescheduleOption>): void {
+    on_change(options.map((option) => (option.id === id ? { ...option, ...change } : option)))
+  }
+
+  function move(index: number, step: number): void {
+    const reordered = [...options]
+    const [option] = reordered.splice(index, 1)
+    reordered.splice(index + step, 0, option!)
+    on_change(reordered)
+  }
+
+  function add(): void {
+    on_change([...options, { id: crypto.randomUUID(), name: 'New option', mode: 'days', days: 7, rule: '' }])
+  }
+
+  return (
+    <>
+      <p class="setting_hint">
+        The quick days offered by Reschedule in a task's menu and details. Each is a number of days from today, or the next
+        date of a repeat rule counted from now. The task keeps its time of day.
+      </p>
+
+      {options.map((option, index) => (
+        <div key={option.id} class="setting_row reschedule_option">
+          <input
+            value={option.name}
+            onChange={(event) => update(option.id, { name: event.currentTarget.value.trim() || option.name })}
+            aria-label="Option name"
+          />
+          <select
+            value={option.mode}
+            onChange={(event) => update(option.id, { mode: event.currentTarget.value as RescheduleOption['mode'] })}
+            aria-label="Option kind"
+          >
+            <option value="days">Days from today</option>
+            <option value="rule">Repeat rule</option>
+          </select>
+          {option.mode === 'days' ? (
+            <input
+              type="number"
+              min="0"
+              step="1"
+              class="reschedule_days"
+              value={option.days}
+              onChange={(event) => update(option.id, { days: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
+              aria-label="Days from today"
+            />
+          ) : (
+            <button class="recurrence_button reschedule_rule" onClick={() => set_picking_rule_id(option.id)}>
+              {(option.rule && describe_rule(option.rule, rule_format(null))) || 'Choose a rule'}
+            </button>
+          )}
+          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+            ↑
+          </button>
+          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === options.length - 1} aria-label="Move down">
+            ↓
+          </button>
+          <button
+            class="remove_button"
+            onClick={() => on_change(options.filter((each) => each.id !== option.id))}
+            aria-label={`Remove ${option.name}`}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+
+      <button class="reschedule_add" onClick={add}>
+        Add option
+      </button>
+
+      {picking_option && (
+        <RecurrencePicker
+          recurrence={picking_option.rule}
+          anchor={null}
+          on_save={(rule) => update(picking_option.id, { rule })}
+          on_close={() => set_picking_rule_id(null)}
+        />
+      )}
     </>
   )
 }

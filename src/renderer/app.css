@@ -658,6 +658,31 @@ select:hover { border-color: var(--border-focus); }
 .context_menu_item.is_danger { color: var(--status-danger); }
 
 /* ========================================================================== */
+/* Reschedule                                                                 */
+/* ========================================================================== */
+
+.reschedule_button { align-self: flex-start; }
+
+.reschedule_dialog { width: min(400px, calc(100vw - 2 * var(--space-7))); }
+
+.reschedule_choices { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); }
+
+.reschedule_choice { display: flex; justify-content: space-between; gap: var(--space-4); font-weight: 400; text-align: left; }
+
+.reschedule_day { color: var(--text-tertiary); }
+
+.settings_group > .setting_hint { display: block; margin: 0 0 var(--space-4); }
+
+.reschedule_option { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
+.reschedule_option > input:not([type]) { flex: 1; min-width: 0; }
+.reschedule_option .reschedule_days { width: 72px; }
+.reschedule_option .reschedule_rule { flex: 1; min-width: 0; }
+.reschedule_option .remove_button { flex: none; }
+.reschedule_option .remove_button:disabled { opacity: 0.3; cursor: default; }
+
+.reschedule_add { margin-top: var(--space-4); }
+
+/* ========================================================================== */
 /* Recurrence picker                                                          */
 /* ========================================================================== */
 

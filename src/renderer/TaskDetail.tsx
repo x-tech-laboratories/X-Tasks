@@ -20,13 +20,14 @@ interface TaskDetailProps {
   on_tag: (task: Task, tag: Tag) => void
   on_untag: (task: Task, tag: Tag) => void
   on_set_schedule: (task: Task, schedule: TaskSchedule) => void
+  on_reschedule: (task: Task) => void
   on_remove: (task: Task) => void
   on_close: () => void
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_tag, on_untag, on_remove,
-  on_close
+  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_tag, on_untag, on_reschedule,
+  on_remove, on_close
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -143,6 +144,9 @@ export function TaskDetail({
 
       <DateField label="Start" value={task.start_at} on_change={(start_at) => on_set_schedule(task, { ...schedule, start_at })} />
       <DateField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
+      <button class="reschedule_button" onClick={() => on_reschedule(task)}>
+        Reschedule…
+      </button>
 
       <div class="task_detail_field">
         <span class="sidebar_heading">Repeat</span>
