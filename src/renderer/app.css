@@ -457,6 +457,20 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 /* The columns button stays in view, unlike the funnels that wait for the pointer. */
 .filter_button.columns_button { visibility: visible; }
 
+/* The header's last cell stays pinned to the right edge and grows leftwards to fit Clear, so the columns button is in reach while a wide table scrolls sideways. */
+.task_table_header > .actions_cell {
+  position: sticky;
+  right: calc(-1 * var(--space-4));
+  z-index: 2;
+  justify-self: end;
+  width: max-content;
+  margin-right: calc(-1 * var(--space-4));
+  padding-right: var(--space-4);
+  padding-left: var(--space-2);
+  overflow: visible;
+  background: var(--surface-secondary);
+}
+
 /* A column being dragged fades, and a line marks the side of the column it would land on. */
 .header_cell.is_dragged { opacity: 0.4; }
 .header_cell.drop_before { box-shadow: inset 2px 0 var(--accent); }

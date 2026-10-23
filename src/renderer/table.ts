@@ -247,7 +247,9 @@ export function task_passes_filters(
   const title_text = filters.title.trim().toLocaleLowerCase()
   if (title_text && !task.title.toLocaleLowerCase().includes(title_text)) return false
   for (const [column, filter] of Object.entries(filters.dates) as [DateColumn, DateFilter][]) {
-    if (!date_passes(task, column_date(task, column, date_field, last_done_of), filter, today)) return false
+    if (column === 'done' && filter === 'none' && task.recurrence) {
+      if (!missed_its_due_date(task)) return false
+    } else if (!date_passes(task, column_date(task, column, date_field, last_done_of), filter, today)) return false
   }
   if (!streak_passes(streak_of(task), filters.streak)) return false
 
@@ -268,6 +270,11 @@ function streak_passes(streak: RoutineStreak | null, filter: StreakFilter): bool
     case 'broken': return streak !== null && streak.current === 0
     case 'untracked': return streak === null
   }
+}
+
+// A repeating task always has a done date once ticked, so it counts as not done while its due date has passed unticked.
+function missed_its_due_date(task: Task): boolean {
+  return task.due_at !== null && is_overdue(task.due_at)
 }
 
 function date_passes(task: Task, task_date: string | null, filter: DateFilter, today: string): boolean {
