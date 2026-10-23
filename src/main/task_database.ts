@@ -86,7 +86,15 @@ const SCHEMA_MIGRATIONS = [
      WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'priority')`,
   // The preset Area and Priority groups start as one tag per task; tasks already holding several keep them.
   `ALTER TABLE tag_groups ADD COLUMN is_single_choice INTEGER NOT NULL DEFAULT 0;
-   UPDATE tag_groups SET is_single_choice = 1 WHERE id IN ('area', 'priority')`
+   UPDATE tag_groups SET is_single_choice = 1 WHERE id IN ('area', 'priority')`,
+  // Starts a one-tag-per-task Type group after Priority, unless a group by that name already exists.
+  `INSERT INTO tag_groups (id, name, created_at, position, is_single_choice)
+     SELECT 'type', 'Type', strftime('%Y-%m-%dT%H:%M:%fZ'), 0.75, 1
+     WHERE NOT EXISTS (SELECT 1 FROM tag_groups WHERE name = 'Type');
+   INSERT INTO tags (id, name, created_at, group_id, position)
+     SELECT lower(hex(randomblob(16))), column1, strftime('%Y-%m-%dT%H:%M:%fZ'), 'type', column2
+     FROM (VALUES ('Goal', 1), ('Task', 2), ('Routine', 3), ('Habit', 4))
+     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'type')`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
