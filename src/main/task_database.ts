@@ -159,11 +159,27 @@ export function open_task_database(): void {
   database.exec('PRAGMA journal_mode = WAL')
   database.exec('PRAGMA foreign_keys = ON')
   migrate_schema(database)
+  last_data_version = read_data_version(database)
 }
 
 export function close_task_database(): void {
   database?.close()
   database = undefined
+}
+
+// SQLite bumps data_version only when another connection commits, so the app's own writes never count as a change.
+let last_data_version = 0
+
+function read_data_version(database: DatabaseSync): number {
+  return (database.prepare('PRAGMA data_version').get() as { data_version: number }).data_version
+}
+
+export function has_changed_elsewhere(): boolean {
+  if (!database) return false
+  const data_version = read_data_version(database)
+  if (data_version === last_data_version) return false
+  last_data_version = data_version
+  return true
 }
 
 // Writes a complete, consistent copy of the open database to a new file.

@@ -110,6 +110,9 @@ export interface TasksApi {
   set_tag_rule: (tag_id: string, name: string, rule: TagRule) => Promise<void>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
+
+  // Calls the listener whenever another program changes the database; returns a function that stops listening.
+  on_database_changed: (listener: () => void) => () => void
 }
 
 export const LIST_TASKS_CHANNEL = 'tasks:list'
@@ -135,3 +138,5 @@ export const ADD_TAG_CHANNEL = 'tags:add'
 export const SET_TAG_RULE_CHANNEL = 'tags:set-rule'
 export const REMOVE_TAG_CHANNEL = 'tags:remove'
 export const MOVE_TAG_CHANNEL = 'tags:move'
+
+export const DATABASE_CHANGED_CHANNEL = 'database:changed'

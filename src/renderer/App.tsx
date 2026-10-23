@@ -65,6 +65,17 @@ export function App() {
     })
   }, [])
 
+  // Fetches everything again when another program changes the database, so its edits show without a restart.
+  useEffect(
+    () =>
+      window.x_tasks.on_database_changed(() => {
+        void window.x_tasks.list_tasks().then(set_tasks)
+        void window.x_tasks.list_tag_groups().then(set_tag_groups)
+        void window.x_tasks.list_tags().then(set_tags)
+      }),
+    []
+  )
+
   // Checks the date every minute, so My Day clears itself at midnight while the app is open.
   useEffect(() => {
     const timer = window.setInterval(() => set_today(format_task_date(new Date(), false)), 60 * 1000)
