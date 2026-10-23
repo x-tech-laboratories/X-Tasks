@@ -1082,3 +1082,4 @@ select:hover { border-color: var(--border-focus); }
 .streak_dot.is_on_time { background: var(--accent); }
 .streak_dot.is_late { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
 .streak_dot.is_missed { border-color: var(--status-danger); background: transparent; }
+.streak_dot.is_pending { border: 2px dashed var(--border-control); background: transparent; }

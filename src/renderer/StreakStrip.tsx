@@ -7,7 +7,8 @@ import type { HistoryMark } from '@shared/streaks'
 const STATE_LABELS: Record<HistoryMark['state'], string> = {
   on_time: 'Done',
   late: 'Done late',
-  missed: 'Missed'
+  missed: 'Missed',
+  pending: 'Not done yet'
 }
 
 interface StreakStripProps {
@@ -18,7 +19,7 @@ interface StreakStripProps {
 // The latest occurrences or rounds as dots, oldest on the left: filled when done, half filled when late, a hollow ring when missed.
 export function StreakStrip({ history, limit }: StreakStripProps) {
   const marks = history.slice(-limit)
-  const summary = (['on_time', 'late', 'missed'] as const)
+  const summary = (['on_time', 'late', 'missed', 'pending'] as const)
     .map((state) => `${marks.filter((mark) => mark.state === state).length} ${STATE_LABELS[state].toLowerCase()}`)
     .join(', ')
 
