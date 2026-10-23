@@ -7,7 +7,7 @@ import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import { format_task_date, is_overdue, task_date_label, task_date_of } from '@shared/schedule'
 import {
-  DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, group_column, has_table_filters, tags_in_sidebar_order,
+  DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, group_column, has_table_filters, tags_in_sidebar_order,
   type DateFilter, type TableColumn, type TableFilters
 } from './table'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
@@ -55,6 +55,7 @@ export function TaskTableHeader({
   function column_label(column: TableColumn): string {
     if (column === 'title') return 'Task'
     if (column === 'date') return 'Date'
+    if (column === 'streak') return 'Streak'
     return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
   }
 
@@ -96,6 +97,7 @@ export function TaskTableHeader({
   function is_column_filtered(column: TableColumn): boolean {
     if (column === 'title') return filters.title.trim() !== ''
     if (column === 'date') return filters.date !== 'any'
+    if (column === 'streak') return filters.streak !== 'any'
     return Boolean(filters.group_tag_ids[column.slice('group:'.length)])
   }
 
@@ -177,6 +179,14 @@ export function TaskTableHeader({
           {DATE_FILTER_CHOICES.map(({ value, label }) =>
             filter_choice(label, filters.date === value, () => on_filter({ ...filters, date: value as DateFilter }))
           )}
+        </FilterPopover>
+      )
+    }
+
+    if (open.column === 'streak') {
+      return (
+        <FilterPopover open={open} on_close={close_filter}>
+          {STREAK_FILTER_CHOICES.map(({ value, label }) => filter_choice(label, filters.streak === value, () => on_filter({ ...filters, streak: value })))}
         </FilterPopover>
       )
     }
@@ -440,6 +450,18 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
   const is_selected = actions.selected_task_id === task.id
   const task_date = task_date_of(task, actions.date_field)
+  // A broken streak shows a muted zero in the table, so it reads apart from a task that is not tracked at all.
+  const streak_badge = streak && streak.current > 0 && (
+    <span class="streak_badge" title={`${streak.current} in a row ${task.recurrence ? 'on time' : 'done with its routine'} · best ${streak.best}`}>
+      🔥 {streak.current}
+    </span>
+  )
+  const streak_cell = (
+    <span key="streak" class="task_cell streak_cell">
+      {streak_badge || (streak && <span class="streak_badge is_broken" title={`No streak · best ${streak.best}`}>0</span>)}
+    </span>
+  )
+
   const date_cell = (
     <span key="date" class="task_cell date_cell">
       {task.is_done && task.done_at ? (
@@ -489,16 +511,12 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           {actions.is_in_my_day(task) && <span class="notes_marker" title="In My Day">☀</span>}
           {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
           {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
-          {streak && streak.current > 0 && (
-            <span class="streak_badge" title={`${streak.current} in a row ${task.recurrence ? 'on time' : 'done with its routine'} · best ${streak.best}`}>
-              🔥 {streak.current}
-            </span>
-          )}
+          {!actions.is_table && streak_badge}
         </span>
 
         {actions.is_table ? (
           actions.table_columns.map((column) =>
-            column === 'date' ? date_cell : (
+            column === 'date' ? date_cell : column === 'streak' ? streak_cell : (
               <span key={column} class="task_cell">
                 {task_tags.filter((tag) => `group:${tag.group_id}` === column).map(render_tag)}
               </span>

@@ -359,6 +359,7 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .task_list.is_table {
   --column-title-min: 240px;
   --column-date: 104px;
+  --column-streak: 84px;
   --column-group: 124px;
   --column-actions: 56px;
 }
@@ -367,7 +368,8 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .task_list.is_table > li {
   min-width: calc(
     var(--space-2) + var(--space-4) + 24px + 16px + var(--column-title-min) + var(--column-actions) + 3 * var(--space-4) +
-      var(--date-count, 0) * (var(--column-date) + var(--space-4)) + var(--group-count, 0) * (var(--column-group) + var(--space-4))
+      var(--date-count, 0) * (var(--column-date) + var(--space-4)) + var(--streak-count, 0) * (var(--column-streak) + var(--space-4)) +
+      var(--group-count, 0) * (var(--column-group) + var(--space-4))
   );
 }
 
@@ -991,6 +993,8 @@ select:hover { border-color: var(--border-focus); }
 /* ========================================================================== */
 
 .streak_badge { flex: none; color: var(--text-secondary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.streak_badge.is_broken { color: var(--text-tertiary); }
 
 .streak_summary { color: var(--text-secondary); font-size: var(--text-control); }
 

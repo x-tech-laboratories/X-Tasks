@@ -15,7 +15,7 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
-  EMPTY_TABLE_FILTERS, has_table_filters, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, type TableColumn, type TableFilters
+  EMPTY_TABLE_FILTERS, has_table_filters, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
@@ -386,6 +386,7 @@ export function App() {
     }
     return streaks
   }, [tasks, completions, today])
+  const streak_of: StreakOf = (task) => streak_by_task_id.get(task.id) ?? null
 
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
@@ -402,11 +403,11 @@ export function App() {
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
   const is_filtered = is_table && has_table_filters(table_filters)
   const is_sorted = is_table && settings.table_sort.length > 0
-  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, today, settings.task_date_field)) : visible_tasks
+  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
   const column_order = ordered_columns(settings.table_column_order, tag_groups)
   const table_columns = column_order.filter((column) => !settings.hidden_table_columns.includes(column))
-  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, settings.task_date_field) : nested_tasks
+  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field) : nested_tasks
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
@@ -448,7 +449,7 @@ export function App() {
     on_add_subtask: add_subtask,
     on_untag: untag_task,
     rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
-    streak_of: (task) => streak_by_task_id.get(task.id) ?? null,
+    streak_of,
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
     // A sorted table ignores the dragged order, so tasks can still be dragged onto tags but not between rows.
@@ -560,9 +561,10 @@ export function App() {
               </header>
 
               <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{
-                  '--data-columns': table_columns.map((column) => (column === 'date' ? 'var(--column-date)' : 'var(--column-group)')).join(' '),
+                  '--data-columns': table_columns.map((column) => `var(--column-${column.startsWith('group:') ? 'group' : column})`).join(' '),
                   '--date-count': table_columns.filter((column) => column === 'date').length,
-                  '--group-count': table_columns.filter((column) => column !== 'date').length
+                  '--streak-count': table_columns.filter((column) => column === 'streak').length,
+                  '--group-count': table_columns.filter((column) => column.startsWith('group:')).length
                 }}>
                 {is_table && visible_tasks.length > 0 && (
                   <TaskTableHeader
