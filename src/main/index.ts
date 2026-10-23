@@ -61,7 +61,7 @@ function register_bridge_handlers(): void {
   ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
 
   ipcMain.handle(LIST_TASK_LISTS_CHANNEL, () => list_task_lists())
-  ipcMain.handle(ADD_TASK_LIST_CHANNEL, (_event, name: string) => add_task_list(name))
+  ipcMain.handle(ADD_TASK_LIST_CHANNEL, (_event, name: string, parent_id: string | null) => add_task_list(name, parent_id))
   ipcMain.handle(REMOVE_TASK_LIST_CHANNEL, (_event, list_id: string) => remove_task_list(list_id))
 }
 

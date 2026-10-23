@@ -26,7 +26,9 @@ const SCHEMA_MIGRATIONS = [
    ALTER TABLE tasks ADD COLUMN list_id TEXT REFERENCES task_lists (id) ON DELETE CASCADE;
    CREATE INDEX tasks_by_list ON tasks (list_id)`,
   `ALTER TABLE tasks ADD COLUMN parent_id TEXT REFERENCES tasks (id) ON DELETE CASCADE;
-   CREATE INDEX tasks_by_parent ON tasks (parent_id)`
+   CREATE INDEX tasks_by_parent ON tasks (parent_id)`,
+  `ALTER TABLE task_lists ADD COLUMN parent_id TEXT REFERENCES task_lists (id) ON DELETE CASCADE;
+   CREATE INDEX task_lists_by_parent ON task_lists (parent_id)`
 ]
 
 function migrate_schema(database: DatabaseSync): void {
@@ -125,16 +127,17 @@ export function list_task_lists(): TaskList[] {
   return open_database().prepare('SELECT * FROM task_lists ORDER BY created_at').all() as unknown as TaskList[]
 }
 
-export function add_task_list(name: string): TaskList {
-  const task_list: TaskList = { id: randomUUID(), name, created_at: new Date().toISOString() }
+export function add_task_list(name: string, parent_id: string | null): TaskList {
+  const task_list: TaskList = { id: randomUUID(), name, created_at: new Date().toISOString(), parent_id }
 
   open_database()
-    .prepare('INSERT INTO task_lists (id, name, created_at) VALUES (?, ?, ?)')
-    .run(task_list.id, task_list.name, task_list.created_at)
+    .prepare('INSERT INTO task_lists (id, name, created_at, parent_id) VALUES (?, ?, ?, ?)')
+    .run(task_list.id, task_list.name, task_list.created_at, task_list.parent_id)
 
   return task_list
 }
 
+// Sub-lists and their tasks go with it through the cascading foreign keys.
 export function remove_task_list(list_id: string): void {
   open_database().prepare('DELETE FROM task_lists WHERE id = ?').run(list_id)
 }

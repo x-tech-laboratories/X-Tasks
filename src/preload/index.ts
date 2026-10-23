@@ -12,7 +12,7 @@ const tasks_api: TasksApi = {
   remove_task: (task_id) => ipcRenderer.invoke(REMOVE_TASK_CHANNEL, task_id),
 
   list_task_lists: () => ipcRenderer.invoke(LIST_TASK_LISTS_CHANNEL),
-  add_task_list: (name) => ipcRenderer.invoke(ADD_TASK_LIST_CHANNEL, name),
+  add_task_list: (name, parent_id) => ipcRenderer.invoke(ADD_TASK_LIST_CHANNEL, name, parent_id),
   remove_task_list: (list_id) => ipcRenderer.invoke(REMOVE_TASK_LIST_CHANNEL, list_id)
 }
 

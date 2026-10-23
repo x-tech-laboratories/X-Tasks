@@ -15,6 +15,7 @@ export interface TaskList {
   id: string
   name: string
   created_at: string
+  parent_id: string | null
 }
 
 // ============================================================================
@@ -28,7 +29,7 @@ export interface TasksApi {
   remove_task: (task_id: string) => Promise<void>
 
   list_task_lists: () => Promise<TaskList[]>
-  add_task_list: (name: string) => Promise<TaskList>
+  add_task_list: (name: string, parent_id: string | null) => Promise<TaskList>
   remove_task_list: (list_id: string) => Promise<void>
 }
 

@@ -4,7 +4,8 @@ import type { Task, TaskList } from '@shared/tasks'
 import { Sidebar } from './Sidebar'
 import { TaskItem } from './TaskItem'
 import {
-  list_id_for_new_task, nest_tasks, task_is_in_view, task_with_descendant_ids, view_title, type View
+  list_id_for_new_task, list_subtree_ids, nest_tasks, task_is_in_view, task_with_descendant_ids, view_title,
+  type View
 } from './views'
 
 // ============================================================================
@@ -61,18 +62,19 @@ export function App() {
   // List changes
   // ==========================================================================
 
-  async function add_list(name: string): Promise<void> {
-    const added_list = await window.x_tasks.add_task_list(name)
+  async function add_list(name: string, parent_id: string | null): Promise<void> {
+    const added_list = await window.x_tasks.add_task_list(name, parent_id)
     set_task_lists((current_lists) => [...current_lists, added_list])
     set_selected_view({ kind: 'list', list_id: added_list.id })
   }
 
   function remove_list(task_list: TaskList): void {
-    if (!window.confirm(`Delete "${task_list.name}" and all of its tasks?`)) return
+    if (!window.confirm(`Delete "${task_list.name}" with all of its sub-lists and tasks?`)) return
 
-    set_task_lists((current_lists) => current_lists.filter((each) => each.id !== task_list.id))
-    set_tasks((current_tasks) => current_tasks.filter((task) => task.list_id !== task_list.id))
-    if (selected_view.kind === 'list' && selected_view.list_id === task_list.id) set_selected_view({ kind: 'all' })
+    const removed_ids = list_subtree_ids(task_list.id, task_lists)
+    set_task_lists((current_lists) => current_lists.filter((each) => !removed_ids.has(each.id)))
+    set_tasks((current_tasks) => current_tasks.filter((task) => task.list_id === null || !removed_ids.has(task.list_id)))
+    if (selected_view.kind === 'list' && removed_ids.has(selected_view.list_id)) set_selected_view({ kind: 'all' })
     void window.x_tasks.remove_task_list(task_list.id)
   }
 
@@ -80,7 +82,7 @@ export function App() {
   // Layout
   // ==========================================================================
 
-  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view))
+  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, task_lists))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
   const task_tree = nest_tasks(visible_tasks, tasks)
 
