@@ -36,3 +36,9 @@
 - [ ] Tests for the database queries and schema migrations
 - [ ] Tests for the view helpers in `src/renderer/views.ts`
 - [ ] CI that typechecks, tests and builds
+
+## Research
+
+- [ ] Review Task Coach for features
+- [ ] Review Planner for features
+- [ ] Review Trilium addons for features
