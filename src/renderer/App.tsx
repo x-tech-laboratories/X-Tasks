@@ -45,7 +45,7 @@ export function App() {
   const [settings, set_settings] = useState<Settings | null>(null)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
   const [is_settings_open, set_is_settings_open] = useState(false)
-  const [new_title, set_new_title] = useState('')
+  const [multibar_text, set_multibar_text] = useState('')
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
@@ -134,14 +134,23 @@ export function App() {
   // Task changes
   // ==========================================================================
 
-  async function submit_new_task(event: Event): Promise<void> {
+  // Typing in the multibar brings back a task list, so its matches show from the settings or reports page.
+  function change_multibar_text(text: string): void {
+    set_multibar_text(text)
+    if (!text.trim()) return
+    if (is_settings_open) set_is_settings_open(false)
+    if (selected_view.kind === 'reports') select_view({ kind: 'all' })
+  }
+
+  // The Completed view takes no new tasks, so pressing Enter there only searches.
+  async function submit_multibar(event: Event): Promise<void> {
     event.preventDefault()
-    const title = new_title.trim()
-    if (!title) return
+    const title = multibar_text.trim()
+    if (!title || selected_view.kind === 'completed') return
 
     const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags, tag_groups), my_day_for_new_task(selected_view, today))
     set_tasks((current_tasks) => [...current_tasks, added_task])
-    set_new_title('')
+    set_multibar_text('')
   }
 
   // A subtask shows wherever its parent does, so it needs no tags of its own.
@@ -382,7 +391,10 @@ export function App() {
   const is_reports = selected_view.kind === 'reports'
   const is_table = settings.task_layout === 'table' && !is_reports
   const shown_since = my_day_since(settings, today)
-  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match))
+  const search_text = multibar_text.trim().toLowerCase()
+  const is_searching = search_text !== ''
+  const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match))
+  const visible_tasks = is_searching ? view_tasks.filter((task) => task_matches_search(task, search_text)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
 
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
@@ -426,197 +438,214 @@ export function App() {
     on_drop: drop_task
   }
 
+  const can_add_task = selected_view.kind !== 'completed'
+
   return (
-    <div
-      class={selected_task ? 'app has_detail' : 'app'}
-      style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` }}
-    >
-      <Sidebar
-        tasks={tasks}
-        tag_groups={tag_groups}
-        tags={tags}
-        my_day_since={shown_since}
-        selected_view={is_settings_open ? null : selected_view}
-        is_settings_open={is_settings_open}
-        dragged_task={dragged_task}
-        on_select_view={select_view}
-        on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
-        on_open_settings={() => set_is_settings_open(true)}
-        on_edit_tag_group={set_editing_group}
-        on_remove_tag_group={remove_tag_group}
-        on_set_tag_group_single_choice={set_tag_group_single_choice}
-        on_move_tag_group={move_tag_group}
-        on_add_tag={add_tag}
-        on_add_rule_tag={(group_id, parent_id) => set_filter_editing({ group_id, parent_id })}
-        on_edit_tag={(tag) => set_filter_editing({ tag })}
-        on_remove_tag={remove_tag}
-        on_move_tag={move_tag}
-        on_tag_task={tag_task}
-        on_context_menu={open_context_menu}
-      />
-      <ResizeHandle
-        side="left"
-        width={settings.sidebar_width}
-        min_width={SIDEBAR_WIDTH_RANGE.min}
-        max_width={SIDEBAR_WIDTH_RANGE.max}
-        default_width={DEFAULT_SETTINGS.sidebar_width}
-        on_resize={(width) => show_setting('sidebar_width', width)}
-        on_resize_end={(width) => void change_setting('sidebar_width', width)}
-        label="Resize sidebar"
-      />
-
-      <main class={is_table && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
-        {is_settings_open ? (
-          <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
-        ) : is_reports ? (
-          <ReportsPage
-            widgets={settings.report_widgets}
-            tasks={tasks}
-            completions={completions}
-            tags={tags}
-            tag_groups={tag_groups}
-            today={today}
-            on_change_widgets={(widgets) => void change_setting('report_widgets', widgets)}
-            on_select_task={(task) => set_selected_task_id(task.id)}
-            on_context_menu={open_context_menu}
-          />
-        ) : (
-          <>
-            <header class="task_pane_header">
-              <h1>{view_title(selected_view, tags)}</h1>
-              {selected_view.kind === 'my_day' && (
-                <span class="my_day_date">
-                  {parse_task_date(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                </span>
-              )}
-              <span class="remaining_count">{remaining_count} left</span>
-              {selected_view.kind === 'my_day' && visible_tasks.length > 0 && (
-                <button class="clear_my_day_button" onClick={clear_my_day}>
-                  Clear
-                </button>
-              )}
-              <div class="segmented_control" role="radiogroup" aria-label="Layout">
-                {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    role="radio"
-                    aria-checked={settings.task_layout === value}
-                    class={settings.task_layout === value ? 'is_selected' : ''}
-                    onClick={() => void change_setting('task_layout', value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </header>
-
-            {selected_view.kind !== 'completed' && (
-              <form class="new_task_form" onSubmit={submit_new_task}>
-                <input
-                  value={new_title}
-                  onInput={(event) => set_new_title(event.currentTarget.value)}
-                  placeholder="What needs doing?"
-                  autofocus
-                />
-                <button type="submit">Add</button>
-              </form>
-            )}
-
-            <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' '), '--group-count': tag_groups.length }}>
-              {is_table && visible_tasks.length > 0 && (
-                <TaskTableHeader
-                  tag_groups={tag_groups}
-                  tags={tags}
-                  sort={settings.table_sort}
-                  on_sort={(column, is_adding) => void change_setting('table_sort', sort_after_click(settings.table_sort, column, is_adding))}
-                  filters={table_filters}
-                  on_filter={set_table_filters}
-                />
-              )}
-              {task_tree.map((node) => (
-                <TaskItem key={node.task.id} node={node} actions={task_actions} />
-              ))}
-            </ul>
-
-            {visible_tasks.length === 0 && <p class="empty_message">Nothing here yet.</p>}
-            {visible_tasks.length > 0 && task_tree.length === 0 && <p class="empty_message">No tasks match the filters.</p>}
-          </>
-        )}
-      </main>
-
-      {selected_task && (
-        <ResizeHandle
-          side="right"
-          width={settings.detail_width}
-          min_width={DETAIL_WIDTH_RANGE.min}
-          max_width={DETAIL_WIDTH_RANGE.max}
-          default_width={DEFAULT_SETTINGS.detail_width}
-          on_resize={(width) => show_setting('detail_width', width)}
-          on_resize_end={(width) => void change_setting('detail_width', width)}
-          label="Resize task details"
+    <div class="app">
+      <form class="multibar" onSubmit={submit_multibar}>
+        <input
+          value={multibar_text}
+          onInput={(event) => change_multibar_text(event.currentTarget.value)}
+          onKeyDown={(event) => event.key === 'Escape' && set_multibar_text('')}
+          placeholder={can_add_task ? 'Search, or press Enter to add a task' : 'Search completed tasks'}
+          aria-label="Search or add a task"
+          autofocus
         />
-      )}
+        {can_add_task && (
+          <button type="submit" disabled={!is_searching}>
+            Add
+          </button>
+        )}
+      </form>
 
-      {selected_task && (
-        <TaskDetail
-          key={selected_task.id}
-          task={selected_task}
+      <div
+        class={selected_task ? 'app_body has_detail' : 'app_body'}
+        style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` }}
+      >
+        <Sidebar
+          tasks={tasks}
           tag_groups={tag_groups}
           tags={tags}
-          subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
-          durations={settings.task_durations}
-          on_toggle={toggle_task}
-          on_rename={rename_task}
-          on_set_notes={set_task_notes}
-          on_tag={tag_task}
-          on_untag={untag_task}
-          on_set_schedule={set_task_schedule}
-          on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
-          streak={streak_by_task_id.get(selected_task.id) ?? null}
-          history={task_history(selected_task, tasks, completions)}
-          on_reschedule={(task) => set_rescheduling_task_id(task.id)}
-          is_in_my_day={is_in_my_day(selected_task, shown_since)}
-          on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
-          on_remove={remove_task}
-          on_close={() => set_selected_task_id(null)}
+          my_day_since={shown_since}
+          selected_view={is_settings_open ? null : selected_view}
+          is_settings_open={is_settings_open}
+          dragged_task={dragged_task}
+          on_select_view={select_view}
+          on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
+          on_open_settings={() => set_is_settings_open(true)}
+          on_edit_tag_group={set_editing_group}
+          on_remove_tag_group={remove_tag_group}
+          on_set_tag_group_single_choice={set_tag_group_single_choice}
+          on_move_tag_group={move_tag_group}
+          on_add_tag={add_tag}
+          on_add_rule_tag={(group_id, parent_id) => set_filter_editing({ group_id, parent_id })}
+          on_edit_tag={(tag) => set_filter_editing({ tag })}
+          on_remove_tag={remove_tag}
+          on_move_tag={move_tag}
+          on_tag_task={tag_task}
+          on_context_menu={open_context_menu}
         />
-      )}
-
-      {rescheduling_task && (
-        <ReschedulePopup
-          task={rescheduling_task}
-          options={settings.reschedule_options}
-          date_field={settings.task_date_field}
-          on_reschedule={set_task_schedule}
-          on_close={() => set_rescheduling_task_id(null)}
+        <ResizeHandle
+          side="left"
+          width={settings.sidebar_width}
+          min_width={SIDEBAR_WIDTH_RANGE.min}
+          max_width={SIDEBAR_WIDTH_RANGE.max}
+          default_width={DEFAULT_SETTINGS.sidebar_width}
+          on_resize={(width) => show_setting('sidebar_width', width)}
+          on_resize_end={(width) => void change_setting('sidebar_width', width)}
+          label="Resize sidebar"
         />
-      )}
 
-      {filter_editing && (
-        <FilterDialog
-          heading={'tag' in filter_editing ? 'Edit tag' : 'New rule tag'}
-          name={'tag' in filter_editing ? filter_editing.tag.name : ''}
-          rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
-          tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
-          tags={tags}
-          tasks={tasks}
-          on_save={save_filter}
-          on_close={() => set_filter_editing(null)}
-        />
-      )}
+        <main class={is_table && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
+          {is_settings_open ? (
+            <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
+          ) : is_reports ? (
+            <ReportsPage
+              widgets={settings.report_widgets}
+              tasks={tasks}
+              completions={completions}
+              tags={tags}
+              tag_groups={tag_groups}
+              today={today}
+              on_change_widgets={(widgets) => void change_setting('report_widgets', widgets)}
+              on_select_task={(task) => set_selected_task_id(task.id)}
+              on_context_menu={open_context_menu}
+            />
+          ) : (
+            <>
+              <header class="task_pane_header">
+                <h1>{view_title(selected_view, tags)}</h1>
+                {selected_view.kind === 'my_day' && (
+                  <span class="my_day_date">
+                    {parse_task_date(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </span>
+                )}
+                <span class="remaining_count">{remaining_count} left</span>
+                {selected_view.kind === 'my_day' && visible_tasks.length > 0 && (
+                  <button class="clear_my_day_button" onClick={clear_my_day}>
+                    Clear
+                  </button>
+                )}
+                <div class="segmented_control" role="radiogroup" aria-label="Layout">
+                  {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      role="radio"
+                      aria-checked={settings.task_layout === value}
+                      class={settings.task_layout === value ? 'is_selected' : ''}
+                      onClick={() => void change_setting('task_layout', value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </header>
 
-      {editing_group && (
-        <GroupDialog
-          heading="Edit filter group"
-          group={editing_group}
-          tags={tags}
-          tasks={tasks}
-          on_save={(name, is_rule) => update_tag_group(editing_group, name, is_rule)}
-          on_close={() => set_editing_group(null)}
-        />
-      )}
+              <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' '), '--group-count': tag_groups.length }}>
+                {is_table && visible_tasks.length > 0 && (
+                  <TaskTableHeader
+                    tag_groups={tag_groups}
+                    tags={tags}
+                    sort={settings.table_sort}
+                    on_sort={(column, is_adding) => void change_setting('table_sort', sort_after_click(settings.table_sort, column, is_adding))}
+                    filters={table_filters}
+                    on_filter={set_table_filters}
+                  />
+                )}
+                {task_tree.map((node) => (
+                  <TaskItem key={node.task.id} node={node} actions={task_actions} />
+                ))}
+              </ul>
 
-      {context_menu && <ContextMenu menu={context_menu} on_close={close_context_menu} />}
+              {visible_tasks.length === 0 && <p class="empty_message">{is_searching ? 'No tasks match the search.' : 'Nothing here yet.'}</p>}
+              {visible_tasks.length > 0 && task_tree.length === 0 && <p class="empty_message">No tasks match the filters.</p>}
+            </>
+          )}
+        </main>
+
+        {selected_task && (
+          <ResizeHandle
+            side="right"
+            width={settings.detail_width}
+            min_width={DETAIL_WIDTH_RANGE.min}
+            max_width={DETAIL_WIDTH_RANGE.max}
+            default_width={DEFAULT_SETTINGS.detail_width}
+            on_resize={(width) => show_setting('detail_width', width)}
+            on_resize_end={(width) => void change_setting('detail_width', width)}
+            label="Resize task details"
+          />
+        )}
+
+        {selected_task && (
+          <TaskDetail
+            key={selected_task.id}
+            task={selected_task}
+            tag_groups={tag_groups}
+            tags={tags}
+            subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
+            durations={settings.task_durations}
+            on_toggle={toggle_task}
+            on_rename={rename_task}
+            on_set_notes={set_task_notes}
+            on_tag={tag_task}
+            on_untag={untag_task}
+            on_set_schedule={set_task_schedule}
+            on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
+            streak={streak_by_task_id.get(selected_task.id) ?? null}
+            history={task_history(selected_task, tasks, completions)}
+            on_reschedule={(task) => set_rescheduling_task_id(task.id)}
+            is_in_my_day={is_in_my_day(selected_task, shown_since)}
+            on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
+            on_remove={remove_task}
+            on_close={() => set_selected_task_id(null)}
+          />
+        )}
+
+        {rescheduling_task && (
+          <ReschedulePopup
+            task={rescheduling_task}
+            options={settings.reschedule_options}
+            date_field={settings.task_date_field}
+            on_reschedule={set_task_schedule}
+            on_close={() => set_rescheduling_task_id(null)}
+          />
+        )}
+
+        {filter_editing && (
+          <FilterDialog
+            heading={'tag' in filter_editing ? 'Edit tag' : 'New rule tag'}
+            name={'tag' in filter_editing ? filter_editing.tag.name : ''}
+            rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
+            tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
+            tags={tags}
+            tasks={tasks}
+            on_save={save_filter}
+            on_close={() => set_filter_editing(null)}
+          />
+        )}
+
+        {editing_group && (
+          <GroupDialog
+            heading="Edit filter group"
+            group={editing_group}
+            tags={tags}
+            tasks={tasks}
+            on_save={(name, is_rule) => update_tag_group(editing_group, name, is_rule)}
+            on_close={() => set_editing_group(null)}
+          />
+        )}
+
+        {context_menu && <ContextMenu menu={context_menu} on_close={close_context_menu} />}
+      </div>
     </div>
   )
+}
+
+// ============================================================================
+// Search
+// ============================================================================
+
+// A task matches when its title or notes hold the search text, ignoring case.
+function task_matches_search(task: Task, search_text: string): boolean {
+  return task.title.toLowerCase().includes(search_text) || task.notes.toLowerCase().includes(search_text)
 }

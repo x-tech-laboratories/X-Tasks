@@ -196,8 +196,10 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 /* Layout                                                                     */
 /* ========================================================================== */
 
-.app { position: relative; display: grid; grid-template-columns: var(--sidebar-width) 1fr; height: 100vh; }
-.app.has_detail { grid-template-columns: var(--sidebar-width) 1fr var(--detail-width); }
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+.app_body { position: relative; display: grid; flex: 1; grid-template-columns: var(--sidebar-width) 1fr; min-height: 0; }
+.app_body.has_detail { grid-template-columns: var(--sidebar-width) 1fr var(--detail-width); }
 
 /* The handles sit over the panel borders, so they take no grid column of their own. */
 .resize_handle {
@@ -257,20 +259,28 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
 
 /* ========================================================================== */
-/* New task form                                                              */
+/* Multibar                                                                   */
 /* ========================================================================== */
 
-.new_task_form { display: flex; gap: var(--space-4); margin-bottom: var(--space-7); }
+.multibar {
+  display: flex;
+  flex: none;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-secondary);
+}
 
-.new_task_form input { flex: 1; }
+.multibar input { flex: 1; }
 
-.new_task_form button {
+.multibar button {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--text-on-fill);
 }
 
-.new_task_form button:hover { opacity: 0.85; }
+.multibar button:hover { opacity: 0.85; }
+.multibar button:disabled { opacity: 0.5; cursor: default; }
 
 /* ========================================================================== */
 /* Task list                                                                  */
