@@ -36,7 +36,7 @@ const PRIORITY_SCALE_CHOICES: { value: PriorityScale; label: string }[] = [
 
 interface SettingsPageProps {
   settings: Settings
-  on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void
+  on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void | Promise<void>
   on_add_tag_group: (name: string) => void
 }
 
@@ -203,7 +203,7 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
 
       <section class="settings_group">
         <h2 class="settings_heading">Backups</h2>
-        <BackupsEditor />
+        <BackupsEditor settings={settings} on_change={on_change} />
       </section>
 
       <section class="settings_group">
@@ -398,8 +398,13 @@ function format_taken_at(taken_at: string): string {
   return new Date(taken_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })
 }
 
+interface BackupsEditorProps {
+  settings: Settings
+  on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void | Promise<void>
+}
+
 // Saved copies of the database, newest first, each of which can be restored or deleted.
-function BackupsEditor() {
+function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
   const [backups, set_backups] = useState<DatabaseBackup[]>([])
 
   async function refresh(): Promise<void> {
@@ -409,6 +414,12 @@ function BackupsEditor() {
   useEffect(() => {
     void refresh()
   }, [])
+
+  // Turning these on or lowering the count can take or delete automatic backups, so the list is read again after.
+  async function change_automatic<Key extends 'auto_backup' | 'auto_backups_to_keep'>(key: Key, value: Settings[Key]): Promise<void> {
+    await on_change(key, value)
+    await refresh()
+  }
 
   async function create(): Promise<void> {
     await window.x_settings.create_backup()
@@ -445,13 +456,45 @@ function BackupsEditor() {
         <button onClick={() => void create()}>Back up</button>
       </div>
 
+      <label class="setting_row">
+        <div class="setting_text">
+          <span class="setting_label">Back up daily</span>
+          <span class="setting_hint">Takes a backup once a day while the app is running. Backups made by hand are always kept.</span>
+        </div>
+        <input
+          type="checkbox"
+          checked={settings.auto_backup}
+          onChange={(event) => void change_automatic('auto_backup', event.currentTarget.checked)}
+        />
+      </label>
+
+      <label class="setting_row">
+        <div class="setting_text">
+          <span class="setting_label">Daily backups to keep</span>
+          <span class="setting_hint">Older daily backups are deleted once there are more than this.</span>
+        </div>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          class="backup_keep"
+          value={settings.auto_backups_to_keep}
+          disabled={!settings.auto_backup}
+          onChange={(event) =>
+            void change_automatic('auto_backups_to_keep', Math.max(1, Math.round(Number(event.currentTarget.value) || 1)))
+          }
+        />
+      </label>
+
       {backups.length === 0 && <p class="setting_hint backup_empty">No backups yet.</p>}
 
       {backups.map((backup) => (
         <div key={backup.name} class="setting_row backup_row">
           <div class="setting_text">
             <span class="setting_label">{format_taken_at(backup.taken_at)}</span>
-            <span class="setting_hint">{format_size(backup.size_bytes)}</span>
+            <span class="setting_hint">
+              {backup.is_automatic ? 'Daily' : 'By hand'} · {format_size(backup.size_bytes)}
+            </span>
           </div>
           <button onClick={() => void restore(backup)}>Restore</button>
           <button class="remove_button" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>

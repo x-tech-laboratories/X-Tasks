@@ -9,7 +9,9 @@ import { back_up_task_database, close_task_database, open_task_database, task_da
 // ============================================================================
 
 // A backup is named after the UTC time it was taken, with dashes for the colons a file name cannot always hold.
-const BACKUP_NAME_PATTERN = /^tasks-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z\.db$/
+const BACKUP_NAME_PATTERN = /^tasks-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z(-auto)?\.db$/
+
+const AUTOMATIC_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 export function backup_folder(): string {
   return join(dirname(task_database_path()), 'backups')
@@ -21,14 +23,19 @@ function backup_path(name: string): string {
   return join(backup_folder(), name)
 }
 
-function backup_name(taken_at: Date): string {
+function backup_name(taken_at: Date, is_automatic: boolean): string {
   const timestamp = taken_at.toISOString().slice(0, 19).replaceAll(':', '-')
-  return `tasks-${timestamp}Z.db`
+  return `tasks-${timestamp}Z${is_automatic ? '-auto' : ''}.db`
 }
 
-function backup_taken_at(name: string): string {
-  const [, date, hours, minutes, seconds] = BACKUP_NAME_PATTERN.exec(name)!
-  return `${date}T${hours}:${minutes}:${seconds}Z`
+function describe_backup(name: string): DatabaseBackup {
+  const [, date, hours, minutes, seconds, automatic_suffix] = BACKUP_NAME_PATTERN.exec(name)!
+  return {
+    name,
+    taken_at: `${date}T${hours}:${minutes}:${seconds}Z`,
+    size_bytes: statSync(backup_path(name)).size,
+    is_automatic: automatic_suffix !== undefined
+  }
 }
 
 // ============================================================================
@@ -41,17 +48,28 @@ export function list_backups(): DatabaseBackup[] {
 
   return readdirSync(backup_folder())
     .filter((name) => BACKUP_NAME_PATTERN.test(name))
-    .map((name) => ({ name, taken_at: backup_taken_at(name), size_bytes: statSync(backup_path(name)).size }))
+    .map(describe_backup)
     .sort((first, second) => second.taken_at.localeCompare(first.taken_at))
 }
 
 // A second backup within the same second keeps the first, since nothing much can have changed between them.
-export function create_backup(): DatabaseBackup {
+export function create_backup(is_automatic = false): DatabaseBackup {
   mkdirSync(backup_folder(), { recursive: true })
 
-  const name = backup_name(new Date())
+  const name = backup_name(new Date(), is_automatic)
   if (!existsSync(backup_path(name))) back_up_task_database(backup_path(name))
-  return { name, taken_at: backup_taken_at(name), size_bytes: statSync(backup_path(name)).size }
+  return describe_backup(name)
+}
+
+// Takes an automatic backup once a day has passed since the last one, and deletes the oldest beyond the number to keep; backups made by hand are never deleted.
+export function run_automatic_backup(backups_to_keep: number): void {
+  const newest_automatic = list_backups().find((backup) => backup.is_automatic)
+  if (!newest_automatic || Date.now() - Date.parse(newest_automatic.taken_at) >= AUTOMATIC_BACKUP_INTERVAL_MS) {
+    create_backup(true)
+  }
+
+  const automatic_backups = list_backups().filter((backup) => backup.is_automatic)
+  for (const backup of automatic_backups.slice(backups_to_keep)) remove_backup(backup.name)
 }
 
 export function remove_backup(name: string): void {

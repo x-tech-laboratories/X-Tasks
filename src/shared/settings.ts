@@ -82,6 +82,9 @@ export interface Settings {
   mcp_port: number
   // The cards on the Reports page, top to bottom.
   report_widgets: ReportWidget[]
+  // When set, a backup is taken once a day, and only the newest of these are kept.
+  auto_backup: boolean
+  auto_backups_to_keep: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -110,7 +113,9 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'calendar', kind: 'calendar', title: 'Ticks per day', tag_ids: [], days: 182, group_id: '' },
     { id: 'weekly', kind: 'weekly', title: 'Ticks per week', tag_ids: [], days: 84, group_id: '' },
     { id: 'by-area', kind: 'by_tag', title: 'Ticks by area', tag_ids: [], days: 30, group_id: 'area' }
-  ]
+  ],
+  auto_backup: true,
+  auto_backups_to_keep: 14
 }
 
 // The ports the MCP endpoint can be set to, leaving out those that need root.
@@ -132,6 +137,7 @@ export interface DatabaseBackup {
   name: string
   taken_at: string
   size_bytes: number
+  is_automatic: boolean
 }
 
 // ============================================================================

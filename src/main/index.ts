@@ -11,7 +11,7 @@ import {
   SET_TAG_RULE_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type CompletionLogChange, type TagRule, type TaskSchedule
 } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
-import { backup_folder, create_backup, list_backups, remove_backup, restore_backup } from './database_backups'
+import { backup_folder, create_backup, list_backups, remove_backup, restore_backup, run_automatic_backup } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
   list_tasks, move_tag, move_tag_group, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, set_tag_group_single_choice, set_tag_rule,
@@ -120,6 +120,7 @@ function register_bridge_handlers(): void {
     if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
     if (key === 'priority_scale') apply_priority_scale(value as Settings['priority_scale'])
     if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server()
+    if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
   })
   ipcMain.handle(GET_DATABASE_PATH_CHANNEL, () => task_database_path())
   ipcMain.handle(SHOW_DATABASE_FOLDER_CHANNEL, () => shell.showItemInFolder(task_database_path()))
@@ -151,6 +152,30 @@ function watch_for_outside_changes(): void {
 }
 
 // ============================================================================
+// Automatic backups
+// ============================================================================
+
+const AUTOMATIC_BACKUP_CHECK_MS = 60 * 60 * 1000
+
+// A failed backup is logged rather than thrown, so it never stops the app.
+function keep_automatic_backups(): void {
+  const settings = get_settings()
+  if (!settings.auto_backup) return
+
+  try {
+    run_automatic_backup(settings.auto_backups_to_keep)
+  } catch (error) {
+    console.error('automatic backup failed:', error)
+  }
+}
+
+// The app can stay open for days, so it checks every hour whether a day has passed since the last backup.
+function schedule_automatic_backups(): void {
+  keep_automatic_backups()
+  setInterval(keep_automatic_backups, AUTOMATIC_BACKUP_CHECK_MS)
+}
+
+// ============================================================================
 // Lifecycle
 // ============================================================================
 
@@ -162,6 +187,7 @@ app.whenReady().then(() => {
   void restart_mcp_server()
   create_main_window()
   watch_for_outside_changes()
+  schedule_automatic_backups()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) create_main_window()
