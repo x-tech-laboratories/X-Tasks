@@ -25,7 +25,6 @@ interface SidebarProps {
   on_open_settings: () => void
   on_edit_tag_group: (group: TagGroup) => void
   on_remove_tag_group: (group: TagGroup) => void
-  on_set_tag_group_single_choice: (group: TagGroup, is_single_choice: boolean) => void
   on_move_tag_group: (dragged: TagGroup, target: TagGroup, placement: SidePlacement) => void
   on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
   on_add_rule_tag: (group_id: string, parent_id: string | null) => void
@@ -53,7 +52,7 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
-  on_edit_tag_group, on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  on_edit_tag_group, on_remove_tag_group, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
@@ -290,15 +289,6 @@ export function Sidebar({
               { label: 'Add tag', on_select: () => add_tag_at({ group_id: group.id, parent_id: null }) },
               ...(group_above ? [{ label: 'Move up', on_select: () => on_move_tag_group(group, group_above, 'before') }] : []),
               ...(group_below ? [{ label: 'Move down', on_select: () => on_move_tag_group(group, group_below, 'after') }] : []),
-              // Rules can match a task several times over, so only plain groups limit a task to one tag.
-              ...(group.is_rule
-                ? []
-                : [
-                    {
-                      label: group.is_single_choice ? 'Allow several tags per task' : 'Allow one tag per task',
-                      on_select: () => on_set_tag_group_single_choice(group, !group.is_single_choice)
-                    }
-                  ]),
               { label: 'Delete group', on_select: () => on_remove_tag_group(group), is_danger: true }
             ])
           }

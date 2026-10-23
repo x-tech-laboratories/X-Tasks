@@ -22,7 +22,7 @@ interface GroupDialogProps {
   group: TagGroup | null
   tags: Tag[]
   tasks: Task[]
-  on_save: (name: string, is_rule: boolean) => void
+  on_save: (name: string, is_rule: boolean, is_single_choice: boolean) => void
   on_close: () => void
 }
 
@@ -31,6 +31,7 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(group?.name ?? '')
   const [is_rule_draft, set_is_rule_draft] = useState(group?.is_rule ?? false)
+  const [is_single_choice_draft, set_is_single_choice_draft] = useState(group?.is_single_choice ?? false)
 
   useEffect(() => dialog_ref.current?.showModal(), [])
 
@@ -44,7 +45,7 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
-    on_save(trimmed_name, is_rule_draft)
+    on_save(trimmed_name, is_rule_draft, is_single_choice_draft && !is_rule_draft)
     on_close()
   }
 
@@ -100,6 +101,21 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
             : 'Tags are given to tasks by hand, from their detail panel or by dragging them onto a tag.'}
         </p>
         {warning && <p class="setting_hint group_warning">{warning}</p>}
+
+        {/* Rules can match a task several times over, so only a plain group can limit a task to one tag. */}
+        {!is_rule_draft && (
+          <label class="group_option">
+            <input
+              type="checkbox"
+              checked={is_single_choice_draft}
+              onChange={(event) => set_is_single_choice_draft(event.currentTarget.checked)}
+            />
+            <span class="setting_text">
+              <span class="setting_label">One tag per task</span>
+              <span class="setting_hint">Giving a task another tag from this group replaces the one it had. Tasks already holding several keep them.</span>
+            </span>
+          </label>
+        )}
 
         <footer class="recurrence_dialog_footer">
           <button type="button" onClick={on_close}>

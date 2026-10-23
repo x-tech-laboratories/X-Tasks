@@ -282,11 +282,11 @@ export function App() {
   }
 
   // A group turned to rules gives each plain tag an empty rule and leaves every task that held its tags; one turned plain drops the rules.
-  function update_tag_group(group: TagGroup, name: string, is_rule: boolean): void {
+  function update_tag_group(group: TagGroup, name: string, is_rule: boolean, is_single_choice: boolean): void {
     const group_tag_ids = new Set(tags.filter((tag) => tag.group_id === group.id).map((tag) => tag.id))
 
     set_tag_groups((current_groups) =>
-      current_groups.map((each) => (each.id === group.id ? { ...each, name, is_rule, is_single_choice: is_rule ? false : each.is_single_choice } : each))
+      current_groups.map((each) => (each.id === group.id ? { ...each, name, is_rule, is_single_choice: is_single_choice && !is_rule } : each))
     )
     set_tags((current_tags) =>
       current_tags.map((tag) => (group_tag_ids.has(tag.id) ? { ...tag, rule: is_rule ? (tag.rule ?? EMPTY_RULE) : null } : tag))
@@ -298,7 +298,7 @@ export function App() {
         )
       )
     }
-    void window.x_tasks.update_tag_group(group.id, name, is_rule)
+    void window.x_tasks.update_tag_group(group.id, name, is_rule, is_single_choice)
   }
 
   function remove_tag_group(group: TagGroup): void {
@@ -309,11 +309,6 @@ export function App() {
     forget_tags(new Set(tags.filter((tag) => tag.group_id === group.id).map((tag) => tag.id)))
     set_tag_groups((current_groups) => current_groups.filter((each) => each.id !== group.id))
     void window.x_tasks.remove_tag_group(group.id)
-  }
-
-  function set_tag_group_single_choice(group: TagGroup, is_single_choice: boolean): void {
-    set_tag_groups((current_groups) => current_groups.map((each) => (each.id === group.id ? { ...each, is_single_choice } : each)))
-    void window.x_tasks.set_tag_group_single_choice(group.id, is_single_choice)
   }
 
   function move_tag_group(dragged: TagGroup, target: TagGroup, placement: SidePlacement): void {
@@ -494,7 +489,6 @@ export function App() {
           on_open_settings={() => set_is_settings_open(true)}
           on_edit_tag_group={set_editing_group}
           on_remove_tag_group={remove_tag_group}
-          on_set_tag_group_single_choice={set_tag_group_single_choice}
           on_move_tag_group={move_tag_group}
           on_add_tag={add_tag}
           on_add_rule_tag={(group_id, parent_id) => set_filter_editing({ group_id, parent_id })}
@@ -659,7 +653,7 @@ export function App() {
             group={editing_group}
             tags={tags}
             tasks={tasks}
-            on_save={(name, is_rule) => update_tag_group(editing_group, name, is_rule)}
+            on_save={(name, is_rule, is_single_choice) => update_tag_group(editing_group, name, is_rule, is_single_choice)}
             on_close={() => set_editing_group(null)}
           />
         )}

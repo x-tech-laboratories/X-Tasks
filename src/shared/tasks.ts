@@ -118,9 +118,8 @@ export interface TasksApi {
 
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string, is_rule: boolean) => Promise<TagGroup>
-  update_tag_group: (group_id: string, name: string, is_rule: boolean) => Promise<void>
+  update_tag_group: (group_id: string, name: string, is_rule: boolean, is_single_choice: boolean) => Promise<void>
   remove_tag_group: (group_id: string) => Promise<void>
-  set_tag_group_single_choice: (group_id: string, is_single_choice: boolean) => Promise<void>
   move_tag_group: (group_id: string, position: number) => Promise<void>
 
   list_tags: () => Promise<Tag[]>
@@ -150,7 +149,6 @@ export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'
 export const ADD_TAG_GROUP_CHANNEL = 'tag-groups:add'
 export const REMOVE_TAG_GROUP_CHANNEL = 'tag-groups:remove'
 export const UPDATE_TAG_GROUP_CHANNEL = 'tag-groups:update'
-export const SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL = 'tag-groups:set-single-choice'
 export const MOVE_TAG_GROUP_CHANNEL = 'tag-groups:move'
 
 export const LIST_TAGS_CHANNEL = 'tags:list'

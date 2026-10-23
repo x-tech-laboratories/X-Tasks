@@ -389,13 +389,15 @@ export function add_tag_group(name: string, is_rule: boolean): TagGroup {
 }
 
 // A group turned to rules gives each plain tag an empty rule and takes its tags off every task; one turned plain drops the rules.
-export function update_tag_group(group_id: string, name: string, is_rule: boolean): void {
+// Only a plain group can limit a task to one tag, and turning that on leaves tasks already holding several as they are.
+export function update_tag_group(group_id: string, name: string, is_rule: boolean, is_single_choice: boolean): void {
   const database = open_database()
 
   in_transaction(database, () => {
-    database.prepare('UPDATE tag_groups SET name = ?, is_rule = ? WHERE id = ?').run(name, is_rule ? 1 : 0, group_id)
+    database
+      .prepare('UPDATE tag_groups SET name = ?, is_rule = ?, is_single_choice = ? WHERE id = ?')
+      .run(name, is_rule ? 1 : 0, is_single_choice && !is_rule ? 1 : 0, group_id)
     if (is_rule) {
-      database.prepare('UPDATE tag_groups SET is_single_choice = 0 WHERE id = ?').run(group_id)
       database.prepare('UPDATE tags SET rule = ? WHERE group_id = ? AND rule IS NULL').run(JSON.stringify(EMPTY_RULE), group_id)
       database.prepare('DELETE FROM task_tags WHERE tag_id IN (SELECT id FROM tags WHERE group_id = ?)').run(group_id)
     } else {
@@ -407,11 +409,6 @@ export function update_tag_group(group_id: string, name: string, is_rule: boolea
 // Its tags go with it, while their tasks stay and only lose the tags.
 export function remove_tag_group(group_id: string): void {
   open_database().prepare('DELETE FROM tag_groups WHERE id = ?').run(group_id)
-}
-
-// Turning this on leaves tasks that already hold several of the group's tags as they are.
-export function set_tag_group_single_choice(group_id: string, is_single_choice: boolean): void {
-  open_database().prepare('UPDATE tag_groups SET is_single_choice = ? WHERE id = ?').run(is_single_choice ? 1 : 0, group_id)
 }
 
 export function move_tag_group(group_id: string, position: number): void {

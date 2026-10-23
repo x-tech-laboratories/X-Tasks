@@ -6,7 +6,7 @@ import {
 } from '@shared/settings'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
-  MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
+  MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
   UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
 } from '@shared/tasks'
 
@@ -26,10 +26,9 @@ const tasks_api: TasksApi = {
 
   list_tag_groups: () => ipcRenderer.invoke(LIST_TAG_GROUPS_CHANNEL),
   add_tag_group: (name, is_rule) => ipcRenderer.invoke(ADD_TAG_GROUP_CHANNEL, name, is_rule),
-  update_tag_group: (group_id, name, is_rule) => ipcRenderer.invoke(UPDATE_TAG_GROUP_CHANNEL, group_id, name, is_rule),
+  update_tag_group: (group_id, name, is_rule, is_single_choice) =>
+    ipcRenderer.invoke(UPDATE_TAG_GROUP_CHANNEL, group_id, name, is_rule, is_single_choice),
   remove_tag_group: (group_id) => ipcRenderer.invoke(REMOVE_TAG_GROUP_CHANNEL, group_id),
-  set_tag_group_single_choice: (group_id, is_single_choice) =>
-    ipcRenderer.invoke(SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, group_id, is_single_choice),
   move_tag_group: (group_id, position) => ipcRenderer.invoke(MOVE_TAG_GROUP_CHANNEL, group_id, position),
 
   list_tags: () => ipcRenderer.invoke(LIST_TAGS_CHANNEL),

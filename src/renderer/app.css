@@ -999,6 +999,8 @@ select:hover { border-color: var(--border-focus); }
 
 .group_dialog { width: min(480px, calc(100vw - 2 * var(--space-7))); }
 .group_warning { color: var(--status-danger); }
+.group_option { display: flex; align-items: flex-start; gap: var(--space-4); margin-top: var(--space-5); }
+.group_option input { margin-top: 3px; }
 
 .rule_match { display: flex; align-items: center; gap: var(--space-4); margin: var(--space-6) 0 var(--space-4); font-size: var(--text-control); }
 
