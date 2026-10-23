@@ -12,6 +12,9 @@ export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed' | 'r
 // How the center pane shows tasks: a plain list, or a table with aligned columns.
 export type TaskLayout = 'list' | 'table'
 
+// Which of a task's dates it is shown, sorted, filtered, rescheduled and put in My Day by.
+export type TaskDateField = 'due' | 'start'
+
 // One column the task table is sorted by: "title", "date", or "group:" and a filter group's id.
 export interface TableSortKey {
   column: string
@@ -62,6 +65,7 @@ export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
   confirm_tag_removal: boolean
+  task_date_field: TaskDateField
   // When set, My Day starts empty each day; otherwise tasks stay in it until taken out.
   auto_clear_my_day: boolean
   // When set, tasks due today or earlier go into My Day by themselves.
@@ -91,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   launch_view: 'last',
   confirm_tag_removal: true,
+  task_date_field: 'due',
   auto_clear_my_day: true,
   add_due_to_my_day: false,
   due_added_to_my_day_on: '',

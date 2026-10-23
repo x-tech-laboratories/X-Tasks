@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type ThemeChoice } from '@shared/settings'
+import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TaskDateField, type ThemeChoice } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
 import { rule_format } from '@shared/schedule'
 
@@ -14,6 +14,11 @@ const THEME_CHOICES: { value: ThemeChoice; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' }
+]
+
+const TASK_DATE_CHOICES: { value: TaskDateField; label: string }[] = [
+  { value: 'due', label: 'Due date' },
+  { value: 'start', label: 'Start date' }
 ]
 
 const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
@@ -105,6 +110,19 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
 
         <label class="setting_row">
           <div class="setting_text">
+            <span class="setting_label">Task date</span>
+            <span class="setting_hint">The date shown beside each task, and used to sort, filter, reschedule and fill My Day.</span>
+          </div>
+          <select
+            value={settings.task_date_field}
+            onChange={(event) => on_change('task_date_field', event.currentTarget.value as TaskDateField)}
+          >
+            {TASK_DATE_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
             <span class="setting_label">Clear My Day each day</span>
             <span class="setting_hint">My Day starts empty every morning. When off, tasks stay until you take them out.</span>
           </div>
@@ -118,7 +136,7 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
         <label class="setting_row">
           <div class="setting_text">
             <span class="setting_label">Add due tasks to My Day</span>
-            <span class="setting_hint">Open tasks due today or overdue go into My Day each morning, and when given a due date that has come.</span>
+            <span class="setting_hint">Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date.</span>
           </div>
           <input
             type="checkbox"

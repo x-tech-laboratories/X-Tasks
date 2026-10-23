@@ -1,11 +1,11 @@
 import type { ComponentChildren } from 'preact'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 
-import type { TableSortKey } from '@shared/settings'
+import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
-import { format_task_date, is_overdue, task_date_label } from '@shared/schedule'
+import { format_task_date, is_overdue, task_date_label, task_date_of } from '@shared/schedule'
 import {
   DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, group_column, has_table_filters, tags_in_sidebar_order,
   type DateFilter, type TableColumn, type TableFilters
@@ -212,6 +212,7 @@ export interface TaskActions {
   tags: Tag[]
   tag_groups: TagGroup[]
   is_table: boolean
+  date_field: TaskDateField
   can_add_subtasks: boolean
   selected_task_id: string | null
   on_select: (task: Task) => void
@@ -333,6 +334,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   }
 
   const is_selected = actions.selected_task_id === task.id
+  const task_date = task_date_of(task, actions.date_field)
   const row_class = ['task', task.is_done && 'is_done', is_selected && 'is_selected', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
 
   return (
@@ -381,9 +383,9 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         <span class="task_cell date_cell">
           {task.is_done && task.done_at ? (
             <span class="due_label">Done {task_date_label(format_task_date(new Date(task.done_at), false))}</span>
-          ) : task.due_at && (
-            <span class={!task.is_done && is_overdue(task.due_at) ? 'due_label is_overdue' : 'due_label'}>
-              {task_date_label(task.due_at)}
+          ) : task_date && (
+            <span class={!task.is_done && is_overdue(task_date) ? 'due_label is_overdue' : 'due_label'}>
+              {task_date_label(task_date)}
             </span>
           )}
         </span>

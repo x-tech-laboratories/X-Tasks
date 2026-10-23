@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 
-import type { RescheduleOption } from '@shared/settings'
+import type { RescheduleOption, TaskDateField } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
 import { format_task_date, parse_task_date, reschedule_day, rescheduled, task_date_label } from '@shared/schedule'
 
@@ -11,12 +11,13 @@ import { format_task_date, parse_task_date, reschedule_day, rescheduled, task_da
 interface ReschedulePopupProps {
   task: Task
   options: RescheduleOption[]
+  date_field: TaskDateField
   on_reschedule: (task: Task, schedule: TaskSchedule) => void
   on_close: () => void
 }
 
 // Each option shows the day it would move the task to; options whose rule yields no day are left out.
-export function ReschedulePopup({ task, options, on_reschedule, on_close }: ReschedulePopupProps) {
+export function ReschedulePopup({ task, options, date_field, on_reschedule, on_close }: ReschedulePopupProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [picked_day, set_picked_day] = useState('')
 
@@ -28,7 +29,7 @@ export function ReschedulePopup({ task, options, on_reschedule, on_close }: Resc
   })
 
   function choose(day: Date): void {
-    on_reschedule(task, rescheduled(task, day))
+    on_reschedule(task, rescheduled(task, day, date_field))
     on_close()
   }
 

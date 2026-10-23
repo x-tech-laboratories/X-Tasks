@@ -1,6 +1,6 @@
-import type { TableSortKey } from '@shared/settings'
+import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
-import { format_task_date, is_overdue } from '@shared/schedule'
+import { format_task_date, is_overdue, task_date_of } from '@shared/schedule'
 import { by_position, children_of, task_is_in_view, type TaskNode } from './views'
 
 // ============================================================================
@@ -37,7 +37,7 @@ export function sort_after_click(sort: TableSortKey[], column: TableColumn, is_a
 }
 
 // Sorts each level of the tree on its own, so subtasks stay under their parents; an empty cell sorts last either way.
-export function sort_task_tree(nodes: TaskNode[], sort: TableSortKey[], tags: Tag[], tags_of: (task: Task) => Tag[]): TaskNode[] {
+export function sort_task_tree(nodes: TaskNode[], sort: TableSortKey[], tags: Tag[], tags_of: (task: Task) => Tag[], date_field: TaskDateField): TaskNode[] {
   if (sort.length === 0) return nodes
   const tag_rank = tag_ranks(tags)
 
@@ -54,7 +54,7 @@ export function sort_task_tree(nodes: TaskNode[], sort: TableSortKey[], tags: Ta
 
   function cell_value(task: Task, column: string): CellValue {
     if (column === 'title') return task.title
-    if (column === 'date') return task.is_done && task.done_at ? format_task_date(new Date(task.done_at), false) : task.due_at
+    if (column === 'date') return task.is_done && task.done_at ? format_task_date(new Date(task.done_at), false) : task_date_of(task, date_field)
     const group_id = group_id_of(column)
     const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => tag_rank.get(tag.id) ?? 0)
     return ranks.length > 0 ? Math.min(...ranks) : null
@@ -101,9 +101,9 @@ export type DateFilter = 'any' | 'overdue' | 'today' | 'upcoming' | 'none'
 export const DATE_FILTER_CHOICES: { value: DateFilter; label: string }[] = [
   { value: 'any', label: 'Any date' },
   { value: 'overdue', label: 'Overdue' },
-  { value: 'today', label: 'Due today' },
-  { value: 'upcoming', label: 'Due later' },
-  { value: 'none', label: 'No due date' }
+  { value: 'today', label: 'Today' },
+  { value: 'upcoming', label: 'Later' },
+  { value: 'none', label: 'No date' }
 ]
 
 // A group filter is empty for any tag, "none" for tasks without one, or a tag id that matches that tag and the tags below it.
@@ -122,10 +122,10 @@ export function has_table_filters(filters: TableFilters): boolean {
 }
 
 // A task passes when every filter set holds, with tags counted the same way the sidebar counts them.
-export function task_passes_filters(task: Task, filters: TableFilters, all_tasks: Task[], tags: Tag[], today: string): boolean {
+export function task_passes_filters(task: Task, filters: TableFilters, all_tasks: Task[], tags: Tag[], today: string, date_field: TaskDateField): boolean {
   const title_text = filters.title.trim().toLocaleLowerCase()
   if (title_text && !task.title.toLocaleLowerCase().includes(title_text)) return false
-  if (!date_passes(task, filters.date, today)) return false
+  if (!date_passes(task, filters.date, today, date_field)) return false
 
   return Object.entries(filters.group_tag_ids).every(([group_id, tag_id]) => {
     if (!tag_id) return true
@@ -135,13 +135,14 @@ export function task_passes_filters(task: Task, filters: TableFilters, all_tasks
   })
 }
 
-function date_passes(task: Task, filter: DateFilter, today: string): boolean {
-  const due_day = task.due_at?.slice(0, 10) ?? null
+function date_passes(task: Task, filter: DateFilter, today: string, date_field: TaskDateField): boolean {
+  const task_date = task_date_of(task, date_field)
+  const task_day = task_date?.slice(0, 10) ?? null
   switch (filter) {
     case 'any': return true
-    case 'overdue': return !task.is_done && task.due_at !== null && is_overdue(task.due_at)
-    case 'today': return due_day === today
-    case 'upcoming': return due_day !== null && due_day > today
-    case 'none': return due_day === null
+    case 'overdue': return !task.is_done && task_date !== null && is_overdue(task_date)
+    case 'today': return task_day === today
+    case 'upcoming': return task_day !== null && task_day > today
+    case 'none': return task_day === null
   }
 }

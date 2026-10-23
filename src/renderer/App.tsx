@@ -91,7 +91,7 @@ export function App() {
   useEffect(() => {
     if (!has_loaded_tasks || !settings?.add_due_to_my_day || settings.due_added_to_my_day_on === today) return
     const shown_since = my_day_since(settings, today)
-    for (const task of tasks) if (is_due_by(task, today) && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
+    for (const task of tasks) if (is_due_by(task, today, settings.task_date_field) && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
     void change_setting('due_added_to_my_day_on', today)
   }, [has_loaded_tasks, settings?.add_due_to_my_day, today])
 
@@ -155,7 +155,7 @@ export function App() {
     void window.x_tasks.set_task_schedule(task.id, schedule)
 
     if (!settings?.add_due_to_my_day || is_in_my_day(task, my_day_since(settings, today))) return
-    if (is_due_by({ ...task, ...schedule }, today)) set_task_my_day(task, today)
+    if (is_due_by({ ...task, ...schedule }, today, settings.task_date_field)) set_task_my_day(task, today)
   }
 
   // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.
@@ -361,9 +361,9 @@ export function App() {
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
   const is_filtered = is_table && has_table_filters(table_filters)
   const is_sorted = is_table && settings.table_sort.length > 0
-  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, today)) : visible_tasks
+  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, today, settings.task_date_field)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
-  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of) : nested_tasks
+  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, settings.task_date_field) : nested_tasks
 
   // The tags a task's row shows: its own and the rule tags that match it.
   function task_tags_of(task: Task): Tag[] {
@@ -378,6 +378,7 @@ export function App() {
     tags,
     tag_groups,
     is_table,
+    date_field: settings.task_date_field,
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
     on_select: (task) => set_selected_task_id(task.id),
@@ -556,6 +557,7 @@ export function App() {
         <ReschedulePopup
           task={rescheduling_task}
           options={settings.reschedule_options}
+          date_field={settings.task_date_field}
           on_reschedule={set_task_schedule}
           on_close={() => set_rescheduling_task_id(null)}
         />
