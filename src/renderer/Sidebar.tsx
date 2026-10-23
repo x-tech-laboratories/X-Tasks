@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 
-import type { Tag, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task } from '@shared/tasks'
 import {
   BUILT_IN_VIEWS, children_of, drop_placement, is_same_view, subtree_ids, task_is_in_view, type DropPlacement, type View
 } from './views'
@@ -11,26 +11,35 @@ import {
 
 interface SidebarProps {
   tasks: Task[]
+  tag_groups: TagGroup[]
   tags: Tag[]
   selected_view: View | null
   is_settings_open: boolean
   dragged_task: Task | null
   on_select_view: (view: View) => void
   on_open_settings: () => void
-  on_add_tag: (name: string, parent_id: string | null) => void
+  on_add_tag_group: (name: string) => void
+  on_remove_tag_group: (group: TagGroup) => void
+  on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
   on_remove_tag: (tag: Tag) => void
   on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
   on_tag_task: (task: Task, tag: Tag) => void
 }
 
+// Where the inline new-tag field is open: at the top of a group, or inside a tag.
+interface NewTagSpot {
+  group_id: string
+  parent_id: string | null
+}
+
 export function Sidebar({
-  tasks, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings, on_add_tag, on_remove_tag,
-  on_move_tag, on_tag_task
+  tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings,
+  on_add_tag_group, on_remove_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task
 }: SidebarProps) {
-  const [new_tag_name, set_new_tag_name] = useState('')
+  const [new_group_name, set_new_group_name] = useState('')
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
-  const [sub_tag_parent_id, set_sub_tag_parent_id] = useState<string | null>(null)
-  const [new_sub_tag_name, set_new_sub_tag_name] = useState('')
+  const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
+  const [new_tag_name, set_new_tag_name] = useState('')
   const [dragged_tag, set_dragged_tag] = useState<Tag | null>(null)
   const [drop_target, set_drop_target] = useState<{ tag_id: string; placement: DropPlacement } | null>(null)
 
@@ -38,57 +47,75 @@ export function Sidebar({
     return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags)).length
   }
 
-  function submit_new_tag(event: Event): void {
+  function submit_new_group(event: Event): void {
     event.preventDefault()
-    const name = new_tag_name.trim()
+    const name = new_group_name.trim()
     if (!name) return
 
-    on_add_tag(name, null)
+    on_add_tag_group(name)
+    set_new_group_name('')
+  }
+
+  // ==========================================================================
+  // New tags
+  // ==========================================================================
+
+  function toggle_collapsed(id: string): void {
+    set_collapsed_ids((current_ids) => {
+      const next_ids = new Set(current_ids)
+      if (!next_ids.delete(id)) next_ids.add(id)
+      return next_ids
+    })
+  }
+
+  // The group or tag being added to opens up so the new tag shows.
+  function start_new_tag(spot: NewTagSpot): void {
+    set_collapsed_ids((current_ids) => {
+      const next_ids = new Set(current_ids)
+      next_ids.delete(spot.parent_id ?? spot.group_id)
+      return next_ids
+    })
+    set_new_tag_spot(spot)
     set_new_tag_name('')
   }
 
-  // ==========================================================================
-  // Sub-tags
-  // ==========================================================================
-
-  function toggle_collapsed(tag_id: string): void {
-    set_collapsed_ids((current_ids) => {
-      const next_ids = new Set(current_ids)
-      if (!next_ids.delete(tag_id)) next_ids.add(tag_id)
-      return next_ids
-    })
+  function stop_new_tag(): void {
+    set_new_tag_spot(null)
+    set_new_tag_name('')
   }
 
-  function start_sub_tag(parent_id: string): void {
-    set_collapsed_ids((current_ids) => {
-      const next_ids = new Set(current_ids)
-      next_ids.delete(parent_id)
-      return next_ids
-    })
-    set_sub_tag_parent_id(parent_id)
-    set_new_sub_tag_name('')
-  }
-
-  function stop_sub_tag(): void {
-    set_sub_tag_parent_id(null)
-    set_new_sub_tag_name('')
-  }
-
-  function submit_new_sub_tag(event: Event): void {
+  function submit_new_tag(event: Event): void {
     event.preventDefault()
-    const name = new_sub_tag_name.trim()
-    if (name && sub_tag_parent_id) on_add_tag(name, sub_tag_parent_id)
-    stop_sub_tag()
+    const name = new_tag_name.trim()
+    if (name && new_tag_spot) on_add_tag(name, new_tag_spot.group_id, new_tag_spot.parent_id)
+    stop_new_tag()
+  }
+
+  function new_tag_form(spot: NewTagSpot, depth: number, placeholder: string) {
+    if (new_tag_spot?.group_id !== spot.group_id || new_tag_spot.parent_id !== spot.parent_id) return null
+
+    return (
+      <form class="new_tag_form" style={{ paddingLeft: `${depth * 16 + 24}px` }} onSubmit={submit_new_tag}>
+        <input
+          value={new_tag_name}
+          onInput={(event) => set_new_tag_name(event.currentTarget.value)}
+          onKeyDown={(event) => event.key === 'Escape' && stop_new_tag()}
+          onBlur={stop_new_tag}
+          placeholder={placeholder}
+          autofocus
+        />
+      </form>
+    )
   }
 
   // ==========================================================================
   // Dragging
   // ==========================================================================
 
-  // A dragged task always drops into the tag; a dragged tag can also land beside it.
+  // A dragged task always drops into the tag; a dragged tag can land beside or inside one of its own group.
   function placement_over(event: DragEvent, tag: Tag): DropPlacement | null {
     if (dragged_task) return 'inside'
-    if (!dragged_tag || subtree_ids(dragged_tag.id, tags).has(tag.id)) return null
+    if (!dragged_tag || dragged_tag.group_id !== tag.group_id || subtree_ids(dragged_tag.id, tags).has(tag.id)) return null
     return drop_placement(event, true)
   }
 
@@ -130,8 +157,8 @@ export function Sidebar({
     )
   }
 
-  function tag_branch(tag: Tag, depth: number) {
-    const children = children_of(tag.id, tags)
+  function tag_branch(tag: Tag, depth: number, group_tags: Tag[]) {
+    const children = children_of(tag.id, group_tags)
     const is_collapsed = collapsed_ids.has(tag.id)
     const row_class = drop_target?.tag_id === tag.id ? `sidebar_tag_row drop_${drop_target.placement}` : 'sidebar_tag_row'
 
@@ -142,7 +169,6 @@ export function Sidebar({
           style={{ paddingLeft: `${depth * 16}px` }}
           draggable
           onDragStart={(event) => {
-            event.stopPropagation()
             event.dataTransfer?.setData('text/plain', tag.id)
             set_dragged_tag(tag)
           }}
@@ -163,7 +189,11 @@ export function Sidebar({
             <span class="collapse_spacer" />
           )}
           {view_button({ kind: 'tag', tag_id: tag.id }, tag.name)}
-          <button class="row_button" onClick={() => start_sub_tag(tag.id)} aria-label={`Add a tag inside ${tag.name}`}>
+          <button
+            class="row_button"
+            onClick={() => start_new_tag({ group_id: tag.group_id, parent_id: tag.id })}
+            aria-label={`Add a tag inside ${tag.name}`}
+          >
             +
           </button>
           <button class="remove_button" onClick={() => on_remove_tag(tag)} aria-label={`Remove ${tag.name}`}>
@@ -171,21 +201,41 @@ export function Sidebar({
           </button>
         </div>
 
-        {!is_collapsed && children.map((child) => tag_branch(child, depth + 1))}
-
-        {sub_tag_parent_id === tag.id && (
-          <form class="new_tag_form" style={{ paddingLeft: `${(depth + 1) * 16 + 24}px` }} onSubmit={submit_new_sub_tag}>
-            <input
-              value={new_sub_tag_name}
-              onInput={(event) => set_new_sub_tag_name(event.currentTarget.value)}
-              onKeyDown={(event) => event.key === 'Escape' && stop_sub_tag()}
-              onBlur={stop_sub_tag}
-              placeholder={`New tag in ${tag.name}`}
-              autofocus
-            />
-          </form>
-        )}
+        {!is_collapsed && children.map((child) => tag_branch(child, depth + 1, group_tags))}
+        {new_tag_form({ group_id: tag.group_id, parent_id: tag.id }, depth + 1, `New tag in ${tag.name}`)}
       </div>
+    )
+  }
+
+  function group_section(group: TagGroup) {
+    const group_tags = tags.filter((tag) => tag.group_id === group.id)
+    const is_collapsed = collapsed_ids.has(group.id)
+
+    return (
+      <section key={group.id} class="sidebar_section">
+        <div class="sidebar_group_header">
+          <button
+            class="sidebar_heading sidebar_group_toggle"
+            onClick={() => toggle_collapsed(group.id)}
+            aria-expanded={!is_collapsed}
+          >
+            {is_collapsed ? '▸' : '▾'} {group.name}
+          </button>
+          <button
+            class="row_button"
+            onClick={() => start_new_tag({ group_id: group.id, parent_id: null })}
+            aria-label={`Add a tag to ${group.name}`}
+          >
+            +
+          </button>
+          <button class="remove_button" onClick={() => on_remove_tag_group(group)} aria-label={`Remove ${group.name}`}>
+            ×
+          </button>
+        </div>
+
+        {!is_collapsed && children_of(null, group_tags).map((tag) => tag_branch(tag, 0, group_tags))}
+        {new_tag_form({ group_id: group.id, parent_id: null }, 0, `New tag in ${group.name}`)}
+      </section>
     )
   }
 
@@ -197,15 +247,15 @@ export function Sidebar({
         {BUILT_IN_VIEWS.map(({ view, label }) => <div key={view.kind}>{view_button(view, label)}</div>)}
       </section>
 
-      <section class="sidebar_section">
-        <h2 class="sidebar_heading">Tags</h2>
+      {tag_groups.map(group_section)}
 
-        {children_of(null, tags).map((tag) => tag_branch(tag, 0))}
-
-        <form class="new_tag_form" onSubmit={submit_new_tag}>
-          <input value={new_tag_name} onInput={(event) => set_new_tag_name(event.currentTarget.value)} placeholder="New tag" />
-        </form>
-      </section>
+      <form class="new_tag_form" onSubmit={submit_new_group}>
+        <input
+          value={new_group_name}
+          onInput={(event) => set_new_group_name(event.currentTarget.value)}
+          placeholder="New filter group"
+        />
+      </form>
 
       <section class="sidebar_section sidebar_footer">
         <button class={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>

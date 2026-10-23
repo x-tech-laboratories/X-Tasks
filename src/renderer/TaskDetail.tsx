@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 
-import type { Tag, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { tag_path } from './views'
 
 // ============================================================================
@@ -9,6 +9,7 @@ import { tag_path } from './views'
 
 interface TaskDetailProps {
   task: Task
+  tag_groups: TagGroup[]
   tags: Tag[]
   subtask_count: number
   on_toggle: (task: Task) => void
@@ -21,7 +22,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_tag, on_untag, on_remove, on_close
+  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_tag, on_untag, on_remove, on_close
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -45,9 +46,6 @@ export function TaskDetail({
   function commit_notes(): void {
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
   }
-
-  const task_tags = tags.filter((tag) => task.tag_ids.includes(tag.id))
-  const other_tags = tags.filter((tag) => !task.tag_ids.includes(tag.id))
 
   function add_tag(event: Event): void {
     const select = event.currentTarget as HTMLSelectElement
@@ -78,32 +76,39 @@ export function TaskDetail({
         </button>
       </header>
 
-      <div class="task_detail_field">
-        <span class="sidebar_heading">Tags</span>
-        {task_tags.length > 0 && (
-          <div class="tag_chips">
-            {task_tags.map((tag) => (
-              <span key={tag.id} class="tag_chip">
-                {tag_path(tag, tags)}
-                <button onClick={() => on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
-                  ×
-                </button>
-              </span>
-            ))}
+      {tag_groups.map((group) => {
+        const group_tags = tags.filter((tag) => tag.group_id === group.id)
+        const task_tags = group_tags.filter((tag) => task.tag_ids.includes(tag.id))
+        const other_tags = group_tags.filter((tag) => !task.tag_ids.includes(tag.id))
+
+        return (
+          <div key={group.id} class="task_detail_field">
+            <span class="sidebar_heading">{group.name}</span>
+            {task_tags.length > 0 && (
+              <div class="tag_chips">
+                {task_tags.map((tag) => (
+                  <span key={tag.id} class="tag_chip">
+                    {tag_path(tag, tags)}
+                    <button onClick={() => on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {other_tags.length > 0 && (
+              <select value="" onChange={add_tag} aria-label={`Add ${group.name} tag`}>
+                <option value="">Add {group.name.toLowerCase()} tag…</option>
+                {other_tags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag_path(tag, tags)}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-        )}
-        {other_tags.length > 0 && (
-          <select value="" onChange={add_tag} aria-label="Add tag">
-            <option value="">Add tag…</option>
-            {other_tags.map((tag) => (
-              <option key={tag.id} value={tag.id}>
-                {tag_path(tag, tags)}
-              </option>
-            ))}
-          </select>
-        )}
-        {tags.length === 0 && <span class="setting_hint">Make a tag in the sidebar to tag this task.</span>}
-      </div>
+        )
+      })}
 
       <label class="task_detail_field task_detail_notes">
         <span class="sidebar_heading">Notes</span>

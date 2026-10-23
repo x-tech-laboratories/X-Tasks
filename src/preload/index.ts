@@ -4,8 +4,8 @@ import {
   GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, SET_SETTING_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type SettingsApi
 } from '@shared/settings'
 import {
-  ADD_TAG_CHANNEL, ADD_TASK_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL, MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL,
-  REMOVE_TAG_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL,
+  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
+  MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL,
   TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
 } from '@shared/tasks'
 
@@ -20,8 +20,12 @@ const tasks_api: TasksApi = {
   tag_task: (task_id, tag_id) => ipcRenderer.invoke(TAG_TASK_CHANNEL, task_id, tag_id),
   untag_task: (task_id, tag_id) => ipcRenderer.invoke(UNTAG_TASK_CHANNEL, task_id, tag_id),
 
+  list_tag_groups: () => ipcRenderer.invoke(LIST_TAG_GROUPS_CHANNEL),
+  add_tag_group: (name) => ipcRenderer.invoke(ADD_TAG_GROUP_CHANNEL, name),
+  remove_tag_group: (group_id) => ipcRenderer.invoke(REMOVE_TAG_GROUP_CHANNEL, group_id),
+
   list_tags: () => ipcRenderer.invoke(LIST_TAGS_CHANNEL),
-  add_tag: (name, parent_id) => ipcRenderer.invoke(ADD_TAG_CHANNEL, name, parent_id),
+  add_tag: (name, group_id, parent_id) => ipcRenderer.invoke(ADD_TAG_CHANNEL, name, group_id, parent_id),
   remove_tag: (tag_id) => ipcRenderer.invoke(REMOVE_TAG_CHANNEL, tag_id),
   move_tag: (tag_id, parent_id, position) => ipcRenderer.invoke(MOVE_TAG_CHANNEL, tag_id, parent_id, position)
 }

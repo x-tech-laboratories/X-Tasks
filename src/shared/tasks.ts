@@ -1,5 +1,5 @@
 // ============================================================================
-// Task and tag
+// Task, tag and tag group
 // ============================================================================
 
 export interface Task {
@@ -13,10 +13,19 @@ export interface Task {
   tag_ids: string[]
 }
 
+// A named set of tags, such as Area or Priority, shown as its own section in the sidebar.
+export interface TagGroup {
+  id: string
+  name: string
+  created_at: string
+  position: number
+}
+
 export interface Tag {
   id: string
   name: string
   created_at: string
+  group_id: string
   parent_id: string | null
   position: number
 }
@@ -46,8 +55,12 @@ export interface TasksApi {
   tag_task: (task_id: string, tag_id: string) => Promise<void>
   untag_task: (task_id: string, tag_id: string) => Promise<void>
 
+  list_tag_groups: () => Promise<TagGroup[]>
+  add_tag_group: (name: string) => Promise<TagGroup>
+  remove_tag_group: (group_id: string) => Promise<void>
+
   list_tags: () => Promise<Tag[]>
-  add_tag: (name: string, parent_id: string | null) => Promise<Tag>
+  add_tag: (name: string, group_id: string, parent_id: string | null) => Promise<Tag>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
 }
@@ -61,6 +74,10 @@ export const REMOVE_TASK_CHANNEL = 'tasks:remove'
 export const MOVE_TASK_CHANNEL = 'tasks:move'
 export const TAG_TASK_CHANNEL = 'tasks:tag'
 export const UNTAG_TASK_CHANNEL = 'tasks:untag'
+
+export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'
+export const ADD_TAG_GROUP_CHANNEL = 'tag-groups:add'
+export const REMOVE_TAG_GROUP_CHANNEL = 'tag-groups:remove'
 
 export const LIST_TAGS_CHANNEL = 'tags:list'
 export const ADD_TAG_CHANNEL = 'tags:add'

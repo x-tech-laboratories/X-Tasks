@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
-import type { Tag, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task } from '@shared/tasks'
 
 // ============================================================================
 // Schema
@@ -38,14 +38,22 @@ const SCHEMA_MIGRATIONS = [
      key TEXT PRIMARY KEY,
      value TEXT NOT NULL
    )`,
-  // Lists become top-level tags; subtasks pick up their parent's tags through the tree, so only top tasks carry one.
-  `CREATE TABLE tags (
+  // Starts an Area group, and turns lists into tags of a Lists group; subtasks pick up their parent's tags.
+  `CREATE TABLE tag_groups (
      id TEXT PRIMARY KEY,
      name TEXT NOT NULL,
      created_at TEXT NOT NULL,
+     position REAL NOT NULL DEFAULT 0
+   );
+   CREATE TABLE tags (
+     id TEXT PRIMARY KEY,
+     name TEXT NOT NULL,
+     created_at TEXT NOT NULL,
+     group_id TEXT NOT NULL REFERENCES tag_groups (id) ON DELETE CASCADE,
      parent_id TEXT REFERENCES tags (id) ON DELETE CASCADE,
      position REAL NOT NULL DEFAULT 0
    );
+   CREATE INDEX tags_by_group ON tags (group_id);
    CREATE INDEX tags_by_parent ON tags (parent_id);
    CREATE TABLE task_tags (
      task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
@@ -53,7 +61,14 @@ const SCHEMA_MIGRATIONS = [
      PRIMARY KEY (task_id, tag_id)
    );
    CREATE INDEX task_tags_by_tag ON task_tags (tag_id);
-   INSERT INTO tags (id, name, created_at, position) SELECT id, name, created_at, position FROM task_lists;
+   INSERT INTO tag_groups (id, name, created_at, position) VALUES ('area', 'Area', strftime('%Y-%m-%dT%H:%M:%fZ'), 0);
+   INSERT INTO tags (id, name, created_at, group_id, position)
+     SELECT lower(hex(randomblob(16))), column1, strftime('%Y-%m-%dT%H:%M:%fZ'), 'area', column2
+     FROM (VALUES ('Career', 1), ('Finances', 2), ('Home', 3), ('Car', 4), ('Tech', 5), ('Fitness', 6), ('Grooming', 7),
+                  ('Sexual', 8), ('Social', 9), ('Health', 10), ('Mental', 11), ('Productivity', 12), ('Fun', 13));
+   INSERT INTO tag_groups (id, name, created_at, position)
+     SELECT 'lists', 'Lists', MIN(created_at), 1 FROM task_lists HAVING COUNT(*) > 0;
+   INSERT INTO tags (id, name, created_at, group_id, position) SELECT id, name, created_at, 'lists', position FROM task_lists;
    INSERT INTO task_tags (task_id, tag_id) SELECT id, list_id FROM tasks WHERE list_id IS NOT NULL AND parent_id IS NULL;
    DROP INDEX tasks_by_list;
    ALTER TABLE tasks DROP COLUMN list_id;
@@ -125,7 +140,7 @@ function open_database(): DatabaseSync {
 }
 
 // New rows go after every existing one.
-function next_position(table: 'tasks' | 'tags'): number {
+function next_position(table: 'tasks' | 'tag_groups' | 'tags'): number {
   const { last } = open_database().prepare(`SELECT MAX(position) AS last FROM ${table}`).get() as { last: number | null }
   return (last ?? 0) + 1
 }
@@ -210,6 +225,29 @@ export function untag_task(task_id: string, tag_id: string): void {
 }
 
 // ============================================================================
+// Tag group queries
+// ============================================================================
+
+export function list_tag_groups(): TagGroup[] {
+  return open_database().prepare('SELECT * FROM tag_groups ORDER BY position').all() as unknown as TagGroup[]
+}
+
+export function add_tag_group(name: string): TagGroup {
+  const group: TagGroup = { id: randomUUID(), name, created_at: new Date().toISOString(), position: next_position('tag_groups') }
+
+  open_database()
+    .prepare('INSERT INTO tag_groups (id, name, created_at, position) VALUES (?, ?, ?, ?)')
+    .run(group.id, group.name, group.created_at, group.position)
+
+  return group
+}
+
+// Its tags go with it, while their tasks stay and only lose the tags.
+export function remove_tag_group(group_id: string): void {
+  open_database().prepare('DELETE FROM tag_groups WHERE id = ?').run(group_id)
+}
+
+// ============================================================================
 // Tag queries
 // ============================================================================
 
@@ -217,12 +255,19 @@ export function list_tags(): Tag[] {
   return open_database().prepare('SELECT * FROM tags ORDER BY position').all() as unknown as Tag[]
 }
 
-export function add_tag(name: string, parent_id: string | null): Tag {
-  const tag: Tag = { id: randomUUID(), name, created_at: new Date().toISOString(), parent_id, position: next_position('tags') }
+export function add_tag(name: string, group_id: string, parent_id: string | null): Tag {
+  const tag: Tag = {
+    id: randomUUID(),
+    name,
+    created_at: new Date().toISOString(),
+    group_id,
+    parent_id,
+    position: next_position('tags')
+  }
 
   open_database()
-    .prepare('INSERT INTO tags (id, name, created_at, parent_id, position) VALUES (?, ?, ?, ?, ?)')
-    .run(tag.id, tag.name, tag.created_at, tag.parent_id, tag.position)
+    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position)
 
   return tag
 }

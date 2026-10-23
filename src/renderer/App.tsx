@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 
 import type { Settings } from '@shared/settings'
-import type { Tag, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
@@ -17,6 +17,7 @@ import {
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
+  const [tag_groups, set_tag_groups] = useState<TagGroup[]>([])
   const [tags, set_tags] = useState<Tag[]>([])
   const [settings, set_settings] = useState<Settings | null>(null)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
@@ -27,6 +28,7 @@ export function App() {
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
+    void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
       set_selected_view(launch_view(loaded_settings, loaded_tags))
@@ -132,8 +134,23 @@ export function App() {
   // Tag changes
   // ==========================================================================
 
-  async function add_tag(name: string, parent_id: string | null): Promise<void> {
-    const added_tag = await window.x_tasks.add_tag(name, parent_id)
+  async function add_tag_group(name: string): Promise<void> {
+    const added_group = await window.x_tasks.add_tag_group(name)
+    set_tag_groups((current_groups) => [...current_groups, added_group])
+  }
+
+  function remove_tag_group(group: TagGroup): void {
+    const is_confirmed =
+      !settings?.confirm_tag_removal || window.confirm(`Delete the group "${group.name}" and all its tags? Tasks are kept.`)
+    if (!is_confirmed) return
+
+    forget_tags(new Set(tags.filter((tag) => tag.group_id === group.id).map((tag) => tag.id)))
+    set_tag_groups((current_groups) => current_groups.filter((each) => each.id !== group.id))
+    void window.x_tasks.remove_tag_group(group.id)
+  }
+
+  async function add_tag(name: string, group_id: string, parent_id: string | null): Promise<void> {
+    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id)
     set_tags((current_tags) => [...current_tags, added_tag])
     select_view({ kind: 'tag', tag_id: added_tag.id })
   }
@@ -143,13 +160,17 @@ export function App() {
       !settings?.confirm_tag_removal || window.confirm(`Delete the tag "${tag.name}" and its sub-tags? Tasks are kept.`)
     if (!is_confirmed) return
 
-    const removed_ids = subtree_ids(tag.id, tags)
+    forget_tags(subtree_ids(tag.id, tags))
+    void window.x_tasks.remove_tag(tag.id)
+  }
+
+  // Drops deleted tags from the screen; the database has already let go of them through its cascades.
+  function forget_tags(removed_ids: Set<string>): void {
     set_tags((current_tags) => current_tags.filter((each) => !removed_ids.has(each.id)))
     set_tasks((current_tasks) =>
       current_tasks.map((task) => ({ ...task, tag_ids: task.tag_ids.filter((tag_id) => !removed_ids.has(tag_id)) }))
     )
     if (selected_view.kind === 'tag' && removed_ids.has(selected_view.tag_id)) select_view({ kind: 'all' })
-    void window.x_tasks.remove_tag(tag.id)
   }
 
   function move_tag(dragged: Tag, target: Tag, placement: DropPlacement): void {
@@ -193,12 +214,15 @@ export function App() {
     <div class={selected_task ? 'app has_detail' : 'app'}>
       <Sidebar
         tasks={tasks}
+        tag_groups={tag_groups}
         tags={tags}
         selected_view={is_settings_open ? null : selected_view}
         is_settings_open={is_settings_open}
         dragged_task={dragged_task}
         on_select_view={select_view}
         on_open_settings={() => set_is_settings_open(true)}
+        on_add_tag_group={add_tag_group}
+        on_remove_tag_group={remove_tag_group}
         on_add_tag={add_tag}
         on_remove_tag={remove_tag}
         on_move_tag={move_tag}
@@ -242,6 +266,7 @@ export function App() {
         <TaskDetail
           key={selected_task.id}
           task={selected_task}
+          tag_groups={tag_groups}
           tags={tags}
           subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
           on_toggle={toggle_task}

@@ -399,6 +399,22 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
 .new_tag_form input { width: 100%; margin-top: var(--space-4); }
 
+.sidebar_group_header { display: flex; align-items: center; gap: var(--space-1); }
+.sidebar_group_header .remove_button,
+.sidebar_group_header .row_button { visibility: hidden; flex: none; }
+.sidebar_group_header:hover .remove_button,
+.sidebar_group_header:hover .row_button,
+.sidebar_group_header button:focus-visible { visibility: visible; }
+
+.sidebar_group_toggle {
+  flex: 1;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
 .sidebar_footer { margin-top: auto; }
 
 /* ========================================================================== */
