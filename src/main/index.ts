@@ -1,8 +1,14 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 
-import { ADD_TASK_CHANNEL, LIST_TASKS_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL } from '@shared/tasks'
-import { add_task, close_task_database, list_tasks, open_task_database, remove_task, set_task_done } from './task_database'
+import {
+  ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, REMOVE_TASK_CHANNEL,
+  REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL
+} from '@shared/tasks'
+import {
+  add_task, add_task_list, close_task_database, list_task_lists, list_tasks, open_task_database, remove_task,
+  remove_task_list, set_task_done
+} from './task_database'
 
 // ============================================================================
 // Window
@@ -10,9 +16,9 @@ import { add_task, close_task_database, list_tasks, open_task_database, remove_t
 
 function create_main_window(): BrowserWindow {
   const main_window = new BrowserWindow({
-    width: 900,
+    width: 1100,
     height: 700,
-    minWidth: 480,
+    minWidth: 640,
     minHeight: 400,
     show: false,
     title: 'X-Tasks',
@@ -48,9 +54,13 @@ function create_main_window(): BrowserWindow {
 
 function register_bridge_handlers(): void {
   ipcMain.handle(LIST_TASKS_CHANNEL, () => list_tasks())
-  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string) => add_task(title))
+  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, list_id: string | null) => add_task(title, list_id))
   ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
   ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
+
+  ipcMain.handle(LIST_TASK_LISTS_CHANNEL, () => list_task_lists())
+  ipcMain.handle(ADD_TASK_LIST_CHANNEL, (_event, name: string) => add_task_list(name))
+  ipcMain.handle(REMOVE_TASK_LIST_CHANNEL, (_event, list_id: string) => remove_task_list(list_id))
 }
 
 // ============================================================================
