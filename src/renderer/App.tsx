@@ -48,7 +48,8 @@ export function App() {
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
       set_selected_view(launch_view(loaded_settings, loaded_tags))
-      set_settings(loaded_settings)
+      // A main process older than this screen leaves out newer settings, so their defaults fill the gaps.
+      set_settings({ ...DEFAULT_SETTINGS, ...loaded_settings })
     })
   }, [])
 
