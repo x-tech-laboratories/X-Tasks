@@ -124,6 +124,8 @@ export interface Settings {
   // The gaps offered by the Duration list in a task's details, in the order shown.
   task_durations: TaskDuration[]
   last_view: View
+  // The tasks whose subtasks are folded away, kept so they stay folded after a restart.
+  collapsed_task_ids: string[]
   // When set, an MCP endpoint on this machine lets AI assistants read and change tasks.
   mcp_enabled: boolean
   mcp_port: number
@@ -177,6 +179,7 @@ export const DEFAULT_SETTINGS: Settings = {
     task_duration('3mo', { months: 3 })
   ],
   last_view: { kind: 'all' },
+  collapsed_task_ids: [],
   mcp_enabled: false,
   mcp_port: 3917,
   show_streak_strip_on_rows: false,

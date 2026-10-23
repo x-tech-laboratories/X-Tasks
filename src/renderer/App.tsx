@@ -132,6 +132,12 @@ export function App() {
     }
   }
 
+  // Ids of tasks deleted since are dropped whenever the list is saved again.
+  function set_task_collapsed(task: Task, is_collapsed: boolean): void {
+    const other_ids = settings!.collapsed_task_ids.filter((id) => id !== task.id && tasks.some((each_task) => each_task.id === id))
+    void change_setting('collapsed_task_ids', is_collapsed ? [...other_ids, task.id] : other_ids)
+  }
+
   // ==========================================================================
   // Task changes
   // ==========================================================================
@@ -455,6 +461,8 @@ export function App() {
     on_set_my_day: (task, is_added) => set_task_my_day(task, is_added ? today : null),
     on_remove: remove_task,
     on_add_subtask: add_subtask,
+    is_collapsed: (task) => settings.collapsed_task_ids.includes(task.id),
+    on_set_collapsed: set_task_collapsed,
     on_untag: untag_task,
     rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
     streak_of,

@@ -359,6 +359,8 @@ export interface TaskActions {
   on_set_my_day: (task: Task, is_added: boolean) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
+  is_collapsed: (task: Task) => boolean
+  on_set_collapsed: (task: Task, is_collapsed: boolean) => void
   on_untag: (task: Task, tag: Tag) => void
   rule_tags_of: (task: Task) => Tag[]
   // The run of on-time ticks of a repeating task; empty for one that does not repeat.
@@ -381,7 +383,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const { task, children } = node
   const streak = actions.streak_of(task)
   const row_history = actions.history_of(task)
-  const [is_collapsed, set_is_collapsed] = useState(false)
+  const is_collapsed = actions.is_collapsed(task)
   const [is_adding_subtask, set_is_adding_subtask] = useState(false)
   const [subtask_title, set_subtask_title] = useState('')
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
@@ -426,7 +428,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
     actions.on_add_subtask(task, title)
     set_subtask_title('')
-    set_is_collapsed(false)
+    if (is_collapsed) actions.on_set_collapsed(task, false)
   }
 
   function close_subtask_form(): void {
@@ -518,7 +520,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         {children.length > 0 ? (
           <button
             class="collapse_button"
-            onClick={() => set_is_collapsed(!is_collapsed)}
+            onClick={() => actions.on_set_collapsed(task, !is_collapsed)}
             aria-label={is_collapsed ? 'Expand' : 'Collapse'}
           >
             {is_collapsed ? '▸' : '▾'}
