@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
+import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import type { Task, TaskList } from '@shared/tasks'
 
 // ============================================================================
@@ -32,7 +33,11 @@ const SCHEMA_MIGRATIONS = [
    ALTER TABLE task_lists ADD COLUMN position REAL NOT NULL DEFAULT 0;
    UPDATE task_lists
      SET position = (SELECT COUNT(*) FROM task_lists AS earlier WHERE earlier.created_at < task_lists.created_at)`,
-  `ALTER TABLE tasks ADD COLUMN notes TEXT NOT NULL DEFAULT ''`
+  `ALTER TABLE tasks ADD COLUMN notes TEXT NOT NULL DEFAULT ''`,
+  `CREATE TABLE settings (
+     key TEXT PRIMARY KEY,
+     value TEXT NOT NULL
+   )`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -205,4 +210,28 @@ export function remove_task_list(list_id: string): void {
 
 export function move_task_list(list_id: string, position: number): void {
   open_database().prepare('UPDATE task_lists SET position = ? WHERE id = ?').run(position, list_id)
+}
+
+// ============================================================================
+// Setting queries
+// ============================================================================
+
+// Each value is stored as JSON, and any setting never saved keeps its default.
+export function get_settings(): Settings {
+  const rows = open_database().prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]
+  const settings: Record<string, unknown> = { ...DEFAULT_SETTINGS }
+
+  for (const row of rows) {
+    if (row.key in DEFAULT_SETTINGS) settings[row.key] = JSON.parse(row.value)
+  }
+
+  return settings as unknown as Settings
+}
+
+export function set_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
+  if (!(key in DEFAULT_SETTINGS)) throw new Error(`unknown setting: ${key}`)
+
+  open_database()
+    .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value')
+    .run(key, JSON.stringify(value))
 }

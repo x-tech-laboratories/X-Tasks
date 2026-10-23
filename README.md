@@ -13,7 +13,8 @@ npm run build    # typecheck and production build
 ```
 
 Tasks are stored in an SQLite database at `~/.config/x-tasks/tasks.db` on Linux, using Electron's
-built-in `node:sqlite`. Set `X_TASKS_DB` to use a different file.
+built-in `node:sqlite`, together with the choices made on the Settings page. Set `X_TASKS_DB` to use a
+different file.
 
 ## Layout
 

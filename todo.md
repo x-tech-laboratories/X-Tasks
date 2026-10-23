@@ -25,9 +25,10 @@
 
 ## App
 
-- [ ] Remember the selected view between launches
+- [x] Settings page
+- [x] Remember the selected view between launches
 - [ ] Show an error when a database call fails instead of leaving the screen out of step
-- [ ] Dark theme that follows the system
+- [x] Dark theme that follows the system, or a fixed light or dark choice
 - [ ] Export and import tasks as JSON
 - [ ] Package the app with the Nix flake
 

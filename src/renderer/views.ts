@@ -1,15 +1,11 @@
-import type { Task, TaskList } from '@shared/tasks'
+import type { Settings } from '@shared/settings'
+import type { Task, TaskList, View } from '@shared/tasks'
+
+export type { View }
 
 // ============================================================================
 // View
 // ============================================================================
-
-export type View =
-  | { kind: 'all' }
-  | { kind: 'active' }
-  | { kind: 'completed' }
-  | { kind: 'inbox' }
-  | { kind: 'list'; list_id: string }
 
 export const BUILT_IN_VIEWS: { view: View; label: string }[] = [
   { view: { kind: 'all' }, label: 'All tasks' },
@@ -40,6 +36,15 @@ export function task_is_in_view(task: Task, view: View): boolean {
 export function view_title(view: View, task_lists: TaskList[]): string {
   if (view.kind === 'list') return task_lists.find((task_list) => task_list.id === view.list_id)?.name ?? 'List'
   return BUILT_IN_VIEWS.find((entry) => entry.view.kind === view.kind)!.label
+}
+
+// A remembered list that has since been deleted falls back to all tasks.
+export function launch_view(settings: Settings, task_lists: TaskList[]): View {
+  if (settings.launch_view !== 'last') return { kind: settings.launch_view }
+
+  const view = settings.last_view
+  if (view.kind === 'list' && !task_lists.some((task_list) => task_list.id === view.list_id)) return { kind: 'all' }
+  return view
 }
 
 // New tasks land in the selected list, or the inbox for every other view.

@@ -2,13 +2,17 @@ import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 
 import {
+  GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, SET_SETTING_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type Settings
+} from '@shared/settings'
+import {
   ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, MOVE_TASK_CHANNEL,
   MOVE_TASK_LIST_CHANNEL, REMOVE_TASK_CHANNEL, REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL,
   SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL
 } from '@shared/tasks'
 import {
-  add_task, add_task_list, close_task_database, list_task_lists, list_tasks, move_task, move_task_list,
-  open_task_database, remove_task, remove_task_list, set_task_done, set_task_notes, set_task_title
+  add_task, add_task_list, close_task_database, get_settings, list_task_lists, list_tasks, move_task, move_task_list,
+  open_task_database, remove_task, remove_task_list, set_setting, set_task_done, set_task_notes, set_task_title,
+  task_database_path
 } from './task_database'
 
 // ============================================================================
@@ -72,6 +76,14 @@ function register_bridge_handlers(): void {
   ipcMain.handle(ADD_TASK_LIST_CHANNEL, (_event, name: string) => add_task_list(name))
   ipcMain.handle(REMOVE_TASK_LIST_CHANNEL, (_event, list_id: string) => remove_task_list(list_id))
   ipcMain.handle(MOVE_TASK_LIST_CHANNEL, (_event, list_id: string, position: number) => move_task_list(list_id, position))
+
+  ipcMain.handle(GET_SETTINGS_CHANNEL, () => get_settings())
+  ipcMain.handle(SET_SETTING_CHANNEL, <Key extends keyof Settings>(_event: unknown, key: Key, value: Settings[Key]) => {
+    set_setting(key, value)
+    if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
+  })
+  ipcMain.handle(GET_DATABASE_PATH_CHANNEL, () => task_database_path())
+  ipcMain.handle(SHOW_DATABASE_FOLDER_CHANNEL, () => shell.showItemInFolder(task_database_path()))
 }
 
 // ============================================================================
@@ -80,6 +92,8 @@ function register_bridge_handlers(): void {
 
 app.whenReady().then(() => {
   open_task_database()
+  // The page's light and dark colours follow this, so it is set before the window opens.
+  nativeTheme.themeSource = get_settings().theme
   register_bridge_handlers()
   create_main_window()
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'preact/hooks'
 
+import type { Settings } from '@shared/settings'
 import type { Task, TaskList } from '@shared/tasks'
+import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, type TaskActions } from './TaskItem'
 import {
-  by_position, list_id_for_new_task, list_position_for_drop, nest_tasks, task_is_in_view, task_move_for_drop,
-  task_with_descendant_ids, view_title, type DropPlacement, type View
+  by_position, launch_view, list_id_for_new_task, list_position_for_drop, nest_tasks, task_is_in_view,
+  task_move_for_drop, task_with_descendant_ids, view_title, type DropPlacement, type View
 } from './views'
 
 // ============================================================================
@@ -16,15 +18,39 @@ import {
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
   const [task_lists, set_task_lists] = useState<TaskList[]>([])
+  const [settings, set_settings] = useState<Settings | null>(null)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
+  const [is_settings_open, set_is_settings_open] = useState(false)
   const [new_title, set_new_title] = useState('')
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
-    void window.x_tasks.list_task_lists().then(set_task_lists)
+    void Promise.all([window.x_tasks.list_task_lists(), window.x_settings.get_settings()]).then(
+      ([loaded_lists, loaded_settings]) => {
+        set_task_lists(loaded_lists)
+        set_selected_view(launch_view(loaded_settings, loaded_lists))
+        set_settings(loaded_settings)
+      }
+    )
   }, [])
+
+  // ==========================================================================
+  // Navigation and settings
+  // ==========================================================================
+
+  // The chosen view is saved so the next launch can reopen it.
+  function select_view(view: View): void {
+    set_selected_view(view)
+    set_is_settings_open(false)
+    void window.x_settings.set_setting('last_view', view)
+  }
+
+  function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
+    set_settings((current_settings) => current_settings && { ...current_settings, [key]: value })
+    void window.x_settings.set_setting(key, value)
+  }
 
   // ==========================================================================
   // Task changes
@@ -115,15 +141,16 @@ export function App() {
   async function add_list(name: string): Promise<void> {
     const added_list = await window.x_tasks.add_task_list(name)
     set_task_lists((current_lists) => [...current_lists, added_list])
-    set_selected_view({ kind: 'list', list_id: added_list.id })
+    select_view({ kind: 'list', list_id: added_list.id })
   }
 
   function remove_list(task_list: TaskList): void {
-    if (!window.confirm(`Delete "${task_list.name}" and all of its tasks?`)) return
+    const is_confirmed = !settings?.confirm_list_removal || window.confirm(`Delete "${task_list.name}" and all of its tasks?`)
+    if (!is_confirmed) return
 
     set_task_lists((current_lists) => current_lists.filter((each) => each.id !== task_list.id))
     set_tasks((current_tasks) => current_tasks.filter((task) => task.list_id !== task_list.id))
-    if (selected_view.kind === 'list' && selected_view.list_id === task_list.id) set_selected_view({ kind: 'all' })
+    if (selected_view.kind === 'list' && selected_view.list_id === task_list.id) select_view({ kind: 'all' })
     void window.x_tasks.remove_task_list(task_list.id)
   }
 
@@ -139,11 +166,15 @@ export function App() {
   // Layout
   // ==========================================================================
 
+  // Nothing is drawn until the settings arrive, so the launch view never flashes past.
+  if (!settings) return null
+
   const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
   const task_tree = nest_tasks(visible_tasks, tasks)
 
-  const selected_task = tasks.find((task) => task.id === selected_task_id) ?? null
+  // The detail panel stays out of the way while the settings page is open.
+  const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
 
   const task_actions: TaskActions = {
     can_add_subtasks: selected_view.kind !== 'completed',
@@ -163,38 +194,46 @@ export function App() {
       <Sidebar
         tasks={tasks}
         task_lists={task_lists}
-        selected_view={selected_view}
-        on_select_view={set_selected_view}
+        selected_view={is_settings_open ? null : selected_view}
+        is_settings_open={is_settings_open}
+        on_select_view={select_view}
+        on_open_settings={() => set_is_settings_open(true)}
         on_add_list={add_list}
         on_remove_list={remove_list}
         on_move_list={move_list}
       />
 
       <main class="task_pane">
-        <header class="task_pane_header">
-          <h1>{view_title(selected_view, task_lists)}</h1>
-          <span class="remaining_count">{remaining_count} left</span>
-        </header>
+        {is_settings_open ? (
+          <SettingsPage settings={settings} on_change={change_setting} />
+        ) : (
+          <>
+            <header class="task_pane_header">
+              <h1>{view_title(selected_view, task_lists)}</h1>
+              <span class="remaining_count">{remaining_count} left</span>
+            </header>
 
-        {selected_view.kind !== 'completed' && (
-          <form class="new_task_form" onSubmit={submit_new_task}>
-            <input
-              value={new_title}
-              onInput={(event) => set_new_title(event.currentTarget.value)}
-              placeholder="What needs doing?"
-              autofocus
-            />
-            <button type="submit">Add</button>
-          </form>
+            {selected_view.kind !== 'completed' && (
+              <form class="new_task_form" onSubmit={submit_new_task}>
+                <input
+                  value={new_title}
+                  onInput={(event) => set_new_title(event.currentTarget.value)}
+                  placeholder="What needs doing?"
+                  autofocus
+                />
+                <button type="submit">Add</button>
+              </form>
+            )}
+
+            <ul class="task_list">
+              {task_tree.map((node) => (
+                <TaskItem key={node.task.id} node={node} actions={task_actions} />
+              ))}
+            </ul>
+
+            {visible_tasks.length === 0 && <p class="empty_message">Nothing here yet.</p>}
+          </>
         )}
-
-        <ul class="task_list">
-          {task_tree.map((node) => (
-            <TaskItem key={node.task.id} node={node} actions={task_actions} />
-          ))}
-        </ul>
-
-        {visible_tasks.length === 0 && <p class="empty_message">Nothing here yet.</p>}
       </main>
 
       {selected_task && (

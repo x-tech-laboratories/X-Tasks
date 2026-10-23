@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import {
+  GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, SET_SETTING_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type SettingsApi
+} from '@shared/settings'
+import {
   ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, MOVE_TASK_CHANNEL,
   MOVE_TASK_LIST_CHANNEL, REMOVE_TASK_CHANNEL, REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL,
   SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL, type TasksApi
@@ -22,4 +25,12 @@ const tasks_api: TasksApi = {
   move_task_list: (list_id, position) => ipcRenderer.invoke(MOVE_TASK_LIST_CHANNEL, list_id, position)
 }
 
+const settings_api: SettingsApi = {
+  get_settings: () => ipcRenderer.invoke(GET_SETTINGS_CHANNEL),
+  set_setting: (key, value) => ipcRenderer.invoke(SET_SETTING_CHANNEL, key, value),
+  get_database_path: () => ipcRenderer.invoke(GET_DATABASE_PATH_CHANNEL),
+  show_database_folder: () => ipcRenderer.invoke(SHOW_DATABASE_FOLDER_CHANNEL)
+}
+
 contextBridge.exposeInMainWorld('x_tasks', tasks_api)
+contextBridge.exposeInMainWorld('x_settings', settings_api)

@@ -10,15 +10,18 @@ import { BUILT_IN_VIEWS, drop_placement, is_same_view, task_is_in_view, type Vie
 interface SidebarProps {
   tasks: Task[]
   task_lists: TaskList[]
-  selected_view: View
+  selected_view: View | null
+  is_settings_open: boolean
   on_select_view: (view: View) => void
+  on_open_settings: () => void
   on_add_list: (name: string) => void
   on_remove_list: (task_list: TaskList) => void
   on_move_list: (dragged: TaskList, target: TaskList, placement: 'before' | 'after') => void
 }
 
 export function Sidebar({
-  tasks, task_lists, selected_view, on_select_view, on_add_list, on_remove_list, on_move_list
+  tasks, task_lists, selected_view, is_settings_open, on_select_view, on_open_settings, on_add_list, on_remove_list,
+  on_move_list
 }: SidebarProps) {
   const [new_list_name, set_new_list_name] = useState('')
   const [dragged_list, set_dragged_list] = useState<TaskList | null>(null)
@@ -61,7 +64,7 @@ export function Sidebar({
 
     return (
       <button
-        class={is_same_view(view, selected_view) ? 'sidebar_item is_selected' : 'sidebar_item'}
+        class={selected_view && is_same_view(view, selected_view) ? 'sidebar_item is_selected' : 'sidebar_item'}
         onClick={() => on_select_view(view)}
       >
         <span class="sidebar_label">{label}</span>
@@ -109,6 +112,12 @@ export function Sidebar({
             placeholder="New list"
           />
         </form>
+      </section>
+
+      <section class="sidebar_section sidebar_footer">
+        <button class={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>
+          <span class="sidebar_label">Settings</span>
+        </button>
       </section>
     </nav>
   )

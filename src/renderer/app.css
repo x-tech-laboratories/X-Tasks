@@ -397,6 +397,8 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
 .new_list_form input { width: 100%; margin-top: var(--space-4); }
 
+.sidebar_footer { margin-top: auto; }
+
 /* ========================================================================== */
 /* Task detail                                                                */
 /* ========================================================================== */
@@ -437,4 +439,80 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
   gap: var(--space-4);
   color: var(--text-tertiary);
   font-size: var(--text-caption);
+}
+
+/* ========================================================================== */
+/* Settings                                                                   */
+/* ========================================================================== */
+
+.settings_group { margin-bottom: var(--space-7); }
+
+.settings_heading {
+  margin: 0 0 var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-caps);
+  text-transform: uppercase;
+}
+
+.setting_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-default);
+  box-shadow: var(--shadow-card);
+}
+
+.setting_row + .setting_row { margin-top: var(--space-4); }
+
+label.setting_row { cursor: pointer; }
+
+.setting_text { display: flex; flex: 1; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.setting_label { color: var(--text-heading); font-size: var(--text-control); font-weight: 500; }
+.setting_hint { color: var(--text-tertiary); font-size: var(--text-caption); }
+.setting_path { overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
+
+.setting_row > button { flex: none; }
+
+select {
+  flex: none;
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-small);
+  background: var(--surface-default);
+  color: var(--text-body);
+  font: 400 var(--text-control) / var(--line-height-ui) var(--font-family-interface);
+  cursor: pointer;
+}
+
+select:hover { border-color: var(--border-focus); }
+
+.segmented_control {
+  display: flex;
+  flex: none;
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-small);
+  background: var(--surface-secondary);
+}
+
+.segmented_control button {
+  height: 26px;
+  padding: 0 var(--space-5);
+  border: 0;
+  color: var(--text-secondary);
+}
+
+.segmented_control button:hover { color: var(--text-heading); }
+
+.segmented_control button.is_selected {
+  background: var(--surface-default);
+  color: var(--text-heading);
+  box-shadow: var(--shadow-item);
 }
