@@ -83,7 +83,10 @@ const SCHEMA_MIGRATIONS = [
    INSERT INTO tags (id, name, created_at, group_id, position)
      SELECT lower(hex(randomblob(16))), column1, strftime('%Y-%m-%dT%H:%M:%fZ'), 'priority', column2
      FROM (VALUES ('High', 1), ('Medium', 2), ('Low', 3))
-     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'priority')`
+     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'priority')`,
+  // The preset Area and Priority groups start as one tag per task; tasks already holding several keep them.
+  `ALTER TABLE tag_groups ADD COLUMN is_single_choice INTEGER NOT NULL DEFAULT 0;
+   UPDATE tag_groups SET is_single_choice = 1 WHERE id IN ('area', 'priority')`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -242,8 +245,23 @@ export function move_task(task_id: string, parent_id: string | null, position: n
   open_database().prepare('UPDATE tasks SET parent_id = ?, position = ? WHERE id = ?').run(parent_id, position, task_id)
 }
 
+// In a one-tag-per-task group, the new tag replaces whichever tag of that group the task had.
 export function tag_task(task_id: string, tag_id: string): void {
-  open_database().prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task_id, tag_id)
+  const database = open_database()
+
+  database.exec('BEGIN')
+  database
+    .prepare(
+      `DELETE FROM task_tags WHERE task_id = ? AND tag_id IN (
+         SELECT other.id FROM tags AS other
+           JOIN tags AS chosen ON chosen.group_id = other.group_id
+           JOIN tag_groups ON tag_groups.id = chosen.group_id
+         WHERE chosen.id = ? AND tag_groups.is_single_choice = 1
+       )`
+    )
+    .run(task_id, tag_id)
+  database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task_id, tag_id)
+  database.exec('COMMIT')
 }
 
 export function untag_task(task_id: string, tag_id: string): void {
@@ -255,11 +273,20 @@ export function untag_task(task_id: string, tag_id: string): void {
 // ============================================================================
 
 export function list_tag_groups(): TagGroup[] {
-  return open_database().prepare('SELECT * FROM tag_groups ORDER BY position').all() as unknown as TagGroup[]
+  const rows = open_database().prepare('SELECT * FROM tag_groups ORDER BY position').all() as unknown as (Omit<TagGroup, 'is_single_choice'> & {
+    is_single_choice: number
+  })[]
+  return rows.map((row) => ({ ...row, is_single_choice: row.is_single_choice === 1 }))
 }
 
 export function add_tag_group(name: string): TagGroup {
-  const group: TagGroup = { id: randomUUID(), name, created_at: new Date().toISOString(), position: next_position('tag_groups') }
+  const group: TagGroup = {
+    id: randomUUID(),
+    name,
+    created_at: new Date().toISOString(),
+    position: next_position('tag_groups'),
+    is_single_choice: false
+  }
 
   open_database()
     .prepare('INSERT INTO tag_groups (id, name, created_at, position) VALUES (?, ?, ?, ?)')
@@ -271,6 +298,11 @@ export function add_tag_group(name: string): TagGroup {
 // Its tags go with it, while their tasks stay and only lose the tags.
 export function remove_tag_group(group_id: string): void {
   open_database().prepare('DELETE FROM tag_groups WHERE id = ?').run(group_id)
+}
+
+// Turning this on leaves tasks that already hold several of the group's tags as they are.
+export function set_tag_group_single_choice(group_id: string, is_single_choice: boolean): void {
+  open_database().prepare('UPDATE tag_groups SET is_single_choice = ? WHERE id = ?').run(is_single_choice ? 1 : 0, group_id)
 }
 
 // ============================================================================

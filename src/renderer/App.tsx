@@ -138,10 +138,16 @@ export function App() {
     void window.x_tasks.move_task(dragged_task.id, move.parent_id, move.position)
   }
 
+  // In a one-tag-per-task group, the new tag replaces whichever tag of that group the task had.
   function tag_task(task: Task, tag: Tag): void {
     if (task.tag_ids.includes(tag.id)) return
+    const is_single_choice = tag_groups.find((group) => group.id === tag.group_id)?.is_single_choice ?? false
+    const replaced_ids = new Set(is_single_choice ? tags.filter((each) => each.group_id === tag.group_id).map((each) => each.id) : [])
+
     set_tasks((current_tasks) =>
-      current_tasks.map((each) => (each.id === task.id ? { ...each, tag_ids: [...each.tag_ids, tag.id] } : each))
+      current_tasks.map((each) =>
+        each.id === task.id ? { ...each, tag_ids: [...each.tag_ids.filter((tag_id) => !replaced_ids.has(tag_id)), tag.id] } : each
+      )
     )
     void window.x_tasks.tag_task(task.id, tag.id)
   }
@@ -172,6 +178,11 @@ export function App() {
     forget_tags(new Set(tags.filter((tag) => tag.group_id === group.id).map((tag) => tag.id)))
     set_tag_groups((current_groups) => current_groups.filter((each) => each.id !== group.id))
     void window.x_tasks.remove_tag_group(group.id)
+  }
+
+  function set_tag_group_single_choice(group: TagGroup, is_single_choice: boolean): void {
+    set_tag_groups((current_groups) => current_groups.map((each) => (each.id === group.id ? { ...each, is_single_choice } : each)))
+    void window.x_tasks.set_tag_group_single_choice(group.id, is_single_choice)
   }
 
   async function add_tag(name: string, group_id: string, parent_id: string | null): Promise<void> {
@@ -248,6 +259,7 @@ export function App() {
         on_select_view={select_view}
         on_open_settings={() => set_is_settings_open(true)}
         on_remove_tag_group={remove_tag_group}
+        on_set_tag_group_single_choice={set_tag_group_single_choice}
         on_add_tag={add_tag}
         on_remove_tag={remove_tag}
         on_move_tag={move_tag}

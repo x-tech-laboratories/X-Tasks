@@ -20,6 +20,7 @@ interface SidebarProps {
   on_select_view: (view: View) => void
   on_open_settings: () => void
   on_remove_tag_group: (group: TagGroup) => void
+  on_set_tag_group_single_choice: (group: TagGroup, is_single_choice: boolean) => void
   on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
   on_remove_tag: (tag: Tag) => void
   on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
@@ -35,7 +36,7 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings,
-  on_remove_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  on_remove_tag_group, on_set_tag_group_single_choice, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
@@ -221,6 +222,10 @@ export function Sidebar({
           onContextMenu={(event) =>
             on_context_menu(event, [
               { label: 'Add tag', on_select: () => start_new_tag({ group_id: group.id, parent_id: null }) },
+              {
+                label: group.is_single_choice ? 'Allow several tags per task' : 'Allow one tag per task',
+                on_select: () => on_set_tag_group_single_choice(group, !group.is_single_choice)
+              },
               { label: 'Delete group', on_select: () => on_remove_tag_group(group), is_danger: true }
             ])
           }

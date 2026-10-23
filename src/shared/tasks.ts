@@ -25,6 +25,8 @@ export interface TagGroup {
   name: string
   created_at: string
   position: number
+  // When set, a task holds at most one tag from this group, such as a single priority.
+  is_single_choice: boolean
 }
 
 export interface Tag {
@@ -65,6 +67,7 @@ export interface TasksApi {
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string) => Promise<TagGroup>
   remove_tag_group: (group_id: string) => Promise<void>
+  set_tag_group_single_choice: (group_id: string, is_single_choice: boolean) => Promise<void>
 
   list_tags: () => Promise<Tag[]>
   add_tag: (name: string, group_id: string, parent_id: string | null) => Promise<Tag>
@@ -86,6 +89,7 @@ export const UNTAG_TASK_CHANNEL = 'tasks:untag'
 export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'
 export const ADD_TAG_GROUP_CHANNEL = 'tag-groups:add'
 export const REMOVE_TAG_GROUP_CHANNEL = 'tag-groups:remove'
+export const SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL = 'tag-groups:set-single-choice'
 
 export const LIST_TAGS_CHANNEL = 'tags:list'
 export const ADD_TAG_CHANNEL = 'tags:add'

@@ -87,6 +87,31 @@ export function TaskDetail({
         const task_tags = group_tags.filter((tag) => task.tag_ids.includes(tag.id))
         const other_tags = group_tags.filter((tag) => !task.tag_ids.includes(tag.id))
 
+        // A one-tag-per-task group is a single choice, with None to clear it.
+        if (group.is_single_choice && task_tags.length <= 1) {
+          const current_tag = task_tags[0]
+
+          function choose(event: Event): void {
+            const chosen_tag = group_tags.find((tag) => tag.id === (event.currentTarget as HTMLSelectElement).value)
+            if (chosen_tag) on_tag(task, chosen_tag)
+            else if (current_tag) on_untag(task, current_tag)
+          }
+
+          return (
+            <label key={group.id} class="task_detail_field">
+              <span class="sidebar_heading">{group.name}</span>
+              <select value={current_tag?.id ?? ''} onChange={choose}>
+                <option value="">None</option>
+                {group_tags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag_path(tag, tags)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
+        }
+
         return (
           <div key={group.id} class="task_detail_field">
             <span class="sidebar_heading">{group.name}</span>
