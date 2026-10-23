@@ -1,5 +1,5 @@
 import type { Settings } from '@shared/settings'
-import type { Tag, Task, View } from '@shared/tasks'
+import { PRIORITY_GROUP_ID, type Tag, type Task, type View } from '@shared/tasks'
 
 export type { View }
 
@@ -100,6 +100,10 @@ function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
 export function tag_path(tag: Tag, tags: Tag[]): string {
   const parent = tags.find((each) => each.id === tag.parent_id)
   return parent ? `${tag_path(parent, tags)} › ${tag.name}` : tag.name
+}
+
+export function is_priority_tag(tag: Tag): boolean {
+  return tag.group_id === PRIORITY_GROUP_ID
 }
 
 // ============================================================================

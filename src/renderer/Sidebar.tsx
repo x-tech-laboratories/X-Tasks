@@ -28,6 +28,15 @@ interface SidebarProps {
   on_context_menu: OpenContextMenu
 }
 
+// Points right when closed and turns down when open.
+function Chevron({ is_open }: { is_open: boolean }) {
+  return (
+    <svg class={is_open ? 'chevron is_open' : 'chevron'} viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M6 3.5 10.5 8 6 12.5" />
+    </svg>
+  )
+}
+
 // Where the inline new-tag field is open: at the top of a group, or inside a tag.
 interface NewTagSpot {
   group_id: string
@@ -187,7 +196,7 @@ export function Sidebar({
               onClick={() => toggle_collapsed(tag.id)}
               aria-label={is_collapsed ? `Expand ${tag.name}` : `Collapse ${tag.name}`}
             >
-              {is_collapsed ? '▸' : '▾'}
+              <Chevron is_open={!is_collapsed} />
             </button>
           ) : (
             <span class="collapse_spacer" />
@@ -235,7 +244,8 @@ export function Sidebar({
             onClick={() => toggle_collapsed(group.id)}
             aria-expanded={!is_collapsed}
           >
-            {is_collapsed ? '▸' : '▾'} {group.name}
+            <Chevron is_open={!is_collapsed} />
+            {group.name}
           </button>
           <button
             class="row_button"

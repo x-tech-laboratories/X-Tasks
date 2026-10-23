@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks'
 import type { Tag, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import { is_overdue, task_date_label } from './schedule'
-import { drop_placement, tag_path, type DropPlacement, type TaskNode } from './views'
+import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
 // Task item
@@ -37,7 +37,10 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const [subtask_title, set_subtask_title] = useState('')
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
 
+  // The priority gets its own label, apart from the tag chips.
   const task_tags = actions.tags.filter((tag) => task.tag_ids.includes(tag.id))
+  const priority_tag = task_tags.find(is_priority_tag)
+  const chip_tags = task_tags.filter((tag) => !is_priority_tag(tag))
 
   function submit_subtask(event: Event): void {
     event.preventDefault()
@@ -132,7 +135,13 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           </span>
         )}
 
-        {task_tags.map((tag) => (
+        {priority_tag && (
+          <span class="priority_label" title={`Priority: ${tag_path(priority_tag, actions.tags)}`}>
+            {priority_tag.name}
+          </span>
+        )}
+
+        {chip_tags.map((tag) => (
           <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
             {tag.name}
             <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>

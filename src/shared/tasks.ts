@@ -29,6 +29,9 @@ export interface TagGroup {
   is_single_choice: boolean
 }
 
+// The preset Priority group, whose tag shows on task rows as its own label.
+export const PRIORITY_GROUP_ID = 'priority'
+
 export interface Tag {
   id: string
   name: string
