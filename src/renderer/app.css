@@ -210,7 +210,10 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
 .task_pane > * { max-width: 720px; margin-left: auto; margin-right: auto; }
 
-.task_pane_header { display: flex; align-items: baseline; justify-content: space-between; }
+/* The table layout gets more room, so its columns leave the titles readable. */
+.task_pane.is_table > * { max-width: 960px; }
+
+.task_pane_header { display: flex; align-items: baseline; gap: var(--space-5); }
 
 .task_pane_header h1 {
   margin: 0 0 var(--space-6);
@@ -220,7 +223,7 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
   letter-spacing: var(--letter-spacing-display);
 }
 
-.remaining_count { color: var(--text-secondary); font-size: var(--text-control); }
+.remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
 
 /* ========================================================================== */
 /* New task form                                                              */
@@ -304,6 +307,43 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 }
 
 .row_button:hover { border-color: var(--border-default); color: var(--text-heading); }
+
+/* ========================================================================== */
+/* Task table                                                                 */
+/* ========================================================================== */
+
+/* In the list layout the cells add no boxes of their own, so the row lays out as one line. */
+.task_cell { display: contents; }
+
+.task_list.is_table {
+  --column-date: 104px;
+  --column-priority: 100px;
+  --column-tags: 200px;
+  --column-actions: 56px;
+}
+
+/* Fixed-width columns on the right keep every row lined up, while nested rows give up width from the title. */
+.task_list.is_table .task,
+.task_table_header {
+  display: grid;
+  grid-template-columns: 24px 16px minmax(0, 1fr) var(--column-date) var(--column-priority) var(--column-tags) var(--column-actions);
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.task_list.is_table .task_cell { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow: hidden; }
+.task_list.is_table .actions_cell { justify-content: flex-end; }
+
+.task_table_header {
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+
+/* The header skips the collapse and checkbox columns, so its first cell starts at the title. */
+.task_table_header .title_cell { grid-column: 3; }
 
 /* ========================================================================== */
 /* Subtasks                                                                   */

@@ -6,6 +6,23 @@ import { format_task_date, is_overdue, task_date_label } from './schedule'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
+// Table header
+// ============================================================================
+
+// The column names shown above the rows in the table layout, lined up with each row's cells.
+export function TaskTableHeader() {
+  return (
+    <li class="task_table_header" aria-hidden="true">
+      <span class="title_cell">Task</span>
+      <span class="date_cell">Date</span>
+      <span class="priority_cell">Priority</span>
+      <span class="tags_cell">Tags</span>
+      <span class="actions_cell" />
+    </li>
+  )
+}
+
+// ============================================================================
 // Task item
 // ============================================================================
 
@@ -128,39 +145,50 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           onChange={() => actions.on_toggle(task)}
           aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'}
         />
-        <span class="task_title">{task.title}</span>
-        {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
-        {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
-        {task.is_done && task.done_at ? (
-          <span class="due_label">Done {task_date_label(format_task_date(new Date(task.done_at), false))}</span>
-        ) : task.due_at && (
-          <span class={!task.is_done && is_overdue(task.due_at) ? 'due_label is_overdue' : 'due_label'}>
-            {task_date_label(task.due_at)}
-          </span>
-        )}
+        <span class="task_cell title_cell">
+          <span class="task_title">{task.title}</span>
+          {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
+          {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
+        </span>
 
-        {priority_tag && (
-          <span class="priority_label" title={`Priority: ${tag_path(priority_tag, actions.tags)}`}>
-            {priority_tag.name}
-          </span>
-        )}
+        <span class="task_cell date_cell">
+          {task.is_done && task.done_at ? (
+            <span class="due_label">Done {task_date_label(format_task_date(new Date(task.done_at), false))}</span>
+          ) : task.due_at && (
+            <span class={!task.is_done && is_overdue(task.due_at) ? 'due_label is_overdue' : 'due_label'}>
+              {task_date_label(task.due_at)}
+            </span>
+          )}
+        </span>
 
-        {chip_tags.map((tag) => (
-          <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
-            {tag.name}
-            <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
-              ×
+        <span class="task_cell priority_cell">
+          {priority_tag && (
+            <span class="priority_label" title={`Priority: ${tag_path(priority_tag, actions.tags)}`}>
+              {priority_tag.name}
+            </span>
+          )}
+        </span>
+
+        <span class="task_cell tags_cell">
+          {chip_tags.map((tag) => (
+            <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
+              {tag.name}
+              <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
+                ×
+              </button>
+            </span>
+          ))}
+        </span>
+
+        <span class="task_cell actions_cell">
+          {is_collapsed && <span class="subtask_count">{children.length}</span>}
+
+          {actions.can_add_subtasks && (
+            <button class="row_button" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
+              +
             </button>
-          </span>
-        ))}
-
-        {is_collapsed && <span class="subtask_count">{children.length}</span>}
-
-        {actions.can_add_subtasks && (
-          <button class="row_button" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
-            +
-          </button>
-        )}
+          )}
+        </span>
       </div>
 
       {!is_collapsed && (children.length > 0 || is_adding_subtask) && (

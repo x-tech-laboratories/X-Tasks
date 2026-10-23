@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
 
-import type { Settings } from '@shared/settings'
+import type { Settings, TaskLayout } from '@shared/settings'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReschedulePopup } from './ReschedulePopup'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
-import { TaskItem, type TaskActions } from './TaskItem'
+import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { next_schedule } from './schedule'
 import {
   by_position, launch_view, move_for_drop, nest_tasks, position_for_drop, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
   view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
+
+// ============================================================================
+// Choices
+// ============================================================================
+
+const TASK_LAYOUT_CHOICES: { value: TaskLayout; label: string }[] = [
+  { value: 'list', label: 'List' },
+  { value: 'table', label: 'Table' }
+]
 
 // ============================================================================
 // App
@@ -297,7 +306,7 @@ export function App() {
         on_context_menu={open_context_menu}
       />
 
-      <main class="task_pane">
+      <main class={settings.task_layout === 'table' && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
         {is_settings_open ? (
           <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
         ) : (
@@ -305,6 +314,19 @@ export function App() {
             <header class="task_pane_header">
               <h1>{view_title(selected_view, tags)}</h1>
               <span class="remaining_count">{remaining_count} left</span>
+              <div class="segmented_control" role="radiogroup" aria-label="Layout">
+                {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    role="radio"
+                    aria-checked={settings.task_layout === value}
+                    class={settings.task_layout === value ? 'is_selected' : ''}
+                    onClick={() => void change_setting('task_layout', value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </header>
 
             {selected_view.kind !== 'completed' && (
@@ -319,7 +341,8 @@ export function App() {
               </form>
             )}
 
-            <ul class="task_list">
+            <ul class={settings.task_layout === 'table' ? 'task_list is_table' : 'task_list'}>
+              {settings.task_layout === 'table' && task_tree.length > 0 && <TaskTableHeader />}
               {task_tree.map((node) => (
                 <TaskItem key={node.task.id} node={node} actions={task_actions} />
               ))}

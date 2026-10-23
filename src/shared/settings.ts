@@ -9,6 +9,9 @@ export type ThemeChoice = 'system' | 'light' | 'dark'
 // The view the app opens on, where 'last' means the one shown when it was closed.
 export type LaunchView = 'last' | 'all' | 'active' | 'completed'
 
+// How the center pane shows tasks: a plain list, or a table with aligned columns.
+export type TaskLayout = 'list' | 'table'
+
 // The names given to the tags of the preset Priority group, from highest to lowest.
 export type PriorityScale = 'high_medium_low' | 'moscow'
 
@@ -31,6 +34,7 @@ export interface Settings {
   launch_view: LaunchView
   confirm_tag_removal: boolean
   priority_scale: PriorityScale
+  task_layout: TaskLayout
   reschedule_options: RescheduleOption[]
   last_view: View
 }
@@ -40,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   launch_view: 'last',
   confirm_tag_removal: true,
   priority_scale: 'high_medium_low',
+  task_layout: 'list',
   reschedule_options: [
     { id: 'today', name: 'Today', mode: 'days', days: 0, rule: '' },
     { id: 'tomorrow', name: 'Tomorrow', mode: 'days', days: 1, rule: '' },
