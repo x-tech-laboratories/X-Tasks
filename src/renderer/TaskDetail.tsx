@@ -8,7 +8,7 @@ import type { TaskDuration } from '@shared/settings'
 import {
   describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor
 } from '@shared/schedule'
-import { tag_path } from './views'
+import { children_of, tag_path } from './views'
 
 // ============================================================================
 // Task detail
@@ -133,14 +133,7 @@ export function TaskDetail({
           return (
             <label key={group.id} class="task_detail_field">
               <span class="sidebar_heading">{group.name}</span>
-              <select value={current_tag?.id ?? ''} onChange={choose}>
-                <option value="">None</option>
-                {group_tags.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag_path(tag, tags)}
-                  </option>
-                ))}
-              </select>
+              <TagTreeSelect value={current_tag?.id ?? ''} blank_label="None" group_tags={group_tags} tags={tags} on_change={choose} />
             </label>
           )
         }
@@ -161,14 +154,15 @@ export function TaskDetail({
               </div>
             )}
             {other_tags.length > 0 && (
-              <select value="" onChange={add_tag} aria-label={`Add ${group.name} tag`}>
-                <option value="">Add {group.name.toLowerCase()} tag…</option>
-                {other_tags.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag_path(tag, tags)}
-                  </option>
-                ))}
-              </select>
+              <TagTreeSelect
+                value=""
+                blank_label={`Add ${group.name.toLowerCase()} tag…`}
+                group_tags={group_tags}
+                tags={tags}
+                held_ids={task.tag_ids}
+                on_change={add_tag}
+                aria_label={`Add ${group.name} tag`}
+              />
             )}
           </div>
         )
@@ -252,6 +246,54 @@ export function TaskDetail({
         </button>
       </footer>
     </aside>
+  )
+}
+
+// ============================================================================
+// Tag tree select
+// ============================================================================
+
+declare module 'preact' {
+  namespace JSX {
+    interface IntrinsicElements {
+      selectedcontent: HTMLAttributes<HTMLElement>
+    }
+  }
+}
+
+interface TagTreeSelectProps {
+  value: string
+  blank_label: string
+  group_tags: Tag[]
+  tags: Tag[]
+  held_ids?: string[]
+  on_change: (event: Event) => void
+  aria_label?: string
+}
+
+// The open list shows the group as an indented tree, while the closed select shows the chosen tag's whole branch.
+function TagTreeSelect({ value, blank_label, group_tags, tags, held_ids = [], on_change, aria_label }: TagTreeSelectProps) {
+  const group_ids = new Set(group_tags.map((tag) => tag.id))
+
+  // Tags the task already holds stay in the tree, greyed out, so their children keep their place under them.
+  function branch(tag: Tag, depth: number): preact.JSX.Element[] {
+    return [
+      <option key={tag.id} value={tag.id} disabled={held_ids.includes(tag.id)} style={{ '--depth': depth }}>
+        <span class="tree_option_name">{tag.name}</span>
+        <span class="tree_option_path">{tag_path(tag, tags)}</span>
+      </option>,
+      ...children_of(tag.id, group_tags).flatMap((child) => branch(child, depth + 1))
+    ]
+  }
+
+  return (
+    <select class="tree_select" value={value} onChange={on_change} aria-label={aria_label}>
+      <button>
+        <selectedcontent />
+      </button>
+      <option value="">{blank_label}</option>
+      {group_tags.filter((tag) => !group_ids.has(tag.parent_id ?? '')).flatMap((tag) => branch(tag, 0))}
+    </select>
   )
 }
 

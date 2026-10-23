@@ -768,6 +768,42 @@ select:hover { border-color: var(--border-focus); }
 .tag_chip.is_rule { padding-right: var(--space-3); border: 1px dashed var(--border-hover); background: transparent; }
 
 /* ========================================================================== */
+/* Tag tree select                                                            */
+/* ========================================================================== */
+
+.tree_select,
+.tree_select::picker(select) { appearance: base-select; }
+
+.tree_select { display: flex; align-items: center; }
+.tree_select > button { display: contents; }
+.tree_select::picker-icon { margin-left: auto; color: var(--text-tertiary); }
+
+.tree_select::picker(select) {
+  max-height: 320px;
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-default);
+  box-shadow: var(--shadow-card);
+}
+
+.tree_select option {
+  min-height: var(--row-height);
+  padding: 0 var(--space-4) 0 calc(var(--space-4) + var(--depth, 0) * var(--space-6));
+  border-radius: var(--radius-small);
+  color: var(--text-body);
+}
+
+.tree_select option:hover,
+.tree_select option:focus-visible { background: var(--surface-navigation-hover); color: var(--text-heading); outline: none; }
+.tree_select option:checked { color: var(--accent); font-weight: 600; }
+.tree_select option:disabled { color: var(--text-tertiary); }
+
+.tree_select option .tree_option_path,
+.tree_select selectedcontent .tree_option_name { display: none; }
+.tree_select selectedcontent .tree_option_path { display: inline; }
+
+/* ========================================================================== */
 /* Context menu                                                               */
 /* ========================================================================== */
 
