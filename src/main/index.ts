@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 
-import { LIST_TASKS_CHANNEL, SAVE_TASKS_CHANNEL, type Task } from '@shared/tasks'
-import { read_tasks, write_tasks } from './task_store'
+import { ADD_TASK_CHANNEL, LIST_TASKS_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL } from '@shared/tasks'
+import { add_task, close_task_database, list_tasks, open_task_database, remove_task, set_task_done } from './task_database'
 
 // ============================================================================
 // Window
@@ -47,8 +47,10 @@ function create_main_window(): BrowserWindow {
 // ============================================================================
 
 function register_bridge_handlers(): void {
-  ipcMain.handle(LIST_TASKS_CHANNEL, () => read_tasks())
-  ipcMain.handle(SAVE_TASKS_CHANNEL, (_event, tasks: Task[]) => write_tasks(tasks))
+  ipcMain.handle(LIST_TASKS_CHANNEL, () => list_tasks())
+  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string) => add_task(title))
+  ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
+  ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
 }
 
 // ============================================================================
@@ -56,6 +58,7 @@ function register_bridge_handlers(): void {
 // ============================================================================
 
 app.whenReady().then(() => {
+  open_task_database()
   register_bridge_handlers()
   create_main_window()
 
@@ -63,6 +66,8 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) create_main_window()
   })
 })
+
+app.on('will-quit', () => close_task_database())
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

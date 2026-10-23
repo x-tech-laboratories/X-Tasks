@@ -3,22 +3,6 @@ import { useEffect, useState } from 'preact/hooks'
 import type { Task } from '@shared/tasks'
 
 // ============================================================================
-// Task changes
-// ============================================================================
-
-function make_task(title: string): Task {
-  return { id: crypto.randomUUID(), title, is_done: false, created_at: new Date().toISOString() }
-}
-
-function toggle_task(tasks: Task[], task_id: string): Task[] {
-  return tasks.map((task) => (task.id === task_id ? { ...task, is_done: !task.is_done } : task))
-}
-
-function remove_task(tasks: Task[], task_id: string): Task[] {
-  return tasks.filter((task) => task.id !== task_id)
-}
-
-// ============================================================================
 // App
 // ============================================================================
 
@@ -30,18 +14,25 @@ export function App() {
     void window.x_tasks.list_tasks().then(set_tasks)
   }, [])
 
-  function update_tasks(next_tasks: Task[]): void {
-    set_tasks(next_tasks)
-    void window.x_tasks.save_tasks(next_tasks)
-  }
-
-  function submit_new_task(event: Event): void {
+  async function submit_new_task(event: Event): Promise<void> {
     event.preventDefault()
     const title = new_title.trim()
     if (!title) return
 
-    update_tasks([...tasks, make_task(title)])
+    const added_task = await window.x_tasks.add_task(title)
+    set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
+  }
+
+  function toggle_task(task: Task): void {
+    const is_done = !task.is_done
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done } : each)))
+    void window.x_tasks.set_task_done(task.id, is_done)
+  }
+
+  function remove_task(task: Task): void {
+    set_tasks((current_tasks) => current_tasks.filter((each) => each.id !== task.id))
+    void window.x_tasks.remove_task(task.id)
   }
 
   const remaining_count = tasks.filter((task) => !task.is_done).length
@@ -67,10 +58,10 @@ export function App() {
         {tasks.map((task) => (
           <li key={task.id} class={task.is_done ? 'task is_done' : 'task'}>
             <label>
-              <input type="checkbox" checked={task.is_done} onChange={() => update_tasks(toggle_task(tasks, task.id))} />
+              <input type="checkbox" checked={task.is_done} onChange={() => toggle_task(task)} />
               <span>{task.title}</span>
             </label>
-            <button class="remove_button" onClick={() => update_tasks(remove_task(tasks, task.id))} aria-label="Remove">
+            <button class="remove_button" onClick={() => remove_task(task)} aria-label="Remove">
               ×
             </button>
           </li>
