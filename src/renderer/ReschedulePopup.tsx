@@ -16,17 +16,14 @@ interface ReschedulePopupProps {
   on_close: () => void
 }
 
-// Each option shows the day it would move the task to; options whose rule yields no day are left out.
+// Each option shows the day it would move the task to, or is greyed out when its rule is empty or yields no day.
 export function ReschedulePopup({ task, options, date_field, on_reschedule, on_close }: ReschedulePopupProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [picked_day, set_picked_day] = useState('')
 
   useEffect(() => dialog_ref.current?.showModal(), [])
 
-  const choices = options.flatMap((option) => {
-    const day = reschedule_day(option)
-    return day ? [{ option, day }] : []
-  })
+  const choices = options.map((option) => ({ option, day: reschedule_day(option) }))
 
   function choose(day: Date): void {
     on_reschedule(task, rescheduled(task, day, date_field))
@@ -45,9 +42,11 @@ export function ReschedulePopup({ task, options, date_field, on_reschedule, on_c
 
       <div class="reschedule_choices">
         {choices.map(({ option, day }) => (
-          <button key={option.id} class="reschedule_choice" onClick={() => choose(day)}>
+          <button key={option.id} class="reschedule_choice" disabled={!day} onClick={() => day && choose(day)}>
             <span>{option.name}</span>
-            <span class="reschedule_day">{task_date_label(format_task_date(day, false))}</span>
+            <span class="reschedule_day">
+              {day ? task_date_label(format_task_date(day, false)) : option.rule ? 'No date ahead' : 'No rule set'}
+            </span>
           </button>
         ))}
         {choices.length === 0 && <p class="empty_message">No reschedule options. Add some in Settings.</p>}

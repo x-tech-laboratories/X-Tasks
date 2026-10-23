@@ -813,6 +813,8 @@ select:hover { border-color: var(--border-focus); }
 
 .reschedule_day { color: var(--text-tertiary); }
 
+.reschedule_choice:disabled { opacity: 0.5; cursor: default; }
+
 .settings_group > .setting_hint { display: block; margin: 0 0 var(--space-4); }
 
 .reschedule_option { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
