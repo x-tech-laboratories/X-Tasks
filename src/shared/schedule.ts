@@ -65,23 +65,28 @@ export function task_date_label(task_date: string, now = new Date()): string {
 // Durations
 // ============================================================================
 
+function needs_time(duration: TaskDuration): boolean {
+  return duration.unit === 'minute' || duration.unit === 'hour'
+}
+
 // A duration's name, such as 2 weeks, with Same day for no days at all.
 export function duration_label(duration: TaskDuration): string {
-  if (duration.amount === 0 && duration.unit !== 'hour') return 'Same day'
+  if (duration.amount === 0 && !needs_time(duration)) return 'Same day'
   return `${duration.amount} ${duration.unit}${duration.amount === 1 ? '' : 's'}`
 }
 
-// Hours need a start time, and Same day is only for a start without one.
+// Minutes and hours need a start time, and Same day is only for a start without one.
 export function durations_for_start(durations: TaskDuration[], start_at: string): TaskDuration[] {
-  if (has_time(start_at)) return durations.filter((duration) => duration.unit === 'hour' || duration.amount > 0)
-  return durations.filter((duration) => duration.unit !== 'hour')
+  if (has_time(start_at)) return durations.filter((duration) => needs_time(duration) || duration.amount > 0)
+  return durations.filter((duration) => !needs_time(duration))
 }
 
 // The due date that lies the given duration after the start, with a time only when the start has one.
 export function due_after(start_at: string, duration: TaskDuration): string {
   const start = parse_task_date(start_at)
   const due = new Date(start)
-  if (duration.unit === 'hour') due.setHours(due.getHours() + duration.amount)
+  if (duration.unit === 'minute') due.setMinutes(due.getMinutes() + duration.amount)
+  else if (duration.unit === 'hour') due.setHours(due.getHours() + duration.amount)
   else if (duration.unit === 'day') due.setDate(due.getDate() + duration.amount)
   else if (duration.unit === 'week') due.setDate(due.getDate() + duration.amount * 7)
   else {

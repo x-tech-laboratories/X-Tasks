@@ -46,7 +46,7 @@ export interface RescheduleOption {
 export interface TaskDuration {
   id: string
   amount: number
-  unit: 'hour' | 'day' | 'week' | 'month'
+  unit: 'minute' | 'hour' | 'day' | 'week' | 'month'
 }
 
 // A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, or ticks split by the tags of a group.
@@ -120,6 +120,7 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'end-of-month', name: 'End of month', mode: 'rule', days: 0, rule: 'FREQ=MONTHLY;BYMONTHDAY=-1' }
   ],
   task_durations: [
+    { id: '30m', amount: 30, unit: 'minute' },
     { id: '1h', amount: 1, unit: 'hour' },
     { id: '2h', amount: 2, unit: 'hour' },
     { id: '4h', amount: 4, unit: 'hour' },

@@ -364,8 +364,8 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
   return (
     <>
       <p class="setting_hint">
-        The gaps offered by Duration in a task's details, which set the due date that long after the start. Hours show only
-        when the start has a time, and Same day only when it has none.
+        The gaps offered by Duration in a task's details, which set the due date that long after the start. Minutes and hours show
+        only when the start has a time, and Same day only when it has none.
       </p>
 
       {durations.map((duration, index) => (
@@ -385,6 +385,7 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
             onChange={(event) => update(duration.id, { unit: event.currentTarget.value as TaskDuration['unit'] })}
             aria-label="Unit"
           >
+            <option value="minute">Minutes</option>
             <option value="hour">Hours</option>
             <option value="day">Days</option>
             <option value="week">Weeks</option>
