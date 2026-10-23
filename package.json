@@ -1,0 +1,27 @@
+{
+  "name": "x-tasks",
+  "version": "0.1.0",
+  "description": "A todo manager",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "app": "bash scripts/run.sh"
+  },
+  "dependencies": {
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@tsconfig/node22": "^22.0.0",
+    "@types/node": "^22.10.5",
+    "electron": "^43.0.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.0.0"
+  }
+}

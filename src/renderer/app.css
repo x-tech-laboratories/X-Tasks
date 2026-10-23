@@ -1,0 +1,94 @@
+/* ========================================================================== */
+/* Colours                                                                    */
+/* ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+  --background: #f5f6f8;
+  --surface: #ffffff;
+  --text: #1b1e24;
+  --muted: #6b7280;
+  --border: #dde1e7;
+  --accent: #3b6ef5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f1115;
+    --surface: #181b21;
+    --text: #e6e8ec;
+    --muted: #8b93a1;
+    --border: #2a2f38;
+    --accent: #6b93ff;
+  }
+}
+
+/* ========================================================================== */
+/* Layout                                                                     */
+/* ========================================================================== */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font: 15px/1.5 system-ui, sans-serif;
+}
+
+.app { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
+
+.app_header { display: flex; align-items: baseline; justify-content: space-between; }
+.app_header h1 { margin: 0 0 16px; font-size: 24px; }
+.remaining_count { color: var(--muted); }
+
+/* ========================================================================== */
+/* New task form                                                              */
+/* ========================================================================== */
+
+.new_task_form { display: flex; gap: 8px; margin-bottom: 16px; }
+
+.new_task_form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ========================================================================== */
+/* Task list                                                                  */
+/* ========================================================================== */
+
+.task_list { list-style: none; margin: 0; padding: 0; }
+
+.task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.task label { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
+.task.is_done span { color: var(--muted); text-decoration: line-through; }
+
+.remove_button { padding: 2px 10px; background: transparent; color: var(--muted); font-size: 18px; }
+.remove_button:hover { color: var(--text); }
+
+.empty_message { color: var(--muted); text-align: center; }
