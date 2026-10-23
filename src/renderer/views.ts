@@ -46,3 +46,46 @@ export function view_title(view: View, task_lists: TaskList[]): string {
 export function list_id_for_new_task(view: View): string | null {
   return view.kind === 'list' ? view.list_id : null
 }
+
+// ============================================================================
+// Nesting
+// ============================================================================
+
+export interface TaskNode {
+  task: Task
+  children: TaskNode[]
+}
+
+// Each task sits under its nearest ancestor that is also shown, or at the top when none is.
+export function nest_tasks(visible_tasks: Task[], all_tasks: Task[]): TaskNode[] {
+  const task_by_id = new Map(all_tasks.map((task) => [task.id, task]))
+  const node_by_id = new Map(visible_tasks.map((task) => [task.id, { task, children: [] as TaskNode[] }]))
+  const top_nodes: TaskNode[] = []
+
+  for (const node of node_by_id.values()) {
+    let ancestor_id = node.task.parent_id
+    while (ancestor_id && !node_by_id.has(ancestor_id)) ancestor_id = task_by_id.get(ancestor_id)?.parent_id ?? null
+
+    if (ancestor_id) node_by_id.get(ancestor_id)!.children.push(node)
+    else top_nodes.push(node)
+  }
+
+  return top_nodes
+}
+
+export function task_with_descendant_ids(task_id: string, all_tasks: Task[]): Set<string> {
+  const ids = new Set([task_id])
+  let found_more = true
+
+  while (found_more) {
+    found_more = false
+    for (const task of all_tasks) {
+      if (task.parent_id && ids.has(task.parent_id) && !ids.has(task.id)) {
+        ids.add(task.id)
+        found_more = true
+      }
+    }
+  }
+
+  return ids
+}

@@ -2,7 +2,10 @@ import { useEffect, useState } from 'preact/hooks'
 
 import type { Task, TaskList } from '@shared/tasks'
 import { Sidebar } from './Sidebar'
-import { list_id_for_new_task, task_is_in_view, view_title, type View } from './views'
+import { TaskItem } from './TaskItem'
+import {
+  list_id_for_new_task, nest_tasks, task_is_in_view, task_with_descendant_ids, view_title, type View
+} from './views'
 
 // ============================================================================
 // App
@@ -28,9 +31,15 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, list_id_for_new_task(selected_view))
+    const added_task = await window.x_tasks.add_task(title, list_id_for_new_task(selected_view), null)
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
+  }
+
+  // A subtask always belongs to the same list as its parent.
+  async function add_subtask(parent: Task, title: string): Promise<void> {
+    const added_task = await window.x_tasks.add_task(title, parent.list_id, parent.id)
+    set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
   function toggle_task(task: Task): void {
@@ -39,8 +48,12 @@ export function App() {
     void window.x_tasks.set_task_done(task.id, is_done)
   }
 
+  // The database removes subtasks along with their parent, so the screen drops them too.
   function remove_task(task: Task): void {
-    set_tasks((current_tasks) => current_tasks.filter((each) => each.id !== task.id))
+    set_tasks((current_tasks) => {
+      const removed_ids = task_with_descendant_ids(task.id, current_tasks)
+      return current_tasks.filter((each) => !removed_ids.has(each.id))
+    })
     void window.x_tasks.remove_task(task.id)
   }
 
@@ -69,6 +82,7 @@ export function App() {
 
   const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
+  const task_tree = nest_tasks(visible_tasks, tasks)
 
   return (
     <div class="app">
@@ -100,16 +114,15 @@ export function App() {
         )}
 
         <ul class="task_list">
-          {visible_tasks.map((task) => (
-            <li key={task.id} class={task.is_done ? 'task is_done' : 'task'}>
-              <label>
-                <input type="checkbox" checked={task.is_done} onChange={() => toggle_task(task)} />
-                <span>{task.title}</span>
-              </label>
-              <button class="remove_button" onClick={() => remove_task(task)} aria-label="Remove">
-                ×
-              </button>
-            </li>
+          {task_tree.map((node) => (
+            <TaskItem
+              key={node.task.id}
+              node={node}
+              can_add_subtasks={selected_view.kind !== 'completed'}
+              on_toggle={toggle_task}
+              on_remove={remove_task}
+              on_add_subtask={add_subtask}
+            />
           ))}
         </ul>
 

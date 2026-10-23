@@ -8,6 +8,7 @@ export interface Task {
   is_done: boolean
   created_at: string
   list_id: string | null
+  parent_id: string | null
 }
 
 export interface TaskList {
@@ -22,7 +23,7 @@ export interface TaskList {
 
 export interface TasksApi {
   list_tasks: () => Promise<Task[]>
-  add_task: (title: string, list_id: string | null) => Promise<Task>
+  add_task: (title: string, list_id: string | null, parent_id: string | null) => Promise<Task>
   set_task_done: (task_id: string, is_done: boolean) => Promise<void>
   remove_task: (task_id: string) => Promise<void>
 

@@ -24,7 +24,9 @@ const SCHEMA_MIGRATIONS = [
      created_at TEXT NOT NULL
    );
    ALTER TABLE tasks ADD COLUMN list_id TEXT REFERENCES task_lists (id) ON DELETE CASCADE;
-   CREATE INDEX tasks_by_list ON tasks (list_id)`
+   CREATE INDEX tasks_by_list ON tasks (list_id)`,
+  `ALTER TABLE tasks ADD COLUMN parent_id TEXT REFERENCES tasks (id) ON DELETE CASCADE;
+   CREATE INDEX tasks_by_parent ON tasks (parent_id)`
 ]
 
 function migrate_schema(database: DatabaseSync): void {
@@ -48,6 +50,7 @@ interface TaskRow {
   is_done: number
   created_at: string
   list_id: string | null
+  parent_id: string | null
 }
 
 let database: DatabaseSync | undefined
@@ -77,7 +80,14 @@ function open_database(): DatabaseSync {
 }
 
 function row_to_task(row: TaskRow): Task {
-  return { id: row.id, title: row.title, is_done: row.is_done === 1, created_at: row.created_at, list_id: row.list_id }
+  return {
+    id: row.id,
+    title: row.title,
+    is_done: row.is_done === 1,
+    created_at: row.created_at,
+    list_id: row.list_id,
+    parent_id: row.parent_id
+  }
 }
 
 // ============================================================================
@@ -89,12 +99,12 @@ export function list_tasks(): Task[] {
   return rows.map(row_to_task)
 }
 
-export function add_task(title: string, list_id: string | null): Task {
-  const task: Task = { id: randomUUID(), title, is_done: false, created_at: new Date().toISOString(), list_id }
+export function add_task(title: string, list_id: string | null, parent_id: string | null): Task {
+  const task: Task = { id: randomUUID(), title, is_done: false, created_at: new Date().toISOString(), list_id, parent_id }
 
   open_database()
-    .prepare('INSERT INTO tasks (id, title, is_done, created_at, list_id) VALUES (?, ?, 0, ?, ?)')
-    .run(task.id, task.title, task.created_at, task.list_id)
+    .prepare('INSERT INTO tasks (id, title, is_done, created_at, list_id, parent_id) VALUES (?, ?, 0, ?, ?, ?)')
+    .run(task.id, task.title, task.created_at, task.list_id, task.parent_id)
 
   return task
 }

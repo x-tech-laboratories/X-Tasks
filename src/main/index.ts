@@ -54,7 +54,9 @@ function create_main_window(): BrowserWindow {
 
 function register_bridge_handlers(): void {
   ipcMain.handle(LIST_TASKS_CHANNEL, () => list_tasks())
-  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, list_id: string | null) => add_task(title, list_id))
+  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, list_id: string | null, parent_id: string | null) =>
+    add_task(title, list_id, parent_id)
+  )
   ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
   ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
 

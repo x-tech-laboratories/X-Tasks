@@ -7,7 +7,7 @@
 - [ ] Notes on a task
 - [ ] Due dates, with Today and Upcoming views
 - [ ] Priorities
-- [ ] Subtasks
+- [x] Subtasks
 - [ ] Reorder tasks by dragging
 - [ ] Clear all completed tasks in a view
 - [ ] Undo after removing a task
