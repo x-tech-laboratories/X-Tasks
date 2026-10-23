@@ -267,8 +267,11 @@ export function App() {
   const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
   const rescheduling_task = tasks.find((task) => task.id === rescheduling_task_id) ?? null
 
+  const is_table = settings.task_layout === 'table'
   const task_actions: TaskActions = {
     tags,
+    tag_groups,
+    is_table,
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
     on_select: (task) => set_selected_task_id(task.id),
@@ -306,7 +309,7 @@ export function App() {
         on_context_menu={open_context_menu}
       />
 
-      <main class={settings.task_layout === 'table' && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
+      <main class={is_table && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
         {is_settings_open ? (
           <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
         ) : (
@@ -341,8 +344,8 @@ export function App() {
               </form>
             )}
 
-            <ul class={settings.task_layout === 'table' ? 'task_list is_table' : 'task_list'}>
-              {settings.task_layout === 'table' && task_tree.length > 0 && <TaskTableHeader />}
+            <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' ') }}>
+              {is_table && task_tree.length > 0 && <TaskTableHeader tag_groups={tag_groups} />}
               {task_tree.map((node) => (
                 <TaskItem key={node.task.id} node={node} actions={task_actions} />
               ))}

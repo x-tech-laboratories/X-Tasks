@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 
-import type { Tag, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import { format_task_date, is_overdue, task_date_label } from './schedule'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
@@ -9,14 +9,13 @@ import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type Tas
 // Table header
 // ============================================================================
 
-// The column names shown above the rows in the table layout, lined up with each row's cells.
-export function TaskTableHeader() {
+// The column names shown above the rows in the table layout, one per filter group, lined up with each row's cells.
+export function TaskTableHeader({ tag_groups }: { tag_groups: TagGroup[] }) {
   return (
     <li class="task_table_header" aria-hidden="true">
       <span class="title_cell">Task</span>
       <span class="date_cell">Date</span>
-      <span class="priority_cell">Priority</span>
-      <span class="tags_cell">Tags</span>
+      {tag_groups.map((group) => <span key={group.id}>{group.name}</span>)}
       <span class="actions_cell" />
     </li>
   )
@@ -28,6 +27,8 @@ export function TaskTableHeader() {
 
 export interface TaskActions {
   tags: Tag[]
+  tag_groups: TagGroup[]
+  is_table: boolean
   can_add_subtasks: boolean
   selected_task_id: string | null
   on_select: (task: Task) => void
@@ -59,6 +60,26 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const task_tags = actions.tags.filter((tag) => task.tag_ids.includes(tag.id))
   const priority_tag = task_tags.find(is_priority_tag)
   const chip_tags = task_tags.filter((tag) => !is_priority_tag(tag))
+
+  // A priority shows as a plain label, and any other tag as a chip that can be removed from the task.
+  function render_tag(tag: Tag) {
+    if (is_priority_tag(tag)) {
+      return (
+        <span key={tag.id} class="priority_label" title={`Priority: ${tag_path(tag, actions.tags)}`}>
+          {tag.name}
+        </span>
+      )
+    }
+
+    return (
+      <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
+        {tag.name}
+        <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
+          ×
+        </button>
+      </span>
+    )
+  }
 
   function submit_subtask(event: Event): void {
     event.preventDefault()
@@ -161,24 +182,18 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           )}
         </span>
 
-        <span class="task_cell priority_cell">
-          {priority_tag && (
-            <span class="priority_label" title={`Priority: ${tag_path(priority_tag, actions.tags)}`}>
-              {priority_tag.name}
+        {actions.is_table ? (
+          actions.tag_groups.map((group) => (
+            <span key={group.id} class="task_cell">
+              {task_tags.filter((tag) => tag.group_id === group.id).map(render_tag)}
             </span>
-          )}
-        </span>
-
-        <span class="task_cell tags_cell">
-          {chip_tags.map((tag) => (
-            <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
-              {tag.name}
-              <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
-                ×
-              </button>
-            </span>
-          ))}
-        </span>
+          ))
+        ) : (
+          <>
+            {priority_tag && render_tag(priority_tag)}
+            {chip_tags.map(render_tag)}
+          </>
+        )}
 
         <span class="task_cell actions_cell">
           {is_collapsed && <span class="subtask_count">{children.length}</span>}
