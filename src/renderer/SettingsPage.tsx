@@ -102,6 +102,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             ))}
           </div>
         </div>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Streak dots on task rows</span>
+            <span class="setting_hint">Routines and their subtasks show their last week of done and missed occurrences beside the title.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.show_streak_strip_on_rows}
+            onChange={(event) => on_change('show_streak_strip_on_rows', event.currentTarget.checked)}
+          />
+        </label>
       </section>
 
       <section class="settings_group">

@@ -458,6 +458,7 @@ export function App() {
     on_untag: untag_task,
     rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
     streak_of,
+    history_of: (task) => (settings.show_streak_strip_on_rows ? task_history(task, tasks, completions) : []),
     last_done_of,
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),

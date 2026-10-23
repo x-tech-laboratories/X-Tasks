@@ -2,9 +2,10 @@ import type { ComponentChildren } from 'preact'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 
 import type { TableSortKey, TaskDateField } from '@shared/settings'
-import type { RoutineStreak } from '@shared/streaks'
+import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
+import { StreakStrip } from './StreakStrip'
 import { ResizeHandle } from './ResizeHandle'
 import { is_overdue, task_date_label } from '@shared/schedule'
 import {
@@ -12,6 +13,9 @@ import {
   has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
 } from './table'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
+
+// A row's strip shows about a week of a daily routine.
+const ROW_STRIP_LENGTH = 7
 
 // ============================================================================
 // Table header
@@ -359,6 +363,8 @@ export interface TaskActions {
   rule_tags_of: (task: Task) => Tag[]
   // The run of on-time ticks of a repeating task; empty for one that does not repeat.
   streak_of: (task: Task) => RoutineStreak | null
+  // The latest occurrences or rounds a row shows as dots; empty when the row shows none.
+  history_of: (task: Task) => HistoryMark[]
   last_done_of: LastDoneOf
   on_drag_start: (task: Task) => void
   on_drag_end: () => void
@@ -374,6 +380,7 @@ interface TaskItemProps {
 export function TaskItem({ node, actions }: TaskItemProps) {
   const { task, children } = node
   const streak = actions.streak_of(task)
+  const row_history = actions.history_of(task)
   const [is_collapsed, set_is_collapsed] = useState(false)
   const [is_adding_subtask, set_is_adding_subtask] = useState(false)
   const [subtask_title, set_subtask_title] = useState('')
@@ -532,6 +539,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
           {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
           {!actions.is_table && streak_badge}
+          {row_history.length > 0 && <StreakStrip history={row_history} limit={ROW_STRIP_LENGTH} />}
         </span>
 
         {actions.is_table ? (

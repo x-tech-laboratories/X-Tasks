@@ -91,13 +91,15 @@ export function ticks_per_day(widget: ReportWidget, widget_tasks: Task[], comple
   return counts
 }
 
-// Every week the card's days touch, oldest first, with weeks that had no ticks kept at zero.
+// Every week from the first one that starts inside the card's days, oldest first, with weeks that had no ticks kept at zero.
 export function ticks_per_week(widget: ReportWidget, widget_tasks: Task[], completions: Completion[], today: string): { week: string; count: number }[] {
+  const first_day = first_report_day(widget, today)
+  const first_week = week_start_of(first_day) < first_day ? day_offset(week_start_of(first_day), 7) : first_day
   const counts = new Map<string, number>()
-  for (let week = week_start_of(first_report_day(widget, today)); week <= today; week = day_offset(week, 7)) counts.set(week, 0)
+  for (let week = first_week; week <= today; week = day_offset(week, 7)) counts.set(week, 0)
   for (const { day } of tick_days(widget, widget_tasks, completions, today)) {
     const week = week_start_of(day)
-    counts.set(week, (counts.get(week) ?? 0) + 1)
+    if (counts.has(week)) counts.set(week, counts.get(week)! + 1)
   }
   return [...counts].map(([week, count]) => ({ week, count }))
 }

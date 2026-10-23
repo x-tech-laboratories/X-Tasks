@@ -129,6 +129,8 @@ export interface Settings {
   mcp_port: number
   // The cards on the Reports page, top to bottom.
   report_widgets: ReportWidget[]
+  // When set, each tracked task's row shows its latest occurrences or rounds as a strip of dots.
+  show_streak_strip_on_rows: boolean
   // When set, a backup is taken once a day, and only the newest of these are kept.
   auto_backup: boolean
   auto_backups_to_keep: number
@@ -177,6 +179,7 @@ export const DEFAULT_SETTINGS: Settings = {
   last_view: { kind: 'all' },
   mcp_enabled: false,
   mcp_port: 3917,
+  show_streak_strip_on_rows: false,
   report_widgets: [
     { id: 'streaks', kind: 'streaks', title: 'Routine streaks', tag_ids: [], days: 30, group_id: '' },
     { id: 'calendar', kind: 'calendar', title: 'Ticks per day', tag_ids: [], days: 182, group_id: '' },
