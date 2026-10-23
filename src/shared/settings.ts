@@ -39,6 +39,10 @@ export interface Settings {
   confirm_tag_removal: boolean
   // When set, My Day starts empty each day; otherwise tasks stay in it until taken out.
   auto_clear_my_day: boolean
+  // When set, tasks due today or earlier go into My Day by themselves.
+  add_due_to_my_day: boolean
+  // The last day due tasks were put in My Day, so ones taken out that day stay out.
+  due_added_to_my_day_on: string
   priority_scale: PriorityScale
   task_layout: TaskLayout
   // Widths in pixels of the left sidebar and the task detail panel, set by dragging their edges.
@@ -53,6 +57,8 @@ export const DEFAULT_SETTINGS: Settings = {
   launch_view: 'last',
   confirm_tag_removal: true,
   auto_clear_my_day: true,
+  add_due_to_my_day: false,
+  due_added_to_my_day_on: '',
   priority_scale: 'high_medium_low',
   task_layout: 'list',
   sidebar_width: 248,

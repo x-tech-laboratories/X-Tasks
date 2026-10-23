@@ -116,6 +116,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
 
         <label class="setting_row">
           <div class="setting_text">
+            <span class="setting_label">Add due tasks to My Day</span>
+            <span class="setting_hint">Open tasks due today or overdue go into My Day each morning, and when given a due date that has come.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.add_due_to_my_day}
+            onChange={(event) => on_change('add_due_to_my_day', event.currentTarget.checked)}
+          />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
             <span class="setting_label">Ask before deleting a tag</span>
             <span class="setting_hint">Deleting a tag also deletes its sub-tags. Tasks are kept.</span>
           </div>

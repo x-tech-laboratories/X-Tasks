@@ -11,7 +11,7 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { format_task_date, next_schedule, parse_task_date } from './schedule'
 import {
-  by_position, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, subtree_ids,
+  by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, subtree_ids,
   tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
 
@@ -30,6 +30,7 @@ const TASK_LAYOUT_CHOICES: { value: TaskLayout; label: string }[] = [
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
+  const [has_loaded_tasks, set_has_loaded_tasks] = useState(false)
   const [tag_groups, set_tag_groups] = useState<TagGroup[]>([])
   const [tags, set_tags] = useState<Tag[]>([])
   const [settings, set_settings] = useState<Settings | null>(null)
@@ -43,7 +44,10 @@ export function App() {
   const [today, set_today] = useState(() => format_task_date(new Date(), false))
 
   useEffect(() => {
-    void window.x_tasks.list_tasks().then(set_tasks)
+    void window.x_tasks.list_tasks().then((loaded_tasks) => {
+      set_tasks(loaded_tasks)
+      set_has_loaded_tasks(true)
+    })
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
@@ -58,6 +62,14 @@ export function App() {
     const timer = window.setInterval(() => set_today(format_task_date(new Date(), false)), 60 * 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  // Puts due tasks into My Day once a day, so ones taken out by hand stay out until tomorrow.
+  useEffect(() => {
+    if (!has_loaded_tasks || !settings?.add_due_to_my_day || settings.due_added_to_my_day_on === today) return
+    const shown_since = my_day_since(settings, today)
+    for (const task of tasks) if (is_due_by(task, today) && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
+    void change_setting('due_added_to_my_day_on', today)
+  }, [has_loaded_tasks, settings?.add_due_to_my_day, today])
 
   // ==========================================================================
   // Navigation and settings
@@ -113,9 +125,13 @@ export function App() {
     set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
+  // A task given a due date that has already come goes straight into My Day when that setting is on.
   function set_task_schedule(task: Task, schedule: TaskSchedule): void {
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, ...schedule } : each)))
     void window.x_tasks.set_task_schedule(task.id, schedule)
+
+    if (!settings?.add_due_to_my_day || is_in_my_day(task, my_day_since(settings, today))) return
+    if (is_due_by({ ...task, ...schedule }, today)) set_task_my_day(task, today)
   }
 
   // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.

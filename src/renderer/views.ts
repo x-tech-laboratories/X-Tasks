@@ -64,6 +64,11 @@ export function is_in_my_day(task: Task, my_day_since: string): boolean {
   return task.my_day_on !== null && task.my_day_on >= my_day_since
 }
 
+// A task belongs in My Day by its due date once that day has come and it is still open.
+export function is_due_by(task: Task, today: string): boolean {
+  return !task.is_done && task.due_at !== null && task.due_at.slice(0, 10) <= today
+}
+
 // New tasks added while My Day is shown go into it.
 export function my_day_for_new_task(view: View, today: string): string | null {
   return view.kind === 'my_day' ? today : null
