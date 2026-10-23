@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 
 import type { Tag, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
+import { is_overdue, task_date_label } from './schedule'
 import { drop_placement, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
@@ -124,6 +125,12 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         />
         <span class="task_title">{task.title}</span>
         {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
+        {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
+        {task.due_at && (
+          <span class={!task.is_done && is_overdue(task.due_at) ? 'due_label is_overdue' : 'due_label'}>
+            {task_date_label(task.due_at)}
+          </span>
+        )}
 
         {task_tags.map((tag) => (
           <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>

@@ -5,8 +5,8 @@ import {
 } from '@shared/settings'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
-  MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL,
-  TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
+  MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
+  SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
 } from '@shared/tasks'
 
 const tasks_api: TasksApi = {
@@ -15,6 +15,7 @@ const tasks_api: TasksApi = {
   set_task_done: (task_id, is_done) => ipcRenderer.invoke(SET_TASK_DONE_CHANNEL, task_id, is_done),
   set_task_title: (task_id, title) => ipcRenderer.invoke(SET_TASK_TITLE_CHANNEL, task_id, title),
   set_task_notes: (task_id, notes) => ipcRenderer.invoke(SET_TASK_NOTES_CHANNEL, task_id, notes),
+  set_task_schedule: (task_id, schedule) => ipcRenderer.invoke(SET_TASK_SCHEDULE_CHANNEL, task_id, schedule),
   remove_task: (task_id) => ipcRenderer.invoke(REMOVE_TASK_CHANNEL, task_id),
   move_task: (task_id, parent_id, position) => ipcRenderer.invoke(MOVE_TASK_CHANNEL, task_id, parent_id, position),
   tag_task: (task_id, tag_id) => ipcRenderer.invoke(TAG_TASK_CHANNEL, task_id, tag_id),

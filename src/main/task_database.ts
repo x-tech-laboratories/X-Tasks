@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
-import type { Tag, TagGroup, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
 // Schema
@@ -72,7 +72,10 @@ const SCHEMA_MIGRATIONS = [
    INSERT INTO task_tags (task_id, tag_id) SELECT id, list_id FROM tasks WHERE list_id IS NOT NULL AND parent_id IS NULL;
    DROP INDEX tasks_by_list;
    ALTER TABLE tasks DROP COLUMN list_id;
-   DROP TABLE task_lists`
+   DROP TABLE task_lists`,
+  `ALTER TABLE tasks ADD COLUMN start_at TEXT;
+   ALTER TABLE tasks ADD COLUMN due_at TEXT;
+   ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT ''`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -108,6 +111,9 @@ interface TaskRow {
   title: string
   notes: string
   is_done: number
+  start_at: string | null
+  due_at: string | null
+  recurrence: string
   created_at: string
   parent_id: string | null
   position: number
@@ -151,6 +157,9 @@ function row_to_task(row: TaskRow, tag_ids: string[]): Task {
     title: row.title,
     notes: row.notes,
     is_done: row.is_done === 1,
+    start_at: row.start_at,
+    due_at: row.due_at,
+    recurrence: row.recurrence,
     created_at: row.created_at,
     parent_id: row.parent_id,
     position: row.position,
@@ -180,6 +189,9 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     title,
     notes: '',
     is_done: false,
+    start_at: null,
+    due_at: null,
+    recurrence: '',
     created_at: new Date().toISOString(),
     parent_id,
     position: next_position('tasks'),
@@ -206,6 +218,12 @@ export function set_task_title(task_id: string, title: string): void {
 
 export function set_task_notes(task_id: string, notes: string): void {
   open_database().prepare('UPDATE tasks SET notes = ? WHERE id = ?').run(notes, task_id)
+}
+
+export function set_task_schedule(task_id: string, schedule: TaskSchedule): void {
+  open_database()
+    .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ? WHERE id = ?')
+    .run(schedule.start_at, schedule.due_at, schedule.recurrence, task_id)
 }
 
 export function remove_task(task_id: string): void {

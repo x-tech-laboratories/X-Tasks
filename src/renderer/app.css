@@ -124,6 +124,9 @@ button {
 button:hover { border-color: var(--accent); }
 
 input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
 input:not([type]) {
   height: var(--control-height);
   padding: 7px 11px;
@@ -136,9 +139,15 @@ input:not([type]) {
 }
 
 input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="date"]:hover,
+input[type="time"]:hover,
 input:not([type]):hover { border-color: var(--border-focus); }
 
 input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
 input:not([type]):focus {
   border-color: var(--border-focus);
   outline: var(--focus-ring-width) solid var(--focus-ring);
@@ -265,6 +274,8 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
 .task_title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notes_marker { color: var(--text-tertiary); font-size: var(--text-caption); }
+.due_label { flex: none; color: var(--text-secondary); font-size: var(--text-caption); }
+.due_label.is_overdue { color: var(--status-danger); }
 .task.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
 
 .row_button { visibility: hidden; }
@@ -458,6 +469,13 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .task_detail_field { display: flex; flex-direction: column; }
 .task_detail_field .sidebar_heading { padding: 0; }
 
+.date_field { display: flex; align-items: center; gap: var(--space-3); }
+.date_field input[type="date"] { flex: 1; min-width: 0; }
+.date_field input[type="time"] { width: 96px; }
+.date_field .remove_button { flex: none; }
+
+.recurrence_button { overflow: hidden; background: var(--surface-default); font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+
 .task_detail_notes { flex: 1; min-height: 160px; }
 .task_detail_notes textarea { flex: 1; }
 
@@ -606,3 +624,55 @@ select:hover { border-color: var(--border-focus); }
 .context_menu_item:hover,
 .context_menu_item:focus-visible { background: var(--surface-navigation-hover); color: var(--text-heading); }
 .context_menu_item.is_danger { color: var(--status-danger); }
+
+/* ========================================================================== */
+/* Recurrence picker                                                          */
+/* ========================================================================== */
+
+.recurrence_dialog {
+  width: min(560px, calc(100vw - 2 * var(--space-7)));
+  padding: var(--space-7);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-default);
+  color: var(--text-body);
+  box-shadow: var(--shadow-card);
+}
+
+.recurrence_dialog::backdrop { background: rgba(15, 23, 42, 0.4); }
+
+.recurrence_dialog_heading { margin: 0 0 var(--space-5); color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
+
+.recurrence_dialog_footer { display: flex; justify-content: flex-end; gap: var(--space-4); margin-top: var(--space-6); }
+
+.primary_button { border-color: var(--accent); background: var(--accent); color: var(--text-on-fill); }
+.primary_button:hover { opacity: 0.85; }
+
+.recurrence-input__enabled { display: flex; align-items: center; gap: var(--space-4); font-weight: 500; }
+.recurrence-input__row-label { width: 64px; color: var(--text-secondary); font-size: var(--text-control); }
+.recurrence-input__controls { gap: var(--space-3); }
+.recurrence-input__number { width: 72px; }
+
+.recurrence-input__toggle-label {
+  min-width: 40px;
+  padding: var(--space-2) var(--space-4);
+  border-color: var(--border-default);
+  border-radius: var(--radius-small);
+  font-size: var(--text-control);
+  opacity: 1;
+}
+
+.recurrence-input__toggle-label:hover { border-color: var(--accent); }
+
+.recurrence-input__toggle-input:checked + .recurrence-input__toggle-label {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--text-on-fill);
+}
+
+.recurrence-input__toggle-input:focus-visible + .recurrence-input__toggle-label {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+}
+
+.recurrence-input__summary { color: var(--text-secondary); font-size: var(--text-control); }
+.recurrence-input__summary--invalid { color: var(--status-danger); }

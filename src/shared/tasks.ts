@@ -7,11 +7,17 @@ export interface Task {
   title: string
   notes: string
   is_done: boolean
+  start_at: string | null
+  due_at: string | null
+  recurrence: string
   created_at: string
   parent_id: string | null
   position: number
   tag_ids: string[]
 }
+
+// Dates are local clock times, as YYYY-MM-DD or YYYY-MM-DDTHH:MM; recurrence is an RFC 5545 rule without the RRULE: prefix.
+export type TaskSchedule = Pick<Task, 'start_at' | 'due_at' | 'recurrence'>
 
 // A named set of tags, such as Area or Priority, shown as its own section in the sidebar.
 export interface TagGroup {
@@ -50,6 +56,7 @@ export interface TasksApi {
   set_task_done: (task_id: string, is_done: boolean) => Promise<void>
   set_task_title: (task_id: string, title: string) => Promise<void>
   set_task_notes: (task_id: string, notes: string) => Promise<void>
+  set_task_schedule: (task_id: string, schedule: TaskSchedule) => Promise<void>
   remove_task: (task_id: string) => Promise<void>
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>
@@ -70,6 +77,7 @@ export const ADD_TASK_CHANNEL = 'tasks:add'
 export const SET_TASK_DONE_CHANNEL = 'tasks:set-done'
 export const SET_TASK_TITLE_CHANNEL = 'tasks:set-title'
 export const SET_TASK_NOTES_CHANNEL = 'tasks:set-notes'
+export const SET_TASK_SCHEDULE_CHANNEL = 'tasks:set-schedule'
 export const REMOVE_TASK_CHANNEL = 'tasks:remove'
 export const MOVE_TASK_CHANNEL = 'tasks:move'
 export const TAG_TASK_CHANNEL = 'tasks:tag'

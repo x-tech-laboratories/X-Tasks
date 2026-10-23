@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 
-import type { Tag, TagGroup, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
+import { RecurrencePicker } from './RecurrencePicker'
+import { describe_recurrence, recurrence_anchor } from './schedule'
 import { tag_path } from './views'
 
 // ============================================================================
@@ -17,15 +19,19 @@ interface TaskDetailProps {
   on_set_notes: (task: Task, notes: string) => void
   on_tag: (task: Task, tag: Tag) => void
   on_untag: (task: Task, tag: Tag) => void
+  on_set_schedule: (task: Task, schedule: TaskSchedule) => void
   on_remove: (task: Task) => void
   on_close: () => void
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_tag, on_untag, on_remove, on_close
+  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_tag, on_untag, on_remove,
+  on_close
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
+  const [is_picking_recurrence, set_is_picking_recurrence] = useState(false)
+  const schedule: TaskSchedule = { start_at: task.start_at, due_at: task.due_at, recurrence: task.recurrence }
 
   // Each field saves on blur, which happens before this closes the panel.
   useEffect(() => {
@@ -110,6 +116,25 @@ export function TaskDetail({
         )
       })}
 
+      <DateField label="Start" value={task.start_at} on_change={(start_at) => on_set_schedule(task, { ...schedule, start_at })} />
+      <DateField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
+
+      <div class="task_detail_field">
+        <span class="sidebar_heading">Repeat</span>
+        <button class="recurrence_button" onClick={() => set_is_picking_recurrence(true)}>
+          {describe_recurrence(schedule)}
+        </button>
+      </div>
+
+      {is_picking_recurrence && (
+        <RecurrencePicker
+          recurrence={task.recurrence}
+          anchor={recurrence_anchor(schedule)}
+          on_save={(recurrence) => on_set_schedule(task, { ...schedule, recurrence })}
+          on_close={() => set_is_picking_recurrence(false)}
+        />
+      )}
+
       <label class="task_detail_field task_detail_notes">
         <span class="sidebar_heading">Notes</span>
         <textarea
@@ -131,5 +156,52 @@ export function TaskDetail({
         </button>
       </footer>
     </aside>
+  )
+}
+
+// ============================================================================
+// Date field
+// ============================================================================
+
+interface DateFieldProps {
+  label: string
+  value: string | null
+  on_change: (value: string | null) => void
+}
+
+// The time is optional, and clearing the date clears the time with it.
+function DateField({ label, value, on_change }: DateFieldProps) {
+  const [day = '', time = ''] = value?.split('T') ?? []
+
+  function change(new_day: string, new_time: string): void {
+    if (!new_day) on_change(null)
+    else on_change(new_time ? `${new_day}T${new_time}` : new_day)
+  }
+
+  return (
+    <div class="task_detail_field">
+      <span class="sidebar_heading">{label}</span>
+      <div class="date_field">
+        <input
+          type="date"
+          value={day}
+          onChange={(event) => change(event.currentTarget.value, time)}
+          aria-label={`${label} date`}
+        />
+        {day && (
+          <input
+            type="time"
+            value={time}
+            onChange={(event) => change(day, event.currentTarget.value)}
+            aria-label={`${label} time`}
+          />
+        )}
+        {day && (
+          <button class="remove_button" onClick={() => on_change(null)} aria-label={`Clear ${label.toLowerCase()} date`}>
+            ×
+          </button>
+        )}
+      </div>
+    </div>
   )
 }

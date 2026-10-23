@@ -13,7 +13,8 @@
     "app": "bash scripts/run.sh"
   },
   "dependencies": {
-    "preact": "^10.29.8"
+    "preact": "^10.29.8",
+    "recurrence-input": "^3.1.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",

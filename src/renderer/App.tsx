@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
 
 import type { Settings } from '@shared/settings'
-import type { Tag, TagGroup, Task } from '@shared/tasks'
+import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, type TaskActions } from './TaskItem'
+import { next_schedule } from './schedule'
 import {
   by_position, launch_view, move_for_drop, nest_tasks, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
   type DropPlacement, type View
@@ -81,7 +82,16 @@ export function App() {
     set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
+  function set_task_schedule(task: Task, schedule: TaskSchedule): void {
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, ...schedule } : each)))
+    void window.x_tasks.set_task_schedule(task.id, schedule)
+  }
+
+  // Completing a recurring task moves it to its next occurrence instead, until its rule runs out.
   function toggle_task(task: Task): void {
+    const next = task.is_done ? null : next_schedule(task)
+    if (next) return set_task_schedule(task, next)
+
     const is_done = !task.is_done
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done } : each)))
     void window.x_tasks.set_task_done(task.id, is_done)
@@ -285,6 +295,7 @@ export function App() {
           on_set_notes={set_task_notes}
           on_tag={tag_task}
           on_untag={untag_task}
+          on_set_schedule={set_task_schedule}
           on_remove={remove_task}
           on_close={() => set_selected_task_id(null)}
         />

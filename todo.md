@@ -5,7 +5,9 @@
 - [x] Edit a task's title in place
 - [x] Tag a task from its detail panel or by dragging it onto a tag
 - [x] Notes on a task
-- [ ] Due dates, with Today and Upcoming views
+- [x] Start and due dates
+- [x] Repeating tasks
+- [ ] Today and Upcoming views
 - [ ] Priorities
 - [x] Subtasks
 - [x] Reorder tasks by dragging
