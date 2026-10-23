@@ -138,7 +138,7 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags), my_day_for_new_task(selected_view, today))
+    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags, tag_groups), my_day_for_new_task(selected_view, today))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
   }
@@ -361,7 +361,7 @@ export function App() {
   const is_reports = selected_view.kind === 'reports'
   const is_table = settings.task_layout === 'table' && !is_reports
   const shown_since = my_day_since(settings, today)
-  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since))
+  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
 
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
@@ -419,7 +419,7 @@ export function App() {
         is_settings_open={is_settings_open}
         dragged_task={dragged_task}
         on_select_view={select_view}
-        on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags))}
+        on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
         on_open_settings={() => set_is_settings_open(true)}
         on_remove_tag_group={remove_tag_group}
         on_set_tag_group_single_choice={set_tag_group_single_choice}

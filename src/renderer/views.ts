@@ -1,5 +1,5 @@
-import type { Settings, TaskDateField } from '@shared/settings'
-import { PRIORITY_GROUP_ID, type Tag, type Task, type View } from '@shared/tasks'
+import type { Settings, TagMatch, TagSelection, TaskDateField } from '@shared/settings'
+import { PRIORITY_GROUP_ID, type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
 import { task_date_of } from '@shared/schedule'
 import { rule_matches } from './rules'
 
@@ -32,16 +32,21 @@ export function is_tag_selected(view: View | null, tag_id: string): boolean {
   return view?.kind === 'tag' && view.tag_ids.includes(tag_id)
 }
 
-// Clicking a tag swaps it in for the selected tag of its group, or takes it out again; with no tag left the view shows all tasks.
-export function view_with_tag_toggled(view: View, tag: Tag, tags: Tag[]): View {
+// Clicking a selected tag takes it out; any other tag joins, replacing the tags the selection mode leaves no room for.
+export function view_with_tag_toggled(view: View, tag: Tag, tags: Tag[], selection: TagSelection): View {
   const current_ids = view.kind === 'tag' ? view.tag_ids : []
-  const other_group_ids = current_ids.filter((tag_id) => tags.find((each) => each.id === tag_id)?.group_id !== tag.group_id)
-  const tag_ids = current_ids.includes(tag.id) ? other_group_ids : [...other_group_ids, tag.id]
+  const kept_ids = current_ids.filter((tag_id) => {
+    if (tag_id === tag.id) return false
+    if (selection === 'single') return false
+    if (selection === 'one_per_group') return tags.find((each) => each.id === tag_id)?.group_id !== tag.group_id
+    return true
+  })
+  const tag_ids = current_ids.includes(tag.id) ? current_ids.filter((tag_id) => tag_id !== tag.id) : [...kept_ids, tag.id]
   return tag_ids.length > 0 ? { kind: 'tag', tag_ids } : { kind: 'all' }
 }
 
-// A task must match every selected tag, through the tag itself or any tag below it; subtasks follow their parent into My Day.
-export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string): boolean {
+// A task matches every selected tag, or at least one, through the tag itself or any tag below it; subtasks follow their parent into My Day.
+export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string, tag_match: TagMatch = 'all'): boolean {
   switch (view.kind) {
     case 'my_day': return task_and_ancestors(task, all_tasks).some((each) => is_in_my_day(each, my_day_since))
     case 'all': return true
@@ -50,7 +55,8 @@ export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags:
     case 'reports': return false
     case 'tag': {
       const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
-      return view.tag_ids.every((tag_id) => [...subtree_ids(tag_id, tags)].some((id) => task_has_tag(task, id, chain_tag_ids, tags)))
+      const matches = (tag_id: string) => [...subtree_ids(tag_id, tags)].some((id) => task_has_tag(task, id, chain_tag_ids, tags))
+      return tag_match === 'any' ? view.tag_ids.some(matches) : view.tag_ids.every(matches)
     }
   }
 }
@@ -119,10 +125,19 @@ function view_without_missing_tags(tag_ids: string[], tags: Tag[]): View {
   return kept_ids.length > 0 ? { kind: 'tag', tag_ids: kept_ids } : { kind: 'all' }
 }
 
-// New tasks carry the selected plain tags, and no tag in every other view; rule tags apply by themselves.
-export function tag_ids_for_new_task(view: View, tags: Tag[]): string[] {
+// New tasks carry the selected plain tags, but only the first from a one-tag-per-task group; rule tags apply by themselves.
+export function tag_ids_for_new_task(view: View, tags: Tag[], tag_groups: TagGroup[]): string[] {
   if (view.kind !== 'tag') return []
-  return view.tag_ids.filter((tag_id) => !tags.find((tag) => tag.id === tag_id)?.rule)
+  const filled_group_ids = new Set<string>()
+
+  return view.tag_ids.filter((tag_id) => {
+    const tag = tags.find((each) => each.id === tag_id)
+    if (!tag || tag.rule) return false
+    if (!tag_groups.find((group) => group.id === tag.group_id)?.is_single_choice) return true
+    if (filled_group_ids.has(tag.group_id)) return false
+    filled_group_ids.add(tag.group_id)
+    return true
+  })
 }
 
 // Deleted tags leave the filter, and an empty filter falls back to all tasks.

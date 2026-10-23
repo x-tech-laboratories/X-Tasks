@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TagMatch, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
 
@@ -33,6 +33,17 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
 const PRIORITY_SCALE_CHOICES: { value: PriorityScale; label: string }[] = [
   { value: 'high_medium_low', label: 'High, Medium, Low' },
   { value: 'moscow', label: 'MoSCoW' }
+]
+
+const TAG_SELECTION_CHOICES: { value: TagSelection; label: string }[] = [
+  { value: 'single', label: 'One tag' },
+  { value: 'one_per_group', label: 'One per group' },
+  { value: 'many', label: 'Any number' }
+]
+
+const TAG_MATCH_CHOICES: { value: TagMatch; label: string }[] = [
+  { value: 'all', label: 'All tags' },
+  { value: 'any', label: 'Any tag' }
 ]
 
 // ============================================================================
@@ -174,6 +185,25 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           />
           <button type="submit">Add</button>
         </form>
+
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Tag selection</span>
+            <span class="setting_hint">
+              How many sidebar tags can be selected at once: one in all, one from each group, or any number. Clicking a selected
+              tag clears it.
+            </span>
+          </div>
+          <SegmentedChoice label="Tag selection" choices={TAG_SELECTION_CHOICES} value={settings.tag_selection} on_change={(value) => on_change('tag_selection', value)} />
+        </div>
+
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Match tasks with</span>
+            <span class="setting_hint">Whether a task must have every selected tag, or just one of them, to show.</span>
+          </div>
+          <SegmentedChoice label="Match tasks with" choices={TAG_MATCH_CHOICES} value={settings.tag_match} on_change={(value) => on_change('tag_match', value)} />
+        </div>
 
         <div class="setting_row">
           <div class="setting_text">
@@ -607,5 +637,34 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
         </div>
       ))}
     </>
+  )
+}
+
+// ============================================================================
+// Segmented choice
+// ============================================================================
+
+interface SegmentedChoiceProps<Value extends string> {
+  label: string
+  choices: { value: Value; label: string }[]
+  value: Value
+  on_change: (value: Value) => void
+}
+
+function SegmentedChoice<Value extends string>({ label, choices, value, on_change }: SegmentedChoiceProps<Value>) {
+  return (
+    <div class="segmented_control" role="radiogroup" aria-label={label}>
+      {choices.map((choice) => (
+        <button
+          key={choice.value}
+          role="radio"
+          aria-checked={value === choice.value}
+          class={value === choice.value ? 'is_selected' : ''}
+          onClick={() => on_change(choice.value)}
+        >
+          {choice.label}
+        </button>
+      ))}
+    </div>
   )
 }

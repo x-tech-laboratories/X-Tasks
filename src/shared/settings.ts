@@ -21,6 +21,12 @@ export interface TableSortKey {
   is_descending: boolean
 }
 
+// How clicking tags builds the sidebar filter: one tag in all, one tag per group, or any number of tags.
+export type TagSelection = 'single' | 'one_per_group' | 'many'
+
+// Whether a task must match every selected tag or just one of them.
+export type TagMatch = 'all' | 'any'
+
 // The narrowest and widest each side panel can be dragged to.
 export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
 export const DETAIL_WIDTH_RANGE = { min: 260, max: 720 }
@@ -96,6 +102,8 @@ export interface Settings {
   // The last day due tasks were put in My Day, so ones taken out that day stay out.
   due_added_to_my_day_on: string
   priority_scale: PriorityScale
+  tag_selection: TagSelection
+  tag_match: TagMatch
   task_layout: TaskLayout
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
   table_sort: TableSortKey[]
@@ -125,6 +133,8 @@ export const DEFAULT_SETTINGS: Settings = {
   add_due_to_my_day: false,
   due_added_to_my_day_on: '',
   priority_scale: 'high_medium_low',
+  tag_selection: 'one_per_group',
+  tag_match: 'all',
   task_layout: 'list',
   table_sort: [],
   sidebar_width: 248,
