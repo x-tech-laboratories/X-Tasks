@@ -147,6 +147,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
 
         <label class="setting_row">
           <div class="setting_text">
+            <span class="setting_label">Remove completed tasks from My Day</span>
+            <span class="setting_hint">Completing a top-level task takes it out of My Day. Subtasks stay with their parent.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.remove_done_from_my_day}
+            onChange={(event) => on_change('remove_done_from_my_day', event.currentTarget.checked)}
+          />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
             <span class="setting_label">Add due tasks to My Day</span>
             <span class="setting_hint">Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date.</span>
           </div>

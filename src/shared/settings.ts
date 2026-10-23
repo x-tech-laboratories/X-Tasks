@@ -97,6 +97,8 @@ export interface Settings {
   task_date_field: TaskDateField
   // When set, My Day starts empty each day; otherwise tasks stay in it until taken out.
   auto_clear_my_day: boolean
+  // When set, completing a top-level task takes it out of My Day.
+  remove_done_from_my_day: boolean
   // When set, tasks due today or earlier go into My Day by themselves.
   add_due_to_my_day: boolean
   // The last day due tasks were put in My Day, so ones taken out that day stay out.
@@ -138,6 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
   confirm_tag_removal: true,
   task_date_field: 'due',
   auto_clear_my_day: true,
+  remove_done_from_my_day: true,
   add_due_to_my_day: false,
   due_added_to_my_day_on: '',
   priority_scale: 'high_medium_low',

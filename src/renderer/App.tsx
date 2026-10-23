@@ -176,6 +176,8 @@ export function App() {
 
     const done_at = new Date().toISOString()
     const log_change: CompletionLogChange = { kind: 'add', occurrence_on: recurrence_anchor(task) }
+    // A completed top-level task can leave My Day, as the settings choose.
+    if (settings?.remove_done_from_my_day && task.parent_id === null && task.my_day_on !== null) set_task_my_day(task, null)
     const next = next_schedule(task)
     if (next) {
       set_task_schedule(task, next)
