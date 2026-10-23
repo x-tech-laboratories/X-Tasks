@@ -448,7 +448,7 @@ export function App() {
               </form>
             )}
 
-            <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' ') }}>
+            <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' '), '--group-count': tag_groups.length }}>
               {is_table && visible_tasks.length > 0 && (
                 <TaskTableHeader
                   tag_groups={tag_groups}
