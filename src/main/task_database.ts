@@ -94,7 +94,9 @@ const SCHEMA_MIGRATIONS = [
    INSERT INTO tags (id, name, created_at, group_id, position)
      SELECT lower(hex(randomblob(16))), column1, strftime('%Y-%m-%dT%H:%M:%fZ'), 'type', column2
      FROM (VALUES ('Goal', 1), ('Task', 2), ('Routine', 3), ('Habit', 4))
-     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'type')`
+     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'type')`,
+  // Tasks already done have no known completion time, so theirs stays empty.
+  `ALTER TABLE tasks ADD COLUMN done_at TEXT`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -130,6 +132,7 @@ interface TaskRow {
   title: string
   notes: string
   is_done: number
+  done_at: string | null
   start_at: string | null
   due_at: string | null
   recurrence: string
@@ -181,6 +184,7 @@ function row_to_task(row: TaskRow, tag_ids: string[]): Task {
     title: row.title,
     notes: row.notes,
     is_done: row.is_done === 1,
+    done_at: row.done_at,
     start_at: row.start_at,
     due_at: row.due_at,
     recurrence: row.recurrence,
@@ -213,6 +217,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     title,
     notes: '',
     is_done: false,
+    done_at: null,
     start_at: null,
     due_at: null,
     recurrence: '',
@@ -232,8 +237,9 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
   return task
 }
 
-export function set_task_done(task_id: string, is_done: boolean): void {
-  open_database().prepare('UPDATE tasks SET is_done = ? WHERE id = ?').run(is_done ? 1 : 0, task_id)
+// Records when the task was completed, and clears that time when it is reopened.
+export function set_task_done(task_id: string, done_at: string | null): void {
+  open_database().prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(done_at === null ? 0 : 1, done_at, task_id)
 }
 
 export function set_task_title(task_id: string, title: string): void {

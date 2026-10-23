@@ -178,6 +178,7 @@ export function TaskDetail({
       <footer class="task_detail_footer">
         <span>
           Created {new Date(task.created_at).toLocaleDateString()}
+          {task.is_done && task.done_at && ` · Done ${new Date(task.done_at).toLocaleDateString()}`}
           {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
         </span>
         <button class="danger_button" onClick={() => on_remove(task)}>

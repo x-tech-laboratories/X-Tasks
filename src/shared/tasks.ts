@@ -7,6 +7,8 @@ export interface Task {
   title: string
   notes: string
   is_done: boolean
+  // When the task was last completed, as an ISO time; empty while open or when it was completed before this was kept.
+  done_at: string | null
   start_at: string | null
   due_at: string | null
   recurrence: string
@@ -58,7 +60,7 @@ export type View =
 export interface TasksApi {
   list_tasks: () => Promise<Task[]>
   add_task: (title: string, parent_id: string | null, tag_ids: string[]) => Promise<Task>
-  set_task_done: (task_id: string, is_done: boolean) => Promise<void>
+  set_task_done: (task_id: string, done_at: string | null) => Promise<void>
   set_task_title: (task_id: string, title: string) => Promise<void>
   set_task_notes: (task_id: string, notes: string) => Promise<void>
   set_task_schedule: (task_id: string, schedule: TaskSchedule) => Promise<void>

@@ -65,7 +65,7 @@ function register_bridge_handlers(): void {
   ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, parent_id: string | null, tag_ids: string[]) =>
     add_task(title, parent_id, tag_ids)
   )
-  ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
+  ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, done_at: string | null) => set_task_done(task_id, done_at))
   ipcMain.handle(SET_TASK_TITLE_CHANNEL, (_event, task_id: string, title: string) => set_task_title(task_id, title))
   ipcMain.handle(SET_TASK_NOTES_CHANNEL, (_event, task_id: string, notes: string) => set_task_notes(task_id, notes))
   ipcMain.handle(SET_TASK_SCHEDULE_CHANNEL, (_event, task_id: string, schedule: TaskSchedule) =>
