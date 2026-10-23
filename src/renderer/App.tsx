@@ -95,14 +95,28 @@ export function App() {
     void window.x_tasks.set_task_schedule(task.id, schedule)
   }
 
-  // Completing a recurring task moves it to its next occurrence instead, until its rule runs out.
+  // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.
   function toggle_task(task: Task): void {
     const next = task.is_done ? null : next_schedule(task)
-    if (next) return set_task_schedule(task, next)
+    if (next) {
+      set_task_schedule(task, next)
+      return set_subtasks_done(task, false)
+    }
 
     const is_done = !task.is_done
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done } : each)))
     void window.x_tasks.set_task_done(task.id, is_done)
+    if (is_done) set_subtasks_done(task, true)
+  }
+
+  function set_subtasks_done(task: Task, is_done: boolean): void {
+    const changed_ids = subtree_ids(task.id, tasks)
+    changed_ids.delete(task.id)
+    for (const each of tasks) if (changed_ids.has(each.id) && each.is_done === is_done) changed_ids.delete(each.id)
+    if (changed_ids.size === 0) return
+
+    set_tasks((current_tasks) => current_tasks.map((each) => (changed_ids.has(each.id) ? { ...each, is_done } : each)))
+    for (const id of changed_ids) void window.x_tasks.set_task_done(id, is_done)
   }
 
   function rename_task(task: Task, title: string): void {
