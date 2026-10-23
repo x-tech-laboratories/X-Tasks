@@ -52,6 +52,8 @@ export interface ReportWidget {
   days: number
   // The tag group a by-tag card splits ticks by.
   group_id: string
+  // When set, a streak card lists only the routines, leaving out the subtasks under each.
+  hide_subtasks?: boolean
 }
 
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }

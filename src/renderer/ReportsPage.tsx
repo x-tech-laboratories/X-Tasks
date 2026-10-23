@@ -4,6 +4,7 @@ import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind } from '@sh
 import { parse_task_date } from '@shared/schedule'
 import type { Completion, Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
+import { StreakStrip } from './StreakStrip'
 import {
   day_offset, first_report_day, streak_rows, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of
 } from './reports'
@@ -111,7 +112,9 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
               <WidgetEditor widget={widget} tags={tags} tag_groups={tag_groups} on_change={update_widget} on_close={() => set_editing_id(null)} />
             )}
 
-            {widget.kind === 'streaks' && <StreakTable widget={widget} widget_tasks={widget_tasks} completions={completions} today={today} on_select_task={on_select_task} />}
+            {widget.kind === 'streaks' && (
+              <StreakTable widget={widget} widget_tasks={widget_tasks} completions={completions} tasks={tasks} today={today} on_select_task={on_select_task} />
+            )}
             {widget.kind === 'calendar' && <TickCalendar widget={widget} counts={ticks_per_day(widget, widget_tasks, completions, today)} today={today} />}
             {widget.kind === 'weekly' && <WeeklyBars weeks={ticks_per_week(widget, widget_tasks, completions, today)} />}
             {widget.kind === 'by_tag' && (
@@ -155,6 +158,13 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
         <span class="sidebar_heading">Days</span>
         <input type="number" min={REPORT_DAYS_RANGE.min} max={REPORT_DAYS_RANGE.max} value={widget.days} onChange={(event) => set_days(event.currentTarget.value)} />
       </label>
+
+      {widget.kind === 'streaks' && (
+        <label class="report_editor_check">
+          <input type="checkbox" checked={!widget.hide_subtasks} onChange={(event) => on_change({ ...widget, hide_subtasks: !event.currentTarget.checked })} />
+          Show subtasks under each routine
+        </label>
+      )}
 
       {widget.kind === 'by_tag' && (
         <label class="task_detail_field">
@@ -204,12 +214,14 @@ interface StreakTableProps {
   widget: ReportWidget
   widget_tasks: Task[]
   completions: Completion[]
+  tasks: Task[]
   today: string
   on_select_task: (task: Task) => void
 }
 
-function StreakTable({ widget, widget_tasks, completions, today, on_select_task }: StreakTableProps) {
-  const rows = streak_rows(widget, widget_tasks, completions, today)
+// A subtask's streak and share count the routine's ticks it was done in, so the ones often left undone stand out.
+function StreakTable({ widget, widget_tasks, completions, tasks, today, on_select_task }: StreakTableProps) {
+  const rows = streak_rows(widget, widget_tasks, completions, tasks, today)
   if (rows.length === 0) return <p class="report_empty">No repeating tasks here.</p>
 
   return (
@@ -217,20 +229,26 @@ function StreakTable({ widget, widget_tasks, completions, today, on_select_task 
       <thead>
         <tr>
           <th>Routine</th>
+          <th class="report_strip_cell">Recent</th>
           <th class="is_number">Streak</th>
           <th class="is_number">Best</th>
-          <th class="is_number">On time</th>
+          <th class="is_number" title="Routines: share of occurrences done on time. Subtasks: share of the routine's ticks they were done in.">
+            Done
+          </th>
         </tr>
       </thead>
       <tbody>
-        {rows.map(({ task, streak, record }) => (
-          <tr key={task.id}>
-            <td>
+        {rows.map(({ task, depth, streak, record, history }) => (
+          <tr key={task.id} class={depth > 0 ? 'is_subtask' : ''}>
+            <td style={{ '--depth': depth }}>
               <button class="report_task_link" onClick={() => on_select_task(task)}>{task.title}</button>
+            </td>
+            <td class="report_strip_cell">
+              <StreakStrip history={history} limit={14} />
             </td>
             <td class="is_number">{streak.current > 0 ? <span class="streak_badge">🔥 {streak.current}</span> : '0'}</td>
             <td class="is_number">{streak.best}</td>
-            <td class="is_number" title={`${record.on_time} of ${record.due} done on time`}>
+            <td class="is_number" title={depth > 0 ? `Done in ${record.on_time} of the routine's ${record.due} ticks` : `${record.on_time} of ${record.due} done on time`}>
               {record.due > 0 ? `${Math.round((record.on_time / record.due) * 100)}%` : '—'}
             </td>
           </tr>

@@ -372,7 +372,9 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
           {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
           {streak && streak.current > 0 && (
-            <span class="streak_badge" title={`${streak.current} in a row on time · best ${streak.best}`}>🔥 {streak.current}</span>
+            <span class="streak_badge" title={`${streak.current} in a row ${task.recurrence ? 'on time' : 'done with its routine'} · best ${streak.best}`}>
+              🔥 {streak.current}
+            </span>
           )}
         </span>
 

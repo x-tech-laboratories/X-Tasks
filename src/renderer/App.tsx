@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
 import type { Completion, CompletionLogChange, Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
-import { completions_after, routine_streak, type RoutineStreak } from '@shared/streaks'
+import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
@@ -343,7 +343,7 @@ export function App() {
     const now = new Date()
     const streaks = new Map<string, RoutineStreak>()
     for (const task of tasks) {
-      const streak = routine_streak(task, completions, now)
+      const streak = task_streak(task, tasks, completions, now)
       if (streak) streaks.set(task.id, streak)
     }
     return streaks
@@ -543,6 +543,7 @@ export function App() {
           on_set_schedule={set_task_schedule}
           on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
           streak={streak_by_task_id.get(selected_task.id) ?? null}
+          history={task_history(selected_task, tasks, completions)}
           on_reschedule={(task) => set_rescheduling_task_id(task.id)}
           is_in_my_day={is_in_my_day(selected_task, shown_since)}
           on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}

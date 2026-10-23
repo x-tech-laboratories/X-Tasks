@@ -91,35 +91,117 @@ export function routine_streak(task: Task, completions: Completion[], now = new 
   return { current: pending_next && now >= pending_next ? 0 : run, best }
 }
 
+// ============================================================================
+// History
+// ============================================================================
+
+// One past occurrence of a routine, or one round of a subtask, and how it went.
+export interface HistoryMark {
+  time: number
+  state: 'on_time' | 'late' | 'missed'
+}
+
+// Every occurrence since the routine's first logged tick that was ticked or whose time is up, oldest first.
+export function routine_history(task: Task, completions: Completion[], now = new Date()): HistoryMark[] {
+  const logged = logged_occurrences(task, completions)
+  const first = logged[0]
+  if (!task.recurrence || !first) return []
+
+  // Logged ticks count wherever they fall, as a rule changed since may no longer produce their dates.
+  const marks: HistoryMark[] = logged
+    .filter((occurrence) => occurrence.time < now.getTime())
+    .map((occurrence) => ({ time: occurrence.time, state: occurrence.is_on_time ? 'on_time' : 'late' }))
+  const logged_times = new Set(logged.map((occurrence) => occurrence.time))
+  const with_time = completions.some((entry) => entry.task_id === task.id && entry.occurrence_on !== null && has_time(entry.occurrence_on))
+
+  // Walks the rule from the first logged tick, marking each occurrence whose time ran out with no tick as missed.
+  let occurrence: Date | null = new Date(first.time)
+  for (let step = 0; occurrence && occurrence < now && step < MAX_OCCURRENCES_WALKED; step += 1) {
+    const next = next_after(task.recurrence, format_task_date(occurrence, with_time))
+    if (!logged_times.has(occurrence.getTime()) && next && next <= now) marks.push({ time: occurrence.getTime(), state: 'missed' })
+    occurrence = next
+  }
+
+  return marks.sort((first_mark, second_mark) => first_mark.time - second_mark.time)
+}
+
 export interface RoutineRecord {
   on_time: number
   due: number
 }
 
-// Of the routine's occurrences since a time, those done on time, out of every one done or whose time is up; counted from its first logged tick.
-export function routine_record(task: Task, completions: Completion[], since: Date, now = new Date()): RoutineRecord {
-  const logged = logged_occurrences(task, completions)
-  const first = logged[0]
-  if (!task.recurrence || !first) return { on_time: 0, due: 0 }
+// Of the marks since a time, those done on time, out of all of them.
+export function record_since(history: HistoryMark[], since: Date): RoutineRecord {
+  const recent = history.filter((mark) => mark.time >= since.getTime())
+  return { on_time: recent.filter((mark) => mark.state === 'on_time').length, due: recent.length }
+}
 
-  const logged_by_time = new Map(logged.map((occurrence) => [occurrence.time, occurrence]))
-  const with_time = completions.some((entry) => entry.task_id === task.id && entry.occurrence_on !== null && has_time(entry.occurrence_on))
-  const record: RoutineRecord = { on_time: 0, due: 0 }
+// ============================================================================
+// Subtasks of a repeating task
+// ============================================================================
 
-  // Logged ticks count wherever they fall, as a rule changed since may no longer produce their dates.
-  for (const occurrence of logged) {
-    if (occurrence.time < since.getTime() || occurrence.time >= now.getTime()) continue
-    record.due += 1
-    if (occurrence.is_on_time) record.on_time += 1
+// The closest task above this one that repeats, which a subtask without a rule of its own is measured against.
+export function repeating_ancestor_of(task: Task, tasks: Task[]): Task | null {
+  const seen = new Set([task.id])
+  let parent = tasks.find((each) => each.id === task.parent_id)
+  while (parent && !seen.has(parent.id)) {
+    if (parent.recurrence) return parent
+    seen.add(parent.id)
+    const parent_id = parent.parent_id
+    parent = tasks.find((each) => each.id === parent_id)
   }
+  return null
+}
 
-  // Walks the rule from the first logged tick, counting each occurrence whose time ran out with no tick as missed.
-  let occurrence: Date | null = new Date(first.time)
-  for (let step = 0; occurrence && occurrence < now && step < MAX_OCCURRENCES_WALKED; step += 1) {
-    const next = next_after(task.recurrence, format_task_date(occurrence, with_time))
-    if (occurrence >= since && !logged_by_time.has(occurrence.getTime()) && next && next <= now) record.due += 1
-    occurrence = next
+// Each tick of the ancestor since the subtask was added closes one round, done when the subtask was ticked since the ancestor's tick before.
+interface SubtaskRound {
+  time: number
+  is_done: boolean
+}
+
+function subtask_rounds(subtask: Task, ancestor: Task, completions: Completion[]): SubtaskRound[] {
+  const tick_times = (task_id: string) =>
+    completions.filter((entry) => entry.task_id === task_id).map((entry) => new Date(entry.done_at).getTime()).sort((first, second) => first - second)
+  const ancestor_ticks = tick_times(ancestor.id)
+  const subtask_ticks = tick_times(subtask.id)
+  const added_time = new Date(subtask.created_at).getTime()
+
+  return ancestor_ticks.flatMap((time, index) => {
+    if (time < added_time) return []
+    const previous_time = ancestor_ticks[index - 1] ?? -Infinity
+    return [{ time, is_done: subtask_ticks.some((tick) => tick > previous_time && tick <= time) }]
+  })
+}
+
+// Rounds in a row the subtask was done in, up to the ancestor's latest tick.
+export function subtask_streak(subtask: Task, ancestor: Task, completions: Completion[]): RoutineStreak {
+  let run = 0
+  let best = 0
+  for (const round of subtask_rounds(subtask, ancestor, completions)) {
+    run = round.is_done ? run + 1 : 0
+    best = Math.max(best, run)
   }
+  return { current: run, best }
+}
 
-  return record
+// Each of the ancestor's ticks since the subtask was added, marked by whether the subtask was done in that round.
+export function subtask_history(subtask: Task, ancestor: Task, completions: Completion[]): HistoryMark[] {
+  return subtask_rounds(subtask, ancestor, completions).map((round) => ({ time: round.time, state: round.is_done ? 'on_time' : 'missed' }))
+}
+
+// ============================================================================
+// Any task
+// ============================================================================
+
+// A repeating task's own streak, a subtask's streak against its repeating ancestor, or empty for any other task.
+export function task_streak(task: Task, tasks: Task[], completions: Completion[], now = new Date()): RoutineStreak | null {
+  if (task.recurrence) return routine_streak(task, completions, now)
+  const ancestor = repeating_ancestor_of(task, tasks)
+  return ancestor && subtask_streak(task, ancestor, completions)
+}
+
+export function task_history(task: Task, tasks: Task[], completions: Completion[], now = new Date()): HistoryMark[] {
+  if (task.recurrence) return routine_history(task, completions, now)
+  const ancestor = repeating_ancestor_of(task, tasks)
+  return ancestor ? subtask_history(task, ancestor, completions) : []
 }

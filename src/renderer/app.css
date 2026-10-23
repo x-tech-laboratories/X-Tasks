@@ -964,7 +964,7 @@ select:hover { border-color: var(--border-focus); }
 .report_table { width: 100%; border-collapse: collapse; font-size: var(--text-control); }
 .report_table th { padding: var(--space-2) var(--space-3); color: var(--text-tertiary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-align: left; text-transform: uppercase; }
 .report_table td { padding: var(--space-3); border-top: 1px solid var(--border-default); color: var(--text-body); }
-.report_table .is_number { width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
+.report_table .is_number { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
 
 .report_task_link { height: auto; padding: 0; border: 0; background: transparent; color: var(--text-body); font-weight: 400; text-align: left; }
 .report_task_link:hover { color: var(--accent); }
@@ -1011,3 +1011,25 @@ select:hover { border-color: var(--border-focus); }
 .report_tag_track { height: 10px; }
 .report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); }
 .report_tag_count { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+
+.report_table td:first-child { padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-6)); }
+.report_table tr.is_subtask .report_task_link { color: var(--text-secondary); }
+.report_table tr.is_subtask td { border-top-style: dashed; }
+
+.report_editor_check { display: flex; grid-column: 1 / -1; align-items: center; gap: var(--space-3); color: var(--text-body); font-size: var(--text-control); cursor: pointer; }
+
+/* The table keeps its number columns in view, and a narrow strip drops its oldest dots first. */
+.report_table { table-layout: fixed; }
+.report_table .report_strip_cell { width: 30%; }
+.report_card { container-type: inline-size; }
+@container (max-width: 440px) { .report_table .report_strip_cell { display: none; } }
+.report_strip_cell .streak_strip { display: flex; flex-wrap: nowrap; justify-content: flex-end; overflow: hidden; }
+.streak_dot { flex: none; }
+
+.streak_strip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.task_detail_field .streak_strip { margin-top: var(--space-3); }
+
+.streak_dot { width: 10px; height: 10px; box-sizing: border-box; border: 2px solid var(--accent); border-radius: 50%; }
+.streak_dot.is_on_time { background: var(--accent); }
+.streak_dot.is_late { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
+.streak_dot.is_missed { border-color: var(--status-danger); background: transparent; }

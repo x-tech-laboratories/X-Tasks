@@ -1,8 +1,11 @@
 import type { ReportWidget } from '@shared/settings'
 import { format_task_date, parse_task_date } from '@shared/schedule'
-import { routine_record, routine_streak, type RoutineRecord, type RoutineStreak } from '@shared/streaks'
+import {
+  record_since, repeating_ancestor_of, routine_history, routine_streak, subtask_history, subtask_streak, type HistoryMark, type RoutineRecord,
+  type RoutineStreak
+} from '@shared/streaks'
 import type { Completion, Tag, Task } from '@shared/tasks'
-import { task_is_in_view } from './views'
+import { children_of, task_is_in_view } from './views'
 
 // ============================================================================
 // Days
@@ -50,17 +53,36 @@ function tick_days(widget: ReportWidget, widget_tasks: Task[], completions: Comp
 
 export interface StreakRow {
   task: Task
+  // How far below its routine a subtask sits; zero for the routine itself.
+  depth: number
   streak: RoutineStreak
   record: RoutineRecord
+  history: HistoryMark[]
 }
 
-// Each open routine, longest current streak first.
-export function streak_rows(widget: ReportWidget, widget_tasks: Task[], completions: Completion[], today: string): StreakRow[] {
+// Each open routine, longest current streak first, with the subtasks it measures listed under it in their own order.
+export function streak_rows(widget: ReportWidget, widget_tasks: Task[], completions: Completion[], tasks: Task[], today: string): StreakRow[] {
   const since = parse_task_date(first_report_day(widget, today))
-  return widget_tasks
+  const routine_rows = widget_tasks
     .filter((task) => task.recurrence && !task.is_done)
-    .map((task) => ({ task, streak: routine_streak(task, completions)!, record: routine_record(task, completions, since) }))
+    .map((task) => {
+      const history = routine_history(task, completions)
+      return { task, depth: 0, streak: routine_streak(task, completions)!, record: record_since(history, since), history }
+    })
     .sort((first, second) => second.streak.current - first.streak.current || second.streak.best - first.streak.best)
+  if (widget.hide_subtasks) return routine_rows
+
+  // A subtask that repeats on its own gets a routine row instead, and so do the subtasks under it.
+  function subtask_rows(routine: Task, parent: Task, depth: number): StreakRow[] {
+    return children_of(parent.id, tasks).flatMap((subtask) => {
+      if (repeating_ancestor_of(subtask, tasks)?.id !== routine.id) return []
+      const history = subtask_history(subtask, routine, completions)
+      const row = { task: subtask, depth, streak: subtask_streak(subtask, routine, completions), record: record_since(history, since), history }
+      return [row, ...subtask_rows(routine, subtask, depth + 1)]
+    })
+  }
+
+  return routine_rows.flatMap((row) => [row, ...subtask_rows(row.task, row.task, 1)])
 }
 
 export function ticks_per_day(widget: ReportWidget, widget_tasks: Task[], completions: Completion[], today: string): Map<string, number> {
