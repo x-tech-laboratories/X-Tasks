@@ -2,6 +2,7 @@ import type { ComponentChildren } from 'preact'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 
 import type { TableSortKey } from '@shared/settings'
+import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import { format_task_date, is_overdue, task_date_label } from '@shared/schedule'
@@ -223,6 +224,8 @@ export interface TaskActions {
   on_add_subtask: (parent: Task, title: string) => void
   on_untag: (task: Task, tag: Tag) => void
   rule_tags_of: (task: Task) => Tag[]
+  // The run of on-time ticks of a repeating task; empty for one that does not repeat.
+  streak_of: (task: Task) => RoutineStreak | null
   on_drag_start: (task: Task) => void
   on_drag_end: () => void
   can_drop_on: (target: Task) => boolean
@@ -236,6 +239,7 @@ interface TaskItemProps {
 
 export function TaskItem({ node, actions }: TaskItemProps) {
   const { task, children } = node
+  const streak = actions.streak_of(task)
   const [is_collapsed, set_is_collapsed] = useState(false)
   const [is_adding_subtask, set_is_adding_subtask] = useState(false)
   const [subtask_title, set_subtask_title] = useState('')
@@ -367,6 +371,9 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           {actions.is_in_my_day(task) && <span class="notes_marker" title="In My Day">☀</span>}
           {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
           {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
+          {streak && streak.current > 0 && (
+            <span class="streak_badge" title={`${streak.current} in a row on time · best ${streak.best}`}>🔥 {streak.current}</span>
+          )}
         </span>
 
         <span class="task_cell date_cell">

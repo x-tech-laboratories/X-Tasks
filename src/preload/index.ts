@@ -5,7 +5,7 @@ import {
   RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, type SettingsApi
 } from '@shared/settings'
 import {
-  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
+  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
   SET_TAG_RULE_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
 } from '@shared/tasks'
@@ -13,7 +13,7 @@ import {
 const tasks_api: TasksApi = {
   list_tasks: () => ipcRenderer.invoke(LIST_TASKS_CHANNEL),
   add_task: (title, parent_id, tag_ids, my_day_on) => ipcRenderer.invoke(ADD_TASK_CHANNEL, title, parent_id, tag_ids, my_day_on),
-  set_task_done: (task_id, is_done, done_at) => ipcRenderer.invoke(SET_TASK_DONE_CHANNEL, task_id, is_done, done_at),
+  set_task_done: (task_id, is_done, done_at, log_change) => ipcRenderer.invoke(SET_TASK_DONE_CHANNEL, task_id, is_done, done_at, log_change),
   set_task_title: (task_id, title) => ipcRenderer.invoke(SET_TASK_TITLE_CHANNEL, task_id, title),
   set_task_notes: (task_id, notes) => ipcRenderer.invoke(SET_TASK_NOTES_CHANNEL, task_id, notes),
   set_task_schedule: (task_id, schedule) => ipcRenderer.invoke(SET_TASK_SCHEDULE_CHANNEL, task_id, schedule),
@@ -22,6 +22,7 @@ const tasks_api: TasksApi = {
   move_task: (task_id, parent_id, position) => ipcRenderer.invoke(MOVE_TASK_CHANNEL, task_id, parent_id, position),
   tag_task: (task_id, tag_id) => ipcRenderer.invoke(TAG_TASK_CHANNEL, task_id, tag_id),
   untag_task: (task_id, tag_id) => ipcRenderer.invoke(UNTAG_TASK_CHANNEL, task_id, tag_id),
+  list_completions: () => ipcRenderer.invoke(LIST_COMPLETIONS_CHANNEL),
 
   list_tag_groups: () => ipcRenderer.invoke(LIST_TAG_GROUPS_CHANNEL),
   add_tag_group: (name) => ipcRenderer.invoke(ADD_TAG_GROUP_CHANNEL, name),

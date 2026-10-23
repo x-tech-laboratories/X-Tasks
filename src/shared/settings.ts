@@ -7,7 +7,7 @@ import type { View } from './tasks'
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
 // The view the app opens on, where 'last' means the one shown when it was closed.
-export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed'
+export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed' | 'reports'
 
 // How the center pane shows tasks: a plain list, or a table with aligned columns.
 export type TaskLayout = 'list' | 'table'
@@ -39,6 +39,23 @@ export interface RescheduleOption {
   rule: string
 }
 
+// A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, or ticks split by the tags of a group.
+export type ReportWidgetKind = 'streaks' | 'calendar' | 'weekly' | 'by_tag'
+
+export interface ReportWidget {
+  id: string
+  kind: ReportWidgetKind
+  title: string
+  // Only tasks holding every one of these tags count; empty counts every task.
+  tag_ids: string[]
+  // How many days back from today the card looks.
+  days: number
+  // The tag group a by-tag card splits ticks by.
+  group_id: string
+}
+
+export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
+
 export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
@@ -61,6 +78,8 @@ export interface Settings {
   // When set, an MCP endpoint on this machine lets AI assistants read and change tasks.
   mcp_enabled: boolean
   mcp_port: number
+  // The cards on the Reports page, top to bottom.
+  report_widgets: ReportWidget[]
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -83,7 +102,13 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   last_view: { kind: 'all' },
   mcp_enabled: false,
-  mcp_port: 3917
+  mcp_port: 3917,
+  report_widgets: [
+    { id: 'streaks', kind: 'streaks', title: 'Routine streaks', tag_ids: [], days: 30, group_id: '' },
+    { id: 'calendar', kind: 'calendar', title: 'Ticks per day', tag_ids: [], days: 182, group_id: '' },
+    { id: 'weekly', kind: 'weekly', title: 'Ticks per week', tag_ids: [], days: 84, group_id: '' },
+    { id: 'by-area', kind: 'by_tag', title: 'Ticks by area', tag_ids: [], days: 30, group_id: 'area' }
+  ]
 }
 
 // The ports the MCP endpoint can be set to, leaving out those that need root.

@@ -21,7 +21,8 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'my_day', label: 'My Day' },
   { value: 'all', label: 'All tasks' },
   { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' }
+  { value: 'completed', label: 'Completed' },
+  { value: 'reports', label: 'Reports' }
 ]
 
 const PRIORITY_SCALE_CHOICES: { value: PriorityScale; label: string }[] = [

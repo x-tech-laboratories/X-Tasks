@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, type PriorityScale, type Settings } from '@shared/settings'
-import type { Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
+import type { Completion, CompletionLogChange, Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
 // Schema
@@ -99,7 +99,16 @@ const SCHEMA_MIGRATIONS = [
   `ALTER TABLE tasks ADD COLUMN done_at TEXT`,
   `ALTER TABLE tasks ADD COLUMN my_day_on TEXT`,
   // A rule tag keeps its rule here as JSON; plain tags leave it empty.
-  `ALTER TABLE tags ADD COLUMN rule TEXT`
+  `ALTER TABLE tags ADD COLUMN rule TEXT`,
+  // Each task's last known completion starts the log; earlier ones were never kept.
+  `CREATE TABLE task_completions (
+     id INTEGER PRIMARY KEY,
+     task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+     done_at TEXT NOT NULL,
+     occurrence_on TEXT
+   );
+   CREATE INDEX task_completions_by_task ON task_completions (task_id);
+   INSERT INTO task_completions (task_id, done_at) SELECT id, done_at FROM tasks WHERE done_at IS NOT NULL ORDER BY done_at`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -260,8 +269,28 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
 }
 
 // A recurring task stays open when ticked, yet still records the time it was done.
-export function set_task_done(task_id: string, is_done: boolean, done_at: string | null): void {
-  open_database().prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
+export function set_task_done(task_id: string, is_done: boolean, done_at: string | null, log_change: CompletionLogChange): void {
+  const database = open_database()
+  const latest_entry = 'SELECT MAX(id) FROM task_completions WHERE task_id = ?'
+
+  database.exec('BEGIN')
+  database.prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
+  if (log_change.kind === 'add' && done_at !== null) {
+    database.prepare('INSERT INTO task_completions (task_id, done_at, occurrence_on) VALUES (?, ?, ?)').run(task_id, done_at, log_change.occurrence_on)
+  }
+  if (log_change.kind === 'remove') database.prepare(`DELETE FROM task_completions WHERE id = (${latest_entry})`).run(task_id)
+  // A time given to a task never ticked starts its log.
+  if (log_change.kind === 'retime' && done_at !== null) {
+    const { changes } = database.prepare(`UPDATE task_completions SET done_at = ? WHERE id = (${latest_entry})`).run(done_at, task_id)
+    if (changes === 0) database.prepare('INSERT INTO task_completions (task_id, done_at) VALUES (?, ?)').run(task_id, done_at)
+  }
+  database.exec('COMMIT')
+}
+
+export function list_completions(): Completion[] {
+  return open_database()
+    .prepare('SELECT task_id, done_at, occurrence_on FROM task_completions ORDER BY id')
+    .all() as unknown as Completion[]
 }
 
 export function set_task_title(task_id: string, title: string): void {

@@ -8,6 +8,7 @@
 - [x] Start and due dates
 - [x] Repeating tasks
 - [x] My Day, which can clear itself each day
+- [x] Streaks on repeating tasks, and a Reports page of cards for streaks and ticks
 - [ ] Upcoming view
 - [ ] Priorities
 - [x] Subtasks

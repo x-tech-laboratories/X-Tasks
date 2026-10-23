@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
-import type { Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
+import type { Completion, CompletionLogChange, Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
+import { completions_after, routine_streak, type RoutineStreak } from '@shared/streaks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
+import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
 import { RuleDialog } from './RuleDialog'
@@ -11,7 +13,7 @@ import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { EMPTY_RULE } from './rules'
-import { format_task_date, next_schedule, parse_task_date } from '@shared/schedule'
+import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import { EMPTY_TABLE_FILTERS, has_table_filters, sort_after_click, sort_task_tree, task_passes_filters, type TableFilters } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
@@ -36,6 +38,7 @@ type RuleEditing = { tag: Tag } | { group_id: string; parent_id: string | null }
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
+  const [completions, set_completions] = useState<Completion[]>([])
   const [has_loaded_tasks, set_has_loaded_tasks] = useState(false)
   const [tag_groups, set_tag_groups] = useState<TagGroup[]>([])
   const [tags, set_tags] = useState<Tag[]>([])
@@ -56,6 +59,7 @@ export function App() {
       set_tasks(loaded_tasks)
       set_has_loaded_tasks(true)
     })
+    void window.x_tasks.list_completions().then(set_completions)
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
@@ -70,6 +74,7 @@ export function App() {
     () =>
       window.x_tasks.on_database_changed(() => {
         void window.x_tasks.list_tasks().then(set_tasks)
+        void window.x_tasks.list_completions().then(set_completions)
         void window.x_tasks.list_tag_groups().then(set_tag_groups)
         void window.x_tasks.list_tags().then(set_tags)
       }),
@@ -155,31 +160,35 @@ export function App() {
 
   // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.
   function toggle_task(task: Task): void {
-    if (task.is_done) return save_task_done(task, false, null)
+    if (task.is_done) return save_task_done(task, false, null, { kind: 'remove' })
 
     const done_at = new Date().toISOString()
+    const log_change: CompletionLogChange = { kind: 'add', occurrence_on: recurrence_anchor(task) }
     const next = next_schedule(task)
     if (next) {
       set_task_schedule(task, next)
-      save_task_done(task, false, done_at)
+      save_task_done(task, false, done_at, log_change)
       return set_subtasks_done(task, false, done_at)
     }
 
-    save_task_done(task, true, done_at)
+    save_task_done(task, true, done_at, log_change)
     set_subtasks_done(task, true, done_at)
   }
 
-  function save_task_done(task: Task, is_done: boolean, done_at: string | null): void {
+  function save_task_done(task: Task, is_done: boolean, done_at: string | null, log_change: CompletionLogChange): void {
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done, done_at } : each)))
-    void window.x_tasks.set_task_done(task.id, is_done, done_at)
+    set_completions((current_completions) => completions_after(current_completions, task.id, done_at, log_change))
+    void window.x_tasks.set_task_done(task.id, is_done, done_at, log_change)
   }
 
-  // Subtasks reset by a recurring parent keep the time they were last done.
+  // Subtasks reset by a recurring parent keep the time they were last done, and their ticks stay in the log.
   function set_subtasks_done(task: Task, is_done: boolean, done_at: string): void {
     const subtask_ids = subtree_ids(task.id, tasks)
     subtask_ids.delete(task.id)
     for (const each of tasks) {
-      if (subtask_ids.has(each.id) && each.is_done !== is_done) save_task_done(each, is_done, is_done ? done_at : each.done_at)
+      if (!subtask_ids.has(each.id) || each.is_done === is_done) continue
+      if (is_done) save_task_done(each, true, done_at, { kind: 'add', occurrence_on: recurrence_anchor(each) })
+      else save_task_done(each, false, each.done_at, { kind: 'none' })
     }
   }
 
@@ -329,10 +338,22 @@ export function App() {
   // Layout
   // ==========================================================================
 
+  // Worked out again when the day turns, so a streak whose occurrence ran out overnight drops to zero.
+  const streak_by_task_id = useMemo(() => {
+    const now = new Date()
+    const streaks = new Map<string, RoutineStreak>()
+    for (const task of tasks) {
+      const streak = routine_streak(task, completions, now)
+      if (streak) streaks.set(task.id, streak)
+    }
+    return streaks
+  }, [tasks, completions, today])
+
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
-  const is_table = settings.task_layout === 'table'
+  const is_reports = selected_view.kind === 'reports'
+  const is_table = settings.task_layout === 'table' && !is_reports
   const shown_since = my_day_since(settings, today)
   const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
@@ -369,6 +390,7 @@ export function App() {
     on_add_subtask: add_subtask,
     on_untag: untag_task,
     rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
+    streak_of: (task) => streak_by_task_id.get(task.id) ?? null,
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
     // A sorted table ignores the dragged order, so tasks can still be dragged onto tags but not between rows.
@@ -417,6 +439,18 @@ export function App() {
       <main class={is_table && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
         {is_settings_open ? (
           <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
+        ) : is_reports ? (
+          <ReportsPage
+            widgets={settings.report_widgets}
+            tasks={tasks}
+            completions={completions}
+            tags={tags}
+            tag_groups={tag_groups}
+            today={today}
+            on_change_widgets={(widgets) => void change_setting('report_widgets', widgets)}
+            on_select_task={(task) => set_selected_task_id(task.id)}
+            on_context_menu={open_context_menu}
+          />
         ) : (
           <>
             <header class="task_pane_header">
@@ -507,7 +541,8 @@ export function App() {
           on_tag={tag_task}
           on_untag={untag_task}
           on_set_schedule={set_task_schedule}
-          on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at)}
+          on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
+          streak={streak_by_task_id.get(selected_task.id) ?? null}
           on_reschedule={(task) => set_rescheduling_task_id(task.id)}
           is_in_my_day={is_in_my_day(selected_task, shown_since)}
           on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}

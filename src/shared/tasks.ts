@@ -23,6 +23,17 @@ export interface Task {
 // Dates are local clock times, as YYYY-MM-DD or YYYY-MM-DDTHH:MM; recurrence is an RFC 5545 rule without the RRULE: prefix.
 export type TaskSchedule = Pick<Task, 'start_at' | 'due_at' | 'recurrence'>
 
+// One tick of a task, kept so streaks and reports can look back over every time it was done.
+export interface Completion {
+  task_id: string
+  done_at: string
+  // The task's due date, or start date without one, at the time it was ticked; empty when it had neither.
+  occurrence_on: string | null
+}
+
+// How a change to a task's done state touches its completion log: a new entry, the latest taken away or moved to the new time, or none.
+export type CompletionLogChange = { kind: 'add'; occurrence_on: string | null } | { kind: 'remove' } | { kind: 'retime' } | { kind: 'none' }
+
 // A named set of tags, such as Area or Priority, shown as its own section in the sidebar.
 export interface TagGroup {
   id: string
@@ -80,6 +91,7 @@ export type View =
   | { kind: 'all' }
   | { kind: 'active' }
   | { kind: 'completed' }
+  | { kind: 'reports' }
   | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================
@@ -89,7 +101,7 @@ export type View =
 export interface TasksApi {
   list_tasks: () => Promise<Task[]>
   add_task: (title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null) => Promise<Task>
-  set_task_done: (task_id: string, is_done: boolean, done_at: string | null) => Promise<void>
+  set_task_done: (task_id: string, is_done: boolean, done_at: string | null, log_change: CompletionLogChange) => Promise<void>
   set_task_title: (task_id: string, title: string) => Promise<void>
   set_task_notes: (task_id: string, notes: string) => Promise<void>
   set_task_schedule: (task_id: string, schedule: TaskSchedule) => Promise<void>
@@ -98,6 +110,7 @@ export interface TasksApi {
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>
   untag_task: (task_id: string, tag_id: string) => Promise<void>
+  list_completions: () => Promise<Completion[]>
 
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string) => Promise<TagGroup>
@@ -126,6 +139,7 @@ export const REMOVE_TASK_CHANNEL = 'tasks:remove'
 export const MOVE_TASK_CHANNEL = 'tasks:move'
 export const TAG_TASK_CHANNEL = 'tasks:tag'
 export const UNTAG_TASK_CHANNEL = 'tasks:untag'
+export const LIST_COMPLETIONS_CHANNEL = 'tasks:list-completions'
 
 export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'
 export const ADD_TAG_GROUP_CHANNEL = 'tag-groups:add'

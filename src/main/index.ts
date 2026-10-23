@@ -6,14 +6,14 @@ import {
   RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, type Settings
 } from '@shared/settings'
 import {
-  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
+  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
-  SET_TAG_RULE_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TagRule, type TaskSchedule
+  SET_TAG_RULE_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type CompletionLogChange, type TagRule, type TaskSchedule
 } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { backup_folder, create_backup, list_backups, remove_backup, restore_backup } from './database_backups'
 import {
-  add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_tag_groups, list_tags,
+  add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
   list_tasks, move_tag, move_tag_group, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, set_tag_group_single_choice, set_tag_rule,
   set_task_done, set_task_my_day, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
   untag_task
@@ -79,7 +79,9 @@ function register_bridge_handlers(): void {
   ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null) =>
     add_task(title, parent_id, tag_ids, my_day_on)
   )
-  ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean, done_at: string | null) => set_task_done(task_id, is_done, done_at))
+  ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean, done_at: string | null, log_change: CompletionLogChange) =>
+    set_task_done(task_id, is_done, done_at, log_change)
+  )
   ipcMain.handle(SET_TASK_TITLE_CHANNEL, (_event, task_id: string, title: string) => set_task_title(task_id, title))
   ipcMain.handle(SET_TASK_NOTES_CHANNEL, (_event, task_id: string, notes: string) => set_task_notes(task_id, notes))
   ipcMain.handle(SET_TASK_SCHEDULE_CHANNEL, (_event, task_id: string, schedule: TaskSchedule) =>
@@ -92,6 +94,7 @@ function register_bridge_handlers(): void {
   )
   ipcMain.handle(TAG_TASK_CHANNEL, (_event, task_id: string, tag_id: string) => tag_task(task_id, tag_id))
   ipcMain.handle(UNTAG_TASK_CHANNEL, (_event, task_id: string, tag_id: string) => untag_task(task_id, tag_id))
+  ipcMain.handle(LIST_COMPLETIONS_CHANNEL, () => list_completions())
 
   ipcMain.handle(LIST_TAG_GROUPS_CHANNEL, () => list_tag_groups())
   ipcMain.handle(ADD_TAG_GROUP_CHANNEL, (_event, name: string) => add_tag_group(name))

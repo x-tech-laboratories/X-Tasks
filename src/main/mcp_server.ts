@@ -4,7 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { z } from 'zod'
 
-import { format_task_date, next_schedule } from '@shared/schedule'
+import { format_task_date, next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
 import type { Task } from '@shared/tasks'
 import {
@@ -65,9 +65,11 @@ function complete_task(task: Task): Task {
   const is_done = next === null
 
   if (next) set_task_schedule(task.id, next)
-  set_task_done(task.id, is_done, done_at)
+  set_task_done(task.id, is_done, done_at, { kind: 'add', occurrence_on: recurrence_anchor(task) })
   for (const each of tasks) {
-    if (subtask_ids_of(task.id, tasks).has(each.id) && each.is_done !== is_done) set_task_done(each.id, is_done, is_done ? done_at : each.done_at)
+    if (!subtask_ids_of(task.id, tasks).has(each.id) || each.is_done === is_done) continue
+    if (is_done) set_task_done(each.id, true, done_at, { kind: 'add', occurrence_on: recurrence_anchor(each) })
+    else set_task_done(each.id, false, each.done_at, { kind: 'none' })
   }
 
   return find_task(task.id)
@@ -187,8 +189,7 @@ function create_mcp_server(on_change: () => void): McpServer {
     'reopen_task',
     { description: 'Marks a completed task as not done.', inputSchema: { task_id: z.string() } },
     changing(({ task_id }) => {
-      find_task(task_id)
-      set_task_done(task_id, false, null)
+      set_task_done(task_id, false, null, find_task(task_id).is_done ? { kind: 'remove' } : { kind: 'none' })
       return describe_tasks([find_task(task_id)])[0]
     })
   )

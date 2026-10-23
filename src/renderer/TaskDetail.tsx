@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 
+import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { describe_recurrence, format_task_date, parse_task_date, recurrence_anchor } from '@shared/schedule'
@@ -21,6 +22,7 @@ interface TaskDetailProps {
   on_untag: (task: Task, tag: Tag) => void
   on_set_schedule: (task: Task, schedule: TaskSchedule) => void
   on_set_done_at: (task: Task, done_at: string | null) => void
+  streak: RoutineStreak | null
   on_reschedule: (task: Task) => void
   is_in_my_day: boolean
   on_set_my_day: (task: Task, is_added: boolean) => void
@@ -30,7 +32,7 @@ interface TaskDetailProps {
 
 export function TaskDetail({
   task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
-  is_in_my_day, on_set_my_day, on_remove, on_close
+  is_in_my_day, on_set_my_day, on_remove, on_close, streak
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -168,6 +170,15 @@ export function TaskDetail({
           {describe_recurrence(schedule)}
         </button>
       </div>
+
+      {streak && (
+        <div class="task_detail_field">
+          <span class="sidebar_heading">Streak</span>
+          <span class="streak_summary">
+            {streak.current > 0 ? <span class="streak_badge">🔥 {streak.current}</span> : 'No streak'} in a row on time · best {streak.best}
+          </span>
+        </div>
+      )}
 
       {is_picking_recurrence && (
         <RecurrencePicker
