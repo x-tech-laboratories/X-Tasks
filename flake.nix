@@ -26,6 +26,9 @@
             export ELECTRON_OVERRIDE_DIST_PATH="${electron}/libexec/electron"
             export ELECTRON_EXEC="${electron}/bin/electron"
 
+            # electron-vite dev launches this binary; without it the dev server reports "Electron uninstall".
+            export ELECTRON_EXEC_PATH="${electron}/bin/electron"
+
             echo "x-tasks dev shell · node $(node -v) · electron ${electron.version}"
           '';
         };
