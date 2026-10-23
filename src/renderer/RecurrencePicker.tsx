@@ -3,7 +3,7 @@ import type { HTMLAttributes } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
 import type { RecurrenceInputElement } from 'recurrence-input'
 
-import { has_time } from './schedule'
+import { has_time } from '@shared/schedule'
 
 declare module 'preact' {
   namespace JSX {

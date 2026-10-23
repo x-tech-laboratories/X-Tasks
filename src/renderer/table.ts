@@ -1,6 +1,6 @@
 import type { TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
-import { format_task_date, is_overdue } from './schedule'
+import { format_task_date, is_overdue } from '@shared/schedule'
 import { by_position, children_of, task_is_in_view, type TaskNode } from './views'
 
 // ============================================================================

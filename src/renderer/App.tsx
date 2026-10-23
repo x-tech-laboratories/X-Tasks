@@ -11,7 +11,7 @@ import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { EMPTY_RULE } from './rules'
-import { format_task_date, next_schedule, parse_task_date } from './schedule'
+import { format_task_date, next_schedule, parse_task_date } from '@shared/schedule'
 import { EMPTY_TABLE_FILTERS, has_table_filters, sort_after_click, sort_task_tree, task_passes_filters, type TableFilters } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,

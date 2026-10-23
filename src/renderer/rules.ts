@@ -1,5 +1,5 @@
 import type { RuleCondition, Tag, TagRule, Task } from '@shared/tasks'
-import { days_between, is_overdue, parse_task_date } from './schedule'
+import { days_between, is_overdue, parse_task_date } from '@shared/schedule'
 import { subtree_ids } from './views'
 
 // ============================================================================

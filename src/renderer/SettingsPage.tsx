@@ -2,9 +2,9 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import type { DatabaseBackup, LaunchView, PriorityScale, RescheduleOption, Settings, ThemeChoice } from '@shared/settings'
+import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type ThemeChoice } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
-import { rule_format } from './schedule'
+import { rule_format } from '@shared/schedule'
 
 // ============================================================================
 // Choices
@@ -204,6 +204,11 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
         <h2 class="settings_heading">Backups</h2>
         <BackupsEditor />
       </section>
+
+      <section class="settings_group">
+        <h2 class="settings_heading">MCP server</h2>
+        <McpEditor settings={settings} on_change={on_change} />
+      </section>
     </>
   )
 }
@@ -302,6 +307,79 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
           on_close={() => set_picking_rule_id(null)}
         />
       )}
+    </>
+  )
+}
+
+// ============================================================================
+// MCP server
+// ============================================================================
+
+interface McpEditorProps {
+  settings: Settings
+  on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void
+}
+
+// Turns the local MCP endpoint on or off, sets its port, and shows the address to give an AI assistant.
+function McpEditor({ settings, on_change }: McpEditorProps) {
+  const [status, set_status] = useState<McpStatus | null>(null)
+
+  useEffect(() => {
+    void window.x_settings.get_mcp_status().then(set_status)
+  }, [settings.mcp_enabled, settings.mcp_port])
+
+  function change_port(text: string): void {
+    const port = Math.round(Number(text))
+    if (port >= MCP_PORT_RANGE.min && port <= MCP_PORT_RANGE.max) on_change('mcp_port', port)
+  }
+
+  return (
+    <>
+      <label class="setting_row">
+        <div class="setting_text">
+          <span class="setting_label">Enable MCP server</span>
+          <span class="setting_hint">
+            Lets AI assistants on this computer list, add, change and complete tasks. Only programs on this computer can reach it.
+          </span>
+        </div>
+        <input
+          type="checkbox"
+          checked={settings.mcp_enabled}
+          onChange={(event) => on_change('mcp_enabled', event.currentTarget.checked)}
+        />
+      </label>
+
+      <label class="setting_row">
+        <div class="setting_text">
+          <span class="setting_label">Port</span>
+          <span class="setting_hint">Change it if another program already uses this one.</span>
+        </div>
+        <input
+          type="number"
+          min={MCP_PORT_RANGE.min}
+          max={MCP_PORT_RANGE.max}
+          step="1"
+          class="mcp_port"
+          value={settings.mcp_port}
+          onChange={(event) => change_port(event.currentTarget.value)}
+          aria-label="MCP server port"
+        />
+      </label>
+
+      {status?.state === 'running' && (
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Address</span>
+            <span class="setting_hint setting_path">{status.url}</span>
+            <span class="setting_hint">
+              Add it to a client as a Streamable HTTP server, such as with <code>claude mcp add --transport http x-tasks {status.url}</code>
+            </span>
+          </div>
+          <button onClick={() => void navigator.clipboard.writeText(status.url)}>Copy</button>
+        </div>
+      )}
+
+      {status?.state === 'failed' && <p class="setting_hint mcp_error">Could not start: {status.error}</p>}
     </>
   )
 }

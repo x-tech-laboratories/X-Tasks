@@ -13,8 +13,10 @@
     "app": "bash scripts/run.sh"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "preact": "^10.29.8",
-    "recurrence-input": "^3.1.0"
+    "recurrence-input": "^3.1.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",

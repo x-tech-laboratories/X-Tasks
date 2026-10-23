@@ -58,6 +58,9 @@ export interface Settings {
   detail_width: number
   reschedule_options: RescheduleOption[]
   last_view: View
+  // When set, an MCP endpoint on this machine lets AI assistants read and change tasks.
+  mcp_enabled: boolean
+  mcp_port: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -78,7 +81,19 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'next-weekend', name: 'Next weekend', mode: 'rule', days: 0, rule: 'FREQ=WEEKLY;BYDAY=SA' },
     { id: 'end-of-month', name: 'End of month', mode: 'rule', days: 0, rule: 'FREQ=MONTHLY;BYMONTHDAY=-1' }
   ],
-  last_view: { kind: 'all' }
+  last_view: { kind: 'all' },
+  mcp_enabled: false,
+  mcp_port: 3917
+}
+
+// The ports the MCP endpoint can be set to, leaving out those that need root.
+export const MCP_PORT_RANGE = { min: 1024, max: 65535 }
+
+// Whether the MCP endpoint is listening, and at which address, or why it could not start.
+export interface McpStatus {
+  state: 'off' | 'running' | 'failed'
+  url: string
+  error: string
 }
 
 // ============================================================================
@@ -106,6 +121,7 @@ export interface SettingsApi {
   restore_backup: (name: string) => Promise<void>
   remove_backup: (name: string) => Promise<void>
   show_backup_folder: () => Promise<void>
+  get_mcp_status: () => Promise<McpStatus>
 }
 
 export const GET_SETTINGS_CHANNEL = 'settings:get'
@@ -117,3 +133,4 @@ export const CREATE_BACKUP_CHANNEL = 'backups:create'
 export const RESTORE_BACKUP_CHANNEL = 'backups:restore'
 export const REMOVE_BACKUP_CHANNEL = 'backups:remove'
 export const SHOW_BACKUP_FOLDER_CHANNEL = 'backups:show-folder'
+export const GET_MCP_STATUS_CHANNEL = 'mcp:status'

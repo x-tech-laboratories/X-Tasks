@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
-  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type SettingsApi
+  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, type SettingsApi
 } from '@shared/settings'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
@@ -52,7 +52,8 @@ const settings_api: SettingsApi = {
   create_backup: () => ipcRenderer.invoke(CREATE_BACKUP_CHANNEL),
   restore_backup: (name) => ipcRenderer.invoke(RESTORE_BACKUP_CHANNEL, name),
   remove_backup: (name) => ipcRenderer.invoke(REMOVE_BACKUP_CHANNEL, name),
-  show_backup_folder: () => ipcRenderer.invoke(SHOW_BACKUP_FOLDER_CHANNEL)
+  show_backup_folder: () => ipcRenderer.invoke(SHOW_BACKUP_FOLDER_CHANNEL),
+  get_mcp_status: () => ipcRenderer.invoke(GET_MCP_STATUS_CHANNEL)
 }
 
 contextBridge.exposeInMainWorld('x_tasks', tasks_api)

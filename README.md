@@ -16,6 +16,17 @@ Tasks are stored in an SQLite database at `~/.config/x-tasks/tasks.db` on Linux,
 built-in `node:sqlite`, together with the choices made on the Settings page. Set `X_TASKS_DB` to use a
 different file.
 
+## MCP server
+
+Turn on **MCP server** in Settings to let AI assistants on this computer read and change tasks. It listens on
+`http://127.0.0.1:3917/mcp` by default, as a Streamable HTTP endpoint; the port is set in Settings too.
+
+```sh
+claude mcp add --transport http x-tasks http://127.0.0.1:3917/mcp
+```
+
+It offers tools to list tasks and tags, add, update, complete, reopen, tag, untag and remove tasks.
+
 ## Layout
 
 - `src/main` — the Electron main process and the task database

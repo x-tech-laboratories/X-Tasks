@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
-import { describe_recurrence, format_task_date, parse_task_date, recurrence_anchor } from './schedule'
+import { describe_recurrence, format_task_date, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import { tag_path } from './views'
 
 // ============================================================================

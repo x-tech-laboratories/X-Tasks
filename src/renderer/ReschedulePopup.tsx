@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 
 import type { RescheduleOption } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
-import { format_task_date, parse_task_date, reschedule_day, rescheduled, task_date_label } from './schedule'
+import { format_task_date, parse_task_date, reschedule_day, rescheduled, task_date_label } from '@shared/schedule'
 
 // ============================================================================
 // Reschedule popup

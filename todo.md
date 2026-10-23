@@ -39,6 +39,7 @@
 - [x] Back up the database, and list, restore and delete backups in settings
 - [ ] Export and import tasks as JSON
 - [ ] Package the app with the Nix flake
+- [x] MCP server for AI assistants, turned on and given a port in settings
 
 ## Quality
 

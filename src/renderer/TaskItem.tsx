@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preac
 import type { TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
-import { format_task_date, is_overdue, task_date_label } from './schedule'
+import { format_task_date, is_overdue, task_date_label } from '@shared/schedule'
 import {
   DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, group_column, has_table_filters, tags_in_sidebar_order,
   type DateFilter, type TableColumn, type TableFilters
