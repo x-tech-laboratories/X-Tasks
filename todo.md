@@ -27,6 +27,7 @@
 ## Finding things
 
 - [ ] Search across all tasks
+- [x] Filter the task table by title, date and tag, and sort it by several columns at once
 - [ ] Keyboard shortcuts for adding, completing and switching views
 
 ## App

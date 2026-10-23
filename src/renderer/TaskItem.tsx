@@ -1,23 +1,95 @@
 import { useState } from 'preact/hooks'
 
+import type { TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import { format_task_date, is_overdue, task_date_label } from './schedule'
+import {
+  DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, group_column, has_table_filters, tags_in_sidebar_order,
+  type DateFilter, type TableColumn, type TableFilters
+} from './table'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
 // Table header
 // ============================================================================
 
-// The column names shown above the rows in the table layout, one per filter group, lined up with each row's cells.
-export function TaskTableHeader({ tag_groups }: { tag_groups: TagGroup[] }) {
+interface TaskTableHeaderProps {
+  tag_groups: TagGroup[]
+  tags: Tag[]
+  sort: TableSortKey[]
+  on_sort: (column: TableColumn, is_adding: boolean) => void
+  filters: TableFilters
+  on_filter: (filters: TableFilters) => void
+}
+
+// The column names above the rows in the table layout, one per filter group, each sorting the table, with a row of filters under them.
+export function TaskTableHeader({ tag_groups, tags, sort, on_sort, filters, on_filter }: TaskTableHeaderProps) {
+  // A sorted column shows its direction, and its place in the sort once more than one column is sorted.
+  function sort_button(column: TableColumn, label: string, class_name = '') {
+    const index = sort.findIndex((key) => key.column === column)
+    const key = sort[index]
+    return (
+      <button
+        class={['sort_button', class_name, key && 'is_sorted'].filter(Boolean).join(' ')}
+        onClick={(event) => on_sort(column, event.shiftKey)}
+        title="Click to sort by this column, Shift+click to add it to the sort"
+        aria-sort={key ? (key.is_descending ? 'descending' : 'ascending') : undefined}
+      >
+        <span class="sort_label">{label}</span>
+        {key && <span class="sort_marker">{key.is_descending ? '▼' : '▲'}{sort.length > 1 && <sup>{index + 1}</sup>}</span>}
+      </button>
+    )
+  }
+
+  function set_group_filter(group: TagGroup, tag_id: string): void {
+    on_filter({ ...filters, group_tag_ids: { ...filters.group_tag_ids, [group.id]: tag_id } })
+  }
+
   return (
-    <li class="task_table_header" aria-hidden="true">
-      <span class="title_cell">Task</span>
-      <span class="date_cell">Date</span>
-      {tag_groups.map((group) => <span key={group.id}>{group.name}</span>)}
-      <span class="actions_cell" />
-    </li>
+    <>
+      <li class="task_table_header">
+        {sort_button('title', 'Task', 'title_cell')}
+        {sort_button('date', 'Date')}
+        {tag_groups.map((group) => <span key={group.id}>{sort_button(group_column(group), group.name)}</span>)}
+        <span class="actions_cell" />
+      </li>
+
+      <li class="task_table_filters">
+        <input
+          class="title_cell"
+          value={filters.title}
+          onInput={(event) => on_filter({ ...filters, title: event.currentTarget.value })}
+          onKeyDown={(event) => event.key === 'Escape' && on_filter({ ...filters, title: '' })}
+          placeholder="Filter tasks"
+          aria-label="Filter by title"
+        />
+        <select value={filters.date} onChange={(event) => on_filter({ ...filters, date: event.currentTarget.value as DateFilter })} aria-label="Filter by date">
+          {DATE_FILTER_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        {tag_groups.map((group) => (
+          <select
+            key={group.id}
+            value={filters.group_tag_ids[group.id] ?? ''}
+            onChange={(event) => set_group_filter(group, event.currentTarget.value)}
+            aria-label={`Filter by ${group.name}`}
+          >
+            <option value="">Any</option>
+            <option value={NO_TAG_FILTER}>None</option>
+            {tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group.id)).map((tag) => (
+              <option key={tag.id} value={tag.id}>{tag_path(tag, tags)}</option>
+            ))}
+          </select>
+        ))}
+        <span class="actions_cell">
+          {has_table_filters(filters) && (
+            <button class="row_button" onClick={() => on_filter(EMPTY_TABLE_FILTERS)} aria-label="Clear filters" title="Clear filters">
+              ×
+            </button>
+          )}
+        </span>
+      </li>
+    </>
   )
 }
 

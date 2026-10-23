@@ -12,6 +12,12 @@ export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed'
 // How the center pane shows tasks: a plain list, or a table with aligned columns.
 export type TaskLayout = 'list' | 'table'
 
+// One column the task table is sorted by: "title", "date", or "group:" and a filter group's id.
+export interface TableSortKey {
+  column: string
+  is_descending: boolean
+}
+
 // The narrowest and widest each side panel can be dragged to.
 export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
 export const DETAIL_WIDTH_RANGE = { min: 260, max: 720 }
@@ -45,6 +51,8 @@ export interface Settings {
   due_added_to_my_day_on: string
   priority_scale: PriorityScale
   task_layout: TaskLayout
+  // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
+  table_sort: TableSortKey[]
   // Widths in pixels of the left sidebar and the task detail panel, set by dragging their edges.
   sidebar_width: number
   detail_width: number
@@ -61,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   due_added_to_my_day_on: '',
   priority_scale: 'high_medium_low',
   task_layout: 'list',
+  table_sort: [],
   sidebar_width: 248,
   detail_width: 340,
   reschedule_options: [

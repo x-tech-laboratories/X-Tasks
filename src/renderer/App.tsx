@@ -12,6 +12,7 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { EMPTY_RULE } from './rules'
 import { format_task_date, next_schedule, parse_task_date } from './schedule'
+import { EMPTY_TABLE_FILTERS, has_table_filters, sort_after_click, sort_task_tree, task_passes_filters, type TableFilters } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
@@ -48,6 +49,7 @@ export function App() {
   const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
   const [today, set_today] = useState(() => format_task_date(new Date(), false))
   const [rule_editing, set_rule_editing] = useState<RuleEditing | null>(null)
+  const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then((loaded_tasks) => {
@@ -319,16 +321,27 @@ export function App() {
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
+  const is_table = settings.task_layout === 'table'
   const shown_since = my_day_since(settings, today)
   const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
-  const task_tree = nest_tasks(visible_tasks, tasks)
+
+  // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
+  const is_filtered = is_table && has_table_filters(table_filters)
+  const is_sorted = is_table && settings.table_sort.length > 0
+  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, today)) : visible_tasks
+  const nested_tasks = nest_tasks(shown_tasks, tasks)
+  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of) : nested_tasks
+
+  // The tags a task's row shows: its own and the rule tags that match it.
+  function task_tags_of(task: Task): Tag[] {
+    return [...tags.filter((tag) => task.tag_ids.includes(tag.id)), ...rule_tags_of(task, tasks, tags)]
+  }
 
   // The detail panel stays out of the way while the settings page is open.
   const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
   const rescheduling_task = tasks.find((task) => task.id === rescheduling_task_id) ?? null
 
-  const is_table = settings.task_layout === 'table'
   const task_actions: TaskActions = {
     tags,
     tag_groups,
@@ -347,7 +360,8 @@ export function App() {
     rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
-    can_drop_on: can_drop_task_on,
+    // A sorted table ignores the dragged order, so tasks can still be dragged onto tags but not between rows.
+    can_drop_on: (target) => !is_sorted && can_drop_task_on(target),
     on_drop: drop_task
   }
 
@@ -435,13 +449,23 @@ export function App() {
             )}
 
             <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' ') }}>
-              {is_table && task_tree.length > 0 && <TaskTableHeader tag_groups={tag_groups} />}
+              {is_table && visible_tasks.length > 0 && (
+                <TaskTableHeader
+                  tag_groups={tag_groups}
+                  tags={tags}
+                  sort={settings.table_sort}
+                  on_sort={(column, is_adding) => void change_setting('table_sort', sort_after_click(settings.table_sort, column, is_adding))}
+                  filters={table_filters}
+                  on_filter={set_table_filters}
+                />
+              )}
               {task_tree.map((node) => (
                 <TaskItem key={node.task.id} node={node} actions={task_actions} />
               ))}
             </ul>
 
             {visible_tasks.length === 0 && <p class="empty_message">Nothing here yet.</p>}
+            {visible_tasks.length > 0 && task_tree.length === 0 && <p class="empty_message">No tasks match the filters.</p>}
           </>
         )}
       </main>
