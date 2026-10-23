@@ -111,6 +111,8 @@ export interface Settings {
   table_column_order: string[]
   // The table columns left out; the title is always shown.
   hidden_table_columns: string[]
+  // Widths in pixels of table columns dragged away from their default; the title takes whatever room is left.
+  table_column_widths: Record<string, number>
   // Widths in pixels of the left sidebar and the task detail panel, set by dragging their edges.
   sidebar_width: number
   detail_width: number
@@ -143,6 +145,7 @@ export const DEFAULT_SETTINGS: Settings = {
   table_sort: [],
   table_column_order: [],
   hidden_table_columns: [],
+  table_column_widths: {},
   sidebar_width: 248,
   detail_width: 340,
   reschedule_options: [

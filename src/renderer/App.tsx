@@ -15,7 +15,7 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
-  EMPTY_TABLE_FILTERS, has_table_filters, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, type StreakOf, type TableColumn, type TableFilters
+  EMPTY_TABLE_FILTERS, column_width, has_table_filters, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
@@ -561,10 +561,8 @@ export function App() {
               </header>
 
               <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{
-                  '--data-columns': table_columns.map((column) => `var(--column-${column.startsWith('group:') ? 'group' : column})`).join(' '),
-                  '--date-count': table_columns.filter((column) => column === 'date').length,
-                  '--streak-count': table_columns.filter((column) => column === 'streak').length,
-                  '--group-count': table_columns.filter((column) => column.startsWith('group:')).length
+                  '--data-columns': table_columns.map((column) => `${column_width(settings.table_column_widths, column)}px`).join(' '),
+                  '--data-width': `calc(${table_columns.reduce((total, column) => total + column_width(settings.table_column_widths, column), 0)}px + ${table_columns.length} * var(--space-4))`
                 }}>
                 {is_table && visible_tasks.length > 0 && (
                   <TaskTableHeader
@@ -574,6 +572,9 @@ export function App() {
                     shown_columns={table_columns}
                     on_move_column={(column, target, is_after) => void change_setting('table_column_order', move_column(column_order, column, target, is_after))}
                     on_show_column={show_table_column}
+                    column_widths={settings.table_column_widths}
+                    on_resize_column={(column, width) => show_setting('table_column_widths', { ...settings.table_column_widths, [column]: width })}
+                    on_resize_column_end={(column, width) => void change_setting('table_column_widths', { ...settings.table_column_widths, [column]: width })}
                     sort={settings.table_sort}
                     on_sort={(column, is_adding) => void change_setting('table_sort', sort_after_click(settings.table_sort, column, is_adding))}
                     filters={table_filters}

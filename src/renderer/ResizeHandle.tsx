@@ -12,10 +12,12 @@ interface ResizeHandleProps {
   on_resize: (width: number) => void
   on_resize_end: (width: number) => void
   label: string
+  // Replaces the panel edge styling, for a handle placed somewhere else.
+  class_name?: string
 }
 
 // A thin bar on a panel's inner edge; drag it to resize, double-click it to reset.
-export function ResizeHandle({ side, width, min_width, max_width, default_width, on_resize, on_resize_end, label }: ResizeHandleProps) {
+export function ResizeHandle({ side, width, min_width, max_width, default_width, on_resize, on_resize_end, label, class_name }: ResizeHandleProps) {
   const clamp = (value: number): number => Math.round(Math.min(max_width, Math.max(min_width, value)))
 
   function start_drag(event: PointerEvent): void {
@@ -59,7 +61,7 @@ export function ResizeHandle({ side, width, min_width, max_width, default_width,
 
   return (
     <div
-      class={`resize_handle is_${side}`}
+      class={class_name ?? `resize_handle is_${side}`}
       role="separator"
       aria-orientation="vertical"
       aria-label={label}

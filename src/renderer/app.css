@@ -358,18 +358,13 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 
 .task_list.is_table {
   --column-title-min: 240px;
-  --column-date: 104px;
-  --column-streak: 84px;
-  --column-group: 124px;
   --column-actions: 56px;
 }
 
 /* Rows never get narrower than every column needs, so a table with many groups scrolls sideways instead of squeezing the titles. */
 .task_list.is_table > li {
   min-width: calc(
-    var(--space-2) + var(--space-4) + 24px + 16px + var(--column-title-min) + var(--column-actions) + 3 * var(--space-4) +
-      var(--date-count, 0) * (var(--column-date) + var(--space-4)) + var(--streak-count, 0) * (var(--column-streak) + var(--space-4)) +
-      var(--group-count, 0) * (var(--column-group) + var(--space-4))
+    var(--space-2) + var(--space-4) + 24px + 16px + var(--column-title-min) + var(--column-actions) + 3 * var(--space-4) + var(--data-width, 0px)
   );
 }
 
@@ -399,6 +394,36 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 
 /* A long group name is cut short so it stays inside its column. */
 .task_table_header > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A line in the gap after each column name separates it from the next; the title's own content still cuts off at its edge. */
+.task_table_header > .header_cell { position: relative; overflow: visible; }
+.task_table_header > .header_cell::after {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  bottom: calc(-1 * var(--space-2));
+  right: calc(var(--space-4) / -2);
+  width: 1px;
+  background: var(--border-default);
+  pointer-events: none;
+}
+
+/* A column's edge is a wider strip over its separator that turns the accent colour while hovered or dragged. */
+.column_resizer {
+  position: absolute;
+  top: calc(-1 * var(--space-3));
+  bottom: calc(-1 * var(--space-3));
+  right: calc(var(--space-4) / -2 - 4px);
+  z-index: 1;
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.column_resizer::after { content: ""; position: absolute; inset: 0 4px; background: transparent; transition: background 120ms; }
+.column_resizer:hover::after,
+.column_resizer:focus-visible::after,
+.column_resizer.is_dragging::after { background: var(--accent); }
+.column_resizer:focus-visible { outline: none; }
 
 /* The header skips the collapse and checkbox columns, so its first cell starts at the title. */
 .task_table_header .title_cell { grid-column: 3; }

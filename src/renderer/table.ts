@@ -29,6 +29,19 @@ export function ordered_columns(saved_order: string[], tag_groups: TagGroup[]): 
   return [...saved, ...all_columns.filter((column) => !saved.includes(column))]
 }
 
+// How wide a column starts, and the narrowest and widest it can be dragged to.
+export const COLUMN_WIDTH_RANGE = { min: 64, max: 480 }
+
+export function default_column_width(column: TableColumn): number {
+  if (column === 'date') return 104
+  if (column === 'streak') return 84
+  return 124
+}
+
+export function column_width(widths: Record<string, number>, column: TableColumn): number {
+  return widths[column] ?? default_column_width(column)
+}
+
 // Moves a column to just before or after another one.
 export function move_column(order: TableColumn[], column: TableColumn, target: TableColumn, is_after: boolean): TableColumn[] {
   const rest = order.filter((each) => each !== column)

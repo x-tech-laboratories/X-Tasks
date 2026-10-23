@@ -5,9 +5,10 @@ import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
+import { ResizeHandle } from './ResizeHandle'
 import { format_task_date, is_overdue, task_date_label, task_date_of } from '@shared/schedule'
 import {
-  DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, group_column, has_table_filters, tags_in_sidebar_order,
+  COLUMN_WIDTH_RANGE, DATE_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_width, default_column_width, group_column, has_table_filters, tags_in_sidebar_order,
   type DateFilter, type TableColumn, type TableFilters
 } from './table'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
@@ -24,6 +25,10 @@ interface TaskTableHeaderProps {
   shown_columns: TableColumn[]
   on_move_column: (column: TableColumn, target: TableColumn, is_after: boolean) => void
   on_show_column: (column: TableColumn, is_shown: boolean) => void
+  column_widths: Record<string, number>
+  // Called as a column's edge is dragged, then once with the width it was let go at.
+  on_resize_column: (column: TableColumn, width: number) => void
+  on_resize_column_end: (column: TableColumn, width: number) => void
   sort: TableSortKey[]
   on_sort: (column: TableColumn, is_adding: boolean) => void
   filters: TableFilters
@@ -43,7 +48,8 @@ interface OpenFilter extends PopoverPoint {
 
 // The column names above the rows in the table layout; each sorts the table, its funnel icon filters it, and dragging it moves the column.
 export function TaskTableHeader({
-  tag_groups, tags, column_order, shown_columns, on_move_column, on_show_column, sort, on_sort, filters, on_filter
+  tag_groups, tags, column_order, shown_columns, on_move_column, on_show_column, column_widths, on_resize_column, on_resize_column_end,
+  sort, on_sort, filters, on_filter
 }: TaskTableHeaderProps) {
   const [open_filter, set_open_filter] = useState<OpenFilter | null>(null)
   const close_filter = useCallback(() => set_open_filter(null), [])
@@ -153,6 +159,19 @@ export function TaskTableHeader({
             <path d="M2 3h12l-4.5 5.5V13l-3 1.5v-6z" />
           </svg>
         </button>
+        {is_movable && (
+          <ResizeHandle
+            side="left"
+            width={column_width(column_widths, column)}
+            min_width={COLUMN_WIDTH_RANGE.min}
+            max_width={COLUMN_WIDTH_RANGE.max}
+            default_width={default_column_width(column)}
+            on_resize={(width) => on_resize_column(column, width)}
+            on_resize_end={(width) => on_resize_column_end(column, width)}
+            label={`Resize the ${label} column`}
+            class_name="column_resizer"
+          />
+        )}
       </span>
     )
   }
