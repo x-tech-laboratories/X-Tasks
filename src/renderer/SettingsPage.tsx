@@ -2,9 +2,9 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TaskDateField, type ThemeChoice } from '@shared/settings'
+import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TaskDateField, type TaskDuration, type ThemeChoice } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
-import { rule_format } from '@shared/schedule'
+import { duration_label, rule_format } from '@shared/schedule'
 
 // ============================================================================
 // Choices
@@ -208,6 +208,11 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
       </section>
 
       <section class="settings_group">
+        <h2 class="settings_heading">Durations</h2>
+        <DurationsEditor durations={settings.task_durations} on_change={(durations) => on_change('task_durations', durations)} />
+      </section>
+
+      <section class="settings_group">
         <h2 class="settings_heading">Storage</h2>
 
         <div class="setting_row">
@@ -326,6 +331,85 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
           on_close={() => set_picking_rule_id(null)}
         />
       )}
+    </>
+  )
+}
+
+// ============================================================================
+// Durations
+// ============================================================================
+
+interface DurationsEditorProps {
+  durations: TaskDuration[]
+  on_change: (durations: TaskDuration[]) => void
+}
+
+// The gaps the Duration list in a task's details offers, in the order shown here.
+function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
+  function update(id: string, change: Partial<TaskDuration>): void {
+    on_change(durations.map((duration) => (duration.id === id ? { ...duration, ...change } : duration)))
+  }
+
+  function move(index: number, step: number): void {
+    const reordered = [...durations]
+    const [duration] = reordered.splice(index, 1)
+    reordered.splice(index + step, 0, duration!)
+    on_change(reordered)
+  }
+
+  function add(): void {
+    on_change([...durations, { id: crypto.randomUUID(), amount: 1, unit: 'day' }])
+  }
+
+  return (
+    <>
+      <p class="setting_hint">
+        The gaps offered by Duration in a task's details, which set the due date that long after the start. Hours show only
+        when the start has a time, and Same day only when it has none.
+      </p>
+
+      {durations.map((duration, index) => (
+        <div key={duration.id} class="setting_row reschedule_option">
+          <input
+            type="number"
+            min="0"
+            step="1"
+            class="reschedule_days"
+            value={duration.amount}
+            onChange={(event) => update(duration.id, { amount: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
+            aria-label="Amount"
+          />
+          <select
+            class="duration_unit"
+            value={duration.unit}
+            onChange={(event) => update(duration.id, { unit: event.currentTarget.value as TaskDuration['unit'] })}
+            aria-label="Unit"
+          >
+            <option value="hour">Hours</option>
+            <option value="day">Days</option>
+            <option value="week">Weeks</option>
+            <option value="month">Months</option>
+          </select>
+          <span class="duration_preview">{duration_label(duration)}</span>
+          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+            ↑
+          </button>
+          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === durations.length - 1} aria-label="Move down">
+            ↓
+          </button>
+          <button
+            class="remove_button"
+            onClick={() => on_change(durations.filter((each) => each.id !== duration.id))}
+            aria-label={`Remove ${duration_label(duration)}`}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+
+      <button class="reschedule_add" onClick={add}>
+        Add duration
+      </button>
     </>
   )
 }

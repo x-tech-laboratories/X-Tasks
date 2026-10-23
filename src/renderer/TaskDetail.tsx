@@ -4,8 +4,9 @@ import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
+import type { TaskDuration } from '@shared/settings'
 import {
-  describe_recurrence, due_after, duration_between, durations_for_start, format_task_date, parse_task_date, recurrence_anchor, TASK_DURATIONS
+  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor
 } from '@shared/schedule'
 import { tag_path } from './views'
 
@@ -18,6 +19,7 @@ interface TaskDetailProps {
   tag_groups: TagGroup[]
   tags: Tag[]
   subtask_count: number
+  durations: TaskDuration[]
   on_toggle: (task: Task) => void
   on_rename: (task: Task, title: string) => void
   on_set_notes: (task: Task, notes: string) => void
@@ -35,7 +37,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, subtask_count, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -63,18 +65,18 @@ export function TaskDetail({
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
   }
 
-  const duration = duration_between(task.start_at, task.due_at)
+  const duration = duration_between(durations, task.start_at, task.due_at)
 
   // While a listed duration is in force, moving the start moves the due date with it.
   function change_start(start_at: string | null): void {
-    const listed_duration = start_at && duration && durations_for_start(start_at).includes(duration) ? duration : null
+    const listed_duration = start_at && duration && durations_for_start(durations, start_at).includes(duration) ? duration : null
     const due_at = start_at && listed_duration ? due_after(start_at, listed_duration) : task.due_at
     on_set_schedule(task, { ...schedule, start_at, due_at })
   }
 
   // Custom leaves the due date as it is.
   function choose_duration(event: Event): void {
-    const chosen = TASK_DURATIONS.find((each) => each.id === (event.currentTarget as HTMLSelectElement).value)
+    const chosen = durations.find((each) => each.id === (event.currentTarget as HTMLSelectElement).value)
     if (chosen && task.start_at) on_set_schedule(task, { ...schedule, due_at: due_after(task.start_at, chosen) })
   }
 
@@ -178,9 +180,9 @@ export function TaskDetail({
           <span class="sidebar_heading">Duration</span>
           <select value={duration?.id ?? ''} onChange={choose_duration}>
             <option value="">{task.due_at ? 'Custom' : 'None'}</option>
-            {durations_for_start(task.start_at).map((each) => (
+            {durations_for_start(durations, task.start_at).map((each) => (
               <option key={each.id} value={each.id}>
-                {each.label}
+                {duration_label(each)}
               </option>
             ))}
           </select>

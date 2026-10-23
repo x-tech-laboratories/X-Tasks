@@ -42,6 +42,13 @@ export interface RescheduleOption {
   rule: string
 }
 
+// A gap the Duration list in a task's details offers, which sets the due date that long after the start.
+export interface TaskDuration {
+  id: string
+  amount: number
+  unit: 'hour' | 'day' | 'week' | 'month'
+}
+
 // A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, or ticks split by the tags of a group.
 export type ReportWidgetKind = 'streaks' | 'calendar' | 'weekly' | 'by_tag'
 
@@ -80,6 +87,8 @@ export interface Settings {
   sidebar_width: number
   detail_width: number
   reschedule_options: RescheduleOption[]
+  // The gaps offered by the Duration list in a task's details, in the order shown.
+  task_durations: TaskDuration[]
   last_view: View
   // When set, an MCP endpoint on this machine lets AI assistants read and change tasks.
   mcp_enabled: boolean
@@ -109,6 +118,19 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'tomorrow', name: 'Tomorrow', mode: 'days', days: 1, rule: '' },
     { id: 'next-weekend', name: 'Next weekend', mode: 'rule', days: 0, rule: 'FREQ=WEEKLY;BYDAY=SA' },
     { id: 'end-of-month', name: 'End of month', mode: 'rule', days: 0, rule: 'FREQ=MONTHLY;BYMONTHDAY=-1' }
+  ],
+  task_durations: [
+    { id: '1h', amount: 1, unit: 'hour' },
+    { id: '2h', amount: 2, unit: 'hour' },
+    { id: '4h', amount: 4, unit: 'hour' },
+    { id: '0d', amount: 0, unit: 'day' },
+    { id: '1d', amount: 1, unit: 'day' },
+    { id: '2d', amount: 2, unit: 'day' },
+    { id: '3d', amount: 3, unit: 'day' },
+    { id: '1w', amount: 1, unit: 'week' },
+    { id: '2w', amount: 2, unit: 'week' },
+    { id: '1mo', amount: 1, unit: 'month' },
+    { id: '3mo', amount: 3, unit: 'month' }
   ],
   last_view: { kind: 'all' },
   mcp_enabled: false,

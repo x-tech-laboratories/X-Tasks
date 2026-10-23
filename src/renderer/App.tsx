@@ -536,6 +536,7 @@ export function App() {
           tag_groups={tag_groups}
           tags={tags}
           subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
+          durations={settings.task_durations}
           on_toggle={toggle_task}
           on_rename={rename_task}
           on_set_notes={set_task_notes}

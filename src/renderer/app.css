@@ -824,6 +824,9 @@ select:hover { border-color: var(--border-focus); }
 
 .reschedule_add { margin-top: var(--space-4); }
 
+.reschedule_option .duration_unit { width: 112px; }
+.duration_preview { flex: 1; min-width: 0; overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+
 .backup_row { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
 .backup_keep { width: 72px; }
 .backup_empty { margin: var(--space-4) 0 0; }
