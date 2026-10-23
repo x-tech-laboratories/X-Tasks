@@ -267,10 +267,8 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .notes_marker { color: var(--text-tertiary); font-size: var(--text-caption); }
 .task.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
 
-.task .remove_button,
 .row_button { visibility: hidden; }
 
-.task:hover .remove_button,
 .task:hover .row_button,
 .task button:focus-visible { visibility: visible; }
 
@@ -390,19 +388,32 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .sidebar_label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar_count { color: var(--text-tertiary); font-size: var(--text-caption); }
 
-.sidebar_tag_row { display: flex; align-items: center; gap: var(--space-1); }
-.sidebar_tag_row .remove_button,
-.sidebar_tag_row .row_button { visibility: hidden; flex: none; }
-.sidebar_tag_row:hover .remove_button,
+/* The whole row is the highlighted pill, so its add and remove buttons sit inside it. */
+.sidebar_tag_row { width: auto; padding: 0 var(--space-2) 0 0; border-radius: var(--radius-small); gap: var(--space-1); }
+
+.sidebar_tag_select {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 100%;
+  padding: 0 var(--space-2) 0 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.sidebar_tag_row .row_button { display: none; flex: none; width: 24px; height: 24px; font-size: 16px; }
 .sidebar_tag_row:hover .row_button,
-.sidebar_tag_row button:focus-visible { visibility: visible; }
+.sidebar_tag_row:focus-within .row_button { display: block; visibility: visible; }
 
 .new_tag_form input { width: 100%; margin-top: var(--space-4); }
 
 .sidebar_group_header { display: flex; align-items: center; gap: var(--space-1); }
-.sidebar_group_header .remove_button,
 .sidebar_group_header .row_button { visibility: hidden; flex: none; }
-.sidebar_group_header:hover .remove_button,
 .sidebar_group_header:hover .row_button,
 .sidebar_group_header button:focus-visible { visibility: visible; }
 
@@ -563,3 +574,35 @@ select:hover { border-color: var(--border-focus); }
 
 .tag_chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .tag_chips + select { margin-top: var(--space-3); }
+
+/* ========================================================================== */
+/* Context menu                                                               */
+/* ========================================================================== */
+
+.context_menu {
+  position: fixed;
+  z-index: 10;
+  min-width: 160px;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-default);
+  box-shadow: var(--shadow-card);
+  list-style: none;
+}
+
+.context_menu_item {
+  display: block;
+  width: 100%;
+  height: var(--row-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  color: var(--text-body);
+  font-weight: 400;
+  text-align: left;
+}
+
+.context_menu_item:hover,
+.context_menu_item:focus-visible { background: var(--surface-navigation-hover); color: var(--text-heading); }
+.context_menu_item.is_danger { color: var(--status-danger); }

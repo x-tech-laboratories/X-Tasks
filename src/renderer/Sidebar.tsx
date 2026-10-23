@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 
 import type { Tag, TagGroup, Task } from '@shared/tasks'
+import type { OpenContextMenu } from './ContextMenu'
 import {
   BUILT_IN_VIEWS, children_of, drop_placement, is_same_view, subtree_ids, task_is_in_view, type DropPlacement, type View
 } from './views'
@@ -24,6 +25,7 @@ interface SidebarProps {
   on_remove_tag: (tag: Tag) => void
   on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
   on_tag_task: (task: Task, tag: Tag) => void
+  on_context_menu: OpenContextMenu
 }
 
 // Where the inline new-tag field is open: at the top of a group, or inside a tag.
@@ -34,7 +36,7 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings,
-  on_add_tag_group, on_remove_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task
+  on_add_tag_group, on_remove_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [new_group_name, set_new_group_name] = useState('')
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
@@ -160,13 +162,19 @@ export function Sidebar({
   function tag_branch(tag: Tag, depth: number, group_tags: Tag[]) {
     const children = children_of(tag.id, group_tags)
     const is_collapsed = collapsed_ids.has(tag.id)
-    const row_class = drop_target?.tag_id === tag.id ? `sidebar_tag_row drop_${drop_target.placement}` : 'sidebar_tag_row'
+    const view: View = { kind: 'tag', tag_id: tag.id }
+    const count = open_count(view)
+    const row_class = [
+      'sidebar_item sidebar_tag_row',
+      selected_view && is_same_view(view, selected_view) && 'is_selected',
+      drop_target?.tag_id === tag.id && `drop_${drop_target.placement}`
+    ].filter(Boolean).join(' ')
 
     return (
       <div key={tag.id}>
         <div
           class={row_class}
-          style={{ paddingLeft: `${depth * 16}px` }}
+          style={{ marginLeft: `${depth * 16}px` }}
           draggable
           onDragStart={(event) => {
             event.dataTransfer?.setData('text/plain', tag.id)
@@ -176,6 +184,12 @@ export function Sidebar({
           onDragOver={(event) => tag_drag_over(event, tag)}
           onDragLeave={() => set_drop_target(null)}
           onDrop={(event) => tag_drop(event, tag)}
+          onContextMenu={(event) =>
+            on_context_menu(event, [
+              { label: 'Add tag inside', on_select: () => start_new_tag({ group_id: tag.group_id, parent_id: tag.id }) },
+              { label: 'Delete tag', on_select: () => on_remove_tag(tag), is_danger: true }
+            ])
+          }
         >
           {children.length > 0 ? (
             <button
@@ -188,16 +202,16 @@ export function Sidebar({
           ) : (
             <span class="collapse_spacer" />
           )}
-          {view_button({ kind: 'tag', tag_id: tag.id }, tag.name)}
+          <button class="sidebar_tag_select" onClick={() => on_select_view(view)}>
+            <span class="sidebar_label">{tag.name}</span>
+            {count ? <span class="sidebar_count">{count}</span> : null}
+          </button>
           <button
             class="row_button"
             onClick={() => start_new_tag({ group_id: tag.group_id, parent_id: tag.id })}
             aria-label={`Add a tag inside ${tag.name}`}
           >
             +
-          </button>
-          <button class="remove_button" onClick={() => on_remove_tag(tag)} aria-label={`Remove ${tag.name}`}>
-            ×
           </button>
         </div>
 
@@ -213,7 +227,15 @@ export function Sidebar({
 
     return (
       <section key={group.id} class="sidebar_section">
-        <div class="sidebar_group_header">
+        <div
+          class="sidebar_group_header"
+          onContextMenu={(event) =>
+            on_context_menu(event, [
+              { label: 'Add tag', on_select: () => start_new_tag({ group_id: group.id, parent_id: null }) },
+              { label: 'Delete group', on_select: () => on_remove_tag_group(group), is_danger: true }
+            ])
+          }
+        >
           <button
             class="sidebar_heading sidebar_group_toggle"
             onClick={() => toggle_collapsed(group.id)}
@@ -227,9 +249,6 @@ export function Sidebar({
             aria-label={`Add a tag to ${group.name}`}
           >
             +
-          </button>
-          <button class="remove_button" onClick={() => on_remove_tag_group(group)} aria-label={`Remove ${group.name}`}>
-            ×
           </button>
         </div>
 

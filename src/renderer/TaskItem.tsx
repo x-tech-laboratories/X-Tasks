@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 
 import type { Tag, Task } from '@shared/tasks'
+import type { OpenContextMenu } from './ContextMenu'
 import { drop_placement, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
@@ -12,6 +13,7 @@ export interface TaskActions {
   can_add_subtasks: boolean
   selected_task_id: string | null
   on_select: (task: Task) => void
+  on_context_menu: OpenContextMenu
   on_toggle: (task: Task) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
@@ -77,6 +79,15 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     if (!(event.target as HTMLElement).closest('input, button')) actions.on_select(task)
   }
 
+  function open_menu(event: MouseEvent): void {
+    actions.on_context_menu(event, [
+      { label: 'Open details', on_select: () => actions.on_select(task) },
+      ...(actions.can_add_subtasks ? [{ label: 'Add subtask', on_select: () => set_is_adding_subtask(true) }] : []),
+      { label: task.is_done ? 'Mark as not done' : 'Mark as done', on_select: () => actions.on_toggle(task) },
+      { label: 'Delete', on_select: () => actions.on_remove(task), is_danger: true }
+    ])
+  }
+
   const is_selected = actions.selected_task_id === task.id
   const row_class = ['task', task.is_done && 'is_done', is_selected && 'is_selected', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
 
@@ -86,6 +97,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         class={row_class}
         draggable
         onClick={click_row}
+        onContextMenu={open_menu}
         onDragStart={start_drag}
         onDragEnd={actions.on_drag_end}
         onDragOver={drag_over}
@@ -129,9 +141,6 @@ export function TaskItem({ node, actions }: TaskItemProps) {
             +
           </button>
         )}
-        <button class="remove_button" onClick={() => actions.on_remove(task)} aria-label="Remove">
-          ×
-        </button>
       </div>
 
       {!is_collapsed && (children.length > 0 || is_adding_subtask) && (

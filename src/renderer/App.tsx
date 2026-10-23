@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useCallback, useEffect, useState } from 'preact/hooks'
 
 import type { Settings } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
+import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
@@ -25,6 +26,7 @@ export function App() {
   const [new_title, set_new_title] = useState('')
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
+  const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
@@ -46,6 +48,13 @@ export function App() {
     set_is_settings_open(false)
     void window.x_settings.set_setting('last_view', view)
   }
+
+  const open_context_menu: OpenContextMenu = (event, items) => {
+    event.preventDefault()
+    set_context_menu({ x: event.clientX, y: event.clientY, items })
+  }
+
+  const close_context_menu = useCallback(() => set_context_menu(null), [])
 
   function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
     set_settings((current_settings) => current_settings && { ...current_settings, [key]: value })
@@ -200,6 +209,7 @@ export function App() {
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
     on_select: (task) => set_selected_task_id(task.id),
+    on_context_menu: open_context_menu,
     on_toggle: toggle_task,
     on_remove: remove_task,
     on_add_subtask: add_subtask,
@@ -227,6 +237,7 @@ export function App() {
         on_remove_tag={remove_tag}
         on_move_tag={move_tag}
         on_tag_task={tag_task}
+        on_context_menu={open_context_menu}
       />
 
       <main class="task_pane">
@@ -278,6 +289,8 @@ export function App() {
           on_close={() => set_selected_task_id(null)}
         />
       )}
+
+      {context_menu && <ContextMenu menu={context_menu} on_close={close_context_menu} />}
     </div>
   )
 }
