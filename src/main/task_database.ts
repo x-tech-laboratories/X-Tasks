@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
-import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, type PriorityScale, type Settings } from '@shared/settings'
+import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, saved_task_duration, type PriorityScale, type Settings } from '@shared/settings'
 import type { Completion, CompletionLogChange, Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
@@ -449,6 +449,7 @@ export function get_settings(): Settings {
   for (const row of rows) {
     if (row.key in DEFAULT_SETTINGS) settings[row.key] = JSON.parse(row.value)
   }
+  settings.task_durations = (settings.task_durations as Parameters<typeof saved_task_duration>[0][]).map(saved_task_duration)
 
   return settings as unknown as Settings
 }

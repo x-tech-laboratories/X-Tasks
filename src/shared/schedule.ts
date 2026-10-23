@@ -1,6 +1,6 @@
 import { describe_rule, next_from_now, next_occurrence, type RuleFormat } from 'recurrence-input'
 
-import type { RescheduleOption, TaskDateField, TaskDuration } from '@shared/settings'
+import { DURATION_UNITS, type RescheduleOption, type TaskDateField, type TaskDuration } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
@@ -66,36 +66,31 @@ export function task_date_label(task_date: string, now = new Date()): string {
 // ============================================================================
 
 function needs_time(duration: TaskDuration): boolean {
-  return duration.unit === 'minute' || duration.unit === 'hour'
+  return duration.hours > 0 || duration.minutes > 0
 }
 
-// A duration's name, such as 2 weeks, with Same day for no days at all.
+// A duration's name, such as 1 hour 30 minutes, with Same day when every unit is zero.
 export function duration_label(duration: TaskDuration): string {
-  if (duration.amount === 0 && !needs_time(duration)) return 'Same day'
-  return `${duration.amount} ${duration.unit}${duration.amount === 1 ? '' : 's'}`
+  const parts = DURATION_UNITS.filter((unit) => duration[unit] > 0).map(
+    (unit) => `${duration[unit]} ${duration[unit] === 1 ? unit.slice(0, -1) : unit}`
+  )
+  return parts.length > 0 ? parts.join(' ') : 'Same day'
 }
 
-// Minutes and hours need a start time, and Same day is only for a start without one.
+// A duration with minutes or hours needs a start time, and Same day is only for a start without one.
 export function durations_for_start(durations: TaskDuration[], start_at: string): TaskDuration[] {
-  if (has_time(start_at)) return durations.filter((duration) => needs_time(duration) || duration.amount > 0)
+  if (has_time(start_at)) return durations.filter((duration) => DURATION_UNITS.some((unit) => duration[unit] > 0))
   return durations.filter((duration) => !needs_time(duration))
 }
 
 // The due date that lies the given duration after the start, with a time only when the start has one.
 export function due_after(start_at: string, duration: TaskDuration): string {
   const start = parse_task_date(start_at)
-  const due = new Date(start)
-  if (duration.unit === 'minute') due.setMinutes(due.getMinutes() + duration.amount)
-  else if (duration.unit === 'hour') due.setHours(due.getHours() + duration.amount)
-  else if (duration.unit === 'day') due.setDate(due.getDate() + duration.amount)
-  else if (duration.unit === 'week') due.setDate(due.getDate() + duration.amount * 7)
-  else {
-    // A day past the end of the target month falls back to its last day, so Jan 31 plus a month is Feb 28.
-    const last_day = new Date(start.getFullYear(), start.getMonth() + duration.amount + 1, 0).getDate()
-    due.setDate(1)
-    due.setMonth(start.getMonth() + duration.amount)
-    due.setDate(Math.min(start.getDate(), last_day))
-  }
+  // A day past the end of the target month falls back to its last day, so Jan 31 plus a month is Feb 28.
+  const last_day = new Date(start.getFullYear(), start.getMonth() + duration.months + 1, 0).getDate()
+  const due = new Date(start.getFullYear(), start.getMonth() + duration.months, Math.min(start.getDate(), last_day), start.getHours(), start.getMinutes())
+  due.setDate(due.getDate() + duration.weeks * 7 + duration.days)
+  due.setHours(due.getHours() + duration.hours, due.getMinutes() + duration.minutes)
   return format_task_date(due, has_time(start_at))
 }
 

@@ -45,8 +45,24 @@ export interface RescheduleOption {
 // A gap the Duration list in a task's details offers, which sets the due date that long after the start.
 export interface TaskDuration {
   id: string
-  amount: number
-  unit: 'minute' | 'hour' | 'day' | 'week' | 'month'
+  months: number
+  weeks: number
+  days: number
+  hours: number
+  minutes: number
+}
+
+export const DURATION_UNITS = ['months', 'weeks', 'days', 'hours', 'minutes'] as const
+
+// Builds a duration from the units given, with every other unit at zero.
+export function task_duration(id: string, amounts: Partial<Omit<TaskDuration, 'id'>>): TaskDuration {
+  return { id, months: 0, weeks: 0, days: 0, hours: 0, minutes: 0, ...amounts }
+}
+
+// Saved durations can still hold a single amount and unit, which this turns into the same gap.
+export function saved_task_duration(saved: TaskDuration | { id: string; amount: number; unit: string }): TaskDuration {
+  if (!('unit' in saved)) return saved
+  return task_duration(saved.id, { [`${saved.unit}s`]: saved.amount })
 }
 
 // A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, or ticks split by the tags of a group.
@@ -120,18 +136,18 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'end-of-month', name: 'End of month', mode: 'rule', days: 0, rule: 'FREQ=MONTHLY;BYMONTHDAY=-1' }
   ],
   task_durations: [
-    { id: '30m', amount: 30, unit: 'minute' },
-    { id: '1h', amount: 1, unit: 'hour' },
-    { id: '2h', amount: 2, unit: 'hour' },
-    { id: '4h', amount: 4, unit: 'hour' },
-    { id: '0d', amount: 0, unit: 'day' },
-    { id: '1d', amount: 1, unit: 'day' },
-    { id: '2d', amount: 2, unit: 'day' },
-    { id: '3d', amount: 3, unit: 'day' },
-    { id: '1w', amount: 1, unit: 'week' },
-    { id: '2w', amount: 2, unit: 'week' },
-    { id: '1mo', amount: 1, unit: 'month' },
-    { id: '3mo', amount: 3, unit: 'month' }
+    task_duration('30m', { minutes: 30 }),
+    task_duration('1h', { hours: 1 }),
+    task_duration('2h', { hours: 2 }),
+    task_duration('4h', { hours: 4 }),
+    task_duration('0d', {}),
+    task_duration('1d', { days: 1 }),
+    task_duration('2d', { days: 2 }),
+    task_duration('3d', { days: 3 }),
+    task_duration('1w', { weeks: 1 }),
+    task_duration('2w', { weeks: 2 }),
+    task_duration('1mo', { months: 1 }),
+    task_duration('3mo', { months: 3 })
   ],
   last_view: { kind: 'all' },
   mcp_enabled: false,

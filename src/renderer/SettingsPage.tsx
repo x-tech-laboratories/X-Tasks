@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TaskDateField, type TaskDuration, type ThemeChoice } from '@shared/settings'
+import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
 
@@ -344,6 +344,14 @@ interface DurationsEditorProps {
   on_change: (durations: TaskDuration[]) => void
 }
 
+const DURATION_UNIT_SHORT_NAMES: Record<(typeof DURATION_UNITS)[number], string> = {
+  months: 'mo',
+  weeks: 'wk',
+  days: 'd',
+  hours: 'h',
+  minutes: 'min'
+}
+
 // The gaps the Duration list in a task's details offers, in the order shown here.
 function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
   function update(id: string, change: Partial<TaskDuration>): void {
@@ -358,39 +366,32 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
   }
 
   function add(): void {
-    on_change([...durations, { id: crypto.randomUUID(), amount: 1, unit: 'day' }])
+    on_change([...durations, task_duration(crypto.randomUUID(), { days: 1 })])
   }
 
   return (
     <>
       <p class="setting_hint">
-        The gaps offered by Duration in a task's details, which set the due date that long after the start. Minutes and hours show
-        only when the start has a time, and Same day only when it has none.
+        The gaps offered by Duration in a task's details, which set the due date that long after the start. Units can be mixed,
+        such as 1 hour 30 minutes. A gap with minutes or hours shows only when the start has a time, and Same day only when it
+        has none.
       </p>
 
       {durations.map((duration, index) => (
         <div key={duration.id} class="setting_row reschedule_option">
-          <input
-            type="number"
-            min="0"
-            step="1"
-            class="reschedule_days"
-            value={duration.amount}
-            onChange={(event) => update(duration.id, { amount: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
-            aria-label="Amount"
-          />
-          <select
-            class="duration_unit"
-            value={duration.unit}
-            onChange={(event) => update(duration.id, { unit: event.currentTarget.value as TaskDuration['unit'] })}
-            aria-label="Unit"
-          >
-            <option value="minute">Minutes</option>
-            <option value="hour">Hours</option>
-            <option value="day">Days</option>
-            <option value="week">Weeks</option>
-            <option value="month">Months</option>
-          </select>
+          {DURATION_UNITS.map((unit) => (
+            <label key={unit} class="duration_amount">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={duration[unit]}
+                onChange={(event) => update(duration.id, { [unit]: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
+                aria-label={unit}
+              />
+              <span>{DURATION_UNIT_SHORT_NAMES[unit]}</span>
+            </label>
+          ))}
           <span class="duration_preview">{duration_label(duration)}</span>
           <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
             ↑

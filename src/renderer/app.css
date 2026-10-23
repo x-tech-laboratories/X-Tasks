@@ -862,7 +862,8 @@ select:hover { border-color: var(--border-focus); }
 
 .reschedule_add { margin-top: var(--space-4); }
 
-.reschedule_option .duration_unit { width: 112px; }
+.duration_amount { display: flex; flex: none; align-items: center; gap: var(--space-1); color: var(--text-secondary); }
+.duration_amount input { width: 52px; }
 .duration_preview { flex: 1; min-width: 0; overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
 
 .backup_row { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
