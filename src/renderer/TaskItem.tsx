@@ -19,23 +19,79 @@ import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type Tas
 interface TaskTableHeaderProps {
   tag_groups: TagGroup[]
   tags: Tag[]
+  // Every column after the title in its order, and the ones of them shown.
+  column_order: TableColumn[]
+  shown_columns: TableColumn[]
+  on_move_column: (column: TableColumn, target: TableColumn, is_after: boolean) => void
+  on_show_column: (column: TableColumn, is_shown: boolean) => void
   sort: TableSortKey[]
   on_sort: (column: TableColumn, is_adding: boolean) => void
   filters: TableFilters
   on_filter: (filters: TableFilters) => void
 }
 
-// The open filter popover: the column it belongs to and the corner of its icon it hangs from.
-interface OpenFilter {
-  column: TableColumn
+// Where a popover hangs from, in window coordinates.
+interface PopoverPoint {
   x: number
   y: number
 }
 
-// The column names above the rows in the table layout, one per filter group; each sorts the table, and its funnel icon filters it.
-export function TaskTableHeader({ tag_groups, tags, sort, on_sort, filters, on_filter }: TaskTableHeaderProps) {
+// The open filter popover: the column it belongs to and the corner of its icon it hangs from.
+interface OpenFilter extends PopoverPoint {
+  column: TableColumn
+}
+
+// The column names above the rows in the table layout; each sorts the table, its funnel icon filters it, and dragging it moves the column.
+export function TaskTableHeader({
+  tag_groups, tags, column_order, shown_columns, on_move_column, on_show_column, sort, on_sort, filters, on_filter
+}: TaskTableHeaderProps) {
   const [open_filter, set_open_filter] = useState<OpenFilter | null>(null)
   const close_filter = useCallback(() => set_open_filter(null), [])
+  const [columns_menu, set_columns_menu] = useState<PopoverPoint | null>(null)
+  const close_columns_menu = useCallback(() => set_columns_menu(null), [])
+  const [dragged_column, set_dragged_column] = useState<TableColumn | null>(null)
+  const [drop_target, set_drop_target] = useState<{ column: TableColumn; is_after: boolean } | null>(null)
+
+  function column_label(column: TableColumn): string {
+    if (column === 'title') return 'Task'
+    if (column === 'date') return 'Date'
+    return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
+  }
+
+  function open_columns_menu(event: MouseEvent): void {
+    event.preventDefault()
+    if (event.type === 'click') {
+      const button = (event.currentTarget as HTMLElement).getBoundingClientRect()
+      set_columns_menu({ x: button.right, y: button.bottom + 4 })
+    } else {
+      set_columns_menu({ x: event.clientX, y: event.clientY })
+    }
+  }
+
+  // ==========================================================================
+  // Moving columns
+  // ==========================================================================
+
+  // A column dropped on the left half of another goes before it, and on the right half after it.
+  function drag_over_column(column: TableColumn, event: DragEvent): void {
+    if (!dragged_column || column === 'title') return
+    event.preventDefault()
+    const cell = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    set_drop_target({ column, is_after: event.clientX > cell.left + cell.width / 2 })
+  }
+
+  function drop_column(event: DragEvent): void {
+    event.preventDefault()
+    if (dragged_column && drop_target && dragged_column !== drop_target.column) {
+      on_move_column(dragged_column, drop_target.column, drop_target.is_after)
+    }
+    end_column_drag()
+  }
+
+  function end_column_drag(): void {
+    set_dragged_column(null)
+    set_drop_target(null)
+  }
 
   function is_column_filtered(column: TableColumn): boolean {
     if (column === 'title') return filters.title.trim() !== ''
@@ -50,12 +106,31 @@ export function TaskTableHeader({ tag_groups, tags, sort, on_sort, filters, on_f
   }
 
   // A sorted column shows its direction, and its place in the sort once more than one column is sorted.
-  function header_cell(column: TableColumn, label: string, class_name = '') {
+  function header_cell(column: TableColumn, class_name = '') {
+    const label = column_label(column)
     const index = sort.findIndex((key) => key.column === column)
     const key = sort[index]
     const is_filtered = is_column_filtered(column)
+    const is_movable = column !== 'title'
+    const cell_class = [
+      'header_cell', class_name, is_filtered && 'is_filtered', open_filter?.column === column && 'is_filter_open',
+      dragged_column === column && 'is_dragged', drop_target?.column === column && (drop_target.is_after ? 'drop_after' : 'drop_before')
+    ].filter(Boolean).join(' ')
     return (
-      <span key={column} class={['header_cell', class_name, is_filtered && 'is_filtered', open_filter?.column === column && 'is_filter_open'].filter(Boolean).join(' ')}>
+      <span
+        key={column}
+        class={cell_class}
+        draggable={is_movable}
+        onDragStart={(event) => {
+          event.dataTransfer?.setData('text/plain', column)
+          set_dragged_column(column)
+        }}
+        onDragEnd={end_column_drag}
+        onDragOver={(event) => drag_over_column(column, event)}
+        onDragLeave={() => set_drop_target(null)}
+        onDrop={drop_column}
+        title={is_movable ? 'Drag to move this column' : undefined}
+      >
         <button
           class={key ? 'sort_button is_sorted' : 'sort_button'}
           onClick={(event) => on_sort(column, event.shiftKey)}
@@ -138,29 +213,57 @@ export function TaskTableHeader({ tag_groups, tags, sort, on_sort, filters, on_f
   }
 
   return (
-    <li class="task_table_header">
-      {header_cell('title', 'Task', 'title_cell')}
-      {header_cell('date', 'Date')}
-      {tag_groups.map((group) => header_cell(group_column(group), group.name))}
+    <li class="task_table_header" onContextMenu={open_columns_menu}>
+      {header_cell('title', 'title_cell')}
+      {shown_columns.map((column) => header_cell(column))}
       <span class="actions_cell">
         {has_table_filters(filters) && (
           <button class="clear_filters_button" onClick={() => on_filter(EMPTY_TABLE_FILTERS)} title="Clear filters">
             Clear
           </button>
         )}
+        <button
+          class="filter_button columns_button"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => (columns_menu ? close_columns_menu() : open_columns_menu(event))}
+          aria-label="Show or hide columns"
+          title="Show or hide columns"
+        >
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path d="M2 2h3v12H2zm4.5 0h3v12h-3zM11 2h3v12h-3z" />
+          </svg>
+        </button>
       </span>
       {open_filter && filter_popover(open_filter)}
+      {columns_menu && (
+        <FilterPopover open={columns_menu} on_close={close_columns_menu}>
+          <label class="context_menu_item columns_choice is_fixed">
+            <input type="checkbox" checked disabled />
+            Task
+          </label>
+          {column_order.map((column) => (
+            <label key={column} class="context_menu_item columns_choice">
+              <input
+                type="checkbox"
+                checked={shown_columns.includes(column)}
+                onChange={(event) => on_show_column(column, event.currentTarget.checked)}
+              />
+              {column_label(column)}
+            </label>
+          ))}
+        </FilterPopover>
+      )}
     </li>
   )
 }
 
 interface FilterPopoverProps {
-  open: OpenFilter
+  open: PopoverPoint
   on_close: () => void
   children: ComponentChildren
 }
 
-// Hangs below a column's funnel icon and closes on any click outside it, Escape, scrolling or the window losing focus.
+// Hangs below a column's funnel icon, or wherever it was opened, and closes on any click outside it, Escape, scrolling or the window losing focus.
 function FilterPopover({ open, on_close, children }: FilterPopoverProps) {
   const popover_element = useRef<HTMLDivElement>(null)
   const [position, set_position] = useState({ left: open.x, top: open.y })
@@ -212,6 +315,8 @@ export interface TaskActions {
   tags: Tag[]
   tag_groups: TagGroup[]
   is_table: boolean
+  // The table columns shown after the title, in order.
+  table_columns: TableColumn[]
   date_field: TaskDateField
   can_add_subtasks: boolean
   selected_task_id: string | null
@@ -335,6 +440,17 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
   const is_selected = actions.selected_task_id === task.id
   const task_date = task_date_of(task, actions.date_field)
+  const date_cell = (
+    <span key="date" class="task_cell date_cell">
+      {task.is_done && task.done_at ? (
+        <span class="due_label">Done {task_date_label(format_task_date(new Date(task.done_at), false))}</span>
+      ) : task_date && (
+        <span class={!task.is_done && is_overdue(task_date) ? 'due_label is_overdue' : 'due_label'}>
+          {task_date_label(task_date)}
+        </span>
+      )}
+    </span>
+  )
   const row_class = ['task', task.is_done && 'is_done', is_selected && 'is_selected', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
 
   return (
@@ -380,24 +496,17 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           )}
         </span>
 
-        <span class="task_cell date_cell">
-          {task.is_done && task.done_at ? (
-            <span class="due_label">Done {task_date_label(format_task_date(new Date(task.done_at), false))}</span>
-          ) : task_date && (
-            <span class={!task.is_done && is_overdue(task_date) ? 'due_label is_overdue' : 'due_label'}>
-              {task_date_label(task_date)}
-            </span>
-          )}
-        </span>
-
         {actions.is_table ? (
-          actions.tag_groups.map((group) => (
-            <span key={group.id} class="task_cell">
-              {task_tags.filter((tag) => tag.group_id === group.id).map(render_tag)}
-            </span>
-          ))
+          actions.table_columns.map((column) =>
+            column === 'date' ? date_cell : (
+              <span key={column} class="task_cell">
+                {task_tags.filter((tag) => `group:${tag.group_id}` === column).map(render_tag)}
+              </span>
+            )
+          )
         ) : (
           <>
+            {date_cell}
             {priority_tag && render_tag(priority_tag)}
             {chip_tags.map(render_tag)}
           </>

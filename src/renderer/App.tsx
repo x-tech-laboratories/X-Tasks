@@ -14,7 +14,9 @@ import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
-import { EMPTY_TABLE_FILTERS, has_table_filters, sort_after_click, sort_task_tree, task_passes_filters, type TableFilters } from './table'
+import {
+  EMPTY_TABLE_FILTERS, has_table_filters, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, type TableColumn, type TableFilters
+} from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
@@ -402,7 +404,22 @@ export function App() {
   const is_sorted = is_table && settings.table_sort.length > 0
   const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, today, settings.task_date_field)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
+  const column_order = ordered_columns(settings.table_column_order, tag_groups)
+  const table_columns = column_order.filter((column) => !settings.hidden_table_columns.includes(column))
   const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, settings.task_date_field) : nested_tasks
+
+  // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
+  function show_table_column(column: TableColumn, is_shown: boolean): void {
+    const hidden = settings!.hidden_table_columns.filter((each) => each !== column)
+    void change_setting('hidden_table_columns', is_shown ? hidden : [...hidden, column])
+    if (is_shown) return
+
+    if (settings!.table_sort.some((key) => key.column === column)) {
+      void change_setting('table_sort', settings!.table_sort.filter((key) => key.column !== column))
+    }
+    if (column === 'date') set_table_filters((filters) => ({ ...filters, date: 'any' }))
+    else set_table_filters((filters) => ({ ...filters, group_tag_ids: { ...filters.group_tag_ids, [column.slice('group:'.length)]: '' } }))
+  }
 
   // The tags a task's row shows: its own and the rule tags that match it.
   function task_tags_of(task: Task): Tag[] {
@@ -417,6 +434,7 @@ export function App() {
     tags,
     tag_groups,
     is_table,
+    table_columns,
     date_field: settings.task_date_field,
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
@@ -541,11 +559,19 @@ export function App() {
                 </div>
               </header>
 
-              <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{ '--group-columns': tag_groups.map(() => 'var(--column-group)').join(' '), '--group-count': tag_groups.length }}>
+              <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{
+                  '--data-columns': table_columns.map((column) => (column === 'date' ? 'var(--column-date)' : 'var(--column-group)')).join(' '),
+                  '--date-count': table_columns.filter((column) => column === 'date').length,
+                  '--group-count': table_columns.filter((column) => column !== 'date').length
+                }}>
                 {is_table && visible_tasks.length > 0 && (
                   <TaskTableHeader
                     tag_groups={tag_groups}
                     tags={tags}
+                    column_order={column_order}
+                    shown_columns={table_columns}
+                    on_move_column={(column, target, is_after) => void change_setting('table_column_order', move_column(column_order, column, target, is_after))}
+                    on_show_column={show_table_column}
                     sort={settings.table_sort}
                     on_sort={(column, is_adding) => void change_setting('table_sort', sort_after_click(settings.table_sort, column, is_adding))}
                     filters={table_filters}

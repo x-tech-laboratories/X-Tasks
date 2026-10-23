@@ -107,6 +107,10 @@ export interface Settings {
   task_layout: TaskLayout
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
   table_sort: TableSortKey[]
+  // The order of the table's columns after the title; columns for groups added since come at the end.
+  table_column_order: string[]
+  // The table columns left out; the title is always shown.
+  hidden_table_columns: string[]
   // Widths in pixels of the left sidebar and the task detail panel, set by dragging their edges.
   sidebar_width: number
   detail_width: number
@@ -137,6 +141,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tag_match: 'all',
   task_layout: 'list',
   table_sort: [],
+  table_column_order: [],
+  hidden_table_columns: [],
   sidebar_width: 248,
   detail_width: 340,
   reschedule_options: [

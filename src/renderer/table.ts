@@ -18,6 +18,20 @@ function group_id_of(column: string): string | null {
   return column.startsWith('group:') ? column.slice('group:'.length) : null
 }
 
+// Lists the columns after the title in their saved order, leaving out removed groups and adding new ones at the end.
+export function ordered_columns(saved_order: string[], tag_groups: TagGroup[]): TableColumn[] {
+  const all_columns: TableColumn[] = ['date', ...tag_groups.map(group_column)]
+  const saved = saved_order.filter((column): column is TableColumn => all_columns.includes(column as TableColumn))
+  return [...saved, ...all_columns.filter((column) => !saved.includes(column))]
+}
+
+// Moves a column to just before or after another one.
+export function move_column(order: TableColumn[], column: TableColumn, target: TableColumn, is_after: boolean): TableColumn[] {
+  const rest = order.filter((each) => each !== column)
+  const index = rest.indexOf(target) + (is_after ? 1 : 0)
+  return [...rest.slice(0, index), column, ...rest.slice(index)]
+}
+
 // ============================================================================
 // Sorting
 // ============================================================================

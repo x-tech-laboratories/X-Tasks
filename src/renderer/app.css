@@ -366,8 +366,8 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 /* Rows never get narrower than every column needs, so a table with many groups scrolls sideways instead of squeezing the titles. */
 .task_list.is_table > li {
   min-width: calc(
-    var(--space-2) + var(--space-4) + 24px + 16px + var(--column-title-min) + var(--column-date) + var(--column-actions) +
-      4 * var(--space-4) + var(--group-count, 0) * (var(--column-group) + var(--space-4))
+    var(--space-2) + var(--space-4) + 24px + 16px + var(--column-title-min) + var(--column-actions) + 3 * var(--space-4) +
+      var(--date-count, 0) * (var(--column-date) + var(--space-4)) + var(--group-count, 0) * (var(--column-group) + var(--space-4))
   );
 }
 
@@ -376,7 +376,7 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .task_table_header {
   display: grid;
   grid-template-columns:
-    24px 16px minmax(0, 1fr) var(--column-date) var(--group-columns,) var(--column-actions);
+    24px 16px minmax(0, 1fr) var(--data-columns,) var(--column-actions);
   align-items: center;
   gap: var(--space-4);
 }
@@ -425,7 +425,19 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .sort_marker { flex: none; font-size: 9px; }
 .sort_marker sup { margin-left: 1px; font-size: 9px; }
 
-.task_table_header .actions_cell { display: flex; justify-content: flex-end; }
+.task_table_header .actions_cell { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+
+/* The columns button stays in view, unlike the funnels that wait for the pointer. */
+.filter_button.columns_button { visibility: visible; }
+
+/* A column being dragged fades, and a line marks the side of the column it would land on. */
+.header_cell.is_dragged { opacity: 0.4; }
+.header_cell.drop_before { box-shadow: inset 2px 0 var(--accent); }
+.header_cell.drop_after { box-shadow: inset -2px 0 var(--accent); }
+
+.filter_popover .columns_choice input { width: auto; margin: 0; }
+.context_menu_item.columns_choice { display: flex; align-items: center; gap: var(--space-3); cursor: pointer; }
+.context_menu_item.columns_choice.is_fixed { cursor: default; opacity: 0.6; }
 .clear_filters_button { height: 22px; padding: 0 var(--space-4); font-size: var(--text-label); }
 
 /* The funnel shows when the pointer is over its column, and stays while that column is filtered or its popover is open. */
