@@ -111,16 +111,28 @@ const SCHEMA_MIGRATIONS = [
    INSERT INTO task_completions (task_id, done_at) SELECT id, done_at FROM tasks WHERE done_at IS NOT NULL ORDER BY done_at`
 ]
 
+// Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
+function in_transaction(database: DatabaseSync, work: () => void): void {
+  database.exec('BEGIN')
+  try {
+    work()
+    database.exec('COMMIT')
+  } catch (error) {
+    database.exec('ROLLBACK')
+    throw error
+  }
+}
+
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
 function undo_reverted_list_tree(database: DatabaseSync): void {
   const columns = database.prepare('PRAGMA table_info(task_lists)').all() as { name: string }[]
   if (!columns.some((column) => column.name === 'parent_id')) return
 
-  database.exec('BEGIN')
-  database.exec('DROP INDEX IF EXISTS task_lists_by_parent')
-  database.exec('ALTER TABLE task_lists DROP COLUMN parent_id')
-  database.exec('PRAGMA user_version = 3')
-  database.exec('COMMIT')
+  in_transaction(database, () => {
+    database.exec('DROP INDEX IF EXISTS task_lists_by_parent')
+    database.exec('ALTER TABLE task_lists DROP COLUMN parent_id')
+    database.exec('PRAGMA user_version = 3')
+  })
 }
 
 function migrate_schema(database: DatabaseSync): void {
@@ -128,10 +140,10 @@ function migrate_schema(database: DatabaseSync): void {
   const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
 
   for (let version = user_version; version < SCHEMA_MIGRATIONS.length; version += 1) {
-    database.exec('BEGIN')
-    database.exec(SCHEMA_MIGRATIONS[version]!)
-    database.exec(`PRAGMA user_version = ${version + 1}`)
-    database.exec('COMMIT')
+    in_transaction(database, () => {
+      database.exec(SCHEMA_MIGRATIONS[version]!)
+      database.exec(`PRAGMA user_version = ${version + 1}`)
+    })
   }
 }
 
@@ -258,12 +270,12 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     tag_ids
   }
 
-  database.exec('BEGIN')
-  database
-    .prepare('INSERT INTO tasks (id, title, is_done, my_day_on, created_at, parent_id, position) VALUES (?, ?, 0, ?, ?, ?, ?)')
-    .run(task.id, task.title, task.my_day_on, task.created_at, task.parent_id, task.position)
-  for (const tag_id of tag_ids) database.prepare('INSERT INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task.id, tag_id)
-  database.exec('COMMIT')
+  in_transaction(database, () => {
+    database
+      .prepare('INSERT INTO tasks (id, title, is_done, my_day_on, created_at, parent_id, position) VALUES (?, ?, 0, ?, ?, ?, ?)')
+      .run(task.id, task.title, task.my_day_on, task.created_at, task.parent_id, task.position)
+    for (const tag_id of tag_ids) database.prepare('INSERT INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task.id, tag_id)
+  })
 
   return task
 }
@@ -273,18 +285,18 @@ export function set_task_done(task_id: string, is_done: boolean, done_at: string
   const database = open_database()
   const latest_entry = 'SELECT MAX(id) FROM task_completions WHERE task_id = ?'
 
-  database.exec('BEGIN')
-  database.prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
-  if (log_change.kind === 'add' && done_at !== null) {
-    database.prepare('INSERT INTO task_completions (task_id, done_at, occurrence_on) VALUES (?, ?, ?)').run(task_id, done_at, log_change.occurrence_on)
-  }
-  if (log_change.kind === 'remove') database.prepare(`DELETE FROM task_completions WHERE id = (${latest_entry})`).run(task_id)
-  // A time given to a task never ticked starts its log.
-  if (log_change.kind === 'retime' && done_at !== null) {
-    const { changes } = database.prepare(`UPDATE task_completions SET done_at = ? WHERE id = (${latest_entry})`).run(done_at, task_id)
-    if (changes === 0) database.prepare('INSERT INTO task_completions (task_id, done_at) VALUES (?, ?)').run(task_id, done_at)
-  }
-  database.exec('COMMIT')
+  in_transaction(database, () => {
+    database.prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
+    if (log_change.kind === 'add' && done_at !== null) {
+      database.prepare('INSERT INTO task_completions (task_id, done_at, occurrence_on) VALUES (?, ?, ?)').run(task_id, done_at, log_change.occurrence_on)
+    }
+    if (log_change.kind === 'remove') database.prepare(`DELETE FROM task_completions WHERE id = (${latest_entry})`).run(task_id)
+    // A time given to a task never ticked starts its log.
+    if (log_change.kind === 'retime' && done_at !== null) {
+      const { changes } = database.prepare(`UPDATE task_completions SET done_at = ? WHERE id = (${latest_entry})`).run(done_at, task_id)
+      if (changes === 0) database.prepare('INSERT INTO task_completions (task_id, done_at) VALUES (?, ?)').run(task_id, done_at)
+    }
+  })
 }
 
 export function list_completions(): Completion[] {
@@ -323,19 +335,19 @@ export function move_task(task_id: string, parent_id: string | null, position: n
 export function tag_task(task_id: string, tag_id: string): void {
   const database = open_database()
 
-  database.exec('BEGIN')
-  database
-    .prepare(
-      `DELETE FROM task_tags WHERE task_id = ? AND tag_id IN (
-         SELECT other.id FROM tags AS other
-           JOIN tags AS chosen ON chosen.group_id = other.group_id
-           JOIN tag_groups ON tag_groups.id = chosen.group_id
-         WHERE chosen.id = ? AND tag_groups.is_single_choice = 1
-       )`
-    )
-    .run(task_id, tag_id)
-  database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task_id, tag_id)
-  database.exec('COMMIT')
+  in_transaction(database, () => {
+    database
+      .prepare(
+        `DELETE FROM task_tags WHERE task_id = ? AND tag_id IN (
+           SELECT other.id FROM tags AS other
+             JOIN tags AS chosen ON chosen.group_id = other.group_id
+             JOIN tag_groups ON tag_groups.id = chosen.group_id
+           WHERE chosen.id = ? AND tag_groups.is_single_choice = 1
+         )`
+      )
+      .run(task_id, tag_id)
+    database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task_id, tag_id)
+  })
 }
 
 export function untag_task(task_id: string, tag_id: string): void {
@@ -463,23 +475,23 @@ export function apply_priority_scale(scale: PriorityScale): void {
     .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position")
     .all() as { id: string }[]
 
-  database.exec('BEGIN')
-  names.forEach((name, index) => {
-    const rank = ranks[index]
-    if (rank) database.prepare('UPDATE tags SET name = ?, position = ? WHERE id = ?').run(name, index + 1, rank.id)
-    else {
-      database
-        .prepare("INSERT INTO tags (id, name, created_at, group_id, position) VALUES (?, ?, ?, 'priority', ?)")
-        .run(randomUUID(), name, new Date().toISOString(), index + 1)
+  in_transaction(database, () => {
+    names.forEach((name, index) => {
+      const rank = ranks[index]
+      if (rank) database.prepare('UPDATE tags SET name = ?, position = ? WHERE id = ?').run(name, index + 1, rank.id)
+      else {
+        database
+          .prepare("INSERT INTO tags (id, name, created_at, group_id, position) VALUES (?, ?, ?, 'priority', ?)")
+          .run(randomUUID(), name, new Date().toISOString(), index + 1)
+      }
+    })
+
+    const lowest = database
+      .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position LIMIT 1 OFFSET ?")
+      .get(names.length - 1) as { id: string }
+    for (const extra of ranks.slice(names.length)) {
+      database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) SELECT task_id, ? FROM task_tags WHERE tag_id = ?').run(lowest.id, extra.id)
+      database.prepare('DELETE FROM tags WHERE id = ?').run(extra.id)
     }
   })
-
-  const lowest = database
-    .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position LIMIT 1 OFFSET ?")
-    .get(names.length - 1) as { id: string }
-  for (const extra of ranks.slice(names.length)) {
-    database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) SELECT task_id, ? FROM task_tags WHERE tag_id = ?').run(lowest.id, extra.id)
-    database.prepare('DELETE FROM tags WHERE id = ?').run(extra.id)
-  }
-  database.exec('COMMIT')
 }
