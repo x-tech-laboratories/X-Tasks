@@ -1,4 +1,5 @@
-import { useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 
 import type { TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
@@ -23,73 +24,182 @@ interface TaskTableHeaderProps {
   on_filter: (filters: TableFilters) => void
 }
 
-// The column names above the rows in the table layout, one per filter group, each sorting the table, with a row of filters under them.
+// The open filter popover: the column it belongs to and the corner of its icon it hangs from.
+interface OpenFilter {
+  column: TableColumn
+  x: number
+  y: number
+}
+
+// The column names above the rows in the table layout, one per filter group; each sorts the table, and its funnel icon filters it.
 export function TaskTableHeader({ tag_groups, tags, sort, on_sort, filters, on_filter }: TaskTableHeaderProps) {
+  const [open_filter, set_open_filter] = useState<OpenFilter | null>(null)
+  const close_filter = useCallback(() => set_open_filter(null), [])
+
+  function is_column_filtered(column: TableColumn): boolean {
+    if (column === 'title') return filters.title.trim() !== ''
+    if (column === 'date') return filters.date !== 'any'
+    return Boolean(filters.group_tag_ids[column.slice('group:'.length)])
+  }
+
+  function toggle_filter(column: TableColumn, event: MouseEvent): void {
+    if (open_filter?.column === column) return set_open_filter(null)
+    const icon = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    set_open_filter({ column, x: icon.left, y: icon.bottom + 4 })
+  }
+
   // A sorted column shows its direction, and its place in the sort once more than one column is sorted.
-  function sort_button(column: TableColumn, label: string, class_name = '') {
+  function header_cell(column: TableColumn, label: string, class_name = '') {
     const index = sort.findIndex((key) => key.column === column)
     const key = sort[index]
+    const is_filtered = is_column_filtered(column)
+    return (
+      <span key={column} class={['header_cell', class_name, is_filtered && 'is_filtered', open_filter?.column === column && 'is_filter_open'].filter(Boolean).join(' ')}>
+        <button
+          class={key ? 'sort_button is_sorted' : 'sort_button'}
+          onClick={(event) => on_sort(column, event.shiftKey)}
+          title="Click to sort by this column, Shift+click to add it to the sort"
+          aria-sort={key ? (key.is_descending ? 'descending' : 'ascending') : undefined}
+        >
+          <span class="sort_label">{label}</span>
+          {key && <span class="sort_marker">{key.is_descending ? '▼' : '▲'}{sort.length > 1 && <sup>{index + 1}</sup>}</span>}
+        </button>
+        <button
+          class="filter_button"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => toggle_filter(column, event)}
+          aria-label={`Filter by ${label}`}
+          title={is_filtered ? `Filtered by ${label}` : `Filter by ${label}`}
+        >
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path d="M2 3h12l-4.5 5.5V13l-3 1.5v-6z" />
+          </svg>
+        </button>
+      </span>
+    )
+  }
+
+  // The title filters by typed text; the date and each group pick one choice from a list.
+  function filter_popover(open: OpenFilter) {
+    if (open.column === 'title') {
+      return (
+        <FilterPopover open={open} on_close={close_filter}>
+          <input
+            value={filters.title}
+            onInput={(event) => on_filter({ ...filters, title: event.currentTarget.value })}
+            onKeyDown={(event) => event.key === 'Enter' && close_filter()}
+            placeholder="Title contains"
+            aria-label="Filter by title"
+          />
+        </FilterPopover>
+      )
+    }
+
+    if (open.column === 'date') {
+      return (
+        <FilterPopover open={open} on_close={close_filter}>
+          {DATE_FILTER_CHOICES.map(({ value, label }) =>
+            filter_choice(label, filters.date === value, () => on_filter({ ...filters, date: value as DateFilter }))
+          )}
+        </FilterPopover>
+      )
+    }
+
+    const group_id = open.column.slice('group:'.length)
+    const chosen_id = filters.group_tag_ids[group_id] ?? ''
+    const choose = (tag_id: string) => on_filter({ ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id]: tag_id } })
+    return (
+      <FilterPopover open={open} on_close={close_filter}>
+        {filter_choice('Any', chosen_id === '', () => choose(''))}
+        {filter_choice('None', chosen_id === NO_TAG_FILTER, () => choose(NO_TAG_FILTER))}
+        {tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group_id)).map((tag) =>
+          filter_choice(tag_path(tag, tags), chosen_id === tag.id, () => choose(tag.id))
+        )}
+      </FilterPopover>
+    )
+  }
+
+  function filter_choice(label: string, is_chosen: boolean, on_choose: () => void) {
     return (
       <button
-        class={['sort_button', class_name, key && 'is_sorted'].filter(Boolean).join(' ')}
-        onClick={(event) => on_sort(column, event.shiftKey)}
-        title="Click to sort by this column, Shift+click to add it to the sort"
-        aria-sort={key ? (key.is_descending ? 'descending' : 'ascending') : undefined}
+        key={label}
+        class={is_chosen ? 'context_menu_item is_chosen' : 'context_menu_item'}
+        role="menuitemradio"
+        aria-checked={is_chosen}
+        onClick={() => {
+          on_choose()
+          close_filter()
+        }}
       >
-        <span class="sort_label">{label}</span>
-        {key && <span class="sort_marker">{key.is_descending ? '▼' : '▲'}{sort.length > 1 && <sup>{index + 1}</sup>}</span>}
+        {label}
       </button>
     )
   }
 
-  function set_group_filter(group: TagGroup, tag_id: string): void {
-    on_filter({ ...filters, group_tag_ids: { ...filters.group_tag_ids, [group.id]: tag_id } })
-  }
+  return (
+    <li class="task_table_header">
+      {header_cell('title', 'Task', 'title_cell')}
+      {header_cell('date', 'Date')}
+      {tag_groups.map((group) => header_cell(group_column(group), group.name))}
+      <span class="actions_cell">
+        {has_table_filters(filters) && (
+          <button class="clear_filters_button" onClick={() => on_filter(EMPTY_TABLE_FILTERS)} title="Clear filters">
+            Clear
+          </button>
+        )}
+      </span>
+      {open_filter && filter_popover(open_filter)}
+    </li>
+  )
+}
+
+interface FilterPopoverProps {
+  open: OpenFilter
+  on_close: () => void
+  children: ComponentChildren
+}
+
+// Hangs below a column's funnel icon and closes on any click outside it, Escape, scrolling or the window losing focus.
+function FilterPopover({ open, on_close, children }: FilterPopoverProps) {
+  const popover_element = useRef<HTMLDivElement>(null)
+  const [position, set_position] = useState({ left: open.x, top: open.y })
+
+  // Shifts the popover back on screen when it would spill past the right or bottom edge.
+  useLayoutEffect(() => {
+    const size = popover_element.current!.getBoundingClientRect()
+    set_position({
+      left: Math.min(open.x, window.innerWidth - size.width - 4),
+      top: Math.min(open.y, window.innerHeight - size.height - 4)
+    })
+  }, [open])
+
+  // A text filter is ready to type into as soon as it opens.
+  useEffect(() => popover_element.current?.querySelector('input')?.focus(), [])
+
+  useEffect(() => {
+    function close_on_outside_press(event: MouseEvent): void {
+      if (!popover_element.current?.contains(event.target as Node)) on_close()
+    }
+    function close_on_escape(event: KeyboardEvent): void {
+      if (event.key === 'Escape') on_close()
+    }
+
+    window.addEventListener('mousedown', close_on_outside_press)
+    window.addEventListener('keydown', close_on_escape)
+    window.addEventListener('blur', on_close)
+    window.addEventListener('scroll', on_close, true)
+    return () => {
+      window.removeEventListener('mousedown', close_on_outside_press)
+      window.removeEventListener('keydown', close_on_escape)
+      window.removeEventListener('blur', on_close)
+      window.removeEventListener('scroll', on_close, true)
+    }
+  }, [on_close])
 
   return (
-    <>
-      <li class="task_table_header">
-        {sort_button('title', 'Task', 'title_cell')}
-        {sort_button('date', 'Date')}
-        {tag_groups.map((group) => <span key={group.id}>{sort_button(group_column(group), group.name)}</span>)}
-        <span class="actions_cell" />
-      </li>
-
-      <li class="task_table_filters">
-        <input
-          class="title_cell"
-          value={filters.title}
-          onInput={(event) => on_filter({ ...filters, title: event.currentTarget.value })}
-          onKeyDown={(event) => event.key === 'Escape' && on_filter({ ...filters, title: '' })}
-          placeholder="Filter tasks"
-          aria-label="Filter by title"
-        />
-        <select value={filters.date} onChange={(event) => on_filter({ ...filters, date: event.currentTarget.value as DateFilter })} aria-label="Filter by date">
-          {DATE_FILTER_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-        </select>
-        {tag_groups.map((group) => (
-          <select
-            key={group.id}
-            value={filters.group_tag_ids[group.id] ?? ''}
-            onChange={(event) => set_group_filter(group, event.currentTarget.value)}
-            aria-label={`Filter by ${group.name}`}
-          >
-            <option value="">Any</option>
-            <option value={NO_TAG_FILTER}>None</option>
-            {tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group.id)).map((tag) => (
-              <option key={tag.id} value={tag.id}>{tag_path(tag, tags)}</option>
-            ))}
-          </select>
-        ))}
-        <span class="actions_cell">
-          {has_table_filters(filters) && (
-            <button class="row_button" onClick={() => on_filter(EMPTY_TABLE_FILTERS)} aria-label="Clear filters" title="Clear filters">
-              ×
-            </button>
-          )}
-        </span>
-      </li>
-    </>
+    <div ref={popover_element} class="context_menu filter_popover" role="menu" style={{ left: `${position.left}px`, top: `${position.top}px` }}>
+      {children}
+    </div>
   )
 }
 
