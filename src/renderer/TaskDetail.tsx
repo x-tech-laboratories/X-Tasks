@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
-import { describe_recurrence, recurrence_anchor } from './schedule'
+import { describe_recurrence, format_task_date, parse_task_date, recurrence_anchor } from './schedule'
 import { tag_path } from './views'
 
 // ============================================================================
@@ -20,6 +20,7 @@ interface TaskDetailProps {
   on_tag: (task: Task, tag: Tag) => void
   on_untag: (task: Task, tag: Tag) => void
   on_set_schedule: (task: Task, schedule: TaskSchedule) => void
+  on_set_done_at: (task: Task, done_at: string | null) => void
   on_reschedule: (task: Task) => void
   is_in_my_day: boolean
   on_set_my_day: (task: Task, is_added: boolean) => void
@@ -28,7 +29,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_close
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -152,6 +153,11 @@ export function TaskDetail({
 
       <DateField label="Start" value={task.start_at} on_change={(start_at) => on_set_schedule(task, { ...schedule, start_at })} />
       <DateField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
+      <DateField
+        label="Done"
+        value={task.done_at && format_task_date(new Date(task.done_at), true)}
+        on_change={(done_at) => on_set_done_at(task, done_at && parse_task_date(done_at).toISOString())}
+      />
       <button class="reschedule_button" onClick={() => on_reschedule(task)}>
         Reschedule…
       </button>
@@ -186,7 +192,6 @@ export function TaskDetail({
       <footer class="task_detail_footer">
         <span>
           Created {new Date(task.created_at).toLocaleDateString()}
-          {task.is_done && task.done_at && ` · Done ${new Date(task.done_at).toLocaleDateString()}`}
           {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
         </span>
         <button class="danger_button" onClick={() => on_remove(task)}>

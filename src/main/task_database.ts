@@ -243,9 +243,9 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
   return task
 }
 
-// Records when the task was completed, and clears that time when it is reopened.
-export function set_task_done(task_id: string, done_at: string | null): void {
-  open_database().prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(done_at === null ? 0 : 1, done_at, task_id)
+// A recurring task stays open when ticked, yet still records the time it was done.
+export function set_task_done(task_id: string, is_done: boolean, done_at: string | null): void {
+  open_database().prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
 }
 
 export function set_task_title(task_id: string, title: string): void {

@@ -142,27 +142,32 @@ export function App() {
 
   // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.
   function toggle_task(task: Task): void {
-    const next = task.is_done ? null : next_schedule(task)
+    if (task.is_done) return save_task_done(task, false, null)
+
+    const done_at = new Date().toISOString()
+    const next = next_schedule(task)
     if (next) {
       set_task_schedule(task, next)
-      return set_subtasks_done(task, null)
+      save_task_done(task, false, done_at)
+      return set_subtasks_done(task, false, done_at)
     }
 
-    const done_at = task.is_done ? null : new Date().toISOString()
-    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done: done_at !== null, done_at } : each)))
-    void window.x_tasks.set_task_done(task.id, done_at)
-    if (done_at) set_subtasks_done(task, done_at)
+    save_task_done(task, true, done_at)
+    set_subtasks_done(task, true, done_at)
   }
 
-  function set_subtasks_done(task: Task, done_at: string | null): void {
-    const is_done = done_at !== null
-    const changed_ids = subtree_ids(task.id, tasks)
-    changed_ids.delete(task.id)
-    for (const each of tasks) if (changed_ids.has(each.id) && each.is_done === is_done) changed_ids.delete(each.id)
-    if (changed_ids.size === 0) return
+  function save_task_done(task: Task, is_done: boolean, done_at: string | null): void {
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done, done_at } : each)))
+    void window.x_tasks.set_task_done(task.id, is_done, done_at)
+  }
 
-    set_tasks((current_tasks) => current_tasks.map((each) => (changed_ids.has(each.id) ? { ...each, is_done, done_at } : each)))
-    for (const id of changed_ids) void window.x_tasks.set_task_done(id, done_at)
+  // Subtasks reset by a recurring parent keep the time they were last done.
+  function set_subtasks_done(task: Task, is_done: boolean, done_at: string): void {
+    const subtask_ids = subtree_ids(task.id, tasks)
+    subtask_ids.delete(task.id)
+    for (const each of tasks) {
+      if (subtask_ids.has(each.id) && each.is_done !== is_done) save_task_done(each, is_done, is_done ? done_at : each.done_at)
+    }
   }
 
   function set_task_my_day(task: Task, my_day_on: string | null): void {
@@ -467,6 +472,7 @@ export function App() {
           on_tag={tag_task}
           on_untag={untag_task}
           on_set_schedule={set_task_schedule}
+          on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at)}
           on_reschedule={(task) => set_rescheduling_task_id(task.id)}
           is_in_my_day={is_in_my_day(selected_task, shown_since)}
           on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}

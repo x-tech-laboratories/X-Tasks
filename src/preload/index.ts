@@ -13,7 +13,7 @@ import {
 const tasks_api: TasksApi = {
   list_tasks: () => ipcRenderer.invoke(LIST_TASKS_CHANNEL),
   add_task: (title, parent_id, tag_ids, my_day_on) => ipcRenderer.invoke(ADD_TASK_CHANNEL, title, parent_id, tag_ids, my_day_on),
-  set_task_done: (task_id, done_at) => ipcRenderer.invoke(SET_TASK_DONE_CHANNEL, task_id, done_at),
+  set_task_done: (task_id, is_done, done_at) => ipcRenderer.invoke(SET_TASK_DONE_CHANNEL, task_id, is_done, done_at),
   set_task_title: (task_id, title) => ipcRenderer.invoke(SET_TASK_TITLE_CHANNEL, task_id, title),
   set_task_notes: (task_id, notes) => ipcRenderer.invoke(SET_TASK_NOTES_CHANNEL, task_id, notes),
   set_task_schedule: (task_id, schedule) => ipcRenderer.invoke(SET_TASK_SCHEDULE_CHANNEL, task_id, schedule),
