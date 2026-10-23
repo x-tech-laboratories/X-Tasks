@@ -49,7 +49,7 @@ export type View =
   | { kind: 'all' }
   | { kind: 'active' }
   | { kind: 'completed' }
-  | { kind: 'tag'; tag_id: string }
+  | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================
 // Bridge contract

@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import {
-  BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, subtree_ids, task_is_in_view, type DropPlacement,
+  BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, is_tag_selected, subtree_ids, task_is_in_view, type DropPlacement,
   type SidePlacement, type View
 } from './views'
 
@@ -19,6 +19,7 @@ interface SidebarProps {
   is_settings_open: boolean
   dragged_task: Task | null
   on_select_view: (view: View) => void
+  on_toggle_tag: (tag: Tag) => void
   on_open_settings: () => void
   on_remove_tag_group: (group: TagGroup) => void
   on_set_tag_group_single_choice: (group: TagGroup, is_single_choice: boolean) => void
@@ -46,7 +47,7 @@ interface NewTagSpot {
 }
 
 export function Sidebar({
-  tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings,
+  tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
   on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
@@ -184,11 +185,11 @@ export function Sidebar({
   function tag_branch(tag: Tag, depth: number, group_tags: Tag[]) {
     const children = children_of(tag.id, group_tags)
     const is_collapsed = collapsed_ids.has(tag.id)
-    const view: View = { kind: 'tag', tag_id: tag.id }
+    const view: View = { kind: 'tag', tag_ids: [tag.id] }
     const count = open_count(view)
     const row_class = [
       'sidebar_item sidebar_tag_row',
-      selected_view && is_same_view(view, selected_view) && 'is_selected',
+      is_tag_selected(selected_view, tag.id) && 'is_selected',
       drop_target?.tag_id === tag.id && `drop_${drop_target.placement}`
     ].filter(Boolean).join(' ')
 
@@ -224,7 +225,7 @@ export function Sidebar({
           ) : (
             <span class="collapse_spacer" />
           )}
-          <button class="sidebar_tag_select" onClick={() => on_select_view(view)}>
+          <button class="sidebar_tag_select" onClick={() => on_toggle_tag(tag)}>
             <span class="sidebar_label">{tag.name}</span>
             {count ? <span class="sidebar_count">{count}</span> : null}
           </button>

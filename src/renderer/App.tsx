@@ -11,7 +11,7 @@ import { TaskItem, type TaskActions } from './TaskItem'
 import { next_schedule } from './schedule'
 import {
   by_position, launch_view, move_for_drop, nest_tasks, position_for_drop, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
-  type DropPlacement, type SidePlacement, type View
+  view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
 
 // ============================================================================
@@ -79,7 +79,7 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view))
+    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
   }
@@ -198,7 +198,7 @@ export function App() {
   async function add_tag(name: string, group_id: string, parent_id: string | null): Promise<void> {
     const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id)
     set_tags((current_tags) => [...current_tags, added_tag])
-    select_view({ kind: 'tag', tag_id: added_tag.id })
+    select_view({ kind: 'tag', tag_ids: [added_tag.id] })
   }
 
   function remove_tag(tag: Tag): void {
@@ -216,7 +216,8 @@ export function App() {
     set_tasks((current_tasks) =>
       current_tasks.map((task) => ({ ...task, tag_ids: task.tag_ids.filter((tag_id) => !removed_ids.has(tag_id)) }))
     )
-    if (selected_view.kind === 'tag' && removed_ids.has(selected_view.tag_id)) select_view({ kind: 'all' })
+    const remaining_view = view_without_tags(selected_view, removed_ids)
+    if (remaining_view !== selected_view) select_view(remaining_view)
   }
 
   function move_tag(dragged: Tag, target: Tag, placement: DropPlacement): void {
@@ -269,6 +270,7 @@ export function App() {
         is_settings_open={is_settings_open}
         dragged_task={dragged_task}
         on_select_view={select_view}
+        on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag.id))}
         on_open_settings={() => set_is_settings_open(true)}
         on_remove_tag_group={remove_tag_group}
         on_set_tag_group_single_choice={set_tag_group_single_choice}
