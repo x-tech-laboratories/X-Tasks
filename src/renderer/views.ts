@@ -89,3 +89,57 @@ export function task_with_descendant_ids(task_id: string, all_tasks: Task[]): Se
 
   return ids
 }
+
+// ============================================================================
+// Dragging
+// ============================================================================
+
+export type DropPlacement = 'before' | 'after' | 'inside'
+
+export interface TaskMove {
+  parent_id: string | null
+  list_id: string | null
+  position: number
+}
+
+// The top and bottom quarters of a row drop beside it, the middle drops into it.
+export function drop_placement(event: DragEvent, allow_inside: boolean): DropPlacement {
+  const row = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const fraction = (event.clientY - row.top) / row.height
+  if (!allow_inside) return fraction < 0.5 ? 'before' : 'after'
+  if (fraction < 0.25) return 'before'
+  if (fraction > 0.75) return 'after'
+  return 'inside'
+}
+
+// Picks a position between the neighbours at the drop point, so only the moved item changes.
+function position_beside<Item extends { id: string; position: number }>(
+  siblings: Item[],
+  target: Item,
+  placement: 'before' | 'after'
+): number {
+  const index = siblings.findIndex((sibling) => sibling.id === target.id)
+  const neighbour = siblings[placement === 'before' ? index - 1 : index + 1]
+  if (!neighbour) return placement === 'before' ? target.position - 1 : target.position + 1
+  return (target.position + neighbour.position) / 2
+}
+
+export function task_move_for_drop(dragged: Task, target: Task, placement: DropPlacement, all_tasks: Task[]): TaskMove {
+  const others = all_tasks.filter((task) => task.id !== dragged.id)
+
+  if (placement === 'inside') {
+    const last_child_position = Math.max(target.position, ...others.filter((task) => task.parent_id === target.id).map((task) => task.position))
+    return { parent_id: target.id, list_id: target.list_id, position: last_child_position + 1 }
+  }
+
+  const siblings = others.filter((task) => task.parent_id === target.parent_id)
+  return { parent_id: target.parent_id, list_id: target.list_id, position: position_beside(siblings, target, placement) }
+}
+
+export function list_position_for_drop(dragged: TaskList, target: TaskList, placement: 'before' | 'after', task_lists: TaskList[]): number {
+  return position_beside(task_lists.filter((task_list) => task_list.id !== dragged.id), target, placement)
+}
+
+export function by_position<Item extends { position: number }>(first: Item, second: Item): number {
+  return first.position - second.position
+}

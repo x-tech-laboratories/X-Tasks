@@ -1,32 +1,41 @@
 import { useState } from 'preact/hooks'
 
 import type { Task } from '@shared/tasks'
-import type { TaskNode } from './views'
+import { drop_placement, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
 // Task item
 // ============================================================================
 
-interface TaskItemProps {
-  node: TaskNode
+export interface TaskActions {
   can_add_subtasks: boolean
   on_toggle: (task: Task) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
+  on_drag_start: (task: Task) => void
+  on_drag_end: () => void
+  can_drop_on: (target: Task) => boolean
+  on_drop: (target: Task, placement: DropPlacement) => void
 }
 
-export function TaskItem({ node, can_add_subtasks, on_toggle, on_remove, on_add_subtask }: TaskItemProps) {
+interface TaskItemProps {
+  node: TaskNode
+  actions: TaskActions
+}
+
+export function TaskItem({ node, actions }: TaskItemProps) {
   const { task, children } = node
   const [is_collapsed, set_is_collapsed] = useState(false)
   const [is_adding_subtask, set_is_adding_subtask] = useState(false)
   const [subtask_title, set_subtask_title] = useState('')
+  const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
 
   function submit_subtask(event: Event): void {
     event.preventDefault()
     const title = subtask_title.trim()
     if (!title) return
 
-    on_add_subtask(task, title)
+    actions.on_add_subtask(task, title)
     set_subtask_title('')
     set_is_collapsed(false)
   }
@@ -36,9 +45,40 @@ export function TaskItem({ node, can_add_subtasks, on_toggle, on_remove, on_add_
     set_subtask_title('')
   }
 
+  // ==========================================================================
+  // Dragging
+  // ==========================================================================
+
+  function start_drag(event: DragEvent): void {
+    event.dataTransfer?.setData('text/plain', task.id)
+    actions.on_drag_start(task)
+  }
+
+  function drag_over(event: DragEvent): void {
+    if (!actions.can_drop_on(task)) return
+    event.preventDefault()
+    set_shown_placement(drop_placement(event, true))
+  }
+
+  function drop(event: DragEvent): void {
+    event.preventDefault()
+    set_shown_placement(null)
+    actions.on_drop(task, drop_placement(event, true))
+  }
+
+  const row_class = ['task', task.is_done && 'is_done', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
+
   return (
     <li class="task_item">
-      <div class={task.is_done ? 'task is_done' : 'task'}>
+      <div
+        class={row_class}
+        draggable
+        onDragStart={start_drag}
+        onDragEnd={actions.on_drag_end}
+        onDragOver={drag_over}
+        onDragLeave={() => set_shown_placement(null)}
+        onDrop={drop}
+      >
         {children.length > 0 ? (
           <button
             class="collapse_button"
@@ -52,18 +92,18 @@ export function TaskItem({ node, can_add_subtasks, on_toggle, on_remove, on_add_
         )}
 
         <label>
-          <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} />
+          <input type="checkbox" checked={task.is_done} onChange={() => actions.on_toggle(task)} />
           <span>{task.title}</span>
         </label>
 
         {is_collapsed && <span class="subtask_count">{children.length}</span>}
 
-        {can_add_subtasks && (
+        {actions.can_add_subtasks && (
           <button class="row_button" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
             +
           </button>
         )}
-        <button class="remove_button" onClick={() => on_remove(task)} aria-label="Remove">
+        <button class="remove_button" onClick={() => actions.on_remove(task)} aria-label="Remove">
           ×
         </button>
       </div>
@@ -71,14 +111,7 @@ export function TaskItem({ node, can_add_subtasks, on_toggle, on_remove, on_add_
       {!is_collapsed && (children.length > 0 || is_adding_subtask) && (
         <ul class="subtask_list">
           {children.map((child) => (
-            <TaskItem
-              key={child.task.id}
-              node={child}
-              can_add_subtasks={can_add_subtasks}
-              on_toggle={on_toggle}
-              on_remove={on_remove}
-              on_add_subtask={on_add_subtask}
-            />
+            <TaskItem key={child.task.id} node={child} actions={actions} />
           ))}
 
           {is_adding_subtask && (

@@ -2,12 +2,12 @@ import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 
 import {
-  ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, REMOVE_TASK_CHANNEL,
-  REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL
+  ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, MOVE_TASK_CHANNEL,
+  MOVE_TASK_LIST_CHANNEL, REMOVE_TASK_CHANNEL, REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL
 } from '@shared/tasks'
 import {
-  add_task, add_task_list, close_task_database, list_task_lists, list_tasks, open_task_database, remove_task,
-  remove_task_list, set_task_done
+  add_task, add_task_list, close_task_database, list_task_lists, list_tasks, move_task, move_task_list,
+  open_task_database, remove_task, remove_task_list, set_task_done
 } from './task_database'
 
 // ============================================================================
@@ -59,10 +59,16 @@ function register_bridge_handlers(): void {
   )
   ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
   ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
+  ipcMain.handle(
+    MOVE_TASK_CHANNEL,
+    (_event, task_id: string, parent_id: string | null, list_id: string | null, position: number) =>
+      move_task(task_id, parent_id, list_id, position)
+  )
 
   ipcMain.handle(LIST_TASK_LISTS_CHANNEL, () => list_task_lists())
   ipcMain.handle(ADD_TASK_LIST_CHANNEL, (_event, name: string) => add_task_list(name))
   ipcMain.handle(REMOVE_TASK_LIST_CHANNEL, (_event, list_id: string) => remove_task_list(list_id))
+  ipcMain.handle(MOVE_TASK_LIST_CHANNEL, (_event, list_id: string, position: number) => move_task_list(list_id, position))
 }
 
 // ============================================================================

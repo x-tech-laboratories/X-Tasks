@@ -8,14 +8,14 @@
 - [ ] Due dates, with Today and Upcoming views
 - [ ] Priorities
 - [x] Subtasks
-- [ ] Reorder tasks by dragging
+- [x] Reorder tasks by dragging
 - [ ] Clear all completed tasks in a view
 - [ ] Undo after removing a task
 
 ## Lists
 
 - [ ] Rename a list
-- [ ] Reorder lists by dragging
+- [x] Reorder lists by dragging
 - [ ] Move tasks to the inbox instead of deleting them when their list is removed, or offer the choice
 
 ## Finding things
