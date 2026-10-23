@@ -23,6 +23,7 @@ interface SidebarProps {
   on_select_view: (view: View) => void
   on_toggle_tag: (tag: Tag) => void
   on_open_settings: () => void
+  on_edit_tag_group: (group: TagGroup) => void
   on_remove_tag_group: (group: TagGroup) => void
   on_set_tag_group_single_choice: (group: TagGroup, is_single_choice: boolean) => void
   on_move_tag_group: (dragged: TagGroup, target: TagGroup, placement: SidePlacement) => void
@@ -52,7 +53,7 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
-  on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  on_edit_tag_group, on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
@@ -87,6 +88,12 @@ export function Sidebar({
     })
     set_new_tag_spot(spot)
     set_new_tag_name('')
+  }
+
+  // A plain group names its new tag in place; a rule group opens the rule dialog.
+  function add_tag_at(spot: NewTagSpot): void {
+    if (tag_groups.find((group) => group.id === spot.group_id)?.is_rule) on_add_rule_tag(spot.group_id, spot.parent_id)
+    else start_new_tag(spot)
   }
 
   function stop_new_tag(): void {
@@ -214,8 +221,7 @@ export function Sidebar({
           onContextMenu={(event) =>
             on_context_menu(event, [
               { label: 'Edit tag…', on_select: () => on_edit_tag(tag) },
-              { label: 'Add tag inside', on_select: () => start_new_tag({ group_id: tag.group_id, parent_id: tag.id }) },
-              { label: 'Add rule tag inside…', on_select: () => on_add_rule_tag(tag.group_id, tag.id) },
+              { label: 'Add tag inside', on_select: () => add_tag_at({ group_id: tag.group_id, parent_id: tag.id }) },
               { label: 'Delete tag', on_select: () => on_remove_tag(tag), is_danger: true }
             ])
           }
@@ -238,7 +244,7 @@ export function Sidebar({
           </button>
           <button
             class="row_button"
-            onClick={() => start_new_tag({ group_id: tag.group_id, parent_id: tag.id })}
+            onClick={() => add_tag_at({ group_id: tag.group_id, parent_id: tag.id })}
             aria-label={`Add a tag inside ${tag.name}`}
           >
             +
@@ -280,14 +286,19 @@ export function Sidebar({
           onDragEnd={end_group_drag}
           onContextMenu={(event) =>
             on_context_menu(event, [
-              { label: 'Add tag', on_select: () => start_new_tag({ group_id: group.id, parent_id: null }) },
-              { label: 'Add rule tag…', on_select: () => on_add_rule_tag(group.id, null) },
+              { label: 'Edit group…', on_select: () => on_edit_tag_group(group) },
+              { label: 'Add tag', on_select: () => add_tag_at({ group_id: group.id, parent_id: null }) },
               ...(group_above ? [{ label: 'Move up', on_select: () => on_move_tag_group(group, group_above, 'before') }] : []),
               ...(group_below ? [{ label: 'Move down', on_select: () => on_move_tag_group(group, group_below, 'after') }] : []),
-              {
-                label: group.is_single_choice ? 'Allow several tags per task' : 'Allow one tag per task',
-                on_select: () => on_set_tag_group_single_choice(group, !group.is_single_choice)
-              },
+              // Rules can match a task several times over, so only plain groups limit a task to one tag.
+              ...(group.is_rule
+                ? []
+                : [
+                    {
+                      label: group.is_single_choice ? 'Allow several tags per task' : 'Allow one tag per task',
+                      on_select: () => on_set_tag_group_single_choice(group, !group.is_single_choice)
+                    }
+                  ]),
               { label: 'Delete group', on_select: () => on_remove_tag_group(group), is_danger: true }
             ])
           }
@@ -295,6 +306,7 @@ export function Sidebar({
           <button
             class="sidebar_heading sidebar_group_toggle"
             onClick={() => toggle_collapsed(group.id)}
+            onDblClick={() => on_edit_tag_group(group)}
             aria-expanded={!is_collapsed}
           >
             <Chevron is_open={!is_collapsed} />
@@ -302,7 +314,7 @@ export function Sidebar({
           </button>
           <button
             class="row_button"
-            onClick={() => start_new_tag({ group_id: group.id, parent_id: null })}
+            onClick={() => add_tag_at({ group_id: group.id, parent_id: null })}
             aria-label={`Add a tag to ${group.name}`}
           >
             +

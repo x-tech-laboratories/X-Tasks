@@ -53,12 +53,13 @@ const TAG_MATCH_CHOICES: { value: TagMatch; label: string }[] = [
 interface SettingsPageProps {
   settings: Settings
   on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void | Promise<void>
-  on_add_tag_group: (name: string) => void
+  on_add_tag_group: (name: string, is_rule: boolean) => void
 }
 
 export function SettingsPage({ settings, on_change, on_add_tag_group }: SettingsPageProps) {
   const [database_path, set_database_path] = useState('')
   const [new_group_name, set_new_group_name] = useState('')
+  const [is_new_group_rule, set_is_new_group_rule] = useState(false)
 
   useEffect(() => {
     void window.x_settings.get_database_path().then(set_database_path)
@@ -69,7 +70,7 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
     const name = new_group_name.trim()
     if (!name) return
 
-    on_add_tag_group(name)
+    on_add_tag_group(name, is_new_group_rule)
     set_new_group_name('')
   }
 
@@ -175,7 +176,7 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
         <form class="setting_row" onSubmit={submit_new_group}>
           <div class="setting_text">
             <span class="setting_label">New filter group</span>
-            <span class="setting_hint">Adds a section to the sidebar, such as Context or Energy, with its own tags.</span>
+            <span class="setting_hint">Adds a section to the sidebar with its own tags: plain tags given by hand, such as Context, or rule tags that apply themselves, such as Overdue.</span>
           </div>
           <input
             value={new_group_name}
@@ -183,6 +184,14 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             placeholder="Group name"
             aria-label="New filter group"
           />
+          <select
+            value={is_new_group_rule ? 'rule' : 'plain'}
+            onChange={(event) => set_is_new_group_rule(event.currentTarget.value === 'rule')}
+            aria-label="New filter group type"
+          >
+            <option value="plain">Plain tags</option>
+            <option value="rule">Rule tags</option>
+          </select>
           <button type="submit">Add</button>
         </form>
 

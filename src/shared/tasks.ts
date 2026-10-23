@@ -42,6 +42,8 @@ export interface TagGroup {
   position: number
   // When set, a task holds at most one tag from this group, such as a single priority.
   is_single_choice: boolean
+  // When set, every tag in the group is a rule tag that applies itself; otherwise its tags are given by hand.
+  is_rule: boolean
 }
 
 // The preset Priority group, whose tag shows on task rows as its own label.
@@ -67,6 +69,8 @@ export interface TagRule {
   match: 'all' | 'any'
   conditions: RuleCondition[]
 }
+
+export const EMPTY_RULE: TagRule = { match: 'all', conditions: [] }
 
 export type DueCondition = 'overdue' | 'today' | 'within_days' | 'any' | 'none'
 
@@ -113,14 +117,14 @@ export interface TasksApi {
   list_completions: () => Promise<Completion[]>
 
   list_tag_groups: () => Promise<TagGroup[]>
-  add_tag_group: (name: string) => Promise<TagGroup>
+  add_tag_group: (name: string, is_rule: boolean) => Promise<TagGroup>
+  update_tag_group: (group_id: string, name: string, is_rule: boolean) => Promise<void>
   remove_tag_group: (group_id: string) => Promise<void>
   set_tag_group_single_choice: (group_id: string, is_single_choice: boolean) => Promise<void>
   move_tag_group: (group_id: string, position: number) => Promise<void>
 
   list_tags: () => Promise<Tag[]>
   add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null) => Promise<Tag>
-  // A rule turns the tag into a rule tag and takes it off every task that held it by hand; null makes it a plain tag.
   update_tag: (tag_id: string, name: string, rule: TagRule | null) => Promise<void>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
@@ -145,6 +149,7 @@ export const LIST_COMPLETIONS_CHANNEL = 'tasks:list-completions'
 export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'
 export const ADD_TAG_GROUP_CHANNEL = 'tag-groups:add'
 export const REMOVE_TAG_GROUP_CHANNEL = 'tag-groups:remove'
+export const UPDATE_TAG_GROUP_CHANNEL = 'tag-groups:update'
 export const SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL = 'tag-groups:set-single-choice'
 export const MOVE_TAG_GROUP_CHANNEL = 'tag-groups:move'
 

@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, saved_task_duration, type PriorityScale, type Settings } from '@shared/settings'
-import type { Completion, CompletionLogChange, Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
+import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
 // Schema
@@ -108,7 +108,12 @@ const SCHEMA_MIGRATIONS = [
      occurrence_on TEXT
    );
    CREATE INDEX task_completions_by_task ON task_completions (task_id);
-   INSERT INTO task_completions (task_id, done_at) SELECT id, done_at FROM tasks WHERE done_at IS NOT NULL ORDER BY done_at`
+   INSERT INTO task_completions (task_id, done_at) SELECT id, done_at FROM tasks WHERE done_at IS NOT NULL ORDER BY done_at`,
+  // A group holding only rule tags becomes a rule group; a group mixing both stays plain and its rule tags keep working.
+  `ALTER TABLE tag_groups ADD COLUMN is_rule INTEGER NOT NULL DEFAULT 0;
+   UPDATE tag_groups SET is_rule = 1, is_single_choice = 0
+     WHERE EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NOT NULL)
+       AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NULL)`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -359,26 +364,44 @@ export function untag_task(task_id: string, tag_id: string): void {
 // ============================================================================
 
 export function list_tag_groups(): TagGroup[] {
-  const rows = open_database().prepare('SELECT * FROM tag_groups ORDER BY position').all() as unknown as (Omit<TagGroup, 'is_single_choice'> & {
+  const rows = open_database().prepare('SELECT * FROM tag_groups ORDER BY position').all() as unknown as (Omit<TagGroup, 'is_single_choice' | 'is_rule'> & {
     is_single_choice: number
+    is_rule: number
   })[]
-  return rows.map((row) => ({ ...row, is_single_choice: row.is_single_choice === 1 }))
+  return rows.map((row) => ({ ...row, is_single_choice: row.is_single_choice === 1, is_rule: row.is_rule === 1 }))
 }
 
-export function add_tag_group(name: string): TagGroup {
+export function add_tag_group(name: string, is_rule: boolean): TagGroup {
   const group: TagGroup = {
     id: randomUUID(),
     name,
     created_at: new Date().toISOString(),
     position: next_position('tag_groups'),
-    is_single_choice: false
+    is_single_choice: false,
+    is_rule
   }
 
   open_database()
-    .prepare('INSERT INTO tag_groups (id, name, created_at, position) VALUES (?, ?, ?, ?)')
-    .run(group.id, group.name, group.created_at, group.position)
+    .prepare('INSERT INTO tag_groups (id, name, created_at, position, is_rule) VALUES (?, ?, ?, ?, ?)')
+    .run(group.id, group.name, group.created_at, group.position, is_rule ? 1 : 0)
 
   return group
+}
+
+// A group turned to rules gives each plain tag an empty rule and takes its tags off every task; one turned plain drops the rules.
+export function update_tag_group(group_id: string, name: string, is_rule: boolean): void {
+  const database = open_database()
+
+  in_transaction(database, () => {
+    database.prepare('UPDATE tag_groups SET name = ?, is_rule = ? WHERE id = ?').run(name, is_rule ? 1 : 0, group_id)
+    if (is_rule) {
+      database.prepare('UPDATE tag_groups SET is_single_choice = 0 WHERE id = ?').run(group_id)
+      database.prepare('UPDATE tags SET rule = ? WHERE group_id = ? AND rule IS NULL').run(JSON.stringify(EMPTY_RULE), group_id)
+      database.prepare('DELETE FROM task_tags WHERE tag_id IN (SELECT id FROM tags WHERE group_id = ?)').run(group_id)
+    } else {
+      database.prepare('UPDATE tags SET rule = NULL WHERE group_id = ?').run(group_id)
+    }
+  })
 }
 
 // Its tags go with it, while their tasks stay and only lose the tags.

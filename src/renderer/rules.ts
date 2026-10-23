@@ -33,8 +33,6 @@ export function default_condition(kind: ConditionKind, tags: Tag[]): RuleConditi
   }
 }
 
-export const EMPTY_RULE: TagRule = { match: 'all', conditions: [] }
-
 // ============================================================================
 // Matching
 // ============================================================================

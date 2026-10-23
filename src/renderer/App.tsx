@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
-import type { Completion, CompletionLogChange, Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
+import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
 import { FilterDialog } from './FilterDialog'
+import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
-import { EMPTY_RULE } from './rules'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import { EMPTY_TABLE_FILTERS, has_table_filters, sort_after_click, sort_task_tree, task_passes_filters, type TableFilters } from './table'
 import {
@@ -52,6 +52,7 @@ export function App() {
   const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
   const [today, set_today] = useState(() => format_task_date(new Date(), false))
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
+  const [editing_group, set_editing_group] = useState<TagGroup | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
 
   useEffect(() => {
@@ -264,9 +265,29 @@ export function App() {
   // Tag changes
   // ==========================================================================
 
-  async function add_tag_group(name: string): Promise<void> {
-    const added_group = await window.x_tasks.add_tag_group(name)
+  async function add_tag_group(name: string, is_rule: boolean): Promise<void> {
+    const added_group = await window.x_tasks.add_tag_group(name, is_rule)
     set_tag_groups((current_groups) => [...current_groups, added_group])
+  }
+
+  // A group turned to rules gives each plain tag an empty rule and leaves every task that held its tags; one turned plain drops the rules.
+  function update_tag_group(group: TagGroup, name: string, is_rule: boolean): void {
+    const group_tag_ids = new Set(tags.filter((tag) => tag.group_id === group.id).map((tag) => tag.id))
+
+    set_tag_groups((current_groups) =>
+      current_groups.map((each) => (each.id === group.id ? { ...each, name, is_rule, is_single_choice: is_rule ? false : each.is_single_choice } : each))
+    )
+    set_tags((current_tags) =>
+      current_tags.map((tag) => (group_tag_ids.has(tag.id) ? { ...tag, rule: is_rule ? (tag.rule ?? EMPTY_RULE) : null } : tag))
+    )
+    if (is_rule) {
+      set_tasks((current_tasks) =>
+        current_tasks.map((task) =>
+          task.tag_ids.some((tag_id) => group_tag_ids.has(tag_id)) ? { ...task, tag_ids: task.tag_ids.filter((tag_id) => !group_tag_ids.has(tag_id)) } : task
+        )
+      )
+    }
+    void window.x_tasks.update_tag_group(group.id, name, is_rule)
   }
 
   function remove_tag_group(group: TagGroup): void {
@@ -421,6 +442,7 @@ export function App() {
         on_select_view={select_view}
         on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
         on_open_settings={() => set_is_settings_open(true)}
+        on_edit_tag_group={set_editing_group}
         on_remove_tag_group={remove_tag_group}
         on_set_tag_group_single_choice={set_tag_group_single_choice}
         on_move_tag_group={move_tag_group}
@@ -580,6 +602,17 @@ export function App() {
           tasks={tasks}
           on_save={save_filter}
           on_close={() => set_filter_editing(null)}
+        />
+      )}
+
+      {editing_group && (
+        <GroupDialog
+          heading="Edit filter group"
+          group={editing_group}
+          tags={tags}
+          tasks={tasks}
+          on_save={(name, is_rule) => update_tag_group(editing_group, name, is_rule)}
+          on_close={() => set_editing_group(null)}
         />
       )}
 
