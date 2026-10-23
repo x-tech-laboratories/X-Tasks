@@ -3,7 +3,7 @@
 ## Tasks
 
 - [x] Edit a task's title in place
-- [x] Move a task to another list
+- [x] Tag a task from its detail panel or by dragging it onto a tag
 - [x] Notes on a task
 - [ ] Due dates, with Today and Upcoming views
 - [ ] Priorities
@@ -12,11 +12,11 @@
 - [ ] Clear all completed tasks in a view
 - [ ] Undo after removing a task
 
-## Lists
+## Tags
 
-- [ ] Rename a list
-- [x] Reorder lists by dragging
-- [ ] Move tasks to the inbox instead of deleting them when their list is removed, or offer the choice
+- [ ] Rename a tag
+- [x] Nest and reorder tags by dragging
+- [ ] Pick several tags at once to see tasks matching all of them
 
 ## Finding things
 

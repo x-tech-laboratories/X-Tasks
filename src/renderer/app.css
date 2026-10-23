@@ -390,12 +390,14 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .sidebar_label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar_count { color: var(--text-tertiary); font-size: var(--text-caption); }
 
-.sidebar_list_row { display: flex; align-items: center; gap: var(--space-1); }
-.sidebar_list_row .remove_button { visibility: hidden; flex: none; }
-.sidebar_list_row:hover .remove_button,
-.sidebar_list_row .remove_button:focus-visible { visibility: visible; }
+.sidebar_tag_row { display: flex; align-items: center; gap: var(--space-1); }
+.sidebar_tag_row .remove_button,
+.sidebar_tag_row .row_button { visibility: hidden; flex: none; }
+.sidebar_tag_row:hover .remove_button,
+.sidebar_tag_row:hover .row_button,
+.sidebar_tag_row button:focus-visible { visibility: visible; }
 
-.new_list_form input { width: 100%; margin-top: var(--space-4); }
+.new_tag_form input { width: 100%; margin-top: var(--space-4); }
 
 .sidebar_footer { margin-top: auto; }
 
@@ -516,3 +518,32 @@ select:hover { border-color: var(--border-focus); }
   color: var(--text-heading);
   box-shadow: var(--shadow-item);
 }
+
+/* ========================================================================== */
+/* Tags on tasks                                                              */
+/* ========================================================================== */
+
+.tag_chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+}
+
+.tag_chip button {
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  line-height: 1.4;
+}
+
+.tag_chip button:hover { color: var(--status-danger); }
+
+.tag_chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tag_chips + select { margin-top: var(--space-3); }

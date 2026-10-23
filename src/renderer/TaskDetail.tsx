@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 
-import type { Task, TaskList } from '@shared/tasks'
+import type { Tag, Task } from '@shared/tasks'
+import { tag_path } from './views'
 
 // ============================================================================
 // Task detail
@@ -8,20 +9,19 @@ import type { Task, TaskList } from '@shared/tasks'
 
 interface TaskDetailProps {
   task: Task
-  task_lists: TaskList[]
+  tags: Tag[]
   subtask_count: number
   on_toggle: (task: Task) => void
   on_rename: (task: Task, title: string) => void
   on_set_notes: (task: Task, notes: string) => void
-  on_move_to_list: (task: Task, list_id: string | null) => void
+  on_tag: (task: Task, tag: Tag) => void
+  on_untag: (task: Task, tag: Tag) => void
   on_remove: (task: Task) => void
   on_close: () => void
 }
 
-const INBOX_OPTION = ''
-
 export function TaskDetail({
-  task, task_lists, subtask_count, on_toggle, on_rename, on_set_notes, on_move_to_list, on_remove, on_close
+  task, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_tag, on_untag, on_remove, on_close
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -46,9 +46,14 @@ export function TaskDetail({
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
   }
 
-  function change_list(event: Event): void {
-    const value = (event.currentTarget as HTMLSelectElement).value
-    on_move_to_list(task, value === INBOX_OPTION ? null : value)
+  const task_tags = tags.filter((tag) => task.tag_ids.includes(tag.id))
+  const other_tags = tags.filter((tag) => !task.tag_ids.includes(tag.id))
+
+  function add_tag(event: Event): void {
+    const select = event.currentTarget as HTMLSelectElement
+    const tag = tags.find((each) => each.id === select.value)
+    if (tag) on_tag(task, tag)
+    select.value = ''
   }
 
   return (
@@ -73,17 +78,32 @@ export function TaskDetail({
         </button>
       </header>
 
-      <label class="task_detail_field">
-        <span class="sidebar_heading">List</span>
-        <select value={task.list_id ?? INBOX_OPTION} onChange={change_list}>
-          <option value={INBOX_OPTION}>Inbox</option>
-          {task_lists.map((task_list) => (
-            <option key={task_list.id} value={task_list.id}>
-              {task_list.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div class="task_detail_field">
+        <span class="sidebar_heading">Tags</span>
+        {task_tags.length > 0 && (
+          <div class="tag_chips">
+            {task_tags.map((tag) => (
+              <span key={tag.id} class="tag_chip">
+                {tag_path(tag, tags)}
+                <button onClick={() => on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        {other_tags.length > 0 && (
+          <select value="" onChange={add_tag} aria-label="Add tag">
+            <option value="">Add tag…</option>
+            {other_tags.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag_path(tag, tags)}
+              </option>
+            ))}
+          </select>
+        )}
+        {tags.length === 0 && <span class="setting_hint">Make a tag in the sidebar to tag this task.</span>}
+      </div>
 
       <label class="task_detail_field task_detail_notes">
         <span class="sidebar_heading">Notes</span>

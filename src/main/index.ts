@@ -5,14 +5,14 @@ import {
   GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, SET_SETTING_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type Settings
 } from '@shared/settings'
 import {
-  ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, MOVE_TASK_CHANNEL,
-  MOVE_TASK_LIST_CHANNEL, REMOVE_TASK_CHANNEL, REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL,
-  SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL
+  ADD_TAG_CHANNEL, ADD_TASK_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL, MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL,
+  REMOVE_TAG_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL,
+  TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL
 } from '@shared/tasks'
 import {
-  add_task, add_task_list, close_task_database, get_settings, list_task_lists, list_tasks, move_task, move_task_list,
-  open_task_database, remove_task, remove_task_list, set_setting, set_task_done, set_task_notes, set_task_title,
-  task_database_path
+  add_tag, add_task, close_task_database, get_settings, list_tags, list_tasks, move_tag, move_task, open_task_database,
+  remove_tag, remove_task, set_setting, set_task_done, set_task_notes, set_task_title, tag_task, task_database_path,
+  untag_task
 } from './task_database'
 
 // ============================================================================
@@ -59,23 +59,25 @@ function create_main_window(): BrowserWindow {
 
 function register_bridge_handlers(): void {
   ipcMain.handle(LIST_TASKS_CHANNEL, () => list_tasks())
-  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, list_id: string | null, parent_id: string | null) =>
-    add_task(title, list_id, parent_id)
+  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, parent_id: string | null, tag_ids: string[]) =>
+    add_task(title, parent_id, tag_ids)
   )
   ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
   ipcMain.handle(SET_TASK_TITLE_CHANNEL, (_event, task_id: string, title: string) => set_task_title(task_id, title))
   ipcMain.handle(SET_TASK_NOTES_CHANNEL, (_event, task_id: string, notes: string) => set_task_notes(task_id, notes))
   ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
-  ipcMain.handle(
-    MOVE_TASK_CHANNEL,
-    (_event, task_id: string, parent_id: string | null, list_id: string | null, position: number) =>
-      move_task(task_id, parent_id, list_id, position)
+  ipcMain.handle(MOVE_TASK_CHANNEL, (_event, task_id: string, parent_id: string | null, position: number) =>
+    move_task(task_id, parent_id, position)
   )
+  ipcMain.handle(TAG_TASK_CHANNEL, (_event, task_id: string, tag_id: string) => tag_task(task_id, tag_id))
+  ipcMain.handle(UNTAG_TASK_CHANNEL, (_event, task_id: string, tag_id: string) => untag_task(task_id, tag_id))
 
-  ipcMain.handle(LIST_TASK_LISTS_CHANNEL, () => list_task_lists())
-  ipcMain.handle(ADD_TASK_LIST_CHANNEL, (_event, name: string) => add_task_list(name))
-  ipcMain.handle(REMOVE_TASK_LIST_CHANNEL, (_event, list_id: string) => remove_task_list(list_id))
-  ipcMain.handle(MOVE_TASK_LIST_CHANNEL, (_event, list_id: string, position: number) => move_task_list(list_id, position))
+  ipcMain.handle(LIST_TAGS_CHANNEL, () => list_tags())
+  ipcMain.handle(ADD_TAG_CHANNEL, (_event, name: string, parent_id: string | null) => add_tag(name, parent_id))
+  ipcMain.handle(REMOVE_TAG_CHANNEL, (_event, tag_id: string) => remove_tag(tag_id))
+  ipcMain.handle(MOVE_TAG_CHANNEL, (_event, tag_id: string, parent_id: string | null, position: number) =>
+    move_tag(tag_id, parent_id, position)
+  )
 
   ipcMain.handle(GET_SETTINGS_CHANNEL, () => get_settings())
   ipcMain.handle(SET_SETTING_CHANNEL, <Key extends keyof Settings>(_event: unknown, key: Key, value: Settings[Key]) => {

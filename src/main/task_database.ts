@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
-import type { Task, TaskList } from '@shared/tasks'
+import type { Tag, Task } from '@shared/tasks'
 
 // ============================================================================
 // Schema
@@ -37,7 +37,27 @@ const SCHEMA_MIGRATIONS = [
   `CREATE TABLE settings (
      key TEXT PRIMARY KEY,
      value TEXT NOT NULL
-   )`
+   )`,
+  // Lists become top-level tags; subtasks pick up their parent's tags through the tree, so only top tasks carry one.
+  `CREATE TABLE tags (
+     id TEXT PRIMARY KEY,
+     name TEXT NOT NULL,
+     created_at TEXT NOT NULL,
+     parent_id TEXT REFERENCES tags (id) ON DELETE CASCADE,
+     position REAL NOT NULL DEFAULT 0
+   );
+   CREATE INDEX tags_by_parent ON tags (parent_id);
+   CREATE TABLE task_tags (
+     task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+     tag_id TEXT NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+     PRIMARY KEY (task_id, tag_id)
+   );
+   CREATE INDEX task_tags_by_tag ON task_tags (tag_id);
+   INSERT INTO tags (id, name, created_at, position) SELECT id, name, created_at, position FROM task_lists;
+   INSERT INTO task_tags (task_id, tag_id) SELECT id, list_id FROM tasks WHERE list_id IS NOT NULL AND parent_id IS NULL;
+   DROP INDEX tasks_by_list;
+   ALTER TABLE tasks DROP COLUMN list_id;
+   DROP TABLE task_lists`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -74,7 +94,6 @@ interface TaskRow {
   notes: string
   is_done: number
   created_at: string
-  list_id: string | null
   parent_id: string | null
   position: number
 }
@@ -106,21 +125,21 @@ function open_database(): DatabaseSync {
 }
 
 // New rows go after every existing one.
-function next_position(table: 'tasks' | 'task_lists'): number {
+function next_position(table: 'tasks' | 'tags'): number {
   const { last } = open_database().prepare(`SELECT MAX(position) AS last FROM ${table}`).get() as { last: number | null }
   return (last ?? 0) + 1
 }
 
-function row_to_task(row: TaskRow): Task {
+function row_to_task(row: TaskRow, tag_ids: string[]): Task {
   return {
     id: row.id,
     title: row.title,
     notes: row.notes,
     is_done: row.is_done === 1,
     created_at: row.created_at,
-    list_id: row.list_id,
     parent_id: row.parent_id,
-    position: row.position
+    position: row.position,
+    tag_ids
   }
 }
 
@@ -129,25 +148,35 @@ function row_to_task(row: TaskRow): Task {
 // ============================================================================
 
 export function list_tasks(): Task[] {
-  const rows = open_database().prepare('SELECT * FROM tasks ORDER BY position').all() as unknown as TaskRow[]
-  return rows.map(row_to_task)
+  const database = open_database()
+  const rows = database.prepare('SELECT * FROM tasks ORDER BY position').all() as unknown as TaskRow[]
+  const links = database.prepare('SELECT task_id, tag_id FROM task_tags').all() as { task_id: string; tag_id: string }[]
+
+  const tag_ids_by_task = new Map<string, string[]>()
+  for (const link of links) tag_ids_by_task.set(link.task_id, [...(tag_ids_by_task.get(link.task_id) ?? []), link.tag_id])
+
+  return rows.map((row) => row_to_task(row, tag_ids_by_task.get(row.id) ?? []))
 }
 
-export function add_task(title: string, list_id: string | null, parent_id: string | null): Task {
+export function add_task(title: string, parent_id: string | null, tag_ids: string[]): Task {
+  const database = open_database()
   const task: Task = {
     id: randomUUID(),
     title,
     notes: '',
     is_done: false,
     created_at: new Date().toISOString(),
-    list_id,
     parent_id,
-    position: next_position('tasks')
+    position: next_position('tasks'),
+    tag_ids
   }
 
-  open_database()
-    .prepare('INSERT INTO tasks (id, title, is_done, created_at, list_id, parent_id, position) VALUES (?, ?, 0, ?, ?, ?, ?)')
-    .run(task.id, task.title, task.created_at, task.list_id, task.parent_id, task.position)
+  database.exec('BEGIN')
+  database
+    .prepare('INSERT INTO tasks (id, title, is_done, created_at, parent_id, position) VALUES (?, ?, 0, ?, ?, ?)')
+    .run(task.id, task.title, task.created_at, task.parent_id, task.position)
+  for (const tag_id of tag_ids) database.prepare('INSERT INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task.id, tag_id)
+  database.exec('COMMIT')
 
   return task
 }
@@ -168,48 +197,43 @@ export function remove_task(task_id: string): void {
   open_database().prepare('DELETE FROM tasks WHERE id = ?').run(task_id)
 }
 
-// The task's subtasks follow it into its new list.
-export function move_task(task_id: string, parent_id: string | null, list_id: string | null, position: number): void {
-  const database = open_database()
+export function move_task(task_id: string, parent_id: string | null, position: number): void {
+  open_database().prepare('UPDATE tasks SET parent_id = ?, position = ? WHERE id = ?').run(parent_id, position, task_id)
+}
 
-  database.exec('BEGIN')
-  database.prepare('UPDATE tasks SET parent_id = ?, list_id = ?, position = ? WHERE id = ?').run(parent_id, list_id, position, task_id)
-  database
-    .prepare(
-      `WITH RECURSIVE descendants (id) AS (
-         SELECT id FROM tasks WHERE parent_id = ?
-         UNION SELECT tasks.id FROM tasks JOIN descendants ON tasks.parent_id = descendants.id
-       )
-       UPDATE tasks SET list_id = ? WHERE id IN (SELECT id FROM descendants)`
-    )
-    .run(task_id, list_id)
-  database.exec('COMMIT')
+export function tag_task(task_id: string, tag_id: string): void {
+  open_database().prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task_id, tag_id)
+}
+
+export function untag_task(task_id: string, tag_id: string): void {
+  open_database().prepare('DELETE FROM task_tags WHERE task_id = ? AND tag_id = ?').run(task_id, tag_id)
 }
 
 // ============================================================================
-// List queries
+// Tag queries
 // ============================================================================
 
-export function list_task_lists(): TaskList[] {
-  return open_database().prepare('SELECT * FROM task_lists ORDER BY position').all() as unknown as TaskList[]
+export function list_tags(): Tag[] {
+  return open_database().prepare('SELECT * FROM tags ORDER BY position').all() as unknown as Tag[]
 }
 
-export function add_task_list(name: string): TaskList {
-  const task_list: TaskList = { id: randomUUID(), name, created_at: new Date().toISOString(), position: next_position('task_lists') }
+export function add_tag(name: string, parent_id: string | null): Tag {
+  const tag: Tag = { id: randomUUID(), name, created_at: new Date().toISOString(), parent_id, position: next_position('tags') }
 
   open_database()
-    .prepare('INSERT INTO task_lists (id, name, created_at, position) VALUES (?, ?, ?, ?)')
-    .run(task_list.id, task_list.name, task_list.created_at, task_list.position)
+    .prepare('INSERT INTO tags (id, name, created_at, parent_id, position) VALUES (?, ?, ?, ?, ?)')
+    .run(tag.id, tag.name, tag.created_at, tag.parent_id, tag.position)
 
-  return task_list
+  return tag
 }
 
-export function remove_task_list(list_id: string): void {
-  open_database().prepare('DELETE FROM task_lists WHERE id = ?').run(list_id)
+// Sub-tags go with it, while its tasks stay and only lose the tags.
+export function remove_tag(tag_id: string): void {
+  open_database().prepare('DELETE FROM tags WHERE id = ?').run(tag_id)
 }
 
-export function move_task_list(list_id: string, position: number): void {
-  open_database().prepare('UPDATE task_lists SET position = ? WHERE id = ?').run(position, list_id)
+export function move_tag(tag_id: string, parent_id: string | null, position: number): void {
+  open_database().prepare('UPDATE tags SET parent_id = ?, position = ? WHERE id = ?').run(parent_id, position, tag_id)
 }
 
 // ============================================================================

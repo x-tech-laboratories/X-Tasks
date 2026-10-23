@@ -16,8 +16,7 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'last', label: 'Last view used' },
   { value: 'all', label: 'All tasks' },
   { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'inbox', label: 'Inbox' }
+  { value: 'completed', label: 'Completed' }
 ]
 
 // ============================================================================
@@ -84,13 +83,13 @@ export function SettingsPage({ settings, on_change }: SettingsPageProps) {
 
         <label class="setting_row">
           <div class="setting_text">
-            <span class="setting_label">Ask before deleting a list</span>
-            <span class="setting_hint">Deleting a list also deletes its tasks.</span>
+            <span class="setting_label">Ask before deleting a tag</span>
+            <span class="setting_hint">Deleting a tag also deletes its sub-tags. Tasks are kept.</span>
           </div>
           <input
             type="checkbox"
-            checked={settings.confirm_list_removal}
-            onChange={(event) => on_change('confirm_list_removal', event.currentTarget.checked)}
+            checked={settings.confirm_tag_removal}
+            onChange={(event) => on_change('confirm_tag_removal', event.currentTarget.checked)}
           />
         </label>
       </section>

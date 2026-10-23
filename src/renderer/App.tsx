@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'preact/hooks'
 
 import type { Settings } from '@shared/settings'
-import type { Task, TaskList } from '@shared/tasks'
+import type { Tag, Task } from '@shared/tasks'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, type TaskActions } from './TaskItem'
 import {
-  by_position, launch_view, list_id_for_new_task, list_position_for_drop, nest_tasks, task_is_in_view,
-  task_move_for_drop, task_with_descendant_ids, view_title, type DropPlacement, type View
+  by_position, launch_view, move_for_drop, nest_tasks, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
+  type DropPlacement, type View
 } from './views'
 
 // ============================================================================
@@ -17,7 +17,7 @@ import {
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
-  const [task_lists, set_task_lists] = useState<TaskList[]>([])
+  const [tags, set_tags] = useState<Tag[]>([])
   const [settings, set_settings] = useState<Settings | null>(null)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
   const [is_settings_open, set_is_settings_open] = useState(false)
@@ -27,13 +27,11 @@ export function App() {
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
-    void Promise.all([window.x_tasks.list_task_lists(), window.x_settings.get_settings()]).then(
-      ([loaded_lists, loaded_settings]) => {
-        set_task_lists(loaded_lists)
-        set_selected_view(launch_view(loaded_settings, loaded_lists))
-        set_settings(loaded_settings)
-      }
-    )
+    void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
+      set_tags(loaded_tags)
+      set_selected_view(launch_view(loaded_settings, loaded_tags))
+      set_settings(loaded_settings)
+    })
   }, [])
 
   // ==========================================================================
@@ -61,14 +59,14 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, list_id_for_new_task(selected_view), null)
+    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
   }
 
-  // A subtask always belongs to the same list as its parent.
+  // A subtask shows wherever its parent does, so it needs no tags of its own.
   async function add_subtask(parent: Task, title: string): Promise<void> {
-    const added_task = await window.x_tasks.add_task(title, parent.list_id, parent.id)
+    const added_task = await window.x_tasks.add_task(title, parent.id, [])
     set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
@@ -88,25 +86,10 @@ export function App() {
     void window.x_tasks.set_task_notes(task.id, notes)
   }
 
-  // A task moved to another list leaves its parent and goes to the end, taking its subtasks along.
-  function move_task_to_list(task: Task, list_id: string | null): void {
-    if (list_id === task.list_id) return
-    const position = Math.max(0, ...tasks.map((each) => each.position)) + 1
-    const moved_ids = task_with_descendant_ids(task.id, tasks)
-
-    set_tasks((current_tasks) =>
-      current_tasks.map((each) => {
-        if (each.id === task.id) return { ...each, parent_id: null, list_id, position }
-        return moved_ids.has(each.id) ? { ...each, list_id } : each
-      })
-    )
-    void window.x_tasks.move_task(task.id, null, list_id, position)
-  }
-
   // The database removes subtasks along with their parent, so the screen drops them too.
   function remove_task(task: Task): void {
     set_tasks((current_tasks) => {
-      const removed_ids = task_with_descendant_ids(task.id, current_tasks)
+      const removed_ids = subtree_ids(task.id, current_tasks)
       return current_tasks.filter((each) => !removed_ids.has(each.id))
     })
     void window.x_tasks.remove_task(task.id)
@@ -114,52 +97,67 @@ export function App() {
 
   // A task cannot be dropped onto itself or anything nested under it.
   function can_drop_task_on(target: Task): boolean {
-    return dragged_task !== null && !task_with_descendant_ids(dragged_task.id, tasks).has(target.id)
+    return dragged_task !== null && !subtree_ids(dragged_task.id, tasks).has(target.id)
   }
 
   function drop_task(target: Task, placement: DropPlacement): void {
     if (!dragged_task || !can_drop_task_on(target)) return
-    const move = task_move_for_drop(dragged_task, target, placement, tasks)
-    const moved_ids = task_with_descendant_ids(dragged_task.id, tasks)
+    const move = move_for_drop(dragged_task, target, placement, tasks)
 
     set_tasks((current_tasks) =>
-      current_tasks
-        .map((each) => {
-          if (each.id === dragged_task.id) return { ...each, ...move }
-          return moved_ids.has(each.id) ? { ...each, list_id: move.list_id } : each
-        })
-        .sort(by_position)
+      current_tasks.map((each) => (each.id === dragged_task.id ? { ...each, ...move } : each)).sort(by_position)
     )
     set_dragged_task(null)
-    void window.x_tasks.move_task(dragged_task.id, move.parent_id, move.list_id, move.position)
+    void window.x_tasks.move_task(dragged_task.id, move.parent_id, move.position)
+  }
+
+  function tag_task(task: Task, tag: Tag): void {
+    if (task.tag_ids.includes(tag.id)) return
+    set_tasks((current_tasks) =>
+      current_tasks.map((each) => (each.id === task.id ? { ...each, tag_ids: [...each.tag_ids, tag.id] } : each))
+    )
+    void window.x_tasks.tag_task(task.id, tag.id)
+  }
+
+  function untag_task(task: Task, tag: Tag): void {
+    set_tasks((current_tasks) =>
+      current_tasks.map((each) =>
+        each.id === task.id ? { ...each, tag_ids: each.tag_ids.filter((tag_id) => tag_id !== tag.id) } : each
+      )
+    )
+    void window.x_tasks.untag_task(task.id, tag.id)
   }
 
   // ==========================================================================
-  // List changes
+  // Tag changes
   // ==========================================================================
 
-  async function add_list(name: string): Promise<void> {
-    const added_list = await window.x_tasks.add_task_list(name)
-    set_task_lists((current_lists) => [...current_lists, added_list])
-    select_view({ kind: 'list', list_id: added_list.id })
+  async function add_tag(name: string, parent_id: string | null): Promise<void> {
+    const added_tag = await window.x_tasks.add_tag(name, parent_id)
+    set_tags((current_tags) => [...current_tags, added_tag])
+    select_view({ kind: 'tag', tag_id: added_tag.id })
   }
 
-  function remove_list(task_list: TaskList): void {
-    const is_confirmed = !settings?.confirm_list_removal || window.confirm(`Delete "${task_list.name}" and all of its tasks?`)
+  function remove_tag(tag: Tag): void {
+    const is_confirmed =
+      !settings?.confirm_tag_removal || window.confirm(`Delete the tag "${tag.name}" and its sub-tags? Tasks are kept.`)
     if (!is_confirmed) return
 
-    set_task_lists((current_lists) => current_lists.filter((each) => each.id !== task_list.id))
-    set_tasks((current_tasks) => current_tasks.filter((task) => task.list_id !== task_list.id))
-    if (selected_view.kind === 'list' && selected_view.list_id === task_list.id) select_view({ kind: 'all' })
-    void window.x_tasks.remove_task_list(task_list.id)
+    const removed_ids = subtree_ids(tag.id, tags)
+    set_tags((current_tags) => current_tags.filter((each) => !removed_ids.has(each.id)))
+    set_tasks((current_tasks) =>
+      current_tasks.map((task) => ({ ...task, tag_ids: task.tag_ids.filter((tag_id) => !removed_ids.has(tag_id)) }))
+    )
+    if (selected_view.kind === 'tag' && removed_ids.has(selected_view.tag_id)) select_view({ kind: 'all' })
+    void window.x_tasks.remove_tag(tag.id)
   }
 
-  function move_list(dragged: TaskList, target: TaskList, placement: 'before' | 'after'): void {
-    const position = list_position_for_drop(dragged, target, placement, task_lists)
-    set_task_lists((current_lists) =>
-      current_lists.map((each) => (each.id === dragged.id ? { ...each, position } : each)).sort(by_position)
-    )
-    void window.x_tasks.move_task_list(dragged.id, position)
+  function move_tag(dragged: Tag, target: Tag, placement: DropPlacement): void {
+    if (subtree_ids(dragged.id, tags).has(target.id)) return
+    const move = move_for_drop(dragged, target, placement, tags)
+
+    set_tags((current_tags) => current_tags.map((each) => (each.id === dragged.id ? { ...each, ...move } : each)).sort(by_position))
+    void window.x_tasks.move_tag(dragged.id, move.parent_id, move.position)
   }
 
   // ==========================================================================
@@ -169,7 +167,7 @@ export function App() {
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
-  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view))
+  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
   const task_tree = nest_tasks(visible_tasks, tasks)
 
@@ -177,12 +175,14 @@ export function App() {
   const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
 
   const task_actions: TaskActions = {
+    tags,
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
     on_select: (task) => set_selected_task_id(task.id),
     on_toggle: toggle_task,
     on_remove: remove_task,
     on_add_subtask: add_subtask,
+    on_untag: untag_task,
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
     can_drop_on: can_drop_task_on,
@@ -193,14 +193,16 @@ export function App() {
     <div class={selected_task ? 'app has_detail' : 'app'}>
       <Sidebar
         tasks={tasks}
-        task_lists={task_lists}
+        tags={tags}
         selected_view={is_settings_open ? null : selected_view}
         is_settings_open={is_settings_open}
+        dragged_task={dragged_task}
         on_select_view={select_view}
         on_open_settings={() => set_is_settings_open(true)}
-        on_add_list={add_list}
-        on_remove_list={remove_list}
-        on_move_list={move_list}
+        on_add_tag={add_tag}
+        on_remove_tag={remove_tag}
+        on_move_tag={move_tag}
+        on_tag_task={tag_task}
       />
 
       <main class="task_pane">
@@ -209,7 +211,7 @@ export function App() {
         ) : (
           <>
             <header class="task_pane_header">
-              <h1>{view_title(selected_view, task_lists)}</h1>
+              <h1>{view_title(selected_view, tags)}</h1>
               <span class="remaining_count">{remaining_count} left</span>
             </header>
 
@@ -240,12 +242,13 @@ export function App() {
         <TaskDetail
           key={selected_task.id}
           task={selected_task}
-          task_lists={task_lists}
-          subtask_count={task_with_descendant_ids(selected_task.id, tasks).size - 1}
+          tags={tags}
+          subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
           on_toggle={toggle_task}
           on_rename={rename_task}
           on_set_notes={set_task_notes}
-          on_move_to_list={move_task_to_list}
+          on_tag={tag_task}
+          on_untag={untag_task}
           on_remove={remove_task}
           on_close={() => set_selected_task_id(null)}
         />

@@ -7,19 +7,19 @@ import type { View } from './tasks'
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
 // The view the app opens on, where 'last' means the one shown when it was closed.
-export type LaunchView = 'last' | 'all' | 'active' | 'completed' | 'inbox'
+export type LaunchView = 'last' | 'all' | 'active' | 'completed'
 
 export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
-  confirm_list_removal: boolean
+  confirm_tag_removal: boolean
   last_view: View
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   launch_view: 'last',
-  confirm_list_removal: true,
+  confirm_tag_removal: true,
   last_view: { kind: 'all' }
 }
 

@@ -1,19 +1,21 @@
 import { useState } from 'preact/hooks'
 
-import type { Task } from '@shared/tasks'
-import { drop_placement, type DropPlacement, type TaskNode } from './views'
+import type { Tag, Task } from '@shared/tasks'
+import { drop_placement, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // ============================================================================
 // Task item
 // ============================================================================
 
 export interface TaskActions {
+  tags: Tag[]
   can_add_subtasks: boolean
   selected_task_id: string | null
   on_select: (task: Task) => void
   on_toggle: (task: Task) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
+  on_untag: (task: Task, tag: Tag) => void
   on_drag_start: (task: Task) => void
   on_drag_end: () => void
   can_drop_on: (target: Task) => boolean
@@ -31,6 +33,8 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const [is_adding_subtask, set_is_adding_subtask] = useState(false)
   const [subtask_title, set_subtask_title] = useState('')
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
+
+  const task_tags = actions.tags.filter((tag) => task.tag_ids.includes(tag.id))
 
   function submit_subtask(event: Event): void {
     event.preventDefault()
@@ -108,6 +112,15 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         />
         <span class="task_title">{task.title}</span>
         {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
+
+        {task_tags.map((tag) => (
+          <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
+            {tag.name}
+            <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
+              ×
+            </button>
+          </span>
+        ))}
 
         {is_collapsed && <span class="subtask_count">{children.length}</span>}
 

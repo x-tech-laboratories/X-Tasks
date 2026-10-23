@@ -1,5 +1,5 @@
 import type { Settings } from '@shared/settings'
-import type { Task, TaskList, View } from '@shared/tasks'
+import type { Tag, Task, View } from '@shared/tasks'
 
 export type { View }
 
@@ -10,8 +10,7 @@ export type { View }
 export const BUILT_IN_VIEWS: { view: View; label: string }[] = [
   { view: { kind: 'all' }, label: 'All tasks' },
   { view: { kind: 'active' }, label: 'Active' },
-  { view: { kind: 'completed' }, label: 'Completed' },
-  { view: { kind: 'inbox' }, label: 'Inbox' }
+  { view: { kind: 'completed' }, label: 'Completed' }
 ]
 
 // ============================================================================
@@ -19,37 +18,88 @@ export const BUILT_IN_VIEWS: { view: View; label: string }[] = [
 // ============================================================================
 
 export function is_same_view(first: View, second: View): boolean {
-  if (first.kind === 'list' && second.kind === 'list') return first.list_id === second.list_id
+  if (first.kind === 'tag' && second.kind === 'tag') return first.tag_id === second.tag_id
   return first.kind === second.kind
 }
 
-export function task_is_in_view(task: Task, view: View): boolean {
+// A tag view shows tasks carrying that tag or any tag below it, along with their subtasks.
+export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[]): boolean {
   switch (view.kind) {
     case 'all': return true
     case 'active': return !task.is_done
     case 'completed': return task.is_done
-    case 'inbox': return task.list_id === null
-    case 'list': return task.list_id === view.list_id
+    case 'tag': {
+      const tag_ids = subtree_ids(view.tag_id, tags)
+      return task_and_ancestors(task, all_tasks).some((each) => each.tag_ids.some((tag_id) => tag_ids.has(tag_id)))
+    }
   }
 }
 
-export function view_title(view: View, task_lists: TaskList[]): string {
-  if (view.kind === 'list') return task_lists.find((task_list) => task_list.id === view.list_id)?.name ?? 'List'
+export function view_title(view: View, tags: Tag[]): string {
+  if (view.kind === 'tag') return tags.find((tag) => tag.id === view.tag_id)?.name ?? 'Tag'
   return BUILT_IN_VIEWS.find((entry) => entry.view.kind === view.kind)!.label
 }
 
-// A remembered list that has since been deleted falls back to all tasks.
-export function launch_view(settings: Settings, task_lists: TaskList[]): View {
-  if (settings.launch_view !== 'last') return { kind: settings.launch_view }
+// A saved list view reopens as the tag that list became; anything else unknown falls back to all tasks.
+export function launch_view(settings: Settings, tags: Tag[]): View {
+  if (settings.launch_view !== 'last') {
+    return BUILT_IN_VIEWS.some(({ view }) => view.kind === settings.launch_view) ? { kind: settings.launch_view } : { kind: 'all' }
+  }
 
-  const view = settings.last_view
-  if (view.kind === 'list' && !task_lists.some((task_list) => task_list.id === view.list_id)) return { kind: 'all' }
-  return view
+  const saved = settings.last_view as View | { kind: 'list'; list_id: string }
+  const view: View = saved.kind === 'list' ? { kind: 'tag', tag_id: saved.list_id } : saved
+
+  if (view.kind === 'tag') return tags.some((tag) => tag.id === view.tag_id) ? view : { kind: 'all' }
+  return BUILT_IN_VIEWS.some((entry) => entry.view.kind === view.kind) ? view : { kind: 'all' }
 }
 
-// New tasks land in the selected list, or the inbox for every other view.
-export function list_id_for_new_task(view: View): string | null {
-  return view.kind === 'list' ? view.list_id : null
+// New tasks carry the selected tag, and no tag in every other view.
+export function tag_ids_for_new_task(view: View): string[] {
+  return view.kind === 'tag' ? [view.tag_id] : []
+}
+
+// ============================================================================
+// Trees
+// ============================================================================
+
+interface TreeItem {
+  id: string
+  parent_id: string | null
+  position: number
+}
+
+export function children_of<Item extends TreeItem>(parent_id: string | null, items: Item[]): Item[] {
+  return items.filter((item) => item.parent_id === parent_id)
+}
+
+// The item itself plus everything below it, at any depth.
+export function subtree_ids(item_id: string, items: TreeItem[]): Set<string> {
+  const ids = new Set([item_id])
+
+  for (const id of ids) {
+    for (const child of children_of(id, items)) ids.add(child.id)
+  }
+
+  return ids
+}
+
+function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
+  const chain = [task]
+  let parent = all_tasks.find((each) => each.id === task.parent_id)
+
+  while (parent && !chain.includes(parent)) {
+    chain.push(parent)
+    const parent_id = parent.parent_id
+    parent = all_tasks.find((each) => each.id === parent_id)
+  }
+
+  return chain
+}
+
+// Names a tag by its whole branch, such as "Work › Clients".
+export function tag_path(tag: Tag, tags: Tag[]): string {
+  const parent = tags.find((each) => each.id === tag.parent_id)
+  return parent ? `${tag_path(parent, tags)} › ${tag.name}` : tag.name
 }
 
 // ============================================================================
@@ -78,32 +128,14 @@ export function nest_tasks(visible_tasks: Task[], all_tasks: Task[]): TaskNode[]
   return top_nodes
 }
 
-export function task_with_descendant_ids(task_id: string, all_tasks: Task[]): Set<string> {
-  const ids = new Set([task_id])
-  let found_more = true
-
-  while (found_more) {
-    found_more = false
-    for (const task of all_tasks) {
-      if (task.parent_id && ids.has(task.parent_id) && !ids.has(task.id)) {
-        ids.add(task.id)
-        found_more = true
-      }
-    }
-  }
-
-  return ids
-}
-
 // ============================================================================
 // Dragging
 // ============================================================================
 
 export type DropPlacement = 'before' | 'after' | 'inside'
 
-export interface TaskMove {
+export interface TreeMove {
   parent_id: string | null
-  list_id: string | null
   position: number
 }
 
@@ -129,20 +161,15 @@ function position_beside<Item extends { id: string; position: number }>(
   return (target.position + neighbour.position) / 2
 }
 
-export function task_move_for_drop(dragged: Task, target: Task, placement: DropPlacement, all_tasks: Task[]): TaskMove {
-  const others = all_tasks.filter((task) => task.id !== dragged.id)
+export function move_for_drop<Item extends TreeItem>(dragged: Item, target: Item, placement: DropPlacement, items: Item[]): TreeMove {
+  const others = items.filter((item) => item.id !== dragged.id)
 
   if (placement === 'inside') {
-    const last_child_position = Math.max(target.position, ...others.filter((task) => task.parent_id === target.id).map((task) => task.position))
-    return { parent_id: target.id, list_id: target.list_id, position: last_child_position + 1 }
+    const last_child_position = Math.max(target.position, ...children_of(target.id, others).map((item) => item.position))
+    return { parent_id: target.id, position: last_child_position + 1 }
   }
 
-  const siblings = others.filter((task) => task.parent_id === target.parent_id)
-  return { parent_id: target.parent_id, list_id: target.list_id, position: position_beside(siblings, target, placement) }
-}
-
-export function list_position_for_drop(dragged: TaskList, target: TaskList, placement: 'before' | 'after', task_lists: TaskList[]): number {
-  return position_beside(task_lists.filter((task_list) => task_list.id !== dragged.id), target, placement)
+  return { parent_id: target.parent_id, position: position_beside(children_of(target.parent_id, others), target, placement) }
 }
 
 export function by_position<Item extends { position: number }>(first: Item, second: Item): number {

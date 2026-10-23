@@ -1,7 +1,9 @@
 import { useState } from 'preact/hooks'
 
-import type { Task, TaskList } from '@shared/tasks'
-import { BUILT_IN_VIEWS, drop_placement, is_same_view, task_is_in_view, type View } from './views'
+import type { Tag, Task } from '@shared/tasks'
+import {
+  BUILT_IN_VIEWS, children_of, drop_placement, is_same_view, subtree_ids, task_is_in_view, type DropPlacement, type View
+} from './views'
 
 // ============================================================================
 // Sidebar
@@ -9,55 +11,110 @@ import { BUILT_IN_VIEWS, drop_placement, is_same_view, task_is_in_view, type Vie
 
 interface SidebarProps {
   tasks: Task[]
-  task_lists: TaskList[]
+  tags: Tag[]
   selected_view: View | null
   is_settings_open: boolean
+  dragged_task: Task | null
   on_select_view: (view: View) => void
   on_open_settings: () => void
-  on_add_list: (name: string) => void
-  on_remove_list: (task_list: TaskList) => void
-  on_move_list: (dragged: TaskList, target: TaskList, placement: 'before' | 'after') => void
+  on_add_tag: (name: string, parent_id: string | null) => void
+  on_remove_tag: (tag: Tag) => void
+  on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
+  on_tag_task: (task: Task, tag: Tag) => void
 }
 
 export function Sidebar({
-  tasks, task_lists, selected_view, is_settings_open, on_select_view, on_open_settings, on_add_list, on_remove_list,
-  on_move_list
+  tasks, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings, on_add_tag, on_remove_tag,
+  on_move_tag, on_tag_task
 }: SidebarProps) {
-  const [new_list_name, set_new_list_name] = useState('')
-  const [dragged_list, set_dragged_list] = useState<TaskList | null>(null)
-  const [drop_target, set_drop_target] = useState<{ list_id: string; placement: 'before' | 'after' } | null>(null)
+  const [new_tag_name, set_new_tag_name] = useState('')
+  const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
+  const [sub_tag_parent_id, set_sub_tag_parent_id] = useState<string | null>(null)
+  const [new_sub_tag_name, set_new_sub_tag_name] = useState('')
+  const [dragged_tag, set_dragged_tag] = useState<Tag | null>(null)
+  const [drop_target, set_drop_target] = useState<{ tag_id: string; placement: DropPlacement } | null>(null)
 
   function open_count(view: View): number {
-    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view)).length
+    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags)).length
   }
 
-  function submit_new_list(event: Event): void {
+  function submit_new_tag(event: Event): void {
     event.preventDefault()
-    const name = new_list_name.trim()
+    const name = new_tag_name.trim()
     if (!name) return
 
-    on_add_list(name)
-    set_new_list_name('')
+    on_add_tag(name, null)
+    set_new_tag_name('')
   }
 
-  function list_drag_over(event: DragEvent, task_list: TaskList): void {
-    if (!dragged_list || dragged_list.id === task_list.id) return
-    event.preventDefault()
-    set_drop_target({ list_id: task_list.id, placement: drop_placement(event, false) as 'before' | 'after' })
+  // ==========================================================================
+  // Sub-tags
+  // ==========================================================================
+
+  function toggle_collapsed(tag_id: string): void {
+    set_collapsed_ids((current_ids) => {
+      const next_ids = new Set(current_ids)
+      if (!next_ids.delete(tag_id)) next_ids.add(tag_id)
+      return next_ids
+    })
   }
 
-  function list_drop(event: DragEvent, task_list: TaskList): void {
+  function start_sub_tag(parent_id: string): void {
+    set_collapsed_ids((current_ids) => {
+      const next_ids = new Set(current_ids)
+      next_ids.delete(parent_id)
+      return next_ids
+    })
+    set_sub_tag_parent_id(parent_id)
+    set_new_sub_tag_name('')
+  }
+
+  function stop_sub_tag(): void {
+    set_sub_tag_parent_id(null)
+    set_new_sub_tag_name('')
+  }
+
+  function submit_new_sub_tag(event: Event): void {
     event.preventDefault()
-    if (dragged_list && dragged_list.id !== task_list.id) {
-      on_move_list(dragged_list, task_list, drop_placement(event, false) as 'before' | 'after')
-    }
+    const name = new_sub_tag_name.trim()
+    if (name && sub_tag_parent_id) on_add_tag(name, sub_tag_parent_id)
+    stop_sub_tag()
+  }
+
+  // ==========================================================================
+  // Dragging
+  // ==========================================================================
+
+  // A dragged task always drops into the tag; a dragged tag can also land beside it.
+  function placement_over(event: DragEvent, tag: Tag): DropPlacement | null {
+    if (dragged_task) return 'inside'
+    if (!dragged_tag || subtree_ids(dragged_tag.id, tags).has(tag.id)) return null
+    return drop_placement(event, true)
+  }
+
+  function tag_drag_over(event: DragEvent, tag: Tag): void {
+    const placement = placement_over(event, tag)
+    if (!placement) return
+    event.preventDefault()
+    set_drop_target({ tag_id: tag.id, placement })
+  }
+
+  function tag_drop(event: DragEvent, tag: Tag): void {
+    event.preventDefault()
+    const placement = placement_over(event, tag)
+    if (dragged_task) on_tag_task(dragged_task, tag)
+    else if (dragged_tag && placement) on_move_tag(dragged_tag, tag, placement)
     set_drop_target(null)
   }
 
-  function end_list_drag(): void {
-    set_dragged_list(null)
+  function end_tag_drag(): void {
+    set_dragged_tag(null)
     set_drop_target(null)
   }
+
+  // ==========================================================================
+  // Rows
+  // ==========================================================================
 
   function view_button(view: View, label: string) {
     const count = view.kind === 'completed' ? null : open_count(view)
@@ -73,6 +130,65 @@ export function Sidebar({
     )
   }
 
+  function tag_branch(tag: Tag, depth: number) {
+    const children = children_of(tag.id, tags)
+    const is_collapsed = collapsed_ids.has(tag.id)
+    const row_class = drop_target?.tag_id === tag.id ? `sidebar_tag_row drop_${drop_target.placement}` : 'sidebar_tag_row'
+
+    return (
+      <div key={tag.id}>
+        <div
+          class={row_class}
+          style={{ paddingLeft: `${depth * 16}px` }}
+          draggable
+          onDragStart={(event) => {
+            event.stopPropagation()
+            event.dataTransfer?.setData('text/plain', tag.id)
+            set_dragged_tag(tag)
+          }}
+          onDragEnd={end_tag_drag}
+          onDragOver={(event) => tag_drag_over(event, tag)}
+          onDragLeave={() => set_drop_target(null)}
+          onDrop={(event) => tag_drop(event, tag)}
+        >
+          {children.length > 0 ? (
+            <button
+              class="collapse_button"
+              onClick={() => toggle_collapsed(tag.id)}
+              aria-label={is_collapsed ? `Expand ${tag.name}` : `Collapse ${tag.name}`}
+            >
+              {is_collapsed ? '▸' : '▾'}
+            </button>
+          ) : (
+            <span class="collapse_spacer" />
+          )}
+          {view_button({ kind: 'tag', tag_id: tag.id }, tag.name)}
+          <button class="row_button" onClick={() => start_sub_tag(tag.id)} aria-label={`Add a tag inside ${tag.name}`}>
+            +
+          </button>
+          <button class="remove_button" onClick={() => on_remove_tag(tag)} aria-label={`Remove ${tag.name}`}>
+            ×
+          </button>
+        </div>
+
+        {!is_collapsed && children.map((child) => tag_branch(child, depth + 1))}
+
+        {sub_tag_parent_id === tag.id && (
+          <form class="new_tag_form" style={{ paddingLeft: `${(depth + 1) * 16 + 24}px` }} onSubmit={submit_new_sub_tag}>
+            <input
+              value={new_sub_tag_name}
+              onInput={(event) => set_new_sub_tag_name(event.currentTarget.value)}
+              onKeyDown={(event) => event.key === 'Escape' && stop_sub_tag()}
+              onBlur={stop_sub_tag}
+              placeholder={`New tag in ${tag.name}`}
+              autofocus
+            />
+          </form>
+        )}
+      </div>
+    )
+  }
+
   return (
     <nav class="sidebar">
       <div class="sidebar_brand">X-Tasks</div>
@@ -82,35 +198,12 @@ export function Sidebar({
       </section>
 
       <section class="sidebar_section">
-        <h2 class="sidebar_heading">Lists</h2>
+        <h2 class="sidebar_heading">Tags</h2>
 
-        {task_lists.map((task_list) => (
-          <div
-            key={task_list.id}
-            class={drop_target?.list_id === task_list.id ? `sidebar_list_row drop_${drop_target.placement}` : 'sidebar_list_row'}
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer?.setData('text/plain', task_list.id)
-              set_dragged_list(task_list)
-            }}
-            onDragEnd={end_list_drag}
-            onDragOver={(event) => list_drag_over(event, task_list)}
-            onDragLeave={() => set_drop_target(null)}
-            onDrop={(event) => list_drop(event, task_list)}
-          >
-            {view_button({ kind: 'list', list_id: task_list.id }, task_list.name)}
-            <button class="remove_button" onClick={() => on_remove_list(task_list)} aria-label={`Remove ${task_list.name}`}>
-              ×
-            </button>
-          </div>
-        ))}
+        {children_of(null, tags).map((tag) => tag_branch(tag, 0))}
 
-        <form class="new_list_form" onSubmit={submit_new_list}>
-          <input
-            value={new_list_name}
-            onInput={(event) => set_new_list_name(event.currentTarget.value)}
-            placeholder="New list"
-          />
+        <form class="new_tag_form" onSubmit={submit_new_tag}>
+          <input value={new_tag_name} onInput={(event) => set_new_tag_name(event.currentTarget.value)} placeholder="New tag" />
         </form>
       </section>
 
