@@ -8,7 +8,7 @@
 - [x] Start and due dates
 - [x] Repeating tasks
 - [x] My Day, which can clear itself each day
-- [ ] Today and Upcoming views
+- [ ] Upcoming view
 - [ ] Priorities
 - [x] Subtasks
 - [x] Reorder tasks by dragging
