@@ -28,14 +28,15 @@ export function is_tag_selected(view: View | null, tag_id: string): boolean {
   return view?.kind === 'tag' && view.tag_ids.includes(tag_id)
 }
 
-// Clicking a tag adds it to the tag filter, or takes it out again; with no tag left the view shows all tasks.
-export function view_with_tag_toggled(view: View, tag_id: string): View {
+// Clicking a tag swaps it in for the selected tag of its group, or takes it out again; with no tag left the view shows all tasks.
+export function view_with_tag_toggled(view: View, tag: Tag, tags: Tag[]): View {
   const current_ids = view.kind === 'tag' ? view.tag_ids : []
-  const tag_ids = current_ids.includes(tag_id) ? current_ids.filter((each) => each !== tag_id) : [...current_ids, tag_id]
+  const other_group_ids = current_ids.filter((tag_id) => tags.find((each) => each.id === tag_id)?.group_id !== tag.group_id)
+  const tag_ids = current_ids.includes(tag.id) ? other_group_ids : [...other_group_ids, tag.id]
   return tag_ids.length > 0 ? { kind: 'tag', tag_ids } : { kind: 'all' }
 }
 
-// Selected tags of one group match a task holding any of them, and every group with a selected tag must match.
+// A task must match every selected tag, through the tag itself or any tag below it.
 export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[]): boolean {
   switch (view.kind) {
     case 'all': return true
@@ -43,22 +44,9 @@ export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags:
     case 'completed': return task.is_done
     case 'tag': {
       const chain_tag_ids = new Set(task_and_ancestors(task, all_tasks).flatMap((each) => each.tag_ids))
-      return [...selected_tag_ids_by_group(view.tag_ids, tags).values()].every((group_tag_ids) =>
-        group_tag_ids.some((tag_id) => [...subtree_ids(tag_id, tags)].some((id) => chain_tag_ids.has(id)))
-      )
+      return view.tag_ids.every((tag_id) => [...subtree_ids(tag_id, tags)].some((id) => chain_tag_ids.has(id)))
     }
   }
-}
-
-function selected_tag_ids_by_group(tag_ids: string[], tags: Tag[]): Map<string, string[]> {
-  const by_group = new Map<string, string[]>()
-
-  for (const tag_id of tag_ids) {
-    const group_id = tags.find((tag) => tag.id === tag_id)?.group_id ?? tag_id
-    by_group.set(group_id, [...(by_group.get(group_id) ?? []), tag_id])
-  }
-
-  return by_group
 }
 
 export function view_title(view: View, tags: Tag[]): string {
@@ -84,10 +72,9 @@ function view_without_missing_tags(tag_ids: string[], tags: Tag[]): View {
   return kept_ids.length > 0 ? { kind: 'tag', tag_ids: kept_ids } : { kind: 'all' }
 }
 
-// New tasks carry the first selected tag of each group, so they show in the view and fit one-tag-per-task groups.
-export function tag_ids_for_new_task(view: View, tags: Tag[]): string[] {
-  if (view.kind !== 'tag') return []
-  return [...selected_tag_ids_by_group(view.tag_ids, tags).values()].map((group_tag_ids) => group_tag_ids[0]!)
+// New tasks carry the selected tags, and no tag in every other view.
+export function tag_ids_for_new_task(view: View): string[] {
+  return view.kind === 'tag' ? view.tag_ids : []
 }
 
 // Deleted tags leave the filter, and an empty filter falls back to all tasks.

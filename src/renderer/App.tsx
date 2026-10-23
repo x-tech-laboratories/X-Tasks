@@ -79,7 +79,7 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags))
+    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
   }
@@ -285,7 +285,7 @@ export function App() {
         is_settings_open={is_settings_open}
         dragged_task={dragged_task}
         on_select_view={select_view}
-        on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag.id))}
+        on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags))}
         on_open_settings={() => set_is_settings_open(true)}
         on_remove_tag_group={remove_tag_group}
         on_set_tag_group_single_choice={set_tag_group_single_choice}
