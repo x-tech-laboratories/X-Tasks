@@ -57,9 +57,15 @@ export function App() {
 
   const close_context_menu = useCallback(() => set_context_menu(null), [])
 
-  function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
+  // A new priority scale renames tags and can move tasks between them, so both are fetched again.
+  async function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): Promise<void> {
     set_settings((current_settings) => current_settings && { ...current_settings, [key]: value })
-    void window.x_settings.set_setting(key, value)
+    await window.x_settings.set_setting(key, value)
+
+    if (key === 'priority_scale') {
+      set_tags(await window.x_tasks.list_tags())
+      set_tasks(await window.x_tasks.list_tasks())
+    }
   }
 
   // ==========================================================================
@@ -241,7 +247,6 @@ export function App() {
         dragged_task={dragged_task}
         on_select_view={select_view}
         on_open_settings={() => set_is_settings_open(true)}
-        on_add_tag_group={add_tag_group}
         on_remove_tag_group={remove_tag_group}
         on_add_tag={add_tag}
         on_remove_tag={remove_tag}
@@ -252,7 +257,7 @@ export function App() {
 
       <main class="task_pane">
         {is_settings_open ? (
-          <SettingsPage settings={settings} on_change={change_setting} />
+          <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
         ) : (
           <>
             <header class="task_pane_header">

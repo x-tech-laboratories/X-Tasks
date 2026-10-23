@@ -19,7 +19,6 @@ interface SidebarProps {
   dragged_task: Task | null
   on_select_view: (view: View) => void
   on_open_settings: () => void
-  on_add_tag_group: (name: string) => void
   on_remove_tag_group: (group: TagGroup) => void
   on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
   on_remove_tag: (tag: Tag) => void
@@ -36,9 +35,8 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings,
-  on_add_tag_group, on_remove_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  on_remove_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
-  const [new_group_name, set_new_group_name] = useState('')
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
   const [new_tag_name, set_new_tag_name] = useState('')
@@ -47,15 +45,6 @@ export function Sidebar({
 
   function open_count(view: View): number {
     return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags)).length
-  }
-
-  function submit_new_group(event: Event): void {
-    event.preventDefault()
-    const name = new_group_name.trim()
-    if (!name) return
-
-    on_add_tag_group(name)
-    set_new_group_name('')
   }
 
   // ==========================================================================
@@ -267,14 +256,6 @@ export function Sidebar({
       </section>
 
       {tag_groups.map(group_section)}
-
-      <form class="new_tag_form" onSubmit={submit_new_group}>
-        <input
-          value={new_group_name}
-          onInput={(event) => set_new_group_name(event.currentTarget.value)}
-          placeholder="New filter group"
-        />
-      </form>
 
       <section class="sidebar_section sidebar_footer">
         <button class={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>

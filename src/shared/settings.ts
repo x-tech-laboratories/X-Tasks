@@ -9,10 +9,19 @@ export type ThemeChoice = 'system' | 'light' | 'dark'
 // The view the app opens on, where 'last' means the one shown when it was closed.
 export type LaunchView = 'last' | 'all' | 'active' | 'completed'
 
+// The names given to the tags of the preset Priority group, from highest to lowest.
+export type PriorityScale = 'high_medium_low' | 'moscow'
+
+export const PRIORITY_SCALE_NAMES: Record<PriorityScale, string[]> = {
+  high_medium_low: ['High', 'Medium', 'Low'],
+  moscow: ['Must have', 'Should have', 'Could have', "Won't have"]
+}
+
 export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
   confirm_tag_removal: boolean
+  priority_scale: PriorityScale
   last_view: View
 }
 
@@ -20,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   launch_view: 'last',
   confirm_tag_removal: true,
+  priority_scale: 'high_medium_low',
   last_view: { kind: 'all' }
 }
 

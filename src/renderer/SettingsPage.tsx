@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 
-import type { LaunchView, Settings, ThemeChoice } from '@shared/settings'
+import type { LaunchView, PriorityScale, Settings, ThemeChoice } from '@shared/settings'
 
 // ============================================================================
 // Choices
@@ -19,6 +19,11 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'completed', label: 'Completed' }
 ]
 
+const PRIORITY_SCALE_CHOICES: { value: PriorityScale; label: string }[] = [
+  { value: 'high_medium_low', label: 'High, Medium, Low' },
+  { value: 'moscow', label: 'MoSCoW' }
+]
+
 // ============================================================================
 // Settings page
 // ============================================================================
@@ -26,14 +31,25 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
 interface SettingsPageProps {
   settings: Settings
   on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void
+  on_add_tag_group: (name: string) => void
 }
 
-export function SettingsPage({ settings, on_change }: SettingsPageProps) {
+export function SettingsPage({ settings, on_change, on_add_tag_group }: SettingsPageProps) {
   const [database_path, set_database_path] = useState('')
+  const [new_group_name, set_new_group_name] = useState('')
 
   useEffect(() => {
     void window.x_settings.get_database_path().then(set_database_path)
   }, [])
+
+  function submit_new_group(event: Event): void {
+    event.preventDefault()
+    const name = new_group_name.trim()
+    if (!name) return
+
+    on_add_tag_group(name)
+    set_new_group_name('')
+  }
 
   return (
     <>
@@ -92,6 +108,47 @@ export function SettingsPage({ settings, on_change }: SettingsPageProps) {
             onChange={(event) => on_change('confirm_tag_removal', event.currentTarget.checked)}
           />
         </label>
+      </section>
+
+      <section class="settings_group">
+        <h2 class="settings_heading">Filters</h2>
+
+        <form class="setting_row" onSubmit={submit_new_group}>
+          <div class="setting_text">
+            <span class="setting_label">New filter group</span>
+            <span class="setting_hint">Adds a section to the sidebar, such as Context or Energy, with its own tags.</span>
+          </div>
+          <input
+            value={new_group_name}
+            onInput={(event) => set_new_group_name(event.currentTarget.value)}
+            placeholder="Group name"
+            aria-label="New filter group"
+          />
+          <button type="submit">Add</button>
+        </form>
+
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Priority scale</span>
+            <span class="setting_hint">
+              The tags in the Priority group. MoSCoW is Must, Should, Could and Won't have. Tasks keep their rank when this
+              changes, and Won't have becomes Low.
+            </span>
+          </div>
+          <div class="segmented_control" role="radiogroup" aria-label="Priority scale">
+            {PRIORITY_SCALE_CHOICES.map(({ value, label }) => (
+              <button
+                key={value}
+                role="radio"
+                aria-checked={settings.priority_scale === value}
+                class={settings.priority_scale === value ? 'is_selected' : ''}
+                onClick={() => on_change('priority_scale', value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section class="settings_group">

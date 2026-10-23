@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
-import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
+import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, type PriorityScale, type Settings } from '@shared/settings'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
@@ -75,7 +75,15 @@ const SCHEMA_MIGRATIONS = [
    DROP TABLE task_lists`,
   `ALTER TABLE tasks ADD COLUMN start_at TEXT;
    ALTER TABLE tasks ADD COLUMN due_at TEXT;
-   ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT ''`
+   ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT ''`,
+  // Starts a Priority group after Area, unless a group by that name already exists.
+  `INSERT INTO tag_groups (id, name, created_at, position)
+     SELECT 'priority', 'Priority', strftime('%Y-%m-%dT%H:%M:%fZ'), 0.5
+     WHERE NOT EXISTS (SELECT 1 FROM tag_groups WHERE name = 'Priority');
+   INSERT INTO tags (id, name, created_at, group_id, position)
+     SELECT lower(hex(randomblob(16))), column1, strftime('%Y-%m-%dT%H:%M:%fZ'), 'priority', column2
+     FROM (VALUES ('High', 1), ('Medium', 2), ('Low', 3))
+     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'priority')`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -321,4 +329,39 @@ export function set_setting<Key extends keyof Settings>(key: Key, value: Setting
   open_database()
     .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value')
     .run(key, JSON.stringify(value))
+}
+
+// ============================================================================
+// Priority scale
+// ============================================================================
+
+// Renames the preset Priority tags rank by rank, so tasks keep their priority; a rank the new scale lacks merges into its lowest.
+export function apply_priority_scale(scale: PriorityScale): void {
+  const database = open_database()
+  const names = PRIORITY_SCALE_NAMES[scale]
+  if (!database.prepare("SELECT 1 FROM tag_groups WHERE id = 'priority'").get()) return
+
+  const ranks = database
+    .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position")
+    .all() as { id: string }[]
+
+  database.exec('BEGIN')
+  names.forEach((name, index) => {
+    const rank = ranks[index]
+    if (rank) database.prepare('UPDATE tags SET name = ?, position = ? WHERE id = ?').run(name, index + 1, rank.id)
+    else {
+      database
+        .prepare("INSERT INTO tags (id, name, created_at, group_id, position) VALUES (?, ?, ?, 'priority', ?)")
+        .run(randomUUID(), name, new Date().toISOString(), index + 1)
+    }
+  })
+
+  const lowest = database
+    .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position LIMIT 1 OFFSET ?")
+    .get(names.length - 1) as { id: string }
+  for (const extra of ranks.slice(names.length)) {
+    database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) SELECT task_id, ? FROM task_tags WHERE tag_id = ?').run(lowest.id, extra.id)
+    database.prepare('DELETE FROM tags WHERE id = ?').run(extra.id)
+  }
+  database.exec('COMMIT')
 }

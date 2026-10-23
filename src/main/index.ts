@@ -10,8 +10,9 @@ import {
   SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TaskSchedule
 } from '@shared/tasks'
 import {
-  add_tag, add_tag_group, add_task, close_task_database, get_settings, list_tag_groups, list_tags, list_tasks, move_tag,
-  move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, set_task_done, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
+  add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, list_tag_groups, list_tags,
+  list_tasks, move_tag, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting,
+  set_task_done, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
   untag_task
 } from './task_database'
 
@@ -92,6 +93,7 @@ function register_bridge_handlers(): void {
   ipcMain.handle(SET_SETTING_CHANNEL, <Key extends keyof Settings>(_event: unknown, key: Key, value: Settings[Key]) => {
     set_setting(key, value)
     if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
+    if (key === 'priority_scale') apply_priority_scale(value as Settings['priority_scale'])
   })
   ipcMain.handle(GET_DATABASE_PATH_CHANNEL, () => task_database_path())
   ipcMain.handle(SHOW_DATABASE_FOLDER_CHANNEL, () => shell.showItemInFolder(task_database_path()))
