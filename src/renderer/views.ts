@@ -143,11 +143,19 @@ export interface TreeMove {
   position: number
 }
 
+export type SidePlacement = 'before' | 'after'
+
+// The top half of an element drops before it, the bottom half after it.
+export function drop_side(event: DragEvent): SidePlacement {
+  const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  return event.clientY - box.top < box.height / 2 ? 'before' : 'after'
+}
+
 // The top and bottom quarters of a row drop beside it, the middle drops into it.
 export function drop_placement(event: DragEvent, allow_inside: boolean): DropPlacement {
+  if (!allow_inside) return drop_side(event)
   const row = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const fraction = (event.clientY - row.top) / row.height
-  if (!allow_inside) return fraction < 0.5 ? 'before' : 'after'
   if (fraction < 0.25) return 'before'
   if (fraction > 0.75) return 'after'
   return 'inside'
@@ -174,6 +182,16 @@ export function move_for_drop<Item extends TreeItem>(dragged: Item, target: Item
   }
 
   return { parent_id: target.parent_id, position: position_beside(children_of(target.parent_id, others), target, placement) }
+}
+
+// For a flat list such as the tag groups, where items only move before or after each other.
+export function position_for_drop<Item extends { id: string; position: number }>(
+  dragged: Item,
+  target: Item,
+  placement: SidePlacement,
+  items: Item[]
+): number {
+  return position_beside(items.filter((item) => item.id !== dragged.id), target, placement)
 }
 
 export function by_position<Item extends { position: number }>(first: Item, second: Item): number {

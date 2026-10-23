@@ -3,7 +3,8 @@ import { useState } from 'preact/hooks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import {
-  BUILT_IN_VIEWS, children_of, drop_placement, is_same_view, subtree_ids, task_is_in_view, type DropPlacement, type View
+  BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, subtree_ids, task_is_in_view, type DropPlacement,
+  type SidePlacement, type View
 } from './views'
 
 // ============================================================================
@@ -21,6 +22,7 @@ interface SidebarProps {
   on_open_settings: () => void
   on_remove_tag_group: (group: TagGroup) => void
   on_set_tag_group_single_choice: (group: TagGroup, is_single_choice: boolean) => void
+  on_move_tag_group: (dragged: TagGroup, target: TagGroup, placement: SidePlacement) => void
   on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
   on_remove_tag: (tag: Tag) => void
   on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
@@ -45,13 +47,15 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_open_settings,
-  on_remove_tag_group, on_set_tag_group_single_choice, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
   const [new_tag_name, set_new_tag_name] = useState('')
   const [dragged_tag, set_dragged_tag] = useState<Tag | null>(null)
   const [drop_target, set_drop_target] = useState<{ tag_id: string; placement: DropPlacement } | null>(null)
+  const [dragged_group, set_dragged_group] = useState<TagGroup | null>(null)
+  const [group_drop_target, set_group_drop_target] = useState<{ group_id: string; placement: SidePlacement } | null>(null)
 
   function open_count(view: View): number {
     return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags)).length
@@ -140,6 +144,25 @@ export function Sidebar({
     set_drop_target(null)
   }
 
+  // A dragged group lands above or below another whole group, tags and all.
+  function group_drag_over(event: DragEvent, group: TagGroup): void {
+    if (!dragged_group || dragged_group.id === group.id) return
+    event.preventDefault()
+    set_group_drop_target({ group_id: group.id, placement: drop_side(event) })
+  }
+
+  function group_drop(event: DragEvent, group: TagGroup): void {
+    if (!dragged_group) return
+    event.preventDefault()
+    if (dragged_group.id !== group.id) on_move_tag_group(dragged_group, group, drop_side(event))
+    set_group_drop_target(null)
+  }
+
+  function end_group_drag(): void {
+    set_dragged_group(null)
+    set_group_drop_target(null)
+  }
+
   // ==========================================================================
   // Rows
   // ==========================================================================
@@ -223,14 +246,35 @@ export function Sidebar({
   function group_section(group: TagGroup) {
     const group_tags = tags.filter((tag) => tag.group_id === group.id)
     const is_collapsed = collapsed_ids.has(group.id)
+    const index = tag_groups.findIndex((each) => each.id === group.id)
+    const group_above = tag_groups[index - 1]
+    const group_below = tag_groups[index + 1]
+    const section_class = [
+      'sidebar_section',
+      group_drop_target?.group_id === group.id && `drop_${group_drop_target.placement}`
+    ].filter(Boolean).join(' ')
 
     return (
-      <section key={group.id} class="sidebar_section">
+      <section
+        key={group.id}
+        class={section_class}
+        onDragOver={(event) => group_drag_over(event, group)}
+        onDragLeave={() => set_group_drop_target(null)}
+        onDrop={(event) => group_drop(event, group)}
+      >
         <div
           class="sidebar_group_header"
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer?.setData('text/plain', group.id)
+            set_dragged_group(group)
+          }}
+          onDragEnd={end_group_drag}
           onContextMenu={(event) =>
             on_context_menu(event, [
               { label: 'Add tag', on_select: () => start_new_tag({ group_id: group.id, parent_id: null }) },
+              ...(group_above ? [{ label: 'Move up', on_select: () => on_move_tag_group(group, group_above, 'before') }] : []),
+              ...(group_below ? [{ label: 'Move down', on_select: () => on_move_tag_group(group, group_below, 'after') }] : []),
               {
                 label: group.is_single_choice ? 'Allow several tags per task' : 'Allow one tag per task',
                 on_select: () => on_set_tag_group_single_choice(group, !group.is_single_choice)

@@ -19,7 +19,8 @@
 - [ ] Rename a tag
 - [x] Nest and reorder tags by dragging
 - [ ] Pick a tag in several groups at once to see tasks matching all of them, such as Area and Priority
-- [ ] Rename and reorder filter groups
+- [ ] Rename filter groups
+- [x] Reorder filter groups by dragging
 
 ## Finding things
 

@@ -318,6 +318,10 @@ export function set_tag_group_single_choice(group_id: string, is_single_choice: 
   open_database().prepare('UPDATE tag_groups SET is_single_choice = ? WHERE id = ?').run(is_single_choice ? 1 : 0, group_id)
 }
 
+export function move_tag_group(group_id: string, position: number): void {
+  open_database().prepare('UPDATE tag_groups SET position = ? WHERE id = ?').run(position, group_id)
+}
+
 // ============================================================================
 // Tag queries
 // ============================================================================

@@ -10,8 +10,8 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, type TaskActions } from './TaskItem'
 import { next_schedule } from './schedule'
 import {
-  by_position, launch_view, move_for_drop, nest_tasks, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
-  type DropPlacement, type View
+  by_position, launch_view, move_for_drop, nest_tasks, position_for_drop, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
+  type DropPlacement, type SidePlacement, type View
 } from './views'
 
 // ============================================================================
@@ -187,6 +187,14 @@ export function App() {
     void window.x_tasks.set_tag_group_single_choice(group.id, is_single_choice)
   }
 
+  function move_tag_group(dragged: TagGroup, target: TagGroup, placement: SidePlacement): void {
+    if (dragged.id === target.id) return
+    const position = position_for_drop(dragged, target, placement, tag_groups)
+
+    set_tag_groups((current_groups) => current_groups.map((each) => (each.id === dragged.id ? { ...each, position } : each)).sort(by_position))
+    void window.x_tasks.move_tag_group(dragged.id, position)
+  }
+
   async function add_tag(name: string, group_id: string, parent_id: string | null): Promise<void> {
     const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id)
     set_tags((current_tags) => [...current_tags, added_tag])
@@ -264,6 +272,7 @@ export function App() {
         on_open_settings={() => set_is_settings_open(true)}
         on_remove_tag_group={remove_tag_group}
         on_set_tag_group_single_choice={set_tag_group_single_choice}
+        on_move_tag_group={move_tag_group}
         on_add_tag={add_tag}
         on_remove_tag={remove_tag}
         on_move_tag={move_tag}

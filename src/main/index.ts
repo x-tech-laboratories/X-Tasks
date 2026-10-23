@@ -7,13 +7,13 @@ import {
 } from '@shared/settings'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
-  MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
+  MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
   SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TaskSchedule
 } from '@shared/tasks'
 import { backup_folder, create_backup, list_backups, remove_backup, restore_backup } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, list_tag_groups, list_tags,
-  list_tasks, move_tag, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, set_tag_group_single_choice,
+  list_tasks, move_tag, move_tag_group, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, set_tag_group_single_choice,
   set_task_done, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
   untag_task
 } from './task_database'
@@ -84,6 +84,7 @@ function register_bridge_handlers(): void {
   ipcMain.handle(SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, (_event, group_id: string, is_single_choice: boolean) =>
     set_tag_group_single_choice(group_id, is_single_choice)
   )
+  ipcMain.handle(MOVE_TAG_GROUP_CHANNEL, (_event, group_id: string, position: number) => move_tag_group(group_id, position))
 
   ipcMain.handle(LIST_TAGS_CHANNEL, () => list_tags())
   ipcMain.handle(ADD_TAG_CHANNEL, (_event, name: string, group_id: string, parent_id: string | null) =>
