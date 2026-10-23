@@ -62,6 +62,59 @@ export function task_date_label(task_date: string, now = new Date()): string {
 }
 
 // ============================================================================
+// Durations
+// ============================================================================
+
+export interface TaskDuration {
+  id: string
+  label: string
+  unit: 'hour' | 'day' | 'month'
+  amount: number
+}
+
+export const TASK_DURATIONS: TaskDuration[] = [
+  { id: '1h', label: '1 hour', unit: 'hour', amount: 1 },
+  { id: '2h', label: '2 hours', unit: 'hour', amount: 2 },
+  { id: '4h', label: '4 hours', unit: 'hour', amount: 4 },
+  { id: '0d', label: 'Same day', unit: 'day', amount: 0 },
+  { id: '1d', label: '1 day', unit: 'day', amount: 1 },
+  { id: '2d', label: '2 days', unit: 'day', amount: 2 },
+  { id: '3d', label: '3 days', unit: 'day', amount: 3 },
+  { id: '1w', label: '1 week', unit: 'day', amount: 7 },
+  { id: '2w', label: '2 weeks', unit: 'day', amount: 14 },
+  { id: '1mo', label: '1 month', unit: 'month', amount: 1 },
+  { id: '3mo', label: '3 months', unit: 'month', amount: 3 }
+]
+
+// Hours need a start time, and Same day is only for a start without one.
+export function durations_for_start(start_at: string): TaskDuration[] {
+  if (has_time(start_at)) return TASK_DURATIONS.filter((duration) => duration.unit !== 'day' || duration.amount > 0)
+  return TASK_DURATIONS.filter((duration) => duration.unit !== 'hour')
+}
+
+// The due date that lies the given duration after the start, with a time only when the start has one.
+export function due_after(start_at: string, duration: TaskDuration): string {
+  const start = parse_task_date(start_at)
+  const due = new Date(start)
+  if (duration.unit === 'hour') due.setHours(due.getHours() + duration.amount)
+  else if (duration.unit === 'day') due.setDate(due.getDate() + duration.amount)
+  else {
+    // A day past the end of the target month falls back to its last day, so Jan 31 plus a month is Feb 28.
+    const last_day = new Date(start.getFullYear(), start.getMonth() + duration.amount + 1, 0).getDate()
+    due.setDate(1)
+    due.setMonth(start.getMonth() + duration.amount)
+    due.setDate(Math.min(start.getDate(), last_day))
+  }
+  return format_task_date(due, has_time(start_at))
+}
+
+// The listed duration that leads from start to due, or null when the gap matches none of them.
+export function duration_between(start_at: string | null, due_at: string | null): TaskDuration | null {
+  if (start_at === null || due_at === null) return null
+  return durations_for_start(start_at).find((duration) => due_after(start_at, duration) === due_at) ?? null
+}
+
+// ============================================================================
 // Recurrence
 // ============================================================================
 

@@ -4,7 +4,9 @@ import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
-import { describe_recurrence, format_task_date, parse_task_date, recurrence_anchor } from '@shared/schedule'
+import {
+  describe_recurrence, due_after, duration_between, durations_for_start, format_task_date, parse_task_date, recurrence_anchor, TASK_DURATIONS
+} from '@shared/schedule'
 import { tag_path } from './views'
 
 // ============================================================================
@@ -59,6 +61,21 @@ export function TaskDetail({
 
   function commit_notes(): void {
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
+  }
+
+  const duration = duration_between(task.start_at, task.due_at)
+
+  // While a listed duration is in force, moving the start moves the due date with it.
+  function change_start(start_at: string | null): void {
+    const listed_duration = start_at && duration && durations_for_start(start_at).includes(duration) ? duration : null
+    const due_at = start_at && listed_duration ? due_after(start_at, listed_duration) : task.due_at
+    on_set_schedule(task, { ...schedule, start_at, due_at })
+  }
+
+  // Custom leaves the due date as it is.
+  function choose_duration(event: Event): void {
+    const chosen = TASK_DURATIONS.find((each) => each.id === (event.currentTarget as HTMLSelectElement).value)
+    if (chosen && task.start_at) on_set_schedule(task, { ...schedule, due_at: due_after(task.start_at, chosen) })
   }
 
   function add_tag(event: Event): void {
@@ -155,7 +172,20 @@ export function TaskDetail({
         )
       })}
 
-      <DateField label="Start" value={task.start_at} on_change={(start_at) => on_set_schedule(task, { ...schedule, start_at })} />
+      <DateField label="Start" value={task.start_at} on_change={change_start} />
+      {task.start_at && (
+        <label class="task_detail_field">
+          <span class="sidebar_heading">Duration</span>
+          <select value={duration?.id ?? ''} onChange={choose_duration}>
+            <option value="">{task.due_at ? 'Custom' : 'None'}</option>
+            {durations_for_start(task.start_at).map((each) => (
+              <option key={each.id} value={each.id}>
+                {each.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <DateField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
       <DateField
         label="Done"
