@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
 
-import type { Settings, TaskLayout } from '@shared/settings'
+import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReschedulePopup } from './ReschedulePopup'
+import { ResizeHandle } from './ResizeHandle'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
@@ -75,9 +76,14 @@ export function App() {
 
   const close_context_menu = useCallback(() => set_context_menu(null), [])
 
+  // Changes a setting on screen only, as a panel does while its edge is being dragged.
+  function show_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
+    set_settings((current_settings) => current_settings && { ...current_settings, [key]: value })
+  }
+
   // A new priority scale renames tags and can move tasks between them, so both are fetched again.
   async function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): Promise<void> {
-    set_settings((current_settings) => current_settings && { ...current_settings, [key]: value })
+    show_setting(key, value)
     await window.x_settings.set_setting(key, value)
 
     if (key === 'priority_scale') {
@@ -308,7 +314,10 @@ export function App() {
   }
 
   return (
-    <div class={selected_task ? 'app has_detail' : 'app'}>
+    <div
+      class={selected_task ? 'app has_detail' : 'app'}
+      style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` }}
+    >
       <Sidebar
         tasks={tasks}
         tag_groups={tag_groups}
@@ -328,6 +337,16 @@ export function App() {
         on_move_tag={move_tag}
         on_tag_task={tag_task}
         on_context_menu={open_context_menu}
+      />
+      <ResizeHandle
+        side="left"
+        width={settings.sidebar_width}
+        min_width={SIDEBAR_WIDTH_RANGE.min}
+        max_width={SIDEBAR_WIDTH_RANGE.max}
+        default_width={DEFAULT_SETTINGS.sidebar_width}
+        on_resize={(width) => show_setting('sidebar_width', width)}
+        on_resize_end={(width) => void change_setting('sidebar_width', width)}
+        label="Resize sidebar"
       />
 
       <main class={is_table && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
@@ -386,6 +405,19 @@ export function App() {
           </>
         )}
       </main>
+
+      {selected_task && (
+        <ResizeHandle
+          side="right"
+          width={settings.detail_width}
+          min_width={DETAIL_WIDTH_RANGE.min}
+          max_width={DETAIL_WIDTH_RANGE.max}
+          default_width={DEFAULT_SETTINGS.detail_width}
+          on_resize={(width) => show_setting('detail_width', width)}
+          on_resize_end={(width) => void change_setting('detail_width', width)}
+          label="Resize task details"
+        />
+      )}
 
       {selected_task && (
         <TaskDetail

@@ -12,6 +12,10 @@ export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed'
 // How the center pane shows tasks: a plain list, or a table with aligned columns.
 export type TaskLayout = 'list' | 'table'
 
+// The narrowest and widest each side panel can be dragged to.
+export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
+export const DETAIL_WIDTH_RANGE = { min: 260, max: 720 }
+
 // The names given to the tags of the preset Priority group, from highest to lowest.
 export type PriorityScale = 'high_medium_low' | 'moscow'
 
@@ -37,6 +41,9 @@ export interface Settings {
   auto_clear_my_day: boolean
   priority_scale: PriorityScale
   task_layout: TaskLayout
+  // Widths in pixels of the left sidebar and the task detail panel, set by dragging their edges.
+  sidebar_width: number
+  detail_width: number
   reschedule_options: RescheduleOption[]
   last_view: View
 }
@@ -48,6 +55,8 @@ export const DEFAULT_SETTINGS: Settings = {
   auto_clear_my_day: true,
   priority_scale: 'high_medium_low',
   task_layout: 'list',
+  sidebar_width: 248,
+  detail_width: 340,
   reschedule_options: [
     { id: 'today', name: 'Today', mode: 'days', days: 0, rule: '' },
     { id: 'tomorrow', name: 'Tomorrow', mode: 'days', days: 1, rule: '' },
