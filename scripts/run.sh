@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the app if needed and launches it with the nixpkgs Electron.
+# Builds the app and launches it with the nixpkgs Electron.
 set -euo pipefail
 
 # VSCode's terminal exports this, which makes Electron run as bare node and die on the ESM main.
@@ -13,6 +13,7 @@ if [[ -z "$electron_binary" ]]; then
 fi
 [[ -n "$electron_binary" ]] || { echo "no electron found; run inside 'nix develop'" >&2; exit 1; }
 
-[[ -f out/main/index.js ]] || npx electron-vite build
+# Rebuilds every launch, so the app never runs code older than the source.
+npx electron-vite build
 
 exec "$electron_binary" . "$@"
