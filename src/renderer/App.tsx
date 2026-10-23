@@ -15,7 +15,7 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
-  EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type StreakOf, type TableColumn, type TableFilters
+  EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
@@ -385,6 +385,16 @@ export function App() {
   }, [tasks, completions, today])
   const streak_of: StreakOf = (task) => streak_by_task_id.get(task.id) ?? null
 
+  const last_done_by_task_id = useMemo(() => {
+    const last_done = new Map<string, string>()
+    for (const completion of completions) {
+      const latest = last_done.get(completion.task_id)
+      if (!latest || new Date(completion.done_at) > new Date(latest)) last_done.set(completion.task_id, completion.done_at)
+    }
+    return last_done
+  }, [completions])
+  const last_done_of: LastDoneOf = (task) => last_done_by_task_id.get(task.id) ?? null
+
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
@@ -400,11 +410,11 @@ export function App() {
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
   const is_filtered = is_table && has_table_filters(table_filters)
   const is_sorted = is_table && settings.table_sort.length > 0
-  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field)) : visible_tasks
+  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
   const column_order = ordered_columns(settings.table_column_order, tag_groups)
   const table_columns = column_order.filter((column) => is_column_shown(column, settings.hidden_table_columns, settings.shown_table_columns))
-  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field) : nested_tasks
+  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field, last_done_of) : nested_tasks
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
@@ -448,6 +458,7 @@ export function App() {
     on_untag: untag_task,
     rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
     streak_of,
+    last_done_of,
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
     // A sorted table ignores the dragged order, so tasks can still be dragged onto tags but not between rows.

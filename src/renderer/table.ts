@@ -25,11 +25,15 @@ export function is_column_shown(column: TableColumn, hidden: string[], shown: st
   return OPTIONAL_COLUMNS.includes(column) ? shown.includes(column) : !hidden.includes(column)
 }
 
-// The date a date column shows for a task, or empty when it has none.
-export function column_date(task: Task, column: DateColumn, date_field: TaskDateField): string | null {
-  const done_date = task.is_done && task.done_at ? format_task_date(new Date(task.done_at), false) : null
+// When a task was last ticked, from its completion log; empty for one never done.
+export type LastDoneOf = (task: Task) => string | null
+
+// The date a date column shows for a task, or empty when it has none; a repeating task is never left done, so its done date is its last tick.
+export function column_date(task: Task, column: DateColumn, date_field: TaskDateField, last_done_of: LastDoneOf): string | null {
+  const done_at = task.recurrence ? last_done_of(task) : task.is_done ? task.done_at : null
+  const done_date = done_at ? format_task_date(new Date(done_at), false) : null
   switch (column) {
-    case 'date': return done_date ?? task_date_of(task, date_field)
+    case 'date': return (task.is_done ? done_date : null) ?? task_date_of(task, date_field)
     case 'start': return task.start_at
     case 'due': return task.due_at
     case 'done': return done_date
@@ -102,7 +106,8 @@ export function sort_task_tree(
   tags: Tag[],
   tags_of: (task: Task) => Tag[],
   streak_of: StreakOf,
-  date_field: TaskDateField
+  date_field: TaskDateField,
+  last_done_of: LastDoneOf
 ): TaskNode[] {
   if (sort.length === 0) return nodes
   const tag_rank = tag_ranks(tags)
@@ -120,7 +125,7 @@ export function sort_task_tree(
 
   function cell_value(task: Task, column: string): CellValue {
     if (column === 'title') return task.title
-    if (is_date_column(column)) return column_date(task, column, date_field)
+    if (is_date_column(column)) return column_date(task, column, date_field, last_done_of)
     if (column === 'streak') return streak_of(task)?.current ?? null
     const group_id = group_id_of(column)
     const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => tag_rank.get(tag.id) ?? 0)
@@ -236,12 +241,13 @@ export function task_passes_filters(
   tags: Tag[],
   streak_of: StreakOf,
   today: string,
-  date_field: TaskDateField
+  date_field: TaskDateField,
+  last_done_of: LastDoneOf
 ): boolean {
   const title_text = filters.title.trim().toLocaleLowerCase()
   if (title_text && !task.title.toLocaleLowerCase().includes(title_text)) return false
   for (const [column, filter] of Object.entries(filters.dates) as [DateColumn, DateFilter][]) {
-    if (!date_passes(task, column_date(task, column, date_field), filter, today)) return false
+    if (!date_passes(task, column_date(task, column, date_field, last_done_of), filter, today)) return false
   }
   if (!streak_passes(streak_of(task), filters.streak)) return false
 

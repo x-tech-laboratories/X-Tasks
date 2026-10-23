@@ -9,7 +9,7 @@ import { ResizeHandle } from './ResizeHandle'
 import { is_overdue, task_date_label } from '@shared/schedule'
 import {
   COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_date, column_width, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type TableColumn, type TableFilters
+  has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
 } from './table'
 import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
 
@@ -359,6 +359,7 @@ export interface TaskActions {
   rule_tags_of: (task: Task) => Tag[]
   // The run of on-time ticks of a repeating task; empty for one that does not repeat.
   streak_of: (task: Task) => RoutineStreak | null
+  last_done_of: LastDoneOf
   on_drag_start: (task: Task) => void
   on_drag_end: () => void
   can_drop_on: (target: Task) => boolean
@@ -480,7 +481,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
   // The smart date says "Done" before a done date, since it shows other dates too; only it and the due date can be overdue.
   function date_cell(column: DateColumn) {
-    const date = column_date(task, column, actions.date_field)
+    const date = column_date(task, column, actions.date_field, actions.last_done_of)
     const is_late = (column === 'date' || column === 'due') && !task.is_done && date !== null && is_overdue(date)
     return (
       <span key={column} class="task_cell date_cell">
