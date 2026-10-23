@@ -34,7 +34,20 @@ const SCHEMA_MIGRATIONS = [
      SET position = (SELECT COUNT(*) FROM task_lists AS earlier WHERE earlier.created_at < task_lists.created_at)`
 ]
 
+// A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
+function undo_reverted_list_tree(database: DatabaseSync): void {
+  const columns = database.prepare('PRAGMA table_info(task_lists)').all() as { name: string }[]
+  if (!columns.some((column) => column.name === 'parent_id')) return
+
+  database.exec('BEGIN')
+  database.exec('DROP INDEX IF EXISTS task_lists_by_parent')
+  database.exec('ALTER TABLE task_lists DROP COLUMN parent_id')
+  database.exec('PRAGMA user_version = 3')
+  database.exec('COMMIT')
+}
+
 function migrate_schema(database: DatabaseSync): void {
+  undo_reverted_list_tree(database)
   const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
 
   for (let version = user_version; version < SCHEMA_MIGRATIONS.length; version += 1) {
