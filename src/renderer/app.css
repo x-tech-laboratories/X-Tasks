@@ -66,6 +66,7 @@
   --control-padding-x: 14px;
   --row-height: 28px;
   --sidebar-width: 248px;
+  --detail-width: 340px;
   --focus-ring-width: 3px;
   --radius-small: 4px;
   --radius-default: 8px;
@@ -145,6 +146,28 @@ input:not([type]):focus {
 
 input::placeholder { color: var(--text-tertiary); }
 
+select,
+textarea {
+  padding: 7px 11px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-small);
+  background: var(--surface-default);
+  color: var(--text-body);
+  font: 400 var(--text-control) / var(--line-height-ui) var(--font-family-interface);
+  transition: border-color var(--duration-fast);
+}
+
+select { height: var(--control-height); padding-top: 0; padding-bottom: 0; }
+textarea { line-height: var(--line-height-body); resize: none; }
+
+select:hover,
+textarea:hover { border-color: var(--border-focus); }
+
+select:focus,
+textarea:focus { border-color: var(--border-focus); outline: var(--focus-ring-width) solid var(--focus-ring); }
+
+textarea::placeholder { color: var(--text-tertiary); }
+
 input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 
 .remove_button {
@@ -159,11 +182,15 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
 .remove_button:hover { border-color: var(--border-default); color: var(--status-danger); }
 
+.danger_button { color: var(--status-danger); }
+.danger_button:hover { border-color: var(--status-danger); }
+
 /* ========================================================================== */
 /* Layout                                                                     */
 /* ========================================================================== */
 
 .app { display: grid; grid-template-columns: var(--sidebar-width) 1fr; height: 100vh; }
+.app.has_detail { grid-template-columns: var(--sidebar-width) 1fr var(--detail-width); }
 
 .task_pane {
   overflow-y: auto;
@@ -232,8 +259,13 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
 .task_list > .task_item:first-child > .task { border-top: 0; }
 
-.task label { display: flex; align-items: center; gap: var(--space-4); flex: 1; min-width: 0; cursor: pointer; }
-.task.is_done span { color: var(--text-tertiary); text-decoration: line-through; }
+.task { cursor: pointer; }
+.task:hover { background: var(--surface-secondary); }
+.task.is_selected { background: var(--surface-navigation-hover); }
+
+.task_title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes_marker { color: var(--text-tertiary); font-size: var(--text-caption); }
+.task.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
 
 .task .remove_button,
 .row_button { visibility: hidden; }
@@ -294,7 +326,6 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 /* Dragging                                                                   */
 /* ========================================================================== */
 
-.task[draggable] { cursor: grab; }
 
 .drop_before { box-shadow: inset 0 2px 0 var(--accent); }
 .drop_after { box-shadow: inset 0 -2px 0 var(--accent); }
@@ -365,3 +396,45 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .sidebar_list_row .remove_button:focus-visible { visibility: visible; }
 
 .new_list_form input { width: 100%; margin-top: var(--space-4); }
+
+/* ========================================================================== */
+/* Task detail                                                                */
+/* ========================================================================== */
+
+.task_detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-left: 1px solid var(--border-default);
+  background: var(--surface-secondary);
+}
+
+.task_detail_header { display: flex; align-items: center; gap: var(--space-4); }
+.task_detail_header .remove_button { flex: none; }
+
+.task_detail .task_detail_title {
+  flex: 1;
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-heading);
+  font-size: var(--text-h3);
+  font-weight: 600;
+}
+
+.task_detail_field { display: flex; flex-direction: column; }
+.task_detail_field .sidebar_heading { padding: 0; }
+
+.task_detail_notes { flex: 1; min-height: 160px; }
+.task_detail_notes textarea { flex: 1; }
+
+.task_detail_footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+}

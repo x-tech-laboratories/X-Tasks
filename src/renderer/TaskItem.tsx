@@ -9,6 +9,8 @@ import { drop_placement, type DropPlacement, type TaskNode } from './views'
 
 export interface TaskActions {
   can_add_subtasks: boolean
+  selected_task_id: string | null
+  on_select: (task: Task) => void
   on_toggle: (task: Task) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
@@ -66,13 +68,20 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     actions.on_drop(task, drop_placement(event, true))
   }
 
-  const row_class = ['task', task.is_done && 'is_done', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
+  // A click on the row opens its details, except on the checkbox and buttons, which do their own thing.
+  function click_row(event: MouseEvent): void {
+    if (!(event.target as HTMLElement).closest('input, button')) actions.on_select(task)
+  }
+
+  const is_selected = actions.selected_task_id === task.id
+  const row_class = ['task', task.is_done && 'is_done', is_selected && 'is_selected', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
 
   return (
     <li class="task_item">
       <div
         class={row_class}
         draggable
+        onClick={click_row}
         onDragStart={start_drag}
         onDragEnd={actions.on_drag_end}
         onDragOver={drag_over}
@@ -91,10 +100,14 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           <span class="collapse_spacer" />
         )}
 
-        <label>
-          <input type="checkbox" checked={task.is_done} onChange={() => actions.on_toggle(task)} />
-          <span>{task.title}</span>
-        </label>
+        <input
+          type="checkbox"
+          checked={task.is_done}
+          onChange={() => actions.on_toggle(task)}
+          aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'}
+        />
+        <span class="task_title">{task.title}</span>
+        {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
 
         {is_collapsed && <span class="subtask_count">{children.length}</span>}
 

@@ -31,7 +31,8 @@ const SCHEMA_MIGRATIONS = [
    UPDATE tasks SET position = (SELECT COUNT(*) FROM tasks AS earlier WHERE earlier.created_at < tasks.created_at);
    ALTER TABLE task_lists ADD COLUMN position REAL NOT NULL DEFAULT 0;
    UPDATE task_lists
-     SET position = (SELECT COUNT(*) FROM task_lists AS earlier WHERE earlier.created_at < task_lists.created_at)`
+     SET position = (SELECT COUNT(*) FROM task_lists AS earlier WHERE earlier.created_at < task_lists.created_at)`,
+  `ALTER TABLE tasks ADD COLUMN notes TEXT NOT NULL DEFAULT ''`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -65,6 +66,7 @@ function migrate_schema(database: DatabaseSync): void {
 interface TaskRow {
   id: string
   title: string
+  notes: string
   is_done: number
   created_at: string
   list_id: string | null
@@ -108,6 +110,7 @@ function row_to_task(row: TaskRow): Task {
   return {
     id: row.id,
     title: row.title,
+    notes: row.notes,
     is_done: row.is_done === 1,
     created_at: row.created_at,
     list_id: row.list_id,
@@ -129,6 +132,7 @@ export function add_task(title: string, list_id: string | null, parent_id: strin
   const task: Task = {
     id: randomUUID(),
     title,
+    notes: '',
     is_done: false,
     created_at: new Date().toISOString(),
     list_id,
@@ -145,6 +149,14 @@ export function add_task(title: string, list_id: string | null, parent_id: strin
 
 export function set_task_done(task_id: string, is_done: boolean): void {
   open_database().prepare('UPDATE tasks SET is_done = ? WHERE id = ?').run(is_done ? 1 : 0, task_id)
+}
+
+export function set_task_title(task_id: string, title: string): void {
+  open_database().prepare('UPDATE tasks SET title = ? WHERE id = ?').run(title, task_id)
+}
+
+export function set_task_notes(task_id: string, notes: string): void {
+  open_database().prepare('UPDATE tasks SET notes = ? WHERE id = ?').run(notes, task_id)
 }
 
 export function remove_task(task_id: string): void {

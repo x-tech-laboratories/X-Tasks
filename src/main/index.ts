@@ -3,11 +3,12 @@ import { join } from 'node:path'
 
 import {
   ADD_TASK_CHANNEL, ADD_TASK_LIST_CHANNEL, LIST_TASKS_CHANNEL, LIST_TASK_LISTS_CHANNEL, MOVE_TASK_CHANNEL,
-  MOVE_TASK_LIST_CHANNEL, REMOVE_TASK_CHANNEL, REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL
+  MOVE_TASK_LIST_CHANNEL, REMOVE_TASK_CHANNEL, REMOVE_TASK_LIST_CHANNEL, SET_TASK_DONE_CHANNEL,
+  SET_TASK_NOTES_CHANNEL, SET_TASK_TITLE_CHANNEL
 } from '@shared/tasks'
 import {
   add_task, add_task_list, close_task_database, list_task_lists, list_tasks, move_task, move_task_list,
-  open_task_database, remove_task, remove_task_list, set_task_done
+  open_task_database, remove_task, remove_task_list, set_task_done, set_task_notes, set_task_title
 } from './task_database'
 
 // ============================================================================
@@ -58,6 +59,8 @@ function register_bridge_handlers(): void {
     add_task(title, list_id, parent_id)
   )
   ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean) => set_task_done(task_id, is_done))
+  ipcMain.handle(SET_TASK_TITLE_CHANNEL, (_event, task_id: string, title: string) => set_task_title(task_id, title))
+  ipcMain.handle(SET_TASK_NOTES_CHANNEL, (_event, task_id: string, notes: string) => set_task_notes(task_id, notes))
   ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
   ipcMain.handle(
     MOVE_TASK_CHANNEL,

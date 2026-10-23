@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import type { Task, TaskList } from '@shared/tasks'
 import { Sidebar } from './Sidebar'
+import { TaskDetail } from './TaskDetail'
 import { TaskItem, type TaskActions } from './TaskItem'
 import {
   by_position, list_id_for_new_task, list_position_for_drop, nest_tasks, task_is_in_view, task_move_for_drop,
@@ -18,6 +19,7 @@ export function App() {
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
   const [new_title, set_new_title] = useState('')
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
+  const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
@@ -48,6 +50,31 @@ export function App() {
     const is_done = !task.is_done
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done } : each)))
     void window.x_tasks.set_task_done(task.id, is_done)
+  }
+
+  function rename_task(task: Task, title: string): void {
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, title } : each)))
+    void window.x_tasks.set_task_title(task.id, title)
+  }
+
+  function set_task_notes(task: Task, notes: string): void {
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, notes } : each)))
+    void window.x_tasks.set_task_notes(task.id, notes)
+  }
+
+  // A task moved to another list leaves its parent and goes to the end, taking its subtasks along.
+  function move_task_to_list(task: Task, list_id: string | null): void {
+    if (list_id === task.list_id) return
+    const position = Math.max(0, ...tasks.map((each) => each.position)) + 1
+    const moved_ids = task_with_descendant_ids(task.id, tasks)
+
+    set_tasks((current_tasks) =>
+      current_tasks.map((each) => {
+        if (each.id === task.id) return { ...each, parent_id: null, list_id, position }
+        return moved_ids.has(each.id) ? { ...each, list_id } : each
+      })
+    )
+    void window.x_tasks.move_task(task.id, null, list_id, position)
   }
 
   // The database removes subtasks along with their parent, so the screen drops them too.
@@ -116,8 +143,12 @@ export function App() {
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
   const task_tree = nest_tasks(visible_tasks, tasks)
 
+  const selected_task = tasks.find((task) => task.id === selected_task_id) ?? null
+
   const task_actions: TaskActions = {
     can_add_subtasks: selected_view.kind !== 'completed',
+    selected_task_id,
+    on_select: (task) => set_selected_task_id(task.id),
     on_toggle: toggle_task,
     on_remove: remove_task,
     on_add_subtask: add_subtask,
@@ -128,7 +159,7 @@ export function App() {
   }
 
   return (
-    <div class="app">
+    <div class={selected_task ? 'app has_detail' : 'app'}>
       <Sidebar
         tasks={tasks}
         task_lists={task_lists}
@@ -165,6 +196,21 @@ export function App() {
 
         {visible_tasks.length === 0 && <p class="empty_message">Nothing here yet.</p>}
       </main>
+
+      {selected_task && (
+        <TaskDetail
+          key={selected_task.id}
+          task={selected_task}
+          task_lists={task_lists}
+          subtask_count={task_with_descendant_ids(selected_task.id, tasks).size - 1}
+          on_toggle={toggle_task}
+          on_rename={rename_task}
+          on_set_notes={set_task_notes}
+          on_move_to_list={move_task_to_list}
+          on_remove={remove_task}
+          on_close={() => set_selected_task_id(null)}
+        />
+      )}
     </div>
   )
 }

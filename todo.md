@@ -2,9 +2,9 @@
 
 ## Tasks
 
-- [ ] Edit a task's title in place
-- [ ] Move a task to another list
-- [ ] Notes on a task
+- [x] Edit a task's title in place
+- [x] Move a task to another list
+- [x] Notes on a task
 - [ ] Due dates, with Today and Upcoming views
 - [ ] Priorities
 - [x] Subtasks
