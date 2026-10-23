@@ -90,7 +90,9 @@ export function TaskDetail({
       </button>
 
       {tag_groups.map((group) => {
-        const group_tags = tags.filter((tag) => tag.group_id === group.id)
+        // Rule tags apply by themselves, so only plain tags are offered, and a group of nothing but rule tags is left out.
+        const group_tags = tags.filter((tag) => tag.group_id === group.id && !tag.rule)
+        if (group_tags.length === 0 && tags.some((tag) => tag.group_id === group.id)) return null
         const task_tags = group_tags.filter((tag) => task.tag_ids.includes(tag.id))
         const other_tags = group_tags.filter((tag) => !task.tag_ids.includes(tag.id))
 

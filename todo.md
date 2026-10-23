@@ -21,6 +21,7 @@
 - [x] Nest and reorder tags by dragging
 - [x] Pick a tag in several groups at once to see tasks matching all of them, such as Area and Priority
 - [ ] Rename filter groups
+- [x] Rule tags that apply themselves to every task matching user-set conditions, such as completed routines
 - [x] Reorder filter groups by dragging
 
 ## Finding things

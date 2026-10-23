@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, type PriorityScale, type Settings } from '@shared/settings'
-import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
+import type { Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
 // Schema
@@ -97,7 +97,9 @@ const SCHEMA_MIGRATIONS = [
      WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'type')`,
   // Tasks already done have no known completion time, so theirs stays empty.
   `ALTER TABLE tasks ADD COLUMN done_at TEXT`,
-  `ALTER TABLE tasks ADD COLUMN my_day_on TEXT`
+  `ALTER TABLE tasks ADD COLUMN my_day_on TEXT`,
+  // A rule tag keeps its rule here as JSON; plain tags leave it empty.
+  `ALTER TABLE tags ADD COLUMN rule TEXT`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -341,24 +343,32 @@ export function move_tag_group(group_id: string, position: number): void {
 // ============================================================================
 
 export function list_tags(): Tag[] {
-  return open_database().prepare('SELECT * FROM tags ORDER BY position').all() as unknown as Tag[]
+  const rows = open_database().prepare('SELECT * FROM tags ORDER BY position').all() as unknown as (Omit<Tag, 'rule'> & {
+    rule: string | null
+  })[]
+  return rows.map((row) => ({ ...row, rule: row.rule === null ? null : (JSON.parse(row.rule) as TagRule) }))
 }
 
-export function add_tag(name: string, group_id: string, parent_id: string | null): Tag {
+export function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null): Tag {
   const tag: Tag = {
     id: randomUUID(),
     name,
     created_at: new Date().toISOString(),
     group_id,
     parent_id,
-    position: next_position('tags')
+    position: next_position('tags'),
+    rule
   }
 
   open_database()
-    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position)
+    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position, rule) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position, rule === null ? null : JSON.stringify(rule))
 
   return tag
+}
+
+export function set_tag_rule(tag_id: string, name: string, rule: TagRule): void {
+  open_database().prepare('UPDATE tags SET name = ?, rule = ? WHERE id = ?').run(name, JSON.stringify(rule), tag_id)
 }
 
 // Sub-tags go with it, while its tasks stay and only lose the tags.

@@ -1,5 +1,6 @@
 import type { Settings } from '@shared/settings'
 import { PRIORITY_GROUP_ID, type Tag, type Task, type View } from '@shared/tasks'
+import { rule_matches } from './rules'
 
 export type { View }
 
@@ -45,10 +46,27 @@ export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags:
     case 'active': return !task.is_done
     case 'completed': return task.is_done
     case 'tag': {
-      const chain_tag_ids = new Set(task_and_ancestors(task, all_tasks).flatMap((each) => each.tag_ids))
-      return view.tag_ids.every((tag_id) => [...subtree_ids(tag_id, tags)].some((id) => chain_tag_ids.has(id)))
+      const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
+      return view.tag_ids.every((tag_id) => [...subtree_ids(tag_id, tags)].some((id) => task_has_tag(task, id, chain_tag_ids, tags)))
     }
   }
+}
+
+// A plain tag is held by the task or a task above it; a rule tag is held whenever its rule matches.
+function task_has_tag(task: Task, tag_id: string, chain_tag_ids: Set<string>, tags: Tag[]): boolean {
+  const rule = tags.find((tag) => tag.id === tag_id)?.rule
+  return rule ? rule_matches(rule, task, chain_tag_ids, tags) : chain_tag_ids.has(tag_id)
+}
+
+// The task's own tags and those of every task above it.
+export function chain_tag_ids_of(task: Task, all_tasks: Task[]): Set<string> {
+  return new Set(task_and_ancestors(task, all_tasks).flatMap((each) => each.tag_ids))
+}
+
+// The rule tags whose rules match the task right now.
+export function rule_tags_of(task: Task, all_tasks: Task[], tags: Tag[]): Tag[] {
+  const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
+  return tags.filter((tag) => tag.rule && rule_matches(tag.rule, task, chain_tag_ids, tags))
 }
 
 // ============================================================================
@@ -97,9 +115,10 @@ function view_without_missing_tags(tag_ids: string[], tags: Tag[]): View {
   return kept_ids.length > 0 ? { kind: 'tag', tag_ids: kept_ids } : { kind: 'all' }
 }
 
-// New tasks carry the selected tags, and no tag in every other view.
-export function tag_ids_for_new_task(view: View): string[] {
-  return view.kind === 'tag' ? view.tag_ids : []
+// New tasks carry the selected plain tags, and no tag in every other view; rule tags apply by themselves.
+export function tag_ids_for_new_task(view: View, tags: Tag[]): string[] {
+  if (view.kind !== 'tag') return []
+  return view.tag_ids.filter((tag_id) => !tags.find((tag) => tag.id === tag_id)?.rule)
 }
 
 // Deleted tags leave the filter, and an empty filter falls back to all tasks.

@@ -30,7 +30,7 @@ function start_of_day(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
-function days_between(first: Date, second: Date): number {
+export function days_between(first: Date, second: Date): number {
   return Math.round((start_of_day(second).getTime() - start_of_day(first).getTime()) / DAY_IN_MILLISECONDS)
 }
 

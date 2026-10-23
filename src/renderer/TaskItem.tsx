@@ -40,6 +40,7 @@ export interface TaskActions {
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
   on_untag: (task: Task, tag: Tag) => void
+  rule_tags_of: (task: Task) => Tag[]
   on_drag_start: (task: Task) => void
   on_drag_end: () => void
   can_drop_on: (target: Task) => boolean
@@ -58,13 +59,21 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const [subtask_title, set_subtask_title] = useState('')
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
 
-  // The priority gets its own label, apart from the tag chips.
-  const task_tags = actions.tags.filter((tag) => task.tag_ids.includes(tag.id))
+  // The priority gets its own label, apart from the tag chips; rule tags that match join the task's own tags.
+  const task_tags = [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)]
   const priority_tag = task_tags.find(is_priority_tag)
   const chip_tags = task_tags.filter((tag) => !is_priority_tag(tag))
 
-  // A priority shows as a plain label, and any other tag as a chip that can be removed from the task.
+  // A priority shows as a plain label, a rule tag as a fixed chip, and any other tag as a chip that can be removed from the task.
   function render_tag(tag: Tag) {
+    if (tag.rule) {
+      return (
+        <span key={tag.id} class="tag_chip is_rule" title={`${tag_path(tag, actions.tags)} (rule)`}>
+          {tag.name}
+        </span>
+      )
+    }
+
     if (is_priority_tag(tag)) {
       return (
         <span key={tag.id} class="priority_label" title={`Priority: ${tag_path(tag, actions.tags)}`}>

@@ -27,6 +27,8 @@ interface SidebarProps {
   on_set_tag_group_single_choice: (group: TagGroup, is_single_choice: boolean) => void
   on_move_tag_group: (dragged: TagGroup, target: TagGroup, placement: SidePlacement) => void
   on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
+  on_add_rule_tag: (group_id: string, parent_id: string | null) => void
+  on_edit_rule_tag: (tag: Tag) => void
   on_remove_tag: (tag: Tag) => void
   on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
   on_tag_task: (task: Task, tag: Tag) => void
@@ -50,7 +52,7 @@ interface NewTagSpot {
 
 export function Sidebar({
   tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
-  on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_rule_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
@@ -120,9 +122,9 @@ export function Sidebar({
   // Dragging
   // ==========================================================================
 
-  // A dragged task always drops into the tag; a dragged tag can land beside or inside one of its own group.
+  // A dragged task drops into any tag but a rule tag; a dragged tag can land beside or inside one of its own group.
   function placement_over(event: DragEvent, tag: Tag): DropPlacement | null {
-    if (dragged_task) return 'inside'
+    if (dragged_task) return tag.rule ? null : 'inside'
     if (!dragged_tag || dragged_tag.group_id !== tag.group_id || subtree_ids(dragged_tag.id, tags).has(tag.id)) return null
     return drop_placement(event, true)
   }
@@ -211,7 +213,9 @@ export function Sidebar({
           onDrop={(event) => tag_drop(event, tag)}
           onContextMenu={(event) =>
             on_context_menu(event, [
+              ...(tag.rule ? [{ label: 'Edit rule…', on_select: () => on_edit_rule_tag(tag) }] : []),
               { label: 'Add tag inside', on_select: () => start_new_tag({ group_id: tag.group_id, parent_id: tag.id }) },
+              { label: 'Add rule tag inside…', on_select: () => on_add_rule_tag(tag.group_id, tag.id) },
               { label: 'Delete tag', on_select: () => on_remove_tag(tag), is_danger: true }
             ])
           }
@@ -229,6 +233,7 @@ export function Sidebar({
           )}
           <button class="sidebar_tag_select" onClick={() => on_toggle_tag(tag)}>
             <span class="sidebar_label">{tag.name}</span>
+            {tag.rule && <span class="rule_marker" title="Rule tag: applied to every task its rule matches">ƒ</span>}
             {count ? <span class="sidebar_count">{count}</span> : null}
           </button>
           <button
@@ -276,6 +281,7 @@ export function Sidebar({
           onContextMenu={(event) =>
             on_context_menu(event, [
               { label: 'Add tag', on_select: () => start_new_tag({ group_id: group.id, parent_id: null }) },
+              { label: 'Add rule tag…', on_select: () => on_add_rule_tag(group.id, null) },
               ...(group_above ? [{ label: 'Move up', on_select: () => on_move_tag_group(group, group_above, 'before') }] : []),
               ...(group_below ? [{ label: 'Move down', on_select: () => on_move_tag_group(group, group_below, 'after') }] : []),
               {

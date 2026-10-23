@@ -43,7 +43,33 @@ export interface Tag {
   group_id: string
   parent_id: string | null
   position: number
+  // When set, the tag is never given by hand: it applies to every task this rule matches.
+  rule: TagRule | null
 }
+
+// ============================================================================
+// Tag rule
+// ============================================================================
+
+// A rule matches a task when all, or any, of its conditions hold; with no conditions it matches every task.
+export interface TagRule {
+  match: 'all' | 'any'
+  conditions: RuleCondition[]
+}
+
+export type DueCondition = 'overdue' | 'today' | 'within_days' | 'any' | 'none'
+
+export type StartCondition = 'started' | 'not_started' | 'none'
+
+export type RuleCondition =
+  | { kind: 'status'; is_done: boolean }
+  | { kind: 'tag'; tag_id: string; has_tag: boolean }
+  | { kind: 'due'; when: DueCondition; days: number }
+  | { kind: 'start'; when: StartCondition }
+  | { kind: 'completed_within'; days: number }
+  | { kind: 'recurring'; is_recurring: boolean }
+  | { kind: 'subtask'; is_subtask: boolean }
+  | { kind: 'title'; text: string }
 
 // ============================================================================
 // View
@@ -80,7 +106,8 @@ export interface TasksApi {
   move_tag_group: (group_id: string, position: number) => Promise<void>
 
   list_tags: () => Promise<Tag[]>
-  add_tag: (name: string, group_id: string, parent_id: string | null) => Promise<Tag>
+  add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null) => Promise<Tag>
+  set_tag_rule: (tag_id: string, name: string, rule: TagRule) => Promise<void>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
 }
@@ -105,5 +132,6 @@ export const MOVE_TAG_GROUP_CHANNEL = 'tag-groups:move'
 
 export const LIST_TAGS_CHANNEL = 'tags:list'
 export const ADD_TAG_CHANNEL = 'tags:add'
+export const SET_TAG_RULE_CHANNEL = 'tags:set-rule'
 export const REMOVE_TAG_CHANNEL = 'tags:remove'
 export const MOVE_TAG_CHANNEL = 'tags:move'

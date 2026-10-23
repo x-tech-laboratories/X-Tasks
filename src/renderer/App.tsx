@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
-import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
+import type { Tag, TagGroup, TagRule, Task, TaskSchedule } from '@shared/tasks'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
+import { RuleDialog } from './RuleDialog'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
+import { EMPTY_RULE } from './rules'
 import { format_task_date, next_schedule, parse_task_date } from './schedule'
 import {
-  by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, subtree_ids,
+  by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
 
@@ -28,6 +30,9 @@ const TASK_LAYOUT_CHOICES: { value: TaskLayout; label: string }[] = [
 // App
 // ============================================================================
 
+// The rule tag open in the rule dialog: an existing one, or a new one about to be added at a spot in a group.
+type RuleEditing = { tag: Tag } | { group_id: string; parent_id: string | null }
+
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
   const [has_loaded_tasks, set_has_loaded_tasks] = useState(false)
@@ -42,6 +47,7 @@ export function App() {
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
   const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
   const [today, set_today] = useState(() => format_task_date(new Date(), false))
+  const [rule_editing, set_rule_editing] = useState<RuleEditing | null>(null)
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then((loaded_tasks) => {
@@ -114,7 +120,7 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view), my_day_for_new_task(selected_view, today))
+    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags), my_day_for_new_task(selected_view, today))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
   }
@@ -204,9 +210,9 @@ export function App() {
     void window.x_tasks.move_task(dragged_task.id, move.parent_id, move.position)
   }
 
-  // In a one-tag-per-task group, the new tag replaces whichever tag of that group the task had.
+  // In a one-tag-per-task group, the new tag replaces whichever tag of that group the task had; a rule tag is never given by hand.
   function tag_task(task: Task, tag: Tag): void {
-    if (task.tag_ids.includes(tag.id)) return
+    if (task.tag_ids.includes(tag.id) || tag.rule) return
     const is_single_choice = tag_groups.find((group) => group.id === tag.group_id)?.is_single_choice ?? false
     const replaced_ids = new Set(is_single_choice ? tags.filter((each) => each.group_id === tag.group_id).map((each) => each.id) : [])
 
@@ -259,10 +265,19 @@ export function App() {
     void window.x_tasks.move_tag_group(dragged.id, position)
   }
 
-  async function add_tag(name: string, group_id: string, parent_id: string | null): Promise<void> {
-    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id)
+  async function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null = null): Promise<void> {
+    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id, rule)
     set_tags((current_tags) => [...current_tags, added_tag])
     select_view({ kind: 'tag', tag_ids: [added_tag.id] })
+  }
+
+  function save_rule_tag(name: string, rule: TagRule): void {
+    if (!rule_editing) return
+    if (!('tag' in rule_editing)) return void add_tag(name, rule_editing.group_id, rule_editing.parent_id, rule)
+
+    const tag_id = rule_editing.tag.id
+    set_tags((current_tags) => current_tags.map((each) => (each.id === tag_id ? { ...each, name, rule } : each)))
+    void window.x_tasks.set_tag_rule(tag_id, name, rule)
   }
 
   function remove_tag(tag: Tag): void {
@@ -324,6 +339,7 @@ export function App() {
     on_remove: remove_task,
     on_add_subtask: add_subtask,
     on_untag: untag_task,
+    rule_tags_of: (task) => rule_tags_of(task, tasks, tags),
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
     can_drop_on: can_drop_task_on,
@@ -350,6 +366,8 @@ export function App() {
         on_set_tag_group_single_choice={set_tag_group_single_choice}
         on_move_tag_group={move_tag_group}
         on_add_tag={add_tag}
+        on_add_rule_tag={(group_id, parent_id) => set_rule_editing({ group_id, parent_id })}
+        on_edit_rule_tag={(tag) => set_rule_editing({ tag })}
         on_remove_tag={remove_tag}
         on_move_tag={move_tag}
         on_tag_task={tag_task}
@@ -463,6 +481,18 @@ export function App() {
           options={settings.reschedule_options}
           on_reschedule={set_task_schedule}
           on_close={() => set_rescheduling_task_id(null)}
+        />
+      )}
+
+      {rule_editing && (
+        <RuleDialog
+          heading={'tag' in rule_editing ? 'Edit rule tag' : 'New rule tag'}
+          name={'tag' in rule_editing ? rule_editing.tag.name : ''}
+          rule={('tag' in rule_editing && rule_editing.tag.rule) || EMPTY_RULE}
+          tags={tags}
+          tasks={tasks}
+          on_save={save_rule_tag}
+          on_close={() => set_rule_editing(null)}
         />
       )}
 
