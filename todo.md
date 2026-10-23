@@ -48,3 +48,4 @@
 - [ ] Review Task Coach for features
 - [ ] Review Planner for features
 - [ ] Review Trilium addons for features
+- [ ] Review Super Productivity for features
