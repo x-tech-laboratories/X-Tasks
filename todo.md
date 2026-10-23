@@ -30,7 +30,7 @@
 
 - [ ] Search across all tasks
 - [x] Filter the task table by title, date and tag, and sort it by several columns at once
-- [x] Show, hide, reorder and resize the task table's columns
+- [x] Show, hide, reorder and resize the task table's columns, including optional start, due and done date columns
 - [ ] Keyboard shortcuts for adding, completing and switching views
 
 ## App

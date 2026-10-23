@@ -8,8 +8,33 @@ import { by_position, children_of, task_is_in_view, type TaskNode } from './view
 // Columns
 // ============================================================================
 
-// A table column is the title, the date, the streak, or one filter group, named by "group:" and the group's id.
-export type TableColumn = 'title' | 'date' | 'streak' | `group:${string}`
+// A table column is the title, a date, the streak, or one filter group, named by "group:" and the group's id.
+export type TableColumn = 'title' | DateColumn | 'streak' | `group:${string}`
+
+// The smart date shows the done date once a task is ticked and the date picked in settings before that; the others show one date each.
+export type DateColumn = 'date' | 'start' | 'due' | 'done'
+
+export function is_date_column(column: string): column is DateColumn {
+  return column === 'date' || column === 'start' || column === 'due' || column === 'done'
+}
+
+// The columns that stay hidden until turned on in the columns menu.
+const OPTIONAL_COLUMNS: TableColumn[] = ['start', 'due', 'done']
+
+export function is_column_shown(column: TableColumn, hidden: string[], shown: string[]): boolean {
+  return OPTIONAL_COLUMNS.includes(column) ? shown.includes(column) : !hidden.includes(column)
+}
+
+// The date a date column shows for a task, or empty when it has none.
+export function column_date(task: Task, column: DateColumn, date_field: TaskDateField): string | null {
+  const done_date = task.is_done && task.done_at ? format_task_date(new Date(task.done_at), false) : null
+  switch (column) {
+    case 'date': return done_date ?? task_date_of(task, date_field)
+    case 'start': return task.start_at
+    case 'due': return task.due_at
+    case 'done': return done_date
+  }
+}
 
 // The streak a task's row shows, or empty for a task that neither repeats nor sits under one that does.
 export type StreakOf = (task: Task) => RoutineStreak | null
@@ -22,18 +47,21 @@ function group_id_of(column: string): string | null {
   return column.startsWith('group:') ? column.slice('group:'.length) : null
 }
 
-// Lists the columns after the title in their saved order, leaving out removed groups and adding new ones at the end.
+// Lists the columns after the title in their saved order, leaving out removed groups and placing any column not yet saved just after the one before it.
 export function ordered_columns(saved_order: string[], tag_groups: TagGroup[]): TableColumn[] {
-  const all_columns: TableColumn[] = ['date', 'streak', ...tag_groups.map(group_column)]
-  const saved = saved_order.filter((column): column is TableColumn => all_columns.includes(column as TableColumn))
-  return [...saved, ...all_columns.filter((column) => !saved.includes(column))]
+  const all_columns: TableColumn[] = ['date', ...OPTIONAL_COLUMNS, 'streak', ...tag_groups.map(group_column)]
+  const ordered = saved_order.filter((column): column is TableColumn => all_columns.includes(column as TableColumn))
+  all_columns.forEach((column, index) => {
+    if (!ordered.includes(column)) ordered.splice(index === 0 ? 0 : ordered.indexOf(all_columns[index - 1]!) + 1, 0, column)
+  })
+  return ordered
 }
 
 // How wide a column starts, and the narrowest and widest it can be dragged to.
 export const COLUMN_WIDTH_RANGE = { min: 64, max: 480 }
 
 export function default_column_width(column: TableColumn): number {
-  if (column === 'date') return 104
+  if (is_date_column(column)) return 104
   if (column === 'streak') return 84
   return 124
 }
@@ -92,7 +120,7 @@ export function sort_task_tree(
 
   function cell_value(task: Task, column: string): CellValue {
     if (column === 'title') return task.title
-    if (column === 'date') return task.is_done && task.done_at ? format_task_date(new Date(task.done_at), false) : task_date_of(task, date_field)
+    if (is_date_column(column)) return column_date(task, column, date_field)
     if (column === 'streak') return streak_of(task)?.current ?? null
     const group_id = group_id_of(column)
     const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => tag_rank.get(tag.id) ?? 0)
@@ -135,15 +163,26 @@ function tag_ranks(tags: Tag[]): Map<string, number> {
 // Filtering
 // ============================================================================
 
-export type DateFilter = 'any' | 'overdue' | 'today' | 'upcoming' | 'none'
+export type DateFilter = 'any' | 'overdue' | 'earlier' | 'today' | 'upcoming' | 'none'
 
-export const DATE_FILTER_CHOICES: { value: DateFilter; label: string }[] = [
-  { value: 'any', label: 'Any date' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'today', label: 'Today' },
-  { value: 'upcoming', label: 'Later' },
-  { value: 'none', label: 'No date' }
-]
+// Only the smart and due dates can be overdue, and a done date never lies ahead.
+export function date_filter_choices(column: DateColumn): { value: DateFilter; label: string }[] {
+  if (column === 'done') {
+    return [
+      { value: 'any', label: 'Any date' },
+      { value: 'earlier', label: 'Before today' },
+      { value: 'today', label: 'Today' },
+      { value: 'none', label: 'Not done' }
+    ]
+  }
+  return [
+    { value: 'any', label: 'Any date' },
+    column === 'start' ? { value: 'earlier', label: 'Before today' } : { value: 'overdue', label: 'Overdue' },
+    { value: 'today', label: 'Today' },
+    { value: 'upcoming', label: 'Later' },
+    { value: 'none', label: 'No date' }
+  ]
+}
 
 // Broken means a tracked task whose current streak is zero; untracked means one that neither repeats nor sits under one that does.
 export type StreakFilter = 'any' | 'active' | 'week' | 'month' | 'broken' | 'untracked'
@@ -160,17 +199,33 @@ export const STREAK_FILTER_CHOICES: { value: StreakFilter; label: string }[] = [
 // A group filter is empty for any tag, "none" for tasks without one, or a tag id that matches that tag and the tags below it.
 export interface TableFilters {
   title: string
-  date: DateFilter
+  dates: Partial<Record<DateColumn, DateFilter>>
   streak: StreakFilter
   group_tag_ids: Record<string, string>
 }
 
 export const NO_TAG_FILTER = 'none'
 
-export const EMPTY_TABLE_FILTERS: TableFilters = { title: '', date: 'any', streak: 'any', group_tag_ids: {} }
+export const EMPTY_TABLE_FILTERS: TableFilters = { title: '', dates: {}, streak: 'any', group_tag_ids: {} }
 
 export function has_table_filters(filters: TableFilters): boolean {
-  return filters.title.trim() !== '' || filters.date !== 'any' || filters.streak !== 'any' || Object.values(filters.group_tag_ids).some(Boolean)
+  return filters.title.trim() !== '' || Object.values(filters.dates).some((filter) => filter !== 'any') || filters.streak !== 'any' ||
+    Object.values(filters.group_tag_ids).some(Boolean)
+}
+
+export function is_column_filtered(filters: TableFilters, column: TableColumn): boolean {
+  if (column === 'title') return filters.title.trim() !== ''
+  if (is_date_column(column)) return (filters.dates[column] ?? 'any') !== 'any'
+  if (column === 'streak') return filters.streak !== 'any'
+  return Boolean(filters.group_tag_ids[group_id_of(column)!])
+}
+
+// Clears the filter on one column, leaving the others set.
+export function without_column_filter(filters: TableFilters, column: TableColumn): TableFilters {
+  if (column === 'title') return { ...filters, title: '' }
+  if (is_date_column(column)) return { ...filters, dates: { ...filters.dates, [column]: 'any' } }
+  if (column === 'streak') return { ...filters, streak: 'any' }
+  return { ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id_of(column)!]: '' } }
 }
 
 // A task passes when every filter set holds, with tags counted the same way the sidebar counts them.
@@ -185,7 +240,9 @@ export function task_passes_filters(
 ): boolean {
   const title_text = filters.title.trim().toLocaleLowerCase()
   if (title_text && !task.title.toLocaleLowerCase().includes(title_text)) return false
-  if (!date_passes(task, filters.date, today, date_field)) return false
+  for (const [column, filter] of Object.entries(filters.dates) as [DateColumn, DateFilter][]) {
+    if (!date_passes(task, column_date(task, column, date_field), filter, today)) return false
+  }
   if (!streak_passes(streak_of(task), filters.streak)) return false
 
   return Object.entries(filters.group_tag_ids).every(([group_id, tag_id]) => {
@@ -207,12 +264,12 @@ function streak_passes(streak: RoutineStreak | null, filter: StreakFilter): bool
   }
 }
 
-function date_passes(task: Task, filter: DateFilter, today: string, date_field: TaskDateField): boolean {
-  const task_date = task_date_of(task, date_field)
+function date_passes(task: Task, task_date: string | null, filter: DateFilter, today: string): boolean {
   const task_day = task_date?.slice(0, 10) ?? null
   switch (filter) {
     case 'any': return true
     case 'overdue': return !task.is_done && task_date !== null && is_overdue(task_date)
+    case 'earlier': return task_day !== null && task_day < today
     case 'today': return task_day === today
     case 'upcoming': return task_day !== null && task_day > today
     case 'none': return task_day === null

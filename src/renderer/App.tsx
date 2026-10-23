@@ -15,7 +15,7 @@ import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
-  EMPTY_TABLE_FILTERS, column_width, has_table_filters, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, type StreakOf, type TableColumn, type TableFilters
+  EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
   by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
@@ -401,20 +401,21 @@ export function App() {
   const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
   const column_order = ordered_columns(settings.table_column_order, tag_groups)
-  const table_columns = column_order.filter((column) => !settings.hidden_table_columns.includes(column))
+  const table_columns = column_order.filter((column) => is_column_shown(column, settings.hidden_table_columns, settings.shown_table_columns))
   const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field) : nested_tasks
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
     const hidden = settings!.hidden_table_columns.filter((each) => each !== column)
+    const shown = settings!.shown_table_columns.filter((each) => each !== column)
     void change_setting('hidden_table_columns', is_shown ? hidden : [...hidden, column])
+    void change_setting('shown_table_columns', is_shown ? [...shown, column] : shown)
     if (is_shown) return
 
     if (settings!.table_sort.some((key) => key.column === column)) {
       void change_setting('table_sort', settings!.table_sort.filter((key) => key.column !== column))
     }
-    if (column === 'date') set_table_filters((filters) => ({ ...filters, date: 'any' }))
-    else set_table_filters((filters) => ({ ...filters, group_tag_ids: { ...filters.group_tag_ids, [column.slice('group:'.length)]: '' } }))
+    set_table_filters((filters) => without_column_filter(filters, column))
   }
 
   // The tags a task's row shows: its own and the rule tags that match it.
