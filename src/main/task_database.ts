@@ -96,7 +96,8 @@ const SCHEMA_MIGRATIONS = [
      FROM (VALUES ('Goal', 1), ('Task', 2), ('Routine', 3), ('Habit', 4))
      WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = 'type')`,
   // Tasks already done have no known completion time, so theirs stays empty.
-  `ALTER TABLE tasks ADD COLUMN done_at TEXT`
+  `ALTER TABLE tasks ADD COLUMN done_at TEXT`,
+  `ALTER TABLE tasks ADD COLUMN my_day_on TEXT`
 ]
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
@@ -136,6 +137,7 @@ interface TaskRow {
   start_at: string | null
   due_at: string | null
   recurrence: string
+  my_day_on: string | null
   created_at: string
   parent_id: string | null
   position: number
@@ -188,6 +190,7 @@ function row_to_task(row: TaskRow, tag_ids: string[]): Task {
     start_at: row.start_at,
     due_at: row.due_at,
     recurrence: row.recurrence,
+    my_day_on: row.my_day_on,
     created_at: row.created_at,
     parent_id: row.parent_id,
     position: row.position,
@@ -210,7 +213,7 @@ export function list_tasks(): Task[] {
   return rows.map((row) => row_to_task(row, tag_ids_by_task.get(row.id) ?? []))
 }
 
-export function add_task(title: string, parent_id: string | null, tag_ids: string[]): Task {
+export function add_task(title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null): Task {
   const database = open_database()
   const task: Task = {
     id: randomUUID(),
@@ -221,6 +224,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     start_at: null,
     due_at: null,
     recurrence: '',
+    my_day_on,
     created_at: new Date().toISOString(),
     parent_id,
     position: next_position('tasks'),
@@ -229,8 +233,8 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
 
   database.exec('BEGIN')
   database
-    .prepare('INSERT INTO tasks (id, title, is_done, created_at, parent_id, position) VALUES (?, ?, 0, ?, ?, ?)')
-    .run(task.id, task.title, task.created_at, task.parent_id, task.position)
+    .prepare('INSERT INTO tasks (id, title, is_done, my_day_on, created_at, parent_id, position) VALUES (?, ?, 0, ?, ?, ?, ?)')
+    .run(task.id, task.title, task.my_day_on, task.created_at, task.parent_id, task.position)
   for (const tag_id of tag_ids) database.prepare('INSERT INTO task_tags (task_id, tag_id) VALUES (?, ?)').run(task.id, tag_id)
   database.exec('COMMIT')
 
@@ -254,6 +258,10 @@ export function set_task_schedule(task_id: string, schedule: TaskSchedule): void
   open_database()
     .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ? WHERE id = ?')
     .run(schedule.start_at, schedule.due_at, schedule.recurrence, task_id)
+}
+
+export function set_task_my_day(task_id: string, my_day_on: string | null): void {
+  open_database().prepare('UPDATE tasks SET my_day_on = ? WHERE id = ?').run(my_day_on, task_id)
 }
 
 export function remove_task(task_id: string): void {

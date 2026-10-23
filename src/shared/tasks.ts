@@ -12,6 +12,8 @@ export interface Task {
   start_at: string | null
   due_at: string | null
   recurrence: string
+  // The local day, as YYYY-MM-DD, the task was added to My Day; empty when it is not in My Day.
+  my_day_on: string | null
   created_at: string
   parent_id: string | null
   position: number
@@ -48,6 +50,7 @@ export interface Tag {
 // ============================================================================
 
 export type View =
+  | { kind: 'my_day' }
   | { kind: 'all' }
   | { kind: 'active' }
   | { kind: 'completed' }
@@ -59,11 +62,12 @@ export type View =
 
 export interface TasksApi {
   list_tasks: () => Promise<Task[]>
-  add_task: (title: string, parent_id: string | null, tag_ids: string[]) => Promise<Task>
+  add_task: (title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null) => Promise<Task>
   set_task_done: (task_id: string, done_at: string | null) => Promise<void>
   set_task_title: (task_id: string, title: string) => Promise<void>
   set_task_notes: (task_id: string, notes: string) => Promise<void>
   set_task_schedule: (task_id: string, schedule: TaskSchedule) => Promise<void>
+  set_task_my_day: (task_id: string, my_day_on: string | null) => Promise<void>
   remove_task: (task_id: string) => Promise<void>
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>
@@ -87,6 +91,7 @@ export const SET_TASK_DONE_CHANNEL = 'tasks:set-done'
 export const SET_TASK_TITLE_CHANNEL = 'tasks:set-title'
 export const SET_TASK_NOTES_CHANNEL = 'tasks:set-notes'
 export const SET_TASK_SCHEDULE_CHANNEL = 'tasks:set-schedule'
+export const SET_TASK_MY_DAY_CHANNEL = 'tasks:set-my-day'
 export const REMOVE_TASK_CHANNEL = 'tasks:remove'
 export const MOVE_TASK_CHANNEL = 'tasks:move'
 export const TAG_TASK_CHANNEL = 'tasks:tag'

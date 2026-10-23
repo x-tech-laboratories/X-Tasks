@@ -21,13 +21,15 @@ interface TaskDetailProps {
   on_untag: (task: Task, tag: Tag) => void
   on_set_schedule: (task: Task, schedule: TaskSchedule) => void
   on_reschedule: (task: Task) => void
+  is_in_my_day: boolean
+  on_set_my_day: (task: Task, is_added: boolean) => void
   on_remove: (task: Task) => void
   on_close: () => void
 }
 
 export function TaskDetail({
   task, tag_groups, tags, subtask_count, on_toggle, on_rename, on_set_notes, on_set_schedule, on_tag, on_untag, on_reschedule,
-  on_remove, on_close
+  is_in_my_day, on_set_my_day, on_remove, on_close
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -82,6 +84,10 @@ export function TaskDetail({
           ×
         </button>
       </header>
+
+      <button class={is_in_my_day ? 'my_day_button is_selected' : 'my_day_button'} onClick={() => on_set_my_day(task, !is_in_my_day)}>
+        {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
+      </button>
 
       {tag_groups.map((group) => {
         const group_tags = tags.filter((tag) => tag.group_id === group.id)

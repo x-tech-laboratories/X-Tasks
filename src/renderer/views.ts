@@ -8,6 +8,7 @@ export type { View }
 // ============================================================================
 
 export const BUILT_IN_VIEWS: { view: View; label: string }[] = [
+  { view: { kind: 'my_day' }, label: 'My Day' },
   { view: { kind: 'all' }, label: 'All tasks' },
   { view: { kind: 'active' }, label: 'Active' },
   { view: { kind: 'completed' }, label: 'Completed' }
@@ -36,9 +37,10 @@ export function view_with_tag_toggled(view: View, tag: Tag, tags: Tag[]): View {
   return tag_ids.length > 0 ? { kind: 'tag', tag_ids } : { kind: 'all' }
 }
 
-// A task must match every selected tag, through the tag itself or any tag below it.
-export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[]): boolean {
+// A task must match every selected tag, through the tag itself or any tag below it; subtasks follow their parent into My Day.
+export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string): boolean {
   switch (view.kind) {
+    case 'my_day': return task_and_ancestors(task, all_tasks).some((each) => is_in_my_day(each, my_day_since))
     case 'all': return true
     case 'active': return !task.is_done
     case 'completed': return task.is_done
@@ -47,6 +49,24 @@ export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags:
       return view.tag_ids.every((tag_id) => [...subtree_ids(tag_id, tags)].some((id) => chain_tag_ids.has(id)))
     }
   }
+}
+
+// ============================================================================
+// My Day
+// ============================================================================
+
+// The earliest day whose My Day tasks still count: today when My Day clears itself, or any day when it does not.
+export function my_day_since(settings: Settings, today: string): string {
+  return settings.auto_clear_my_day ? today : ''
+}
+
+export function is_in_my_day(task: Task, my_day_since: string): boolean {
+  return task.my_day_on !== null && task.my_day_on >= my_day_since
+}
+
+// New tasks added while My Day is shown go into it.
+export function my_day_for_new_task(view: View, today: string): string | null {
+  return view.kind === 'my_day' ? today : null
 }
 
 export function view_title(view: View, tags: Tag[]): string {

@@ -7,6 +7,7 @@
 - [x] Notes on a task
 - [x] Start and due dates
 - [x] Repeating tasks
+- [x] My Day, which can clear itself each day
 - [ ] Today and Upcoming views
 - [ ] Priorities
 - [x] Subtasks

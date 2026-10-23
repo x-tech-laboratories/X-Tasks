@@ -18,6 +18,7 @@ const THEME_CHOICES: { value: ThemeChoice; label: string }[] = [
 
 const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'last', label: 'Last view used' },
+  { value: 'my_day', label: 'My Day' },
   { value: 'all', label: 'All tasks' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' }
@@ -99,6 +100,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           >
             {LAUNCH_VIEW_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Clear My Day each day</span>
+            <span class="setting_hint">My Day starts empty every morning. When off, tasks stay until you take them out.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.auto_clear_my_day}
+            onChange={(event) => on_change('auto_clear_my_day', event.currentTarget.checked)}
+          />
         </label>
 
         <label class="setting_row">

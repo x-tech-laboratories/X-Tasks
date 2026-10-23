@@ -779,3 +779,15 @@ select:hover { border-color: var(--border-focus); }
 
 .recurrence-input__summary { color: var(--text-secondary); font-size: var(--text-control); }
 .recurrence-input__summary--invalid { color: var(--status-danger); }
+
+/* ========================================================================== */
+/* My Day                                                                     */
+/* ========================================================================== */
+
+.my_day_date { color: var(--text-secondary); font-size: var(--text-control); }
+
+.clear_my_day_button { flex: none; }
+
+.my_day_button { align-self: flex-start; }
+
+.my_day_button.is_selected { border-color: var(--accent); color: var(--accent); }

@@ -15,6 +15,8 @@ interface SidebarProps {
   tasks: Task[]
   tag_groups: TagGroup[]
   tags: Tag[]
+  // The earliest day whose My Day tasks still count.
+  my_day_since: string
   selected_view: View | null
   is_settings_open: boolean
   dragged_task: Task | null
@@ -47,7 +49,7 @@ interface NewTagSpot {
 }
 
 export function Sidebar({
-  tasks, tag_groups, tags, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
+  tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
   on_remove_tag_group, on_set_tag_group_single_choice, on_move_tag_group, on_add_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
@@ -59,7 +61,7 @@ export function Sidebar({
   const [group_drop_target, set_group_drop_target] = useState<{ group_id: string; placement: SidePlacement } | null>(null)
 
   function open_count(view: View): number {
-    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags)).length
+    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags, my_day_since)).length
   }
 
   // ==========================================================================

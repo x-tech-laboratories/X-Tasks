@@ -8,10 +8,10 @@ import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
-import { next_schedule } from './schedule'
+import { format_task_date, next_schedule, parse_task_date } from './schedule'
 import {
-  by_position, launch_view, move_for_drop, nest_tasks, position_for_drop, subtree_ids, tag_ids_for_new_task, task_is_in_view, view_title,
-  view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
+  by_position, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, subtree_ids,
+  tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
 
 // ============================================================================
@@ -39,6 +39,7 @@ export function App() {
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
   const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
+  const [today, set_today] = useState(() => format_task_date(new Date(), false))
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then(set_tasks)
@@ -48,6 +49,12 @@ export function App() {
       set_selected_view(launch_view(loaded_settings, loaded_tags))
       set_settings(loaded_settings)
     })
+  }, [])
+
+  // Checks the date every minute, so My Day clears itself at midnight while the app is open.
+  useEffect(() => {
+    const timer = window.setInterval(() => set_today(format_task_date(new Date(), false)), 60 * 1000)
+    return () => window.clearInterval(timer)
   }, [])
 
   // ==========================================================================
@@ -88,14 +95,14 @@ export function App() {
     const title = new_title.trim()
     if (!title) return
 
-    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view))
+    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view), my_day_for_new_task(selected_view, today))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_new_title('')
   }
 
   // A subtask shows wherever its parent does, so it needs no tags of its own.
   async function add_subtask(parent: Task, title: string): Promise<void> {
-    const added_task = await window.x_tasks.add_task(title, parent.id, [])
+    const added_task = await window.x_tasks.add_task(title, parent.id, [], null)
     set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
@@ -127,6 +134,16 @@ export function App() {
 
     set_tasks((current_tasks) => current_tasks.map((each) => (changed_ids.has(each.id) ? { ...each, is_done, done_at } : each)))
     for (const id of changed_ids) void window.x_tasks.set_task_done(id, done_at)
+  }
+
+  function set_task_my_day(task: Task, my_day_on: string | null): void {
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, my_day_on } : each)))
+    void window.x_tasks.set_task_my_day(task.id, my_day_on)
+  }
+
+  // Takes every task out of My Day, including ones left from earlier days.
+  function clear_my_day(): void {
+    for (const task of tasks) if (task.my_day_on !== null) set_task_my_day(task, null)
   }
 
   function rename_task(task: Task, title: string): void {
@@ -259,7 +276,8 @@ export function App() {
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
-  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags))
+  const shown_since = my_day_since(settings, today)
+  const visible_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since))
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
   const task_tree = nest_tasks(visible_tasks, tasks)
 
@@ -278,6 +296,8 @@ export function App() {
     on_context_menu: open_context_menu,
     on_toggle: toggle_task,
     on_reschedule: (task) => set_rescheduling_task_id(task.id),
+    is_in_my_day: (task) => is_in_my_day(task, shown_since),
+    on_set_my_day: (task, is_added) => set_task_my_day(task, is_added ? today : null),
     on_remove: remove_task,
     on_add_subtask: add_subtask,
     on_untag: untag_task,
@@ -293,6 +313,7 @@ export function App() {
         tasks={tasks}
         tag_groups={tag_groups}
         tags={tags}
+        my_day_since={shown_since}
         selected_view={is_settings_open ? null : selected_view}
         is_settings_open={is_settings_open}
         dragged_task={dragged_task}
@@ -316,7 +337,17 @@ export function App() {
           <>
             <header class="task_pane_header">
               <h1>{view_title(selected_view, tags)}</h1>
+              {selected_view.kind === 'my_day' && (
+                <span class="my_day_date">
+                  {parse_task_date(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                </span>
+              )}
               <span class="remaining_count">{remaining_count} left</span>
+              {selected_view.kind === 'my_day' && visible_tasks.length > 0 && (
+                <button class="clear_my_day_button" onClick={clear_my_day}>
+                  Clear
+                </button>
+              )}
               <div class="segmented_control" role="radiogroup" aria-label="Layout">
                 {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
                   <button
@@ -370,6 +401,8 @@ export function App() {
           on_untag={untag_task}
           on_set_schedule={set_task_schedule}
           on_reschedule={(task) => set_rescheduling_task_id(task.id)}
+          is_in_my_day={is_in_my_day(selected_task, shown_since)}
+          on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
           on_remove={remove_task}
           on_close={() => set_selected_task_id(null)}
         />

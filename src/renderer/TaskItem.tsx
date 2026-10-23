@@ -35,6 +35,8 @@ export interface TaskActions {
   on_context_menu: OpenContextMenu
   on_toggle: (task: Task) => void
   on_reschedule: (task: Task) => void
+  is_in_my_day: (task: Task) => boolean
+  on_set_my_day: (task: Task, is_added: boolean) => void
   on_remove: (task: Task) => void
   on_add_subtask: (parent: Task, title: string) => void
   on_untag: (task: Task, tag: Tag) => void
@@ -128,6 +130,9 @@ export function TaskItem({ node, actions }: TaskItemProps) {
       ...(actions.can_add_subtasks ? [{ label: 'Add subtask', on_select: () => set_is_adding_subtask(true) }] : []),
       { label: task.is_done ? 'Mark as not done' : 'Mark as done', on_select: () => actions.on_toggle(task) },
       { label: 'Reschedule…', on_select: () => actions.on_reschedule(task) },
+      actions.is_in_my_day(task)
+        ? { label: 'Remove from My Day', on_select: () => actions.on_set_my_day(task, false) }
+        : { label: 'Add to My Day', on_select: () => actions.on_set_my_day(task, true) },
       { label: 'Delete', on_select: () => actions.on_remove(task), is_danger: true }
     ])
   }
@@ -168,6 +173,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         />
         <span class="task_cell title_cell">
           <span class="task_title">{task.title}</span>
+          {actions.is_in_my_day(task) && <span class="notes_marker" title="In My Day">☀</span>}
           {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
           {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
         </span>

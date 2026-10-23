@@ -7,7 +7,7 @@ import type { View } from './tasks'
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
 // The view the app opens on, where 'last' means the one shown when it was closed.
-export type LaunchView = 'last' | 'all' | 'active' | 'completed'
+export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed'
 
 // How the center pane shows tasks: a plain list, or a table with aligned columns.
 export type TaskLayout = 'list' | 'table'
@@ -33,6 +33,8 @@ export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
   confirm_tag_removal: boolean
+  // When set, My Day starts empty each day; otherwise tasks stay in it until taken out.
+  auto_clear_my_day: boolean
   priority_scale: PriorityScale
   task_layout: TaskLayout
   reschedule_options: RescheduleOption[]
@@ -43,6 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   launch_view: 'last',
   confirm_tag_removal: true,
+  auto_clear_my_day: true,
   priority_scale: 'high_medium_low',
   task_layout: 'list',
   reschedule_options: [
