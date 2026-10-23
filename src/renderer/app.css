@@ -350,10 +350,8 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .sidebar_count { color: var(--text-tertiary); font-size: var(--text-caption); }
 
 .sidebar_list_row { display: flex; align-items: center; gap: var(--space-1); }
-.sidebar_list_row .remove_button,
-.sidebar_list_row .row_button { visibility: hidden; flex: none; }
+.sidebar_list_row .remove_button { visibility: hidden; flex: none; }
 .sidebar_list_row:hover .remove_button,
-.sidebar_list_row:hover .row_button,
-.sidebar_list_row button:focus-visible { visibility: visible; }
+.sidebar_list_row .remove_button:focus-visible { visibility: visible; }
 
 .new_list_form input { width: 100%; margin-top: var(--space-4); }

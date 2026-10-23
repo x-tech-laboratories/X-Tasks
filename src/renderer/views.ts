@@ -27,14 +27,13 @@ export function is_same_view(first: View, second: View): boolean {
   return first.kind === second.kind
 }
 
-// A list view also shows the tasks of every list nested under it.
-export function task_is_in_view(task: Task, view: View, task_lists: TaskList[]): boolean {
+export function task_is_in_view(task: Task, view: View): boolean {
   switch (view.kind) {
     case 'all': return true
     case 'active': return !task.is_done
     case 'completed': return task.is_done
     case 'inbox': return task.list_id === null
-    case 'list': return task.list_id !== null && list_subtree_ids(view.list_id, task_lists).has(task.list_id)
+    case 'list': return task.list_id === view.list_id
   }
 }
 
@@ -89,23 +88,4 @@ export function task_with_descendant_ids(task_id: string, all_tasks: Task[]): Se
   }
 
   return ids
-}
-
-// ============================================================================
-// List tree
-// ============================================================================
-
-export function child_lists(parent_id: string | null, task_lists: TaskList[]): TaskList[] {
-  return task_lists.filter((task_list) => task_list.parent_id === parent_id)
-}
-
-// The list itself plus every list below it, at any depth.
-export function list_subtree_ids(list_id: string, task_lists: TaskList[]): Set<string> {
-  const subtree_ids = new Set([list_id])
-
-  for (const subtree_id of subtree_ids) {
-    for (const child of child_lists(subtree_id, task_lists)) subtree_ids.add(child.id)
-  }
-
-  return subtree_ids
 }
