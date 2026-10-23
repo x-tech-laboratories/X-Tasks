@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import type { LaunchView, PriorityScale, RescheduleOption, Settings, ThemeChoice } from '@shared/settings'
+import type { DatabaseBackup, LaunchView, PriorityScale, RescheduleOption, Settings, ThemeChoice } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
 import { rule_format } from './schedule'
 
@@ -174,6 +174,11 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>
         </div>
       </section>
+
+      <section class="settings_group">
+        <h2 class="settings_heading">Backups</h2>
+        <BackupsEditor />
+      </section>
     </>
   )
 }
@@ -272,6 +277,84 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
           on_close={() => set_picking_rule_id(null)}
         />
       )}
+    </>
+  )
+}
+
+// ============================================================================
+// Backups
+// ============================================================================
+
+function format_size(size_bytes: number): string {
+  if (size_bytes < 1024 * 1024) return `${Math.max(1, Math.round(size_bytes / 1024))} KB`
+  return `${(size_bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function format_taken_at(taken_at: string): string {
+  return new Date(taken_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })
+}
+
+// Saved copies of the database, newest first, each of which can be restored or deleted.
+function BackupsEditor() {
+  const [backups, set_backups] = useState<DatabaseBackup[]>([])
+
+  async function refresh(): Promise<void> {
+    set_backups(await window.x_settings.list_backups())
+  }
+
+  useEffect(() => {
+    void refresh()
+  }, [])
+
+  async function create(): Promise<void> {
+    await window.x_settings.create_backup()
+    await refresh()
+  }
+
+  // Every task, tag and setting comes from the restored copy, so the whole page is loaded again.
+  async function restore(backup: DatabaseBackup): Promise<void> {
+    const is_confirmed = window.confirm(
+      `Replace all current tasks, tags and settings with the backup from ${format_taken_at(backup.taken_at)}? ` +
+        'The current data is backed up first.'
+    )
+    if (!is_confirmed) return
+
+    await window.x_settings.restore_backup(backup.name)
+    window.location.reload()
+  }
+
+  async function remove(backup: DatabaseBackup): Promise<void> {
+    if (!window.confirm(`Delete the backup from ${format_taken_at(backup.taken_at)}?`)) return
+
+    await window.x_settings.remove_backup(backup.name)
+    await refresh()
+  }
+
+  return (
+    <>
+      <div class="setting_row">
+        <div class="setting_text">
+          <span class="setting_label">Back up now</span>
+          <span class="setting_hint">Saves a copy of every task, tag and setting, named by the time it was taken.</span>
+        </div>
+        <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>
+        <button onClick={() => void create()}>Back up</button>
+      </div>
+
+      {backups.length === 0 && <p class="setting_hint backup_empty">No backups yet.</p>}
+
+      {backups.map((backup) => (
+        <div key={backup.name} class="setting_row backup_row">
+          <div class="setting_text">
+            <span class="setting_label">{format_taken_at(backup.taken_at)}</span>
+            <span class="setting_hint">{format_size(backup.size_bytes)}</span>
+          </div>
+          <button onClick={() => void restore(backup)}>Restore</button>
+          <button class="remove_button" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>
+            ×
+          </button>
+        </div>
+      ))}
     </>
   )
 }

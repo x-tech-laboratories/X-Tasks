@@ -682,6 +682,9 @@ select:hover { border-color: var(--border-focus); }
 
 .reschedule_add { margin-top: var(--space-4); }
 
+.backup_row { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
+.backup_empty { margin: var(--space-4) 0 0; }
+
 /* ========================================================================== */
 /* Recurrence picker                                                          */
 /* ========================================================================== */

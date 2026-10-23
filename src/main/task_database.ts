@@ -151,6 +151,11 @@ export function close_task_database(): void {
   database = undefined
 }
 
+// Writes a complete, consistent copy of the open database to a new file.
+export function back_up_task_database(backup_path: string): void {
+  open_database().prepare('VACUUM INTO ?').run(backup_path)
+}
+
 function open_database(): DatabaseSync {
   if (!database) throw new Error('task database is not open')
   return database

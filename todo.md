@@ -32,6 +32,7 @@
 - [x] Remember the selected view between launches
 - [ ] Show an error when a database call fails instead of leaving the screen out of step
 - [x] Dark theme that follows the system, or a fixed light or dark choice
+- [x] Back up the database, and list, restore and delete backups in settings
 - [ ] Export and import tasks as JSON
 - [ ] Package the app with the Nix flake
 

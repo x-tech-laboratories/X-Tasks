@@ -2,13 +2,15 @@ import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 
 import {
-  GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, SET_SETTING_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type Settings
+  CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
+  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, type Settings
 } from '@shared/settings'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TAG_GROUP_SINGLE_CHOICE_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
   SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TaskSchedule
 } from '@shared/tasks'
+import { backup_folder, create_backup, list_backups, remove_backup, restore_backup } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, list_tag_groups, list_tags,
   list_tasks, move_tag, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, set_tag_group_single_choice,
@@ -100,6 +102,16 @@ function register_bridge_handlers(): void {
   })
   ipcMain.handle(GET_DATABASE_PATH_CHANNEL, () => task_database_path())
   ipcMain.handle(SHOW_DATABASE_FOLDER_CHANNEL, () => shell.showItemInFolder(task_database_path()))
+
+  ipcMain.handle(LIST_BACKUPS_CHANNEL, () => list_backups())
+  ipcMain.handle(CREATE_BACKUP_CHANNEL, () => create_backup())
+  // The restored data brings its own settings, so its theme is applied straight away.
+  ipcMain.handle(RESTORE_BACKUP_CHANNEL, (_event, name: string) => {
+    restore_backup(name)
+    nativeTheme.themeSource = get_settings().theme
+  })
+  ipcMain.handle(REMOVE_BACKUP_CHANNEL, (_event, name: string) => remove_backup(name))
+  ipcMain.handle(SHOW_BACKUP_FOLDER_CHANNEL, () => shell.openPath(backup_folder()).then(() => undefined))
 }
 
 // ============================================================================
