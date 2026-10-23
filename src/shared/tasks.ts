@@ -120,7 +120,8 @@ export interface TasksApi {
 
   list_tags: () => Promise<Tag[]>
   add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null) => Promise<Tag>
-  set_tag_rule: (tag_id: string, name: string, rule: TagRule) => Promise<void>
+  // A rule turns the tag into a rule tag and takes it off every task that held it by hand; null makes it a plain tag.
+  update_tag: (tag_id: string, name: string, rule: TagRule | null) => Promise<void>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
 
@@ -149,7 +150,7 @@ export const MOVE_TAG_GROUP_CHANNEL = 'tag-groups:move'
 
 export const LIST_TAGS_CHANNEL = 'tags:list'
 export const ADD_TAG_CHANNEL = 'tags:add'
-export const SET_TAG_RULE_CHANNEL = 'tags:set-rule'
+export const UPDATE_TAG_CHANNEL = 'tags:update'
 export const REMOVE_TAG_CHANNEL = 'tags:remove'
 export const MOVE_TAG_CHANNEL = 'tags:move'
 

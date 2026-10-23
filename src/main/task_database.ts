@@ -424,8 +424,14 @@ export function add_tag(name: string, group_id: string, parent_id: string | null
   return tag
 }
 
-export function set_tag_rule(tag_id: string, name: string, rule: TagRule): void {
-  open_database().prepare('UPDATE tags SET name = ?, rule = ? WHERE id = ?').run(name, JSON.stringify(rule), tag_id)
+// A rule tag is never held by hand, so giving the tag a rule takes it off every task that had it.
+export function update_tag(tag_id: string, name: string, rule: TagRule | null): void {
+  const database = open_database()
+
+  in_transaction(database, () => {
+    database.prepare('UPDATE tags SET name = ?, rule = ? WHERE id = ?').run(name, rule === null ? null : JSON.stringify(rule), tag_id)
+    if (rule !== null) database.prepare('DELETE FROM task_tags WHERE tag_id = ?').run(tag_id)
+  })
 }
 
 // Sub-tags go with it, while its tasks stay and only lose the tags.

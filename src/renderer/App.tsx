@@ -7,7 +7,7 @@ import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
-import { RuleDialog } from './RuleDialog'
+import { FilterDialog } from './FilterDialog'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
@@ -33,8 +33,8 @@ const TASK_LAYOUT_CHOICES: { value: TaskLayout; label: string }[] = [
 // App
 // ============================================================================
 
-// The rule tag open in the rule dialog: an existing one, or a new one about to be added at a spot in a group.
-type RuleEditing = { tag: Tag } | { group_id: string; parent_id: string | null }
+// The tag open in the filter dialog: an existing one, or a new rule tag about to be added at a spot in a group.
+type FilterEditing = { tag: Tag } | { group_id: string; parent_id: string | null }
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
@@ -51,7 +51,7 @@ export function App() {
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
   const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
   const [today, set_today] = useState(() => format_task_date(new Date(), false))
-  const [rule_editing, set_rule_editing] = useState<RuleEditing | null>(null)
+  const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
 
   useEffect(() => {
@@ -298,13 +298,19 @@ export function App() {
     select_view({ kind: 'tag', tag_ids: [added_tag.id] })
   }
 
-  function save_rule_tag(name: string, rule: TagRule): void {
-    if (!rule_editing) return
-    if (!('tag' in rule_editing)) return void add_tag(name, rule_editing.group_id, rule_editing.parent_id, rule)
+  // A tag that becomes a rule leaves every task that held it by hand.
+  function save_filter(name: string, rule: TagRule | null): void {
+    if (!filter_editing) return
+    if (!('tag' in filter_editing)) return void add_tag(name, filter_editing.group_id, filter_editing.parent_id, rule)
 
-    const tag_id = rule_editing.tag.id
+    const tag_id = filter_editing.tag.id
     set_tags((current_tags) => current_tags.map((each) => (each.id === tag_id ? { ...each, name, rule } : each)))
-    void window.x_tasks.set_tag_rule(tag_id, name, rule)
+    if (rule) {
+      set_tasks((current_tasks) =>
+        current_tasks.map((task) => (task.tag_ids.includes(tag_id) ? { ...task, tag_ids: task.tag_ids.filter((id) => id !== tag_id) } : task))
+      )
+    }
+    void window.x_tasks.update_tag(tag_id, name, rule)
   }
 
   function remove_tag(tag: Tag): void {
@@ -419,8 +425,8 @@ export function App() {
         on_set_tag_group_single_choice={set_tag_group_single_choice}
         on_move_tag_group={move_tag_group}
         on_add_tag={add_tag}
-        on_add_rule_tag={(group_id, parent_id) => set_rule_editing({ group_id, parent_id })}
-        on_edit_rule_tag={(tag) => set_rule_editing({ tag })}
+        on_add_rule_tag={(group_id, parent_id) => set_filter_editing({ group_id, parent_id })}
+        on_edit_tag={(tag) => set_filter_editing({ tag })}
         on_remove_tag={remove_tag}
         on_move_tag={move_tag}
         on_tag_task={tag_task}
@@ -564,15 +570,16 @@ export function App() {
         />
       )}
 
-      {rule_editing && (
-        <RuleDialog
-          heading={'tag' in rule_editing ? 'Edit rule tag' : 'New rule tag'}
-          name={'tag' in rule_editing ? rule_editing.tag.name : ''}
-          rule={('tag' in rule_editing && rule_editing.tag.rule) || EMPTY_RULE}
+      {filter_editing && (
+        <FilterDialog
+          heading={'tag' in filter_editing ? 'Edit tag' : 'New rule tag'}
+          name={'tag' in filter_editing ? filter_editing.tag.name : ''}
+          rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
+          tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
           tags={tags}
           tasks={tasks}
-          on_save={save_rule_tag}
-          on_close={() => set_rule_editing(null)}
+          on_save={save_filter}
+          on_close={() => set_filter_editing(null)}
         />
       )}
 

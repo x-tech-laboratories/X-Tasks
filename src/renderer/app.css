@@ -945,6 +945,9 @@ select:hover { border-color: var(--border-focus); }
 
 .rule_dialog { width: min(640px, calc(100vw - 2 * var(--space-7))); }
 
+.filter_type { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
+.filter_type .sidebar_heading { padding: 0; }
+
 .rule_match { display: flex; align-items: center; gap: var(--space-4); margin: var(--space-6) 0 var(--space-4); font-size: var(--text-control); }
 
 .rule_conditions { display: flex; flex-direction: column; gap: var(--space-3); margin: 0 0 var(--space-4); padding: 0; list-style: none; }

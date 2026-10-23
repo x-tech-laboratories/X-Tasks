@@ -18,7 +18,7 @@
 
 ## Tags
 
-- [ ] Rename a tag
+- [x] Rename a tag, and switch it between a plain tag and a rule tag
 - [x] Nest and reorder tags by dragging
 - [x] Pick a tag in several groups at once to see tasks matching all of them, such as Area and Priority
 - [ ] Rename filter groups

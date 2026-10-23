@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 
 import type { DueCondition, RuleCondition, StartCondition, Tag, TagRule, Task } from '@shared/tasks'
-import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
-import { chain_tag_ids_of, tag_path } from './views'
+import { CONDITION_CHOICES, default_condition, EMPTY_RULE, rule_matches, type ConditionKind } from './rules'
+import { chain_tag_ids_of, subtree_ids, tag_path } from './views'
 
 // ============================================================================
 // Choices
@@ -14,6 +14,12 @@ const DUE_CHOICES: { value: DueCondition; label: string }[] = [
   { value: 'within_days', label: 'is within the next' },
   { value: 'any', label: 'is set' },
   { value: 'none', label: 'is not set' }
+]
+
+// A plain tag is given by hand; a rule tag applies itself.
+const TYPE_CHOICES: { value: boolean; label: string }[] = [
+  { value: false, label: 'Plain tag' },
+  { value: true, label: 'Rule' }
 ]
 
 const START_CHOICES: { value: StartCondition; label: string }[] = [
@@ -136,28 +142,37 @@ function ConditionRow({ condition, tags, on_change, on_remove }: ConditionRowPro
 }
 
 // ============================================================================
-// Rule dialog
+// Filter dialog
 // ============================================================================
 
-interface RuleDialogProps {
+interface FilterDialogProps {
   heading: string
   name: string
-  rule: TagRule
+  rule: TagRule | null
+  // The tag being edited, or null for a new one.
+  tag_id: string | null
   tags: Tag[]
   tasks: Task[]
-  on_save: (name: string, rule: TagRule) => void
+  on_save: (name: string, rule: TagRule | null) => void
   on_close: () => void
 }
 
-// Names a rule tag and lists the conditions a task must meet to carry it, with a live count of the tasks it matches.
-export function RuleDialog({ heading, name, rule, tags, tasks, on_save, on_close }: RuleDialogProps) {
+// Names a tag and picks whether it is given by hand or applies itself by a rule, with a live count of the tasks it covers.
+export function FilterDialog({ heading, name, rule, tag_id, tags, tasks, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
-  const [rule_draft, set_rule_draft] = useState(rule)
+  const [is_rule, set_is_rule] = useState(rule !== null)
+  const [rule_draft, set_rule_draft] = useState(rule ?? EMPTY_RULE)
 
   useEffect(() => dialog_ref.current?.showModal(), [])
 
+  // A rule cannot test for its own tag, and other rules can only test for plain tags.
+  const own_ids = tag_id ? subtree_ids(tag_id, tags) : new Set<string>()
+  const condition_tags = tags.filter((tag) => !own_ids.has(tag.id))
+  const rules_using_tag = tag_id ? tags.filter((tag) => tag.rule?.conditions.some((condition) => condition.kind === 'tag' && condition.tag_id === tag_id)) : []
+  const hand_count = tag_id ? tasks.filter((task) => task.tag_ids.includes(tag_id)).length : 0
   const match_count = tasks.filter((task) => rule_matches(rule_draft, task, chain_tag_ids_of(task, tasks), tags)).length
+  const can_be_rule = rule !== null || rules_using_tag.length === 0
 
   function change_condition(index: number, condition: RuleCondition): void {
     set_rule_draft({ ...rule_draft, conditions: rule_draft.conditions.map((each, at) => (at === index ? condition : each)) })
@@ -171,8 +186,14 @@ export function RuleDialog({ heading, name, rule, tags, tasks, on_save, on_close
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
-    on_save(trimmed_name, rule_draft)
+    on_save(trimmed_name, is_rule ? rule_draft : null)
     on_close()
+  }
+
+  function count_text(): string | null {
+    if (is_rule) return match_count === 1 ? '1 task matches' : `${match_count} tasks match`
+    if (!tag_id) return null
+    return hand_count === 1 ? '1 task has this tag' : `${hand_count} tasks have this tag`
   }
 
   // Escape closes only this dialog, not the task panel behind it.
@@ -191,42 +212,75 @@ export function RuleDialog({ heading, name, rule, tags, tasks, on_save, on_close
           <input value={name_draft} onInput={(event) => set_name_draft(event.currentTarget.value)} placeholder="Completed routines" autofocus />
         </label>
 
-        <div class="rule_match">
-          Tasks matching
-          <select
-            value={rule_draft.match}
-            onChange={(event) => set_rule_draft({ ...rule_draft, match: event.currentTarget.value as TagRule['match'] })}
-            aria-label="Match"
-          >
-            <option value="all">all</option>
-            <option value="any">any</option>
-          </select>
-          of these conditions
+        <div class="filter_type">
+          <span class="sidebar_heading">Type</span>
+          <div class="segmented_control" role="radiogroup" aria-label="Type">
+            {TYPE_CHOICES.map(({ value, label }) => (
+              <button
+                key={label}
+                type="button"
+                role="radio"
+                aria-checked={is_rule === value}
+                class={is_rule === value ? 'is_selected' : ''}
+                disabled={value && !can_be_rule}
+                onClick={() => set_is_rule(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <ul class="rule_conditions">
-          {rule_draft.conditions.map((condition, index) => (
-            <ConditionRow
-              key={index}
-              condition={condition}
-              tags={tags}
-              on_change={(changed) => change_condition(index, changed)}
-              on_remove={() => remove_condition(index)}
-            />
-          ))}
-        </ul>
-        {rule_draft.conditions.length === 0 && <p class="setting_hint">With no conditions, every task matches.</p>}
+        {!can_be_rule && (
+          <p class="setting_hint">
+            Stays a plain tag while the rules of {rules_using_tag.map((tag) => tag.name).join(', ')} test for it.
+          </p>
+        )}
+        {!is_rule && <p class="setting_hint">Given to tasks by hand, from their detail panel or by dragging them onto it.</p>}
+        {is_rule && rule === null && hand_count > 0 && (
+          <p class="setting_hint">Saving as a rule takes this tag off the {hand_count === 1 ? 'task' : `${hand_count} tasks`} given it by hand.</p>
+        )}
 
-        <button
-          type="button"
-          class="rule_add"
-          onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', tags)] })}
-        >
-          Add condition
-        </button>
+        {is_rule && (
+          <>
+            <div class="rule_match">
+              Tasks matching
+              <select
+                value={rule_draft.match}
+                onChange={(event) => set_rule_draft({ ...rule_draft, match: event.currentTarget.value as TagRule['match'] })}
+                aria-label="Match"
+              >
+                <option value="all">all</option>
+                <option value="any">any</option>
+              </select>
+              of these conditions
+            </div>
+
+            <ul class="rule_conditions">
+              {rule_draft.conditions.map((condition, index) => (
+                <ConditionRow
+                  key={index}
+                  condition={condition}
+                  tags={condition_tags}
+                  on_change={(changed) => change_condition(index, changed)}
+                  on_remove={() => remove_condition(index)}
+                />
+              ))}
+            </ul>
+            {rule_draft.conditions.length === 0 && <p class="setting_hint">With no conditions, every task matches.</p>}
+
+            <button
+              type="button"
+              class="rule_add"
+              onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags)] })}
+            >
+              Add condition
+            </button>
+          </>
+        )}
 
         <footer class="recurrence_dialog_footer">
-          <span class="rule_count">{match_count === 1 ? '1 task matches' : `${match_count} tasks match`}</span>
+          <span class="rule_count">{count_text()}</span>
           <button type="button" onClick={on_close}>
             Cancel
           </button>
