@@ -347,7 +347,7 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-7);
+  gap: var(--space-5);
   overflow-y: auto;
   padding: var(--space-6) var(--space-4);
   border-right: 1px solid var(--border-default);
@@ -355,6 +355,7 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 }
 
 .sidebar_brand {
+  margin-bottom: var(--space-5);
   padding: 0 var(--space-4);
   color: var(--text-heading);
   font-size: var(--text-h3);
@@ -362,6 +363,9 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 }
 
 .sidebar_section { display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* A thin rule sits between each list and the one above it. */
+.sidebar_section + .sidebar_section { padding-top: var(--space-5); border-top: 1px solid var(--border-default); }
 
 .sidebar_heading {
   margin: 0 0 var(--space-2);
