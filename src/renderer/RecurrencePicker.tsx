@@ -3,8 +3,6 @@ import type { HTMLAttributes } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
 import type { RecurrenceInputElement } from 'recurrence-input'
 
-import { has_time } from '@shared/schedule'
-
 declare module 'preact' {
   namespace JSX {
     interface IntrinsicElements {
@@ -30,6 +28,7 @@ interface RecurrencePickerProps {
   on_close: () => void
 }
 
+// Hourly rules and set times stay available for a task without a time, which gets one when the rule is saved.
 // The picker's form refuses to submit while the rule has a field it cannot read.
 export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: RecurrencePickerProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
@@ -58,7 +57,6 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
           value={recurrence}
           features="standard"
           time-mode="floating"
-          all-day={anchor === null || !has_time(anchor)}
           start={anchor ?? undefined}
         />
         <footer class="recurrence_dialog_footer">

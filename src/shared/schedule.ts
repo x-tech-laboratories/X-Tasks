@@ -1,4 +1,4 @@
-import { describe_rule, next_from_now, next_occurrence, type RuleFormat } from 'recurrence-input'
+import { describe_rule, next_from_now, next_occurrence, parse_rule, type RuleFormat } from 'recurrence-input'
 
 import { DURATION_UNITS, type RescheduleOption, type TaskDateField, type TaskDuration } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
@@ -109,6 +109,9 @@ export function recurrence_anchor(schedule: TaskSchedule): string | null {
   return schedule.due_at ?? schedule.start_at
 }
 
+// rrule numbers frequencies from YEARLY at 0, so HOURLY and everything shorter is 4 or more.
+const HOURLY_FREQUENCY = 4
+
 // Rules use local clock times, and plain dates when the anchor has no time.
 export function rule_format(anchor: string | null): RuleFormat {
   return { time_mode: 'floating', all_day: anchor === null || !has_time(anchor) }
@@ -117,6 +120,33 @@ export function rule_format(anchor: string | null): RuleFormat {
 export function describe_recurrence(schedule: TaskSchedule): string {
   if (!schedule.recurrence) return 'Does not repeat'
   return describe_rule(schedule.recurrence, rule_format(recurrence_anchor(schedule))) || 'Custom rule'
+}
+
+// The clock time a rule sets, such as 09:30 for BYHOUR=9;BYMINUTE=30, or null when it repeats on whole days.
+function rule_time(recurrence: string, now: Date): { hours: number; minutes: number } | null {
+  let options: ReturnType<typeof parse_rule>
+  try {
+    options = parse_rule(recurrence)
+  } catch {
+    return null
+  }
+  const is_sub_daily = options.freq !== undefined && options.freq >= HOURLY_FREQUENCY
+  const hours = options.byhour?.[0]
+  const minutes = options.byminute?.[0]
+  if (!is_sub_daily && hours === undefined && minutes === undefined) return null
+  return { hours: hours ?? now.getHours(), minutes: minutes ?? (hours === undefined ? now.getMinutes() : 0) }
+}
+
+// Sets the rule, and gives the anchor a time when the rule repeats by the hour or at set times and the anchor has none.
+export function with_recurrence(schedule: TaskSchedule, recurrence: string, now = new Date()): TaskSchedule {
+  const anchor = recurrence_anchor(schedule)
+  const time = recurrence ? rule_time(recurrence, now) : null
+  if (time === null || (anchor !== null && has_time(anchor))) return { ...schedule, recurrence }
+
+  const day = anchor === null ? now : parse_task_date(anchor)
+  const timed_anchor = format_task_date(new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.hours, time.minutes), true)
+  if (schedule.due_at === null && schedule.start_at !== null) return { ...schedule, start_at: timed_anchor, recurrence }
+  return { ...schedule, due_at: timed_anchor, recurrence }
 }
 
 // The date rescheduling moves: the chosen date, or the other one when the task lacks it.

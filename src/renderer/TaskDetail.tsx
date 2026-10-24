@@ -6,7 +6,8 @@ import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
 import type { TaskDuration } from '@shared/settings'
 import {
-  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor
+  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor,
+  with_recurrence
 } from '@shared/schedule'
 import { children_of, tag_path } from './views'
 
@@ -220,7 +221,7 @@ export function TaskDetail({
         <RecurrencePicker
           recurrence={task.recurrence}
           anchor={recurrence_anchor(schedule)}
-          on_save={(recurrence) => on_set_schedule(task, { ...schedule, recurrence })}
+          on_save={(recurrence) => on_set_schedule(task, with_recurrence(schedule, recurrence))}
           on_close={() => set_is_picking_recurrence(false)}
         />
       )}
