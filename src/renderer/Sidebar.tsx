@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 
 import type { Tag, TagGroup, Task } from '@shared/tasks'
+import type { TagScope } from '@shared/settings'
 import type { OpenContextMenu } from './ContextMenu'
 import {
   BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, is_tag_selected, subtree_ids, tag_color_style, task_is_in_view, type DropPlacement,
@@ -18,6 +19,8 @@ interface SidebarProps {
   // The earliest day whose My Day tasks still count.
   my_day_since: string
   selected_view: View | null
+  // Whether a tag's count takes in the tasks of the tags inside it.
+  tag_scope: TagScope
   is_settings_open: boolean
   dragged_task: Task | null
   // The ids of the tag groups and tags folded shut.
@@ -54,7 +57,7 @@ interface NewTagSpot {
 }
 
 export function Sidebar({
-  tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag, on_open_settings,
+  tasks, tag_groups, tags, my_day_since, selected_view, tag_scope, is_settings_open, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag, on_open_settings,
   on_edit_tag_group, on_remove_tag_group, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
@@ -65,7 +68,7 @@ export function Sidebar({
   const [group_drop_target, set_group_drop_target] = useState<{ group_id: string; placement: SidePlacement } | null>(null)
 
   function open_count(view: View): number {
-    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags, my_day_since)).length
+    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags, my_day_since, 'all', tag_scope)).length
   }
 
   // ==========================================================================

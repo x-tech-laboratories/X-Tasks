@@ -410,7 +410,7 @@ export function App() {
   const shown_since = my_day_since(settings, today)
   const search_text = multibar_text.trim().toLowerCase()
   const is_searching = search_text !== ''
-  const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match))
+  const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match, settings.tag_scope))
   const searched_tasks = settings.search_scope === 'all' ? tasks : view_tasks
   const visible_tasks = is_searching ? searched_tasks.filter((task) => task_matches_search(task, search_text)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
@@ -506,6 +506,7 @@ export function App() {
           tag_groups={tag_groups}
           tags={tags}
           my_day_since={shown_since}
+          tag_scope={settings.tag_scope}
           selected_view={is_settings_open ? null : selected_view}
           is_settings_open={is_settings_open}
           dragged_task={dragged_task}

@@ -27,6 +27,9 @@ export type TagSelection = 'single' | 'one_per_group' | 'many'
 // Whether a task must match every selected tag or just one of them.
 export type TagMatch = 'all' | 'any'
 
+// Whether selecting a tag shows the tasks of the tags inside it too, or only its own.
+export type TagScope = 'subtags' | 'own'
+
 // Whether the multibar searches only the view on screen or every task.
 export type SearchScope = 'view' | 'all'
 
@@ -109,6 +112,7 @@ export interface Settings {
   priority_scale: PriorityScale
   tag_selection: TagSelection
   tag_match: TagMatch
+  tag_scope: TagScope
   search_scope: SearchScope
   task_layout: TaskLayout
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
@@ -158,6 +162,7 @@ export const DEFAULT_SETTINGS: Settings = {
   priority_scale: 'high_medium_low',
   tag_selection: 'one_per_group',
   tag_match: 'all',
+  tag_scope: 'subtags',
   search_scope: 'view',
   task_layout: 'list',
   table_sort: [],

@@ -1,4 +1,4 @@
-import type { Settings, TagMatch, TagSelection, TaskDateField } from '@shared/settings'
+import type { Settings, TagMatch, TagScope, TagSelection, TaskDateField } from '@shared/settings'
 import { PRIORITY_GROUP_ID, type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
 import { task_date_of } from '@shared/schedule'
 import { rule_matches } from './rules'
@@ -45,8 +45,10 @@ export function view_with_tag_toggled(view: View, tag: Tag, tags: Tag[], selecti
   return tag_ids.length > 0 ? { kind: 'tag', tag_ids } : { kind: 'all' }
 }
 
-// A task matches every selected tag, or at least one, through the tag itself or any tag below it; subtasks follow their parent into My Day.
-export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string, tag_match: TagMatch = 'all'): boolean {
+// A task matches every selected tag, or at least one, through the tag itself or, unless scoped to its own, any tag below it; subtasks follow their parent into My Day.
+export function task_is_in_view(
+  task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string, tag_match: TagMatch = 'all', tag_scope: TagScope = 'subtags'
+): boolean {
   switch (view.kind) {
     case 'my_day': return task_and_ancestors(task, all_tasks).some((each) => is_in_my_day(each, my_day_since))
     case 'all': return true
@@ -55,7 +57,8 @@ export function task_is_in_view(task: Task, view: View, all_tasks: Task[], tags:
     case 'reports': return false
     case 'tag': {
       const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
-      const matches = (tag_id: string) => [...subtree_ids(tag_id, tags)].some((id) => task_has_tag(task, id, chain_tag_ids, tags))
+      const matched_ids = (tag_id: string) => (tag_scope === 'own' ? [tag_id] : [...subtree_ids(tag_id, tags)])
+      const matches = (tag_id: string) => matched_ids(tag_id).some((id) => task_has_tag(task, id, chain_tag_ids, tags))
       return tag_match === 'any' ? view.tag_ids.some(matches) : view.tag_ids.every(matches)
     }
   }
