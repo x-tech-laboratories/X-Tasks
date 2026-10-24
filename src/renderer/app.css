@@ -971,6 +971,37 @@ select:hover { border-color: var(--border-focus); }
 .tree_select selectedcontent .tree_option_path { display: inline; }
 
 /* ========================================================================== */
+/* Undo bar                                                                   */
+/* ========================================================================== */
+
+/* Sits at the foot of the window after a removal, until it is undone or times out. */
+.undo_bar {
+  position: fixed;
+  z-index: 10;
+  bottom: var(--space-5);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: calc(100vw - 32px);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-default);
+  box-shadow: var(--shadow-card);
+  transform: translateX(-50%);
+}
+
+.undo_message {
+  overflow: hidden;
+  color: var(--text-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.undo_button { flex: none; color: var(--accent); }
+
+/* ========================================================================== */
 /* Context menu                                                               */
 /* ========================================================================== */
 

@@ -14,7 +14,7 @@
 - [x] Subtasks
 - [x] Reorder tasks by dragging
 - [x] Clear all completed tasks in a view
-- [ ] Undo after removing a task
+- [x] Undo after removing a task
 
 ## Tags
 

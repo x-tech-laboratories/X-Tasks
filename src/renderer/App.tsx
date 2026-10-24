@@ -1,5 +1,5 @@
 import { Fragment } from 'preact'
-import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
@@ -36,12 +36,18 @@ const TASK_LAYOUT_CHOICES: { value: TaskLayout; label: string }[] = [
 // A phone's keyboard covers half the screen, so the search box only takes focus at launch where there is a mouse.
 const IS_TOUCH_SCREEN = window.matchMedia('(pointer: coarse)').matches
 
+// Removed tasks wait this long before the database deletes them, so the removal can be undone.
+const UNDO_DELAY_MS = 8000
+
 // ============================================================================
 // App
 // ============================================================================
 
 // The tag open in the filter dialog: an existing one, or a new rule tag about to be added at a spot in a group.
 type FilterEditing = { tag: Tag } | { group_id: string; parent_id: string | null }
+
+// Tasks taken off the screen but not yet deleted: the ones removed, everything under them, and the timer that deletes them.
+type PendingRemoval = { root_ids: string[]; tasks: Task[]; timer: number }
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
@@ -63,10 +69,18 @@ export function App() {
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
   const [editing_group, set_editing_group] = useState<TagGroup | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
+  const [undo_message, set_undo_message] = useState<string | null>(null)
+  const pending_removal = useRef<PendingRemoval | null>(null)
+
+  // Tasks waiting to be deleted stay hidden when the list is fetched again.
+  function without_pending(loaded_tasks: Task[]): Task[] {
+    const pending_ids = new Set(pending_removal.current?.tasks.map((task) => task.id))
+    return loaded_tasks.filter((task) => !pending_ids.has(task.id))
+  }
 
   useEffect(() => {
     void window.x_tasks.list_tasks().then((loaded_tasks) => {
-      set_tasks(loaded_tasks)
+      set_tasks(without_pending(loaded_tasks))
       set_has_loaded_tasks(true)
     })
     void window.x_tasks.list_completions().then(set_completions)
@@ -83,7 +97,7 @@ export function App() {
   useEffect(
     () =>
       window.x_tasks.on_database_changed(() => {
-        void window.x_tasks.list_tasks().then(set_tasks)
+        void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
         void window.x_tasks.list_completions().then(set_completions)
         void window.x_tasks.list_tag_groups().then(set_tag_groups)
         void window.x_tasks.list_tags().then(set_tags)
@@ -104,6 +118,23 @@ export function App() {
     for (const task of tasks) if (is_due_by(task, today, settings.task_date_field) && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
     void change_setting('due_added_to_my_day_on', today)
   }, [has_loaded_tasks, settings?.add_due_to_my_day, today])
+
+  // Closing the app deletes any tasks still waiting, and Ctrl+Z outside a text field undoes the last removal.
+  useEffect(() => {
+    const undo_on_shortcut = (event: KeyboardEvent): void => {
+      const is_typing = event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(event.target.tagName))
+      if (!is_typing && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z' && pending_removal.current) {
+        event.preventDefault()
+        undo_removal()
+      }
+    }
+    window.addEventListener('keydown', undo_on_shortcut)
+    window.addEventListener('beforeunload', finish_removal)
+    return () => {
+      window.removeEventListener('keydown', undo_on_shortcut)
+      window.removeEventListener('beforeunload', finish_removal)
+    }
+  }, [])
 
   // ==========================================================================
   // Navigation and settings
@@ -136,7 +167,7 @@ export function App() {
 
     if (key === 'priority_scale') {
       set_tags(await window.x_tasks.list_tags())
-      set_tasks(await window.x_tasks.list_tasks())
+      set_tasks(without_pending(await window.x_tasks.list_tasks()))
     }
   }
 
@@ -246,20 +277,48 @@ export function App() {
     void window.x_tasks.set_task_notes(task.id, notes)
   }
 
-  // The database removes subtasks along with their parent, so the screen drops them too.
   function remove_task(task: Task): void {
-    set_tasks((current_tasks) => {
-      const removed_ids = subtree_ids(task.id, current_tasks)
-      return current_tasks.filter((each) => !removed_ids.has(each.id))
-    })
-    void window.x_tasks.remove_task(task.id)
+    remove_tasks([task])
+  }
+
+  // Takes tasks and their subtasks off the screen at once, and deletes them only once the chance to undo has passed.
+  function remove_tasks(removed_tasks: Task[]): void {
+    finish_removal()
+    const removed_ids = new Set(removed_tasks.flatMap((task) => [...subtree_ids(task.id, tasks)]))
+    pending_removal.current = {
+      root_ids: removed_tasks.map((task) => task.id),
+      tasks: tasks.filter((task) => removed_ids.has(task.id)),
+      timer: window.setTimeout(finish_removal, UNDO_DELAY_MS)
+    }
+    set_tasks((current_tasks) => current_tasks.filter((each) => !removed_ids.has(each.id)))
+    set_undo_message(removed_tasks.length === 1 ? `Deleted "${removed_tasks[0]!.title}"` : `Deleted ${removed_tasks.length} tasks`)
+  }
+
+  // Deletes the waiting tasks from the database; the database removes their subtasks along with them.
+  function finish_removal(): void {
+    const removal = pending_removal.current
+    if (!removal) return
+    pending_removal.current = null
+    window.clearTimeout(removal.timer)
+    for (const task_id of removal.root_ids) void window.x_tasks.remove_task(task_id)
+    set_undo_message(null)
+  }
+
+  // The database never lost the waiting tasks, so fetching the list again puts them back in their places.
+  function undo_removal(): void {
+    const removal = pending_removal.current
+    if (!removal) return
+    pending_removal.current = null
+    window.clearTimeout(removal.timer)
+    void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
+    set_undo_message(null)
   }
 
   // Deletes the completed tasks on screen, after asking, along with their history in the reports.
   function clear_completed(clearable_tasks: Task[]): void {
     const count = clearable_tasks.length
     if (!window.confirm(`Delete ${count} completed ${count === 1 ? 'task' : 'tasks'}? Their ticks leave the reports too.`)) return
-    for (const task of clearable_tasks) remove_task(task)
+    remove_tasks(clearable_tasks)
   }
 
   // A task cannot be dropped onto itself or anything nested under it.
@@ -758,6 +817,15 @@ export function App() {
         )}
 
         {context_menu && <ContextMenu menu={context_menu} on_close={close_context_menu} />}
+
+        {undo_message && (
+          <div class="undo_bar" role="status">
+            <span class="undo_message">{undo_message}</span>
+            <button class="undo_button" onClick={undo_removal}>
+              Undo
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
