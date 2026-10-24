@@ -29,7 +29,7 @@
 
 ## Finding things
 
-- [ ] Search across all tasks
+- [x] Search across all tasks, or only the view on screen, from the bar at the top
 - [x] Filter the task table by title, date and tag, and sort it by several columns at once
 - [x] Show, hide, reorder and resize the task table's columns, including optional start, due and done date columns
 - [ ] Keyboard shortcuts for adding, completing and switching views

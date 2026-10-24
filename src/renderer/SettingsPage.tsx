@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type Settings, type TagMatch, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
 
@@ -44,6 +44,11 @@ const TAG_SELECTION_CHOICES: { value: TagSelection; label: string }[] = [
 const TAG_MATCH_CHOICES: { value: TagMatch; label: string }[] = [
   { value: 'all', label: 'All tags' },
   { value: 'any', label: 'Any tag' }
+]
+
+const SEARCH_SCOPE_CHOICES: { value: SearchScope; label: string }[] = [
+  { value: 'view', label: 'This view' },
+  { value: 'all', label: 'All tasks' }
 ]
 
 // ============================================================================
@@ -236,6 +241,14 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             <span class="setting_hint">Whether a task must have every selected tag, or just one of them, to show.</span>
           </div>
           <SegmentedChoice label="Match tasks with" choices={TAG_MATCH_CHOICES} value={settings.tag_match} on_change={(value) => on_change('tag_match', value)} />
+        </div>
+
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Search</span>
+            <span class="setting_hint">Whether typing in the bar at the top searches only the view on screen, or every task. Enter still adds the task to the view on screen.</span>
+          </div>
+          <SegmentedChoice label="Search" choices={SEARCH_SCOPE_CHOICES} value={settings.search_scope} on_change={(value) => on_change('search_scope', value)} />
         </div>
 
         <div class="setting_row">

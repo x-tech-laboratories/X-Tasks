@@ -410,7 +410,8 @@ export function App() {
   const search_text = multibar_text.trim().toLowerCase()
   const is_searching = search_text !== ''
   const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match))
-  const visible_tasks = is_searching ? view_tasks.filter((task) => task_matches_search(task, search_text)) : view_tasks
+  const searched_tasks = settings.search_scope === 'all' ? tasks : view_tasks
+  const visible_tasks = is_searching ? searched_tasks.filter((task) => task_matches_search(task, search_text)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
 
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
@@ -484,7 +485,7 @@ export function App() {
           value={multibar_text}
           onInput={(event) => change_multibar_text(event.currentTarget.value)}
           onKeyDown={(event) => event.key === 'Escape' && set_multibar_text('')}
-          placeholder={can_add_task ? 'Search, or press Enter to add a task' : 'Search completed tasks'}
+          placeholder={can_add_task ? 'Search, or press Enter to add a task' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
           aria-label="Search or add a task"
           autofocus
         />
