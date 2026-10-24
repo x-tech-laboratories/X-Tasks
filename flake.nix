@@ -53,7 +53,8 @@
             runHook preInstall
             npm prune --omit=dev --ignore-scripts
             mkdir -p $out/lib/x-tasks
-            cp -r out package.json node_modules $out/lib/x-tasks/
+            cp -r out resources package.json node_modules $out/lib/x-tasks/
+            install -Dm644 resources/icon.svg $out/share/icons/hicolor/scalable/apps/x-tasks.svg
             makeWrapper ${electron}/bin/electron $out/bin/x-tasks \
               --add-flags $out/lib/x-tasks \
               --unset ELECTRON_RUN_AS_NODE
@@ -66,7 +67,7 @@
               desktopName = "X-Tasks";
               comment = "Todo manager";
               exec = "x-tasks %U";
-              icon = "checkbox-checked";
+              icon = "x-tasks";
               categories = [ "Office" "ProjectManagement" ];
             })
           ];

@@ -36,6 +36,8 @@ function create_main_window(): BrowserWindow {
     minHeight: 400,
     show: false,
     title: 'X-Tasks',
+    // The built app sits in out/main, and resources/ beside out/ both in the source tree and in the package.
+    icon: join(__dirname, '../../resources/icon.png'),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1115' : '#f5f6f8',
     webPreferences: {
       // electron-vite emits an ESM preload as .mjs; loading .js here silently yields no bridge.

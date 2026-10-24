@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- A tick cut out of the X-Tech hexagon, at the same margin and weight as X-Monitor's speedometer; one path, so Android's vector icons can draw it too. -->
+  <title>X-Tasks</title>
+  <path fill="#0088ff" fill-rule="evenodd" d="M16.5 5.153 1 32 16.5 58.848 47.5 58.848 63 32 47.5 5.153Z M42.406 21.801A2.7 2.7 0 0 1 44.342 22.525 2.7 2.7 0 0 1 44.475 26.342L30.475 41.342A2.7 2.7 0 0 1 26.59 41.41L19.59 34.41A2.7 2.7 0 0 1 19.59 30.59 2.7 2.7 0 0 1 23.41 30.59L28.434 35.613 40.525 22.658A2.7 2.7 0 0 1 42.406 21.801Z"/>
+</svg>

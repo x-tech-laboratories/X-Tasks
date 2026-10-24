@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
+import { BACK_EVENT } from './back_navigation'
 import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
@@ -154,6 +155,23 @@ export function App() {
   }
 
   const close_context_menu = useCallback(() => set_context_menu(null), [])
+
+  // The phone's Back button closes whatever sits on top, from a menu down to Settings, as Android apps do.
+  useEffect(() => {
+    const step_back = (event: Event): void => {
+      if (context_menu) set_context_menu(null)
+      else if (rescheduling_task_id) set_rescheduling_task_id(null)
+      else if (filter_editing) set_filter_editing(null)
+      else if (editing_group) set_editing_group(null)
+      else if (selected_task_id) set_selected_task_id(null)
+      else if (is_sidebar_open) set_is_sidebar_open(false)
+      else if (is_settings_open) set_is_settings_open(false)
+      else return
+      event.preventDefault()
+    }
+    window.addEventListener(BACK_EVENT, step_back)
+    return () => window.removeEventListener(BACK_EVENT, step_back)
+  }, [context_menu, rescheduling_task_id, filter_editing, editing_group, selected_task_id, is_sidebar_open, is_settings_open])
 
   // Changes a setting on screen only, as a panel does while its edge is being dragged.
   function show_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {

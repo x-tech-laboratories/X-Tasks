@@ -87,7 +87,8 @@ npm run build:android   # builds the page and copies it into android/
 cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Android only allows https, so the server must sit behind TLS. The phone keeps no backups of its
+Android only allows https, so the server must sit behind TLS; plain http works only to `localhost`,
+for testing through `adb reverse tcp:3918 tcp:3918`. The phone keeps no backups of its
 own; before it takes the server's tasks it saves its old ones in the app's storage.
 
 ## Layout

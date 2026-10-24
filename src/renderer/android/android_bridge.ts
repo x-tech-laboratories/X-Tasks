@@ -8,6 +8,7 @@ import {
   move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, set_setting, set_task_done, set_task_my_day, set_task_notes,
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group
 } from '../../main/task_database'
+import { request_back } from '../back_navigation'
 import { BEFORE_SYNC_FILE, open_wasm_database, write_file } from './wasm_database'
 
 // ============================================================================
@@ -114,4 +115,9 @@ export async function install_android_bridge(): Promise<void> {
   // Android can stop a paused app at any time, so the database is saved as it goes to the background, and syncs as it comes back.
   void App.addListener('pause', () => void database.save_now())
   void App.addListener('resume', () => void sync_now())
+
+  // With nothing left to close, Back sends the app to the background rather than closing it.
+  void App.addListener('backButton', () => {
+    if (!request_back()) void App.minimizeApp()
+  })
 }
