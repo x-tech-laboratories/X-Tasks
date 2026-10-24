@@ -963,6 +963,8 @@ select:hover { border-color: var(--border-focus); }
 .recurrence-input__row-label { width: 64px; color: var(--text-secondary); font-size: var(--text-control); }
 .recurrence-input__controls { gap: var(--space-3); }
 .recurrence-input__number { width: 72px; }
+/* Task dates stop at minutes, so the picker offers no secondly rule. */
+.recurrence-input__repeat option[value="SECONDLY"] { display: none; }
 
 .recurrence-input__toggle-label {
   min-width: 40px;
