@@ -665,6 +665,7 @@ export function App() {
             name={'tag' in filter_editing ? filter_editing.tag.name : ''}
             rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
             color={'tag' in filter_editing ? filter_editing.tag.color : null}
+            swatches={settings.tag_colors}
             tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
             tags={tags}
             groups={tag_groups}

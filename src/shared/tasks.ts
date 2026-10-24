@@ -62,9 +62,6 @@ export interface Tag {
   color: string | null
 }
 
-// The swatches offered when picking a tag colour; any other #rrggbb colour can be picked too.
-export const TAG_COLORS = ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#db2777', '#64748b']
-
 // ============================================================================
 // Tag rule
 // ============================================================================

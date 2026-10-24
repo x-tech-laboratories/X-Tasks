@@ -123,6 +123,8 @@ export interface Settings {
   reschedule_options: RescheduleOption[]
   // The gaps offered by the Duration list in a task's details, in the order shown.
   task_durations: TaskDuration[]
+  // The swatches, as #rrggbb, offered when picking a tag colour; any other colour can still be picked.
+  tag_colors: string[]
   last_view: View
   // The tasks whose subtasks are folded away, kept so they stay folded after a restart.
   collapsed_task_ids: string[]
@@ -180,6 +182,7 @@ export const DEFAULT_SETTINGS: Settings = {
     task_duration('1mo', { months: 1 }),
     task_duration('3mo', { months: 3 })
   ],
+  tag_colors: ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#db2777', '#64748b'],
   last_view: { kind: 'all' },
   collapsed_task_ids: [],
   collapsed_sidebar_ids: [],

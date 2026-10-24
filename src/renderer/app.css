@@ -966,6 +966,7 @@ select:hover { border-color: var(--border-focus); }
 .reschedule_option .reschedule_rule { flex: 1; min-width: 0; }
 .reschedule_option .remove_button { flex: none; }
 .reschedule_option .remove_button:disabled { opacity: 0.3; cursor: default; }
+.reschedule_option .tag_color_hex { flex: 1; min-width: 0; font-family: monospace; }
 
 .reschedule_add { margin-top: var(--space-4); }
 

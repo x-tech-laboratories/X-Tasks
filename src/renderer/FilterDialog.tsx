@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 
-import { EMPTY_RULE, TAG_COLORS, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import { EMPTY_RULE, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
 import { chain_tag_ids_of, subtree_ids, tag_path } from './views'
 
@@ -156,7 +156,7 @@ function ConditionRow({ condition, tags, groups, on_change, on_remove }: Conditi
 // ============================================================================
 
 // A row of swatches, a None choice, and the system colour chooser for any other colour.
-function ColorPicker({ color, on_change }: { color: string | null; on_change: (color: string | null) => void }) {
+function ColorPicker({ color, swatches, on_change }: { color: string | null; swatches: string[]; on_change: (color: string | null) => void }) {
   return (
     <div class="tag_color_picker" role="radiogroup" aria-label="Colour">
       <button
@@ -168,7 +168,7 @@ function ColorPicker({ color, on_change }: { color: string | null; on_change: (c
         aria-label="No colour"
         title="No colour"
       />
-      {TAG_COLORS.map((swatch) => (
+      {swatches.map((swatch) => (
         <button
           key={swatch}
           type="button"
@@ -183,7 +183,7 @@ function ColorPicker({ color, on_change }: { color: string | null; on_change: (c
       ))}
       <input
         type="color"
-        class={color !== null && !TAG_COLORS.includes(color) ? 'tag_color_custom is_chosen' : 'tag_color_custom'}
+        class={color !== null && !swatches.includes(color) ? 'tag_color_custom is_chosen' : 'tag_color_custom'}
         value={color ?? '#888888'}
         onInput={(event) => on_change(event.currentTarget.value)}
         aria-label="Other colour"
@@ -203,6 +203,8 @@ interface FilterDialogProps {
   // The tag's rule, or null for a plain tag, which is only named here.
   rule: TagRule | null
   color: string | null
+  // The preset colours offered as swatches.
+  swatches: string[]
   // The tag being edited, or null for a new one.
   tag_id: string | null
   tags: Tag[]
@@ -213,7 +215,7 @@ interface FilterDialogProps {
 }
 
 // Names and colours a tag and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
-export function FilterDialog({ heading, name, rule, color, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
+export function FilterDialog({ heading, name, rule, color, swatches, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
   const [color_draft, set_color_draft] = useState(color)
@@ -268,7 +270,7 @@ export function FilterDialog({ heading, name, rule, color, tag_id, tags, groups,
 
         <div class="task_detail_field">
           <span class="sidebar_heading">Colour</span>
-          <ColorPicker color={color_draft} on_change={set_color_draft} />
+          <ColorPicker color={color_draft} swatches={swatches} on_change={set_color_draft} />
         </div>
 
         {is_rule && (

@@ -276,6 +276,11 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
       </section>
 
       <section class="settings_group">
+        <h2 class="settings_heading">Tag colours</h2>
+        <TagColorsEditor colors={settings.tag_colors} on_change={(colors) => on_change('tag_colors', colors)} />
+      </section>
+
+      <section class="settings_group">
         <h2 class="settings_heading">Storage</h2>
 
         <div class="setting_row">
@@ -394,6 +399,68 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
           on_close={() => set_picking_rule_id(null)}
         />
       )}
+    </>
+  )
+}
+
+// ============================================================================
+// Tag colours
+// ============================================================================
+
+interface TagColorsEditorProps {
+  colors: string[]
+  on_change: (colors: string[]) => void
+}
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
+
+// The swatches the tag dialog offers, in the order shown here; tags keep their colour when its swatch is changed or removed.
+function TagColorsEditor({ colors, on_change }: TagColorsEditorProps) {
+  // A code that is not #rrggbb is put back to the colour it replaced.
+  function update(index: number, input: HTMLInputElement): void {
+    const color = input.value.trim()
+    if (HEX_COLOR.test(color)) on_change(colors.map((each, at) => (at === index ? color.toLowerCase() : each)))
+    else input.value = colors[index]!
+  }
+
+  function move(index: number, step: number): void {
+    const reordered = [...colors]
+    const [color] = reordered.splice(index, 1)
+    reordered.splice(index + step, 0, color!)
+    on_change(reordered)
+  }
+
+  return (
+    <>
+      <p class="setting_hint">
+        The colours offered as swatches when editing a tag. Any other colour can still be picked there. Changing a swatch
+        leaves tags already given that colour as they are.
+      </p>
+
+      {colors.map((color, index) => (
+        <div key={`${index}-${color}`} class="setting_row reschedule_option">
+          <input type="color" class="tag_color_custom" value={color} onChange={(event) => update(index, event.currentTarget)} aria-label="Colour" />
+          <input
+            class="tag_color_hex"
+            value={color}
+            onChange={(event) => update(index, event.currentTarget)}
+            aria-label="Colour code"
+          />
+          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+            ↑
+          </button>
+          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === colors.length - 1} aria-label="Move down">
+            ↓
+          </button>
+          <button class="remove_button" onClick={() => on_change(colors.filter((_each, at) => at !== index))} aria-label={`Remove ${color}`}>
+            ×
+          </button>
+        </div>
+      ))}
+
+      <button class="reschedule_add" onClick={() => on_change([...colors, '#64748b'])}>
+        Add colour
+      </button>
     </>
   )
 }
