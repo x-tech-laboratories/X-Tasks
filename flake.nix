@@ -12,20 +12,24 @@
         pkgs = import nixpkgs { inherit system; };
         electron = pkgs.electron_43;
         nodejs = pkgs.nodejs_22;
-      in
-      {
-        packages.default = pkgs.buildNpmPackage {
-          pname = "x-tasks";
+
+        # What the desktop app and the web server share: the source, its npm packages and the Node they build with.
+        npm_package = attributes: pkgs.buildNpmPackage ({
           version = (builtins.fromJSON (builtins.readFile ./package.json)).version;
           src = self;
 
           npmDepsHash = "sha256-mWuun0jNBWr/1DHWJ+cKL1COZ611rQC0+AejaHGPPos=";
           inherit nodejs;
 
-          nativeBuildInputs = with pkgs; [ makeWrapper copyDesktopItems ];
-
           # The npm-downloaded Electron cannot run on NixOS and the download needs the network.
           env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
+        } // attributes);
+      in
+      {
+        packages.default = npm_package {
+          pname = "x-tasks";
+
+          nativeBuildInputs = with pkgs; [ makeWrapper copyDesktopItems ];
 
           buildPhase = ''
             runHook preBuild
@@ -58,6 +62,33 @@
           meta.mainProgram = "x-tasks";
         };
 
+        # The web app and the server that hosts it, run with plain Node.
+        packages.server = npm_package {
+          pname = "x-tasks-server";
+
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+
+          buildPhase = ''
+            runHook preBuild
+            npm run build:server
+            runHook postBuild
+          '';
+
+          # Node 22 still marks node:sqlite as experimental and would warn on every start.
+          installPhase = ''
+            runHook preInstall
+            npm prune --omit=dev --ignore-scripts
+            mkdir -p $out/lib/x-tasks-server/out
+            cp -r out/server out/web $out/lib/x-tasks-server/out/
+            cp -r package.json node_modules $out/lib/x-tasks-server/
+            makeWrapper ${nodejs}/bin/node $out/bin/x-tasks-server \
+              --add-flags "--disable-warning=ExperimentalWarning $out/lib/x-tasks-server/out/server/index.js"
+            runHook postInstall
+          '';
+
+          meta.mainProgram = "x-tasks-server";
+        };
+
         devShells.default = pkgs.mkShell {
           packages = [ nodejs electron ];
 
@@ -76,5 +107,7 @@
             echo "x-tasks dev shell · node $(node -v) · electron ${electron.version}"
           '';
         };
-      });
+      }) // {
+      nixosModules.default = import ./nix/server-module.nix self;
+    };
 }

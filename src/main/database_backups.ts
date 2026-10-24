@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } fr
 import { dirname, join } from 'node:path'
 
 import type { DatabaseBackup } from '@shared/settings'
-import { back_up_task_database, close_task_database, open_task_database, task_database_path } from './task_database'
+import { back_up_task_database, close_task_database, get_settings, open_task_database, task_database_path } from './task_database'
 
 // ============================================================================
 // Backup files
@@ -12,6 +12,7 @@ import { back_up_task_database, close_task_database, open_task_database, task_da
 const BACKUP_NAME_PATTERN = /^tasks-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z(-auto)?\.db$/
 
 const AUTOMATIC_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000
+const AUTOMATIC_BACKUP_CHECK_MS = 60 * 60 * 1000
 
 export function backup_folder(): string {
   return join(dirname(task_database_path()), 'backups')
@@ -91,4 +92,26 @@ export function restore_backup(name: string): void {
   } finally {
     open_task_database()
   }
+}
+
+// ============================================================================
+// Automatic backups
+// ============================================================================
+
+// A failed backup is logged rather than thrown, so it never stops the app.
+export function keep_automatic_backups(): void {
+  const settings = get_settings()
+  if (!settings.auto_backup) return
+
+  try {
+    run_automatic_backup(settings.auto_backups_to_keep)
+  } catch (error) {
+    console.error('automatic backup failed:', error)
+  }
+}
+
+// The app can stay open for days, so it checks every hour whether a day has passed since the last backup.
+export function schedule_automatic_backups(): void {
+  keep_automatic_backups()
+  setInterval(keep_automatic_backups, AUTOMATIC_BACKUP_CHECK_MS)
 }

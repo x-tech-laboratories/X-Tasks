@@ -236,6 +236,8 @@ export interface DatabaseBackup {
 // ============================================================================
 
 export interface SettingsApi {
+  // Whether the page runs in the desktop app or in a browser, where folders cannot be opened.
+  host: 'desktop' | 'web'
   get_settings: () => Promise<Settings>
   set_setting: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => Promise<void>
   get_database_path: () => Promise<string>

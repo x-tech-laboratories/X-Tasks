@@ -10,7 +10,9 @@
     "build": "npm run typecheck && electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "app": "bash scripts/run.sh"
+    "app": "bash scripts/run.sh",
+    "build:server": "npm run typecheck && vite build -c vite.web.config.ts && vite build -c vite.server.config.ts",
+    "server": "node out/server/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

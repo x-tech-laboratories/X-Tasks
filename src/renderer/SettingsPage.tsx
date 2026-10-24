@@ -314,7 +314,7 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             <span class="setting_label">Database</span>
             <span class="setting_hint setting_path">{database_path}</span>
           </div>
-          <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>
+          {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>}
         </div>
       </section>
 
@@ -712,7 +712,7 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
           <span class="setting_label">Back up now</span>
           <span class="setting_hint">Saves a copy of every task, tag and setting, named by the time it was taken.</span>
         </div>
-        <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>
+        {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>}
         <button onClick={() => void create()}>Back up</button>
       </div>
 

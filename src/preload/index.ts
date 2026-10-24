@@ -45,6 +45,7 @@ const tasks_api: TasksApi = {
 }
 
 const settings_api: SettingsApi = {
+  host: 'desktop',
   get_settings: () => ipcRenderer.invoke(GET_SETTINGS_CHANNEL),
   set_setting: (key, value) => ipcRenderer.invoke(SET_SETTING_CHANNEL, key, value),
   get_database_path: () => ipcRenderer.invoke(GET_DATABASE_PATH_CHANNEL),

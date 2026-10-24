@@ -1,7 +1,6 @@
-import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, saved_task_duration, type PriorityScale, type Settings } from '@shared/settings'
@@ -173,13 +172,15 @@ interface TaskRow {
 }
 
 let database: DatabaseSync | undefined
+let database_path = ''
 
 export function task_database_path(): string {
-  return process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db')
+  return database_path
 }
 
-export function open_task_database(): void {
-  const database_path = task_database_path()
+// Later calls without a path reopen the file opened before, as a restore does.
+export function open_task_database(path = database_path): void {
+  database_path = path
   mkdirSync(dirname(database_path), { recursive: true })
 
   database = new DatabaseSync(database_path)

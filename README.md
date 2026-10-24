@@ -28,10 +28,42 @@ claude mcp add --transport http x-tasks http://127.0.0.1:3917/mcp
 
 It offers tools to list tasks and tags, add, update, complete, reopen, tag, untag and remove tasks.
 
+## Web server
+
+`x-tasks-server` serves the same app to a browser, from a database of its own, so it can run on a
+server and be used from any device. Pages that are open update by themselves when another one
+changes something.
+
+```sh
+npm run build:server
+X_TASKS_TOKEN_FILE=token.txt npm run server -- --database ./server-tasks.db --port 3918
+nix build .#server   # the packaged server, in ./result/bin/x-tasks-server
+```
+
+Browsers sign in with the access token, read from the file named by `X_TASKS_TOKEN_FILE` or from
+`X_TASKS_TOKEN`. Without a token the server only listens on `127.0.0.1`. Other programs can send the
+token as an `Authorization: Bearer` header and call `POST /api/<call>` with the arguments as a JSON
+array, using the calls listed in `src/shared/web_api.ts`.
+
+On NixOS, import the flake's module and put a TLS reverse proxy in front of it:
+
+```nix
+imports = [ x-tasks.nixosModules.default ];
+services.x-tasks-server = {
+  enable = true;
+  tokenFile = config.sops.secrets.x-tasks-token.path;
+};
+```
+
+It keeps its database and backups in `/var/lib/x-tasks-server`. The theme setting has no effect in a
+browser, which follows the system theme.
+
 ## Layout
 
 - `src/main` — the Electron main process and the task database
-- `src/preload` — the bridge that exposes `window.x_tasks` to the page
+- `src/server` — the web server, which shares the task database code with `src/main`
+- `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
+  `src/renderer/web_bridge.ts` sets up the same bridge over HTTP
 - `src/renderer` — the Preact interface
 - `src/shared` — types and channel names used by both sides
 
