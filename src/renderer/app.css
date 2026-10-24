@@ -1106,6 +1106,8 @@ select:hover { border-color: var(--border-focus); }
 
 .clear_my_day_button { flex: none; }
 
+.clear_completed_button { flex: none; }
+
 .group_by_date_button { flex: none; }
 .group_by_date_button.is_selected { border-color: var(--accent); color: var(--accent); }
 

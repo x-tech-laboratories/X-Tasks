@@ -10,10 +10,10 @@
 - [x] My Day, which can clear itself each day and take in due tasks by itself
 - [x] Streaks on repeating tasks, and a Reports page of cards for streaks and ticks
 - [x] Upcoming view, grouped by day with the later dates of repeating tasks, and date headings for any view
-- [ ] Priorities
+- [x] Priorities
 - [x] Subtasks
 - [x] Reorder tasks by dragging
-- [ ] Clear all completed tasks in a view
+- [x] Clear all completed tasks in a view
 - [ ] Undo after removing a task
 
 ## Tags

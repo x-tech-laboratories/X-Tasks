@@ -255,6 +255,13 @@ export function App() {
     void window.x_tasks.remove_task(task.id)
   }
 
+  // Deletes the completed tasks on screen, after asking, along with their history in the reports.
+  function clear_completed(clearable_tasks: Task[]): void {
+    const count = clearable_tasks.length
+    if (!window.confirm(`Delete ${count} completed ${count === 1 ? 'task' : 'tasks'}? Their ticks leave the reports too.`)) return
+    for (const task of clearable_tasks) remove_task(task)
+  }
+
   // A task cannot be dropped onto itself or anything nested under it.
   function can_drop_task_on(target: Task): boolean {
     return dragged_task !== null && !subtree_ids(dragged_task.id, tasks).has(target.id)
@@ -433,6 +440,12 @@ export function App() {
   const is_sorted = is_table && settings.table_sort.length > 0
   const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
+  // A completed task with an open subtask stays, and one whose parent is cleared goes with that parent.
+  const open_task_ids = new Set(tasks.filter((task) => !task.is_done).map((task) => task.id))
+  const fully_done_ids = new Set(
+    shown_tasks.filter((task) => task.is_done && ![...subtree_ids(task.id, tasks)].some((id) => open_task_ids.has(id))).map((task) => task.id)
+  )
+  const clearable_tasks = shown_tasks.filter((task) => fully_done_ids.has(task.id) && (task.parent_id === null || !fully_done_ids.has(task.parent_id)))
   const column_order = ordered_columns(settings.table_column_order, tag_groups)
   const table_columns = column_order.filter((column) => is_column_shown(column, settings.hidden_table_columns, settings.shown_table_columns))
   const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field, last_done_of) : nested_tasks
@@ -592,6 +605,11 @@ export function App() {
                 {selected_view.kind === 'my_day' && visible_tasks.length > 0 && (
                   <button class="clear_my_day_button" onClick={clear_my_day}>
                     Clear
+                  </button>
+                )}
+                {clearable_tasks.length > 0 && (
+                  <button class="clear_completed_button" onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
+                    Clear completed
                   </button>
                 )}
                 {!is_upcoming && (
