@@ -10,6 +10,7 @@ npm install
 npm run dev      # hot-reloading dev build
 npm run app      # build once and launch
 npm run build    # typecheck and production build
+nix build        # the packaged app, in ./result/bin/x-tasks
 ```
 
 Tasks are stored in an SQLite database at `~/.config/x-tasks/tasks.db` on Linux, using Electron's

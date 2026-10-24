@@ -14,6 +14,50 @@
         nodejs = pkgs.nodejs_22;
       in
       {
+        packages.default = pkgs.buildNpmPackage {
+          pname = "x-tasks";
+          version = (builtins.fromJSON (builtins.readFile ./package.json)).version;
+          src = self;
+
+          npmDepsHash = "sha256-mWuun0jNBWr/1DHWJ+cKL1COZ611rQC0+AejaHGPPos=";
+          inherit nodejs;
+
+          nativeBuildInputs = with pkgs; [ makeWrapper copyDesktopItems ];
+
+          # The npm-downloaded Electron cannot run on NixOS and the download needs the network.
+          env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
+
+          buildPhase = ''
+            runHook preBuild
+            npm run build
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            npm prune --omit=dev --ignore-scripts
+            mkdir -p $out/lib/x-tasks
+            cp -r out package.json node_modules $out/lib/x-tasks/
+            makeWrapper ${electron}/bin/electron $out/bin/x-tasks \
+              --add-flags $out/lib/x-tasks \
+              --unset ELECTRON_RUN_AS_NODE
+            runHook postInstall
+          '';
+
+          desktopItems = [
+            (pkgs.makeDesktopItem {
+              name = "x-tasks";
+              desktopName = "X-Tasks";
+              comment = "Todo manager";
+              exec = "x-tasks %U";
+              icon = "checkbox-checked";
+              categories = [ "Office" "ProjectManagement" ];
+            })
+          ];
+
+          meta.mainProgram = "x-tasks";
+        };
+
         devShells.default = pkgs.mkShell {
           packages = [ nodejs electron ];
 
