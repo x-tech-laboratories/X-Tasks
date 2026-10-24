@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, saved_task_duration, type PriorityScale, type Settings } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
+import { drop_sync_triggers, install_sync_triggers } from './sync_engine'
 
 // ============================================================================
 // Schema
@@ -113,7 +114,32 @@ const SCHEMA_MIGRATIONS = [
    UPDATE tag_groups SET is_rule = 1, is_single_choice = 0
      WHERE EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NOT NULL)
        AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NULL)`,
-  `ALTER TABLE tags ADD COLUMN color TEXT`
+  `ALTER TABLE tags ADD COLUMN color TEXT`,
+  // Completions get an id every device agrees on, and sync keeps the version of each value it tracks; see sync_engine.ts.
+  `ALTER TABLE task_completions ADD COLUMN uid TEXT;
+   UPDATE task_completions SET uid = lower(hex(randomblob(16)));
+   CREATE UNIQUE INDEX task_completions_by_uid ON task_completions (uid);
+   CREATE TABLE sync_state (
+     id INTEGER PRIMARY KEY CHECK (id = 1),
+     site TEXT NOT NULL,
+     generation TEXT NOT NULL,
+     server_generation TEXT NOT NULL DEFAULT '',
+     last_seq INTEGER NOT NULL DEFAULT 0,
+     pushed_seq INTEGER NOT NULL DEFAULT 0,
+     pulled_seq INTEGER NOT NULL DEFAULT 0,
+     is_applying INTEGER NOT NULL DEFAULT 0
+   );
+   INSERT INTO sync_state (id, site, generation) VALUES (1, lower(hex(randomblob(16))), lower(hex(randomblob(16))));
+   CREATE TABLE sync_cells (
+     table_name TEXT NOT NULL,
+     row_key TEXT NOT NULL,
+     column_name TEXT NOT NULL,
+     ts INTEGER NOT NULL,
+     site TEXT NOT NULL,
+     seq INTEGER NOT NULL,
+     PRIMARY KEY (table_name, row_key, column_name)
+   ) WITHOUT ROWID;
+   CREATE INDEX sync_cells_by_seq ON sync_cells (seq)`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -140,7 +166,9 @@ function undo_reverted_list_tree(database: DatabaseSync): void {
   })
 }
 
+// Sync's triggers name table columns, so they come off while migrations reshape tables and go back on after.
 function migrate_schema(database: DatabaseSync): void {
+  drop_sync_triggers(database)
   undo_reverted_list_tree(database)
   const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
 
@@ -150,6 +178,7 @@ function migrate_schema(database: DatabaseSync): void {
       database.exec(`PRAGMA user_version = ${version + 1}`)
     })
   }
+  install_sync_triggers(database)
 }
 
 // ============================================================================
@@ -215,7 +244,7 @@ export function back_up_task_database(backup_path: string): void {
   open_database().prepare('VACUUM INTO ?').run(backup_path)
 }
 
-function open_database(): DatabaseSync {
+export function open_database(): DatabaseSync {
   if (!database) throw new Error('task database is not open')
   return database
 }
@@ -295,13 +324,15 @@ export function set_task_done(task_id: string, is_done: boolean, done_at: string
   in_transaction(database, () => {
     database.prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
     if (log_change.kind === 'add' && done_at !== null) {
-      database.prepare('INSERT INTO task_completions (task_id, done_at, occurrence_on) VALUES (?, ?, ?)').run(task_id, done_at, log_change.occurrence_on)
+      database
+        .prepare('INSERT INTO task_completions (uid, task_id, done_at, occurrence_on) VALUES (?, ?, ?, ?)')
+        .run(randomUUID(), task_id, done_at, log_change.occurrence_on)
     }
     if (log_change.kind === 'remove') database.prepare(`DELETE FROM task_completions WHERE id = (${latest_entry})`).run(task_id)
     // A time given to a task never ticked starts its log.
     if (log_change.kind === 'retime' && done_at !== null) {
       const { changes } = database.prepare(`UPDATE task_completions SET done_at = ? WHERE id = (${latest_entry})`).run(done_at, task_id)
-      if (changes === 0) database.prepare('INSERT INTO task_completions (task_id, done_at) VALUES (?, ?)').run(task_id, done_at)
+      if (changes === 0) database.prepare('INSERT INTO task_completions (uid, task_id, done_at) VALUES (?, ?, ?)').run(randomUUID(), task_id, done_at)
     }
   })
 }

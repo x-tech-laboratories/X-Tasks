@@ -6,6 +6,7 @@ import { extname, join, resolve, sep } from 'node:path'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, HELLO_EVENT, WEB_SETTINGS_METHODS, WEB_TASKS_METHODS, type WebMethod } from '@shared/web_api'
 import { create_bridge_handlers, type BridgeContext } from './bridge_handlers'
 import { render_login_page } from './login_page'
+import { BadSyncRequest, exchange_changes, GenerationMismatch, read_snapshot, replace_data } from './sync_routes'
 
 // ============================================================================
 // Options
@@ -22,6 +23,8 @@ const SESSION_COOKIE = 'x_tasks_session'
 const SESSION_MAX_AGE_SECONDS = 90 * 24 * 60 * 60
 const FAILED_LOGIN_DELAY_MS = 1000
 const MAX_BODY_BYTES = 4 * 1024 * 1024
+// A device sending its whole database to replace the server's needs more room.
+const MAX_SYNC_BODY_BYTES = 256 * 1024 * 1024
 const HEARTBEAT_MS = 25 * 1000
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -79,13 +82,13 @@ function session_cookie(request: IncomingMessage, value: string, max_age_seconds
 // Request helpers
 // ============================================================================
 
-function read_body(request: IncomingMessage): Promise<string> {
+function read_body(request: IncomingMessage, max_bytes = MAX_BODY_BYTES): Promise<string> {
   return new Promise((resolve_body, reject) => {
     const chunks: Buffer[] = []
     let size = 0
     request.on('data', (chunk: Buffer) => {
       size += chunk.length
-      if (size > MAX_BODY_BYTES) {
+      if (size > max_bytes) {
         reject(new Error('request body too large'))
         request.destroy()
       } else chunks.push(chunk)
@@ -172,6 +175,43 @@ async function answer_bridge_call(
 }
 
 // ============================================================================
+// Sync calls
+// ============================================================================
+
+async function answer_sync_call(request: IncomingMessage, response: ServerResponse, call: string): Promise<void> {
+  const client_id = String(request.headers[CLIENT_ID_HEADER] ?? '')
+  const json = (value: unknown): void => send(response, 200, JSON.stringify(value), 'application/json')
+
+  if (call === 'snapshot' && request.method === 'GET') return json(read_snapshot())
+  if (request.method !== 'POST') return send(response, 405, 'use POST')
+
+  let body: unknown
+  try {
+    body = JSON.parse(await read_body(request, MAX_SYNC_BODY_BYTES))
+  } catch {
+    return send(response, 400, 'the body must be JSON')
+  }
+
+  try {
+    if (call === 'exchange') {
+      const [answer, has_changed] = exchange_changes(body as Parameters<typeof exchange_changes>[0])
+      if (has_changed) announce_change(client_id)
+      return json(answer)
+    }
+    if (call === 'replace') {
+      const answer = replace_data(body as Parameters<typeof replace_data>[0])
+      announce_change(client_id)
+      return json(answer)
+    }
+  } catch (error) {
+    if (error instanceof GenerationMismatch) return send(response, 409, error.message)
+    if (error instanceof BadSyncRequest) return send(response, 400, error.message)
+    throw error
+  }
+  send(response, 404, `no sync call named ${call}`)
+}
+
+// ============================================================================
 // Static files
 // ============================================================================
 
@@ -225,6 +265,7 @@ async function handle_request(request: IncomingMessage, response: ServerResponse
   }
 
   if (pathname === '/api/events') return open_event_stream(request, response)
+  if (pathname.startsWith('/api/sync/')) return answer_sync_call(request, response, pathname.slice('/api/sync/'.length))
   if (pathname.startsWith('/api/')) return answer_bridge_call(request, response, pathname.slice('/api/'.length), handlers)
   serve_static(response, options.web_folder, pathname)
 }

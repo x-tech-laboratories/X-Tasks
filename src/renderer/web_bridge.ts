@@ -1,4 +1,5 @@
 import type { SettingsApi } from '@shared/settings'
+import type { SyncStatus } from '@shared/sync'
 import type { TasksApi } from '@shared/tasks'
 import {
   API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT, LOGIN_PATH, WEB_SETTINGS_METHODS, WEB_TASKS_METHODS, type WebMethod
@@ -66,6 +67,8 @@ function listen_for_changes(): void {
 // Bridge
 // ============================================================================
 
+const NO_SYNC: SyncStatus = { state: 'off', server_url: '', last_synced_at: '', error: '' }
+
 // Gives the page the same window.x_tasks and window.x_settings the desktop app's preload does, backed by the web server.
 export function install_web_bridge(): void {
   const tasks_api = {
@@ -80,7 +83,12 @@ export function install_web_bridge(): void {
     ...forward_methods(WEB_SETTINGS_METHODS),
     host: 'web',
     show_database_folder: () => Promise.resolve(),
-    show_backup_folder: () => Promise.resolve()
+    show_backup_folder: () => Promise.resolve(),
+    // A page served by the server already works on the server's tasks, so it has nothing to sync.
+    get_sync_status: () => Promise.resolve(NO_SYNC),
+    connect_sync: () => Promise.reject(new Error('a browser page cannot sync')),
+    disconnect_sync: () => Promise.resolve(NO_SYNC),
+    sync_now: () => Promise.resolve(NO_SYNC)
   } as unknown as SettingsApi
 
   window.x_tasks = tasks_api

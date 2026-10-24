@@ -122,6 +122,8 @@ button {
 button:hover { border-color: var(--accent); }
 
 input[type="text"],
+input[type="url"],
+input[type="password"],
 input[type="number"],
 input[type="date"],
 input[type="time"],
@@ -137,12 +139,16 @@ input:not([type]) {
 }
 
 input[type="text"]:hover,
+input[type="url"]:hover,
+input[type="password"]:hover,
 input[type="number"]:hover,
 input[type="date"]:hover,
 input[type="time"]:hover,
 input:not([type]):hover { border-color: var(--border-focus); }
 
 input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
 input[type="number"]:focus,
 input[type="date"]:focus,
 input[type="time"]:focus,
@@ -980,6 +986,9 @@ select:hover { border-color: var(--border-focus); }
 
 .mcp_port { width: 96px; }
 .mcp_error { margin: var(--space-4) 0 0; color: var(--status-danger); }
+.sync_input { width: 260px; }
+.settings_group > .sync_status { margin: var(--space-4) 0 0; }
+.settings_group > .sync_status_problem { color: var(--status-danger); }
 
 /* ========================================================================== */
 /* Recurrence picker                                                          */

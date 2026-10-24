@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { describe_rule } from 'recurrence-input'
 
 import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import type { SyncDirection, SyncStatus } from '@shared/sync'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
 
@@ -327,6 +328,13 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
         <h2 class="settings_heading">MCP server</h2>
         <McpEditor settings={settings} on_change={on_change} />
       </section>
+
+      {window.x_settings.host === 'desktop' && (
+        <section class="settings_group">
+          <h2 class="settings_heading">Sync</h2>
+          <SyncEditor />
+        </section>
+      )}
     </>
   )
 }
@@ -641,6 +649,130 @@ function McpEditor({ settings, on_change }: McpEditorProps) {
       )}
 
       {status?.state === 'failed' && <p class="setting_hint mcp_error">Could not start: {status.error}</p>}
+    </>
+  )
+}
+
+// ============================================================================
+// Sync
+// ============================================================================
+
+const SYNC_STATUS_POLL_MS = 2000
+
+const CONFIRM_DIRECTION: Record<SyncDirection, string> = {
+  download: "Replace every task, tag and shared setting on this device with the server's? A backup of this device is taken first.",
+  upload: "Replace every task, tag and shared setting on the server with this device's? Other devices will have to choose again. The server takes a backup first."
+}
+
+function describe_sync_status(status: SyncStatus): string {
+  if (status.state === 'off') return 'Not syncing.'
+  if (status.state === 'syncing') return 'Syncing…'
+  if (status.state === 'idle') {
+    if (status.last_synced_at === '') return 'Connected.'
+    return `Up to date as of ${new Date(status.last_synced_at).toLocaleTimeString(undefined, { timeStyle: 'short' })}.`
+  }
+  if (status.state === 'offline') return `Cannot reach the server; changes are kept and sent once it is back. (${status.error})`
+  return `${status.error[0]?.toUpperCase() ?? ''}${status.error.slice(1)}.`
+}
+
+// The bridge wraps a main-process error in its own words; only the message after the last "Error: " is meant for people.
+function error_message(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error)
+  return text.split('Error: ').at(-1) ?? text
+}
+
+// Connects this device to an X-Tasks server, choosing once whose tasks win, then shows how syncing is going.
+function SyncEditor() {
+  const [status, set_status] = useState<SyncStatus | null>(null)
+  const [server_url, set_server_url] = useState('')
+  const [token, set_token] = useState('')
+  const [is_busy, set_is_busy] = useState(false)
+  const [error, set_error] = useState('')
+
+  useEffect(() => {
+    let is_first = true
+    const refresh = (): void =>
+      void window.x_settings.get_sync_status().then((next) => {
+        set_status(next)
+        if (is_first && next.server_url) set_server_url(next.server_url)
+        is_first = false
+      })
+    refresh()
+    const timer = setInterval(refresh, SYNC_STATUS_POLL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  async function run(action: () => Promise<SyncStatus>): Promise<void> {
+    set_is_busy(true)
+    set_error('')
+    try {
+      set_status(await action())
+      set_token('')
+    } catch (caught) {
+      set_error(error_message(caught))
+    } finally {
+      set_is_busy(false)
+    }
+  }
+
+  function connect(direction: SyncDirection): void {
+    if (window.confirm(CONFIRM_DIRECTION[direction])) void run(() => window.x_settings.connect_sync(server_url, token, direction))
+  }
+
+  if (!status) return null
+  const is_connected = status.state !== 'off' && status.state !== 'needs_setup'
+  const has_saved_token = status.state === 'needs_setup'
+
+  return (
+    <>
+      <p class="setting_hint">
+        Keeps this device's tasks in step with an X-Tasks server and every device connected to it. Changes made offline are sent when the server can be reached.
+      </p>
+
+      {!is_connected && (
+        <>
+          <label class="setting_row">
+            <div class="setting_text">
+              <span class="setting_label">Server address</span>
+              <span class="setting_hint">Where x-tasks-server is reached, such as https://tasks.example.org/</span>
+            </div>
+            <input type="url" class="sync_input" value={server_url} onInput={(event) => set_server_url(event.currentTarget.value)} aria-label="Server address" />
+          </label>
+
+          <label class="setting_row">
+            <div class="setting_text">
+              <span class="setting_label">Access token</span>
+              <span class="setting_hint">The token the server was set up with{has_saved_token ? '; leave it empty to keep the saved one' : ''}.</span>
+            </div>
+            <input type="password" class="sync_input" value={token} onInput={(event) => set_token(event.currentTarget.value)} aria-label="Access token" />
+          </label>
+
+          <div class="setting_row">
+            <div class="setting_text">
+              <span class="setting_label">Start syncing</span>
+              <span class="setting_hint">Choose once whose tasks to keep: a new device usually takes the server's, and the first device sends its own.</span>
+            </div>
+            <button disabled={is_busy || server_url.trim() === ''} onClick={() => connect('download')}>Use the server's tasks</button>
+            <button disabled={is_busy || server_url.trim() === ''} onClick={() => connect('upload')}>Send this device's tasks</button>
+          </div>
+        </>
+      )}
+
+      {is_connected && (
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Server</span>
+            <span class="setting_hint setting_path">{status.server_url}</span>
+          </div>
+          <button disabled={is_busy} onClick={() => void run(() => window.x_settings.sync_now())}>Sync now</button>
+          <button disabled={is_busy} onClick={() => void run(() => window.x_settings.disconnect_sync())}>Stop syncing</button>
+        </div>
+      )}
+
+      {status.state !== 'off' && (
+        <p class={`setting_hint sync_status ${status.state === 'failed' || status.state === 'needs_setup' ? 'sync_status_problem' : ''}`}>{describe_sync_status(status)}</p>
+      )}
+      {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
     </>
   )
 }

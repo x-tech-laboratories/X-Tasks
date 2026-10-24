@@ -58,10 +58,26 @@ services.x-tasks-server = {
 It keeps its database and backups in `/var/lib/x-tasks-server`. The theme setting has no effect in a
 browser, which follows the system theme.
 
+## Sync
+
+The desktop app keeps its own database and syncs it with a server, so it works offline and sends
+its changes once the server can be reached. Set it up under **Sync** in Settings with the server's
+address and token, and choose once whose tasks to keep: the first device sends its own, and later
+ones take the server's. Either choice backs up the data it replaces.
+
+Each value a task, tag or setting holds is synced on its own, and the latest edit of it wins, so
+editing a task's title on one device and its notes on another keeps both. A subtask added under a
+task deleted elsewhere goes too. Window layout, the MCP endpoint and backup settings stay with each
+device. The server address and token are kept in `sync.json` beside the database.
+
+Restoring a backup, on a device or the server, stops sync on the devices it affects until someone
+chooses again which copy to keep.
+
 ## Layout
 
 - `src/main` — the Electron main process and the task database
 - `src/server` — the web server, which shares the task database code with `src/main`
+- `src/main/sync_engine.ts` — change tracking and merging; `src/main/sync_client.ts` syncs a device with the server
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
   `src/renderer/web_bridge.ts` sets up the same bridge over HTTP
 - `src/renderer` — the Preact interface

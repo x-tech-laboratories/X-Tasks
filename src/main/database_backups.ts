@@ -2,7 +2,8 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } fr
 import { dirname, join } from 'node:path'
 
 import type { DatabaseBackup } from '@shared/settings'
-import { back_up_task_database, close_task_database, get_settings, open_task_database, task_database_path } from './task_database'
+import { forget_sync_history } from './sync_engine'
+import { back_up_task_database, close_task_database, get_settings, open_database, open_task_database, task_database_path } from './task_database'
 
 // ============================================================================
 // Backup files
@@ -77,7 +78,7 @@ export function remove_backup(name: string): void {
   rmSync(backup_path(name))
 }
 
-// The current data is backed up first, so a restore can itself be undone.
+// The current data is backed up first, so a restore can itself be undone; the restored data no longer matches what other devices have, so sync starts over.
 export function restore_backup(name: string): void {
   const source_path = backup_path(name)
   statSync(source_path)
@@ -92,6 +93,7 @@ export function restore_backup(name: string): void {
   } finally {
     open_task_database()
   }
+  forget_sync_history(open_database())
 }
 
 // ============================================================================

@@ -3,14 +3,17 @@ import { join } from 'node:path'
 
 import {
   CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
-  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, type Settings
+  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, GET_SYNC_STATUS_CHANNEL,
+  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, type Settings
 } from '@shared/settings'
+import type { SyncDirection } from '@shared/sync'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
   UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type CompletionLogChange, type TagRule, type TaskSchedule
 } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
+import { connect_sync, disconnect_sync, get_sync_status, start_sync, stop_sync, sync_now } from './sync_client'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
@@ -61,9 +64,15 @@ function create_main_window(): BrowserWindow {
 // MCP endpoint
 // ============================================================================
 
-// The MCP endpoint writes through the app's own connection, which the outside-change check never sees, so it tells the windows itself.
+// The MCP endpoint and sync write through the app's own connection, which the outside-change check never sees, so they tell the windows themselves.
 function announce_mcp_change(): void {
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send(DATABASE_CHANGED_CHANNEL)
+}
+
+// Changes from other devices can include the theme, which the window's colours follow.
+function announce_sync_change(): void {
+  nativeTheme.themeSource = get_settings().theme
+  announce_mcp_change()
 }
 
 function restart_mcp_server(): Promise<void> {
@@ -129,16 +138,22 @@ function register_bridge_handlers(): void {
 
   ipcMain.handle(LIST_BACKUPS_CHANNEL, () => list_backups())
   ipcMain.handle(CREATE_BACKUP_CHANNEL, () => create_backup())
-  // The restored data brings its own settings, so its theme and MCP endpoint are applied straight away.
+  // The restored data brings its own settings, so its theme and MCP endpoint are applied straight away, and sync asks which copy to keep.
   ipcMain.handle(RESTORE_BACKUP_CHANNEL, (_event, name: string) => {
     restore_backup(name)
     nativeTheme.themeSource = get_settings().theme
     void restart_mcp_server()
+    void sync_now()
   })
   ipcMain.handle(REMOVE_BACKUP_CHANNEL, (_event, name: string) => remove_backup(name))
   ipcMain.handle(SHOW_BACKUP_FOLDER_CHANNEL, () => shell.openPath(backup_folder()).then(() => undefined))
 
   ipcMain.handle(GET_MCP_STATUS_CHANNEL, () => get_mcp_status())
+
+  ipcMain.handle(GET_SYNC_STATUS_CHANNEL, () => get_sync_status())
+  ipcMain.handle(CONNECT_SYNC_CHANNEL, (_event, server_url: string, token: string, direction: SyncDirection) => connect_sync(server_url, token, direction))
+  ipcMain.handle(DISCONNECT_SYNC_CHANNEL, () => disconnect_sync())
+  ipcMain.handle(SYNC_NOW_CHANNEL, () => sync_now())
 }
 
 // ============================================================================
@@ -166,6 +181,7 @@ app.whenReady().then(() => {
   create_main_window()
   watch_for_outside_changes()
   schedule_automatic_backups()
+  start_sync(announce_sync_change)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) create_main_window()
@@ -173,6 +189,7 @@ app.whenReady().then(() => {
 })
 
 app.on('will-quit', () => {
+  stop_sync()
   void stop_mcp_server()
   close_task_database()
 })

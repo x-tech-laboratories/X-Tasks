@@ -1,3 +1,4 @@
+import type { SyncDirection, SyncStatus } from './sync'
 import type { View } from './tasks'
 
 // ============================================================================
@@ -209,6 +210,12 @@ export const DEFAULT_SETTINGS: Settings = {
   auto_backups_to_keep: 14
 }
 
+// Settings that belong to one device and never sync: its window layout, its MCP endpoint and its backups.
+export const DEVICE_ONLY_SETTINGS: readonly (keyof Settings)[] = [
+  'sidebar_width', 'detail_width', 'table_column_widths', 'last_view', 'collapsed_task_ids', 'collapsed_sidebar_ids',
+  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep'
+]
+
 // The ports the MCP endpoint can be set to, leaving out those that need root.
 export const MCP_PORT_RANGE = { min: 1024, max: 65535 }
 
@@ -248,6 +255,11 @@ export interface SettingsApi {
   remove_backup: (name: string) => Promise<void>
   show_backup_folder: () => Promise<void>
   get_mcp_status: () => Promise<McpStatus>
+  get_sync_status: () => Promise<SyncStatus>
+  // An empty token keeps the one saved before, for choosing a direction again with the same server.
+  connect_sync: (server_url: string, token: string, direction: SyncDirection) => Promise<SyncStatus>
+  disconnect_sync: () => Promise<SyncStatus>
+  sync_now: () => Promise<SyncStatus>
 }
 
 export const GET_SETTINGS_CHANNEL = 'settings:get'
@@ -260,3 +272,7 @@ export const RESTORE_BACKUP_CHANNEL = 'backups:restore'
 export const REMOVE_BACKUP_CHANNEL = 'backups:remove'
 export const SHOW_BACKUP_FOLDER_CHANNEL = 'backups:show-folder'
 export const GET_MCP_STATUS_CHANNEL = 'mcp:status'
+export const GET_SYNC_STATUS_CHANNEL = 'sync:status'
+export const CONNECT_SYNC_CHANNEL = 'sync:connect'
+export const DISCONNECT_SYNC_CHANNEL = 'sync:disconnect'
+export const SYNC_NOW_CHANNEL = 'sync:now'

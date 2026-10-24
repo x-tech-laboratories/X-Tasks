@@ -45,7 +45,7 @@
 - [ ] Package the app with the Nix flake
 - [x] MCP server for AI assistants, turned on and given a port in settings
 - [x] Web server that serves the app to browsers, with a sign-in token, live updates and a NixOS module
-- [ ] Sync the desktop app with the web server
+- [x] Sync the desktop app with the web server, offline first
 - [ ] Follow the theme setting in a browser
 - [ ] Fit the layout to phone screens and touch
 - [ ] Android app, built with Capacitor from the same page
