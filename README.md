@@ -87,6 +87,9 @@ npm run build:android   # builds the page and copies it into android/
 cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Install it with `adb install --user 0 -r app/build/outputs/apk/debug/app-debug.apk`. Without
+`--user 0`, a Samsung phone also installs it into its Dual Apps profile and shows two icons.
+
 Android only allows https, so the server must sit behind TLS; plain http works only to `localhost`,
 for testing through `adb reverse tcp:3918 tcp:3918`. The phone keeps no backups of its
 own; before it takes the server's tasks it saves its old ones in the app's storage.
