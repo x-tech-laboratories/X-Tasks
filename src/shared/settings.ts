@@ -103,6 +103,7 @@ export interface Settings {
   theme: ThemeChoice
   launch_view: LaunchView
   confirm_tag_removal: boolean
+  confirm_clear_completed: boolean
   task_date_field: TaskDateField
   // When set, My Day starts empty each day; otherwise tasks stay in it until taken out.
   auto_clear_my_day: boolean
@@ -161,6 +162,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   launch_view: 'last',
   confirm_tag_removal: true,
+  confirm_clear_completed: true,
   task_date_field: 'due',
   auto_clear_my_day: true,
   remove_done_from_my_day: true,

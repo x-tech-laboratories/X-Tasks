@@ -332,10 +332,12 @@ export function App() {
     set_undo_message(null)
   }
 
-  // Deletes the completed tasks on screen, after asking, along with their history in the reports.
+  // Deletes the completed tasks on screen, after asking if the settings say to, along with their history in the reports.
   function clear_completed(clearable_tasks: Task[]): void {
     const count = clearable_tasks.length
-    if (!window.confirm(`Delete ${count} completed ${count === 1 ? 'task' : 'tasks'}? Their ticks leave the reports too.`)) return
+    const is_confirmed =
+      !settings?.confirm_clear_completed || window.confirm(`Delete ${count} completed ${count === 1 ? 'task' : 'tasks'}? Their ticks leave the reports too.`)
+    if (!is_confirmed) return
     remove_tasks(clearable_tasks)
   }
 

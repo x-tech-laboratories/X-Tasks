@@ -223,6 +223,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             onChange={(event) => on_change('confirm_tag_removal', event.currentTarget.checked)}
           />
         </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Ask before clearing completed tasks</span>
+            <span class="setting_hint">Undo can still bring them back for a few seconds either way.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.confirm_clear_completed}
+            onChange={(event) => on_change('confirm_clear_completed', event.currentTarget.checked)}
+          />
+        </label>
       </section>
 
       <section class="settings_group">
