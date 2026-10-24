@@ -20,6 +20,9 @@ interface SidebarProps {
   selected_view: View | null
   is_settings_open: boolean
   dragged_task: Task | null
+  // The ids of the tag groups and tags folded shut.
+  collapsed_ids: string[]
+  on_set_collapsed_ids: (ids: string[]) => void
   on_select_view: (view: View) => void
   on_toggle_tag: (tag: Tag) => void
   on_open_settings: () => void
@@ -51,10 +54,9 @@ interface NewTagSpot {
 }
 
 export function Sidebar({
-  tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, on_select_view, on_toggle_tag, on_open_settings,
+  tasks, tag_groups, tags, my_day_since, selected_view, is_settings_open, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag, on_open_settings,
   on_edit_tag_group, on_remove_tag_group, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
-  const [collapsed_ids, set_collapsed_ids] = useState<Set<string>>(new Set())
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
   const [new_tag_name, set_new_tag_name] = useState('')
   const [dragged_tag, set_dragged_tag] = useState<Tag | null>(null)
@@ -70,21 +72,16 @@ export function Sidebar({
   // New tags
   // ==========================================================================
 
-  function toggle_collapsed(id: string): void {
-    set_collapsed_ids((current_ids) => {
-      const next_ids = new Set(current_ids)
-      if (!next_ids.delete(id)) next_ids.add(id)
-      return next_ids
-    })
+  // Ids of groups and tags deleted since are dropped whenever the list is saved again.
+  function set_collapsed(id: string, is_collapsed: boolean): void {
+    const other_ids = collapsed_ids.filter((each_id) => each_id !== id && [...tag_groups, ...tags].some((item) => item.id === each_id))
+    on_set_collapsed_ids(is_collapsed ? [...other_ids, id] : other_ids)
   }
 
   // The group or tag being added to opens up so the new tag shows.
   function start_new_tag(spot: NewTagSpot): void {
-    set_collapsed_ids((current_ids) => {
-      const next_ids = new Set(current_ids)
-      next_ids.delete(spot.parent_id ?? spot.group_id)
-      return next_ids
-    })
+    const opened_id = spot.parent_id ?? spot.group_id
+    if (collapsed_ids.includes(opened_id)) set_collapsed(opened_id, false)
     set_new_tag_spot(spot)
     set_new_tag_name('')
   }
@@ -194,7 +191,7 @@ export function Sidebar({
 
   function tag_branch(tag: Tag, depth: number, group_tags: Tag[]) {
     const children = children_of(tag.id, group_tags)
-    const is_collapsed = collapsed_ids.has(tag.id)
+    const is_collapsed = collapsed_ids.includes(tag.id)
     const view: View = { kind: 'tag', tag_ids: [tag.id] }
     const count = open_count(view)
     const row_class = [
@@ -228,7 +225,7 @@ export function Sidebar({
           {children.length > 0 ? (
             <button
               class="collapse_button"
-              onClick={() => toggle_collapsed(tag.id)}
+              onClick={() => set_collapsed(tag.id, !is_collapsed)}
               aria-label={is_collapsed ? `Expand ${tag.name}` : `Collapse ${tag.name}`}
             >
               <Chevron is_open={!is_collapsed} />
@@ -258,7 +255,7 @@ export function Sidebar({
 
   function group_section(group: TagGroup) {
     const group_tags = tags.filter((tag) => tag.group_id === group.id)
-    const is_collapsed = collapsed_ids.has(group.id)
+    const is_collapsed = collapsed_ids.includes(group.id)
     const index = tag_groups.findIndex((each) => each.id === group.id)
     const group_above = tag_groups[index - 1]
     const group_below = tag_groups[index + 1]
@@ -295,7 +292,7 @@ export function Sidebar({
         >
           <button
             class="sidebar_heading sidebar_group_toggle"
-            onClick={() => toggle_collapsed(group.id)}
+            onClick={() => set_collapsed(group.id, !is_collapsed)}
             onDblClick={() => on_edit_tag_group(group)}
             aria-expanded={!is_collapsed}
           >

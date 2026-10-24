@@ -507,6 +507,8 @@ export function App() {
           selected_view={is_settings_open ? null : selected_view}
           is_settings_open={is_settings_open}
           dragged_task={dragged_task}
+          collapsed_ids={settings.collapsed_sidebar_ids}
+          on_set_collapsed_ids={(ids) => void change_setting('collapsed_sidebar_ids', ids)}
           on_select_view={select_view}
           on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
           on_open_settings={() => set_is_settings_open(true)}

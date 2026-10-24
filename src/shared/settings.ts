@@ -126,6 +126,8 @@ export interface Settings {
   last_view: View
   // The tasks whose subtasks are folded away, kept so they stay folded after a restart.
   collapsed_task_ids: string[]
+  // The sidebar's tag groups and tags folded shut, kept the same way.
+  collapsed_sidebar_ids: string[]
   // When set, an MCP endpoint on this machine lets AI assistants read and change tasks.
   mcp_enabled: boolean
   mcp_port: number
@@ -180,6 +182,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   last_view: { kind: 'all' },
   collapsed_task_ids: [],
+  collapsed_sidebar_ids: [],
   mcp_enabled: false,
   mcp_port: 3917,
   show_streak_strip_on_rows: false,
