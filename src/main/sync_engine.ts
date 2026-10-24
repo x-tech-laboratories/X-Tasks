@@ -1,8 +1,7 @@
-import { randomUUID } from 'node:crypto'
-import type { DatabaseSync } from 'node:sqlite'
 
 import { DEVICE_ONLY_SETTINGS } from '@shared/settings'
 import type { SyncChange } from '@shared/sync'
+import type { SqlDatabase, SqlValue } from './sql_database'
 
 // ============================================================================
 // Synced tables
@@ -44,7 +43,7 @@ function filter_sql(table: SyncedTable, alias: string): string {
   return `${key_sql(table, alias)} NOT IN (${table.local_keys.map((key) => `'${key}'`).join(', ')})`
 }
 
-function synced_columns(database: DatabaseSync, table: SyncedTable): string[] {
+function synced_columns(database: SqlDatabase, table: SyncedTable): string[] {
   const columns = database.prepare(`PRAGMA table_info("${table.name}")`).all() as { name: string }[]
   return columns.map((column) => column.name).filter((name) => !table.local_columns.includes(name))
 }
@@ -73,12 +72,12 @@ function stamp_cell_sql(table: SyncedTable, row_key: string, column: string, con
     ON CONFLICT (table_name, row_key, column_name) DO UPDATE SET ts = excluded.ts, site = excluded.site, seq = excluded.seq;`
 }
 
-export function drop_sync_triggers(database: DatabaseSync): void {
+export function drop_sync_triggers(database: SqlDatabase): void {
   for (const table of SYNCED_TABLES) for (const event of TRIGGER_EVENTS) database.exec(`DROP TRIGGER IF EXISTS ${trigger_name(table, event)}`)
 }
 
 // Triggers stamp every change the app makes, whatever code makes it; changes arriving from another device are stamped by apply_changes instead.
-export function install_sync_triggers(database: DatabaseSync): void {
+export function install_sync_triggers(database: SqlDatabase): void {
   drop_sync_triggers(database)
   const is_local = '(SELECT is_applying FROM sync_state) = 0'
 
@@ -105,7 +104,7 @@ export function install_sync_triggers(database: DatabaseSync): void {
 }
 
 // Rows written before sync existed, and columns added since, get a version older than any real write, so any edit made anywhere beats them.
-function backfill_cells(database: DatabaseSync): void {
+function backfill_cells(database: SqlDatabase): void {
   for (const table of SYNCED_TABLES) {
     for (const column of [EXISTS_COLUMN, ...synced_columns(database, table)]) {
       database
@@ -136,23 +135,23 @@ export interface SyncStateRow {
   pulled_seq: number
 }
 
-export function read_sync_state(database: DatabaseSync): SyncStateRow {
+export function read_sync_state(database: SqlDatabase): SyncStateRow {
   return database.prepare('SELECT site, generation, server_generation, last_seq, pushed_seq, pulled_seq FROM sync_state').get() as unknown as SyncStateRow
 }
 
-export function write_sync_state(database: DatabaseSync, changes: Partial<Omit<SyncStateRow, 'last_seq'>>): void {
+export function write_sync_state(database: SqlDatabase, changes: Partial<Omit<SyncStateRow, 'last_seq'>>): void {
   for (const [column, value] of Object.entries(changes)) database.prepare(`UPDATE sync_state SET "${column}" = ?`).run(value as string | number)
 }
 
 // Whether this device has changes the server has not had yet.
-export function has_unpushed_changes(database: DatabaseSync): boolean {
+export function has_unpushed_changes(database: SqlDatabase): boolean {
   const { site, pushed_seq } = read_sync_state(database)
   return database.prepare('SELECT 1 FROM sync_cells WHERE seq > ? AND site = ? LIMIT 1').get(pushed_seq, site) !== undefined
 }
 
 // A restored backup is no longer the data the server and other devices have seen, so this database starts a new generation and follows no server.
-export function forget_sync_history(database: DatabaseSync): void {
-  write_sync_state(database, { generation: randomUUID(), server_generation: '' })
+export function forget_sync_history(database: SqlDatabase): void {
+  write_sync_state(database, { generation: crypto.randomUUID(), server_generation: '' })
 }
 
 // ============================================================================
@@ -167,14 +166,14 @@ interface CellRow {
   site: string
 }
 
-function read_row(database: DatabaseSync, table: SyncedTable, row_key: string): Record<string, unknown> | undefined {
+function read_row(database: SqlDatabase, table: SyncedTable, row_key: string): Record<string, unknown> | undefined {
   return database.prepare(`SELECT * FROM "${table.name}" AS row WHERE ${key_sql(table, 'row')} = ? AND ${filter_sql(table, 'row')}`).get(row_key) as
     | Record<string, unknown>
     | undefined
 }
 
 // Values are read as they are now; a row since removed sends only that it is gone.
-function cells_to_changes(database: DatabaseSync, cells: CellRow[]): SyncChange[] {
+function cells_to_changes(database: SqlDatabase, cells: CellRow[]): SyncChange[] {
   const rows = new Map<string, Record<string, unknown> | undefined>()
   const changes: SyncChange[] = []
 
@@ -193,7 +192,7 @@ function cells_to_changes(database: DatabaseSync, cells: CellRow[]): SyncChange[
 }
 
 // This device's own changes the server has not had yet, and the counter they were read at.
-export function collect_unpushed_changes(database: DatabaseSync): { changes: SyncChange[]; up_to_seq: number } {
+export function collect_unpushed_changes(database: SqlDatabase): { changes: SyncChange[]; up_to_seq: number } {
   const { site, pushed_seq, last_seq } = read_sync_state(database)
   const cells = database
     .prepare('SELECT table_name, row_key, column_name, ts, site FROM sync_cells WHERE seq > ? AND seq <= ? AND site = ? ORDER BY seq')
@@ -202,7 +201,7 @@ export function collect_unpushed_changes(database: DatabaseSync): { changes: Syn
 }
 
 // Every change after the cursor that another device should hear about, leaving out the ones it made itself.
-export function collect_changes_since(database: DatabaseSync, cursor: number, except_site: string): { changes: SyncChange[]; up_to_seq: number } {
+export function collect_changes_since(database: SqlDatabase, cursor: number, except_site: string): { changes: SyncChange[]; up_to_seq: number } {
   const { last_seq } = read_sync_state(database)
   const cells = database
     .prepare('SELECT table_name, row_key, column_name, ts, site FROM sync_cells WHERE seq > ? AND seq <= ? AND site != ? ORDER BY seq')
@@ -211,7 +210,7 @@ export function collect_changes_since(database: DatabaseSync, cursor: number, ex
 }
 
 // Every row there is now, with its versions, enough to rebuild the data elsewhere.
-export function collect_snapshot(database: DatabaseSync): { changes: SyncChange[]; up_to_seq: number } {
+export function collect_snapshot(database: SqlDatabase): { changes: SyncChange[]; up_to_seq: number } {
   const { last_seq } = read_sync_state(database)
   const changes: SyncChange[] = []
 
@@ -235,7 +234,7 @@ function is_newer(change: { ts: number; site: string }, current: { ts: number; s
   return !current || change.ts > current.ts || (change.ts === current.ts && change.site > current.site)
 }
 
-function record_cell(database: DatabaseSync, change: SyncChange): void {
+function record_cell(database: SqlDatabase, change: SyncChange): void {
   database.exec('UPDATE sync_state SET last_seq = last_seq + 1')
   database
     .prepare(
@@ -245,10 +244,8 @@ function record_cell(database: DatabaseSync, change: SyncChange): void {
     .run(change.table, change.key, change.column, change.ts, change.site)
 }
 
-type SqlValue = string | number | bigint | null
-
 // Changes from another device for one row: whether it should exist, then each value newer than this device's.
-function apply_row_changes(database: DatabaseSync, table: SyncedTable, known_columns: string[], row_key: string, changes: SyncChange[]): number {
+function apply_row_changes(database: SqlDatabase, table: SyncedTable, known_columns: string[], row_key: string, changes: SyncChange[]): number {
   const current_cells = new Map(
     (database.prepare('SELECT column_name, ts, site FROM sync_cells WHERE table_name = ? AND row_key = ?').all(table.name, row_key) as unknown as CellRow[]).map(
       (cell) => [cell.column_name, cell]
@@ -290,7 +287,7 @@ function apply_row_changes(database: DatabaseSync, table: SyncedTable, known_col
 
 // Rows left pointing at something another device removed, such as a subtask added under a task deleted elsewhere, go too.
 // Every device removes the same ones, so all of them end up alike without telling each other.
-function remove_orphans(database: DatabaseSync): void {
+function remove_orphans(database: SqlDatabase): void {
   for (;;) {
     const orphans = database.prepare('PRAGMA foreign_key_check').all() as { table: string; rowid: number }[]
     if (orphans.length === 0) return
@@ -298,7 +295,7 @@ function remove_orphans(database: DatabaseSync): void {
   }
 }
 
-function in_sync_transaction<Result>(database: DatabaseSync, work: () => Result): Result {
+function in_sync_transaction<Result>(database: SqlDatabase, work: () => Result): Result {
   database.exec('BEGIN')
   try {
     database.exec('UPDATE sync_state SET is_applying = 1')
@@ -314,7 +311,7 @@ function in_sync_transaction<Result>(database: DatabaseSync, work: () => Result)
   }
 }
 
-function apply_each_row(database: DatabaseSync, changes: SyncChange[]): number {
+function apply_each_row(database: SqlDatabase, changes: SyncChange[]): number {
   const rows = new Map<string, { table: SyncedTable; key: string; changes: SyncChange[] }>()
   for (const change of changes) {
     const table = TABLES_BY_NAME.get(change.table)
@@ -333,12 +330,12 @@ function apply_each_row(database: DatabaseSync, changes: SyncChange[]): number {
 }
 
 // Applies changes from another device as one transaction, and returns how many were newer than what this device had.
-export function apply_changes(database: DatabaseSync, changes: SyncChange[]): number {
+export function apply_changes(database: SqlDatabase, changes: SyncChange[]): number {
   return in_sync_transaction(database, () => apply_each_row(database, changes))
 }
 
 // Swaps every synced row for another copy's data in one transaction; settings kept to this device stay.
-export function replace_with_snapshot(database: DatabaseSync, changes: SyncChange[]): void {
+export function replace_with_snapshot(database: SqlDatabase, changes: SyncChange[]): void {
   in_sync_transaction(database, () => {
     for (const table of [...SYNCED_TABLES].reverse()) {
       database.exec(`DELETE FROM "${table.name}" WHERE rowid IN (SELECT rowid FROM "${table.name}" AS row WHERE ${filter_sql(table, 'row')})`)

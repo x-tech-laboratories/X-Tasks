@@ -231,6 +231,60 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .resize_handle.is_dragging::after { background: var(--accent); }
 .resize_handle:focus-visible { outline: none; }
 
+/* The menu button and the backdrop behind an open drawer only show on a phone. */
+.menu_button,
+.sidebar_backdrop { display: none; }
+
+/* On a phone the sidebar slides over the tasks as a drawer, and a task's details cover the whole screen. */
+@media (max-width: 700px) {
+  .app_body,
+  .app_body.has_detail { grid-template-columns: 1fr; }
+
+  .resize_handle { display: none; }
+
+  .multibar .menu_button {
+    display: block;
+    flex: none;
+    padding: 0 var(--space-4);
+    border-color: var(--border-default);
+    background: var(--surface-default);
+    color: var(--text-body);
+    font-size: 18px;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    width: min(85vw, 320px);
+    transform: translateX(-100%);
+    transition: transform var(--duration-fast);
+  }
+  .app_body.is_sidebar_open .sidebar { transform: none; box-shadow: var(--shadow-card); }
+
+  .sidebar_backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 19;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: rgba(15, 23, 42, 0.4);
+  }
+
+  .task_detail { position: absolute; inset: 0; z-index: 10; border-left: 0; }
+
+  .task_pane { padding: var(--space-6) var(--space-5) 80px; }
+  .task_pane_header { flex-wrap: wrap; row-gap: var(--space-3); }
+
+  .multibar { padding: var(--space-4); }
+
+  .setting_row { flex-wrap: wrap; }
+}
+
 /* Keeps the column cursor and stops text being selected while a panel edge is dragged. */
 body.is_resizing { cursor: col-resize; user-select: none; }
 

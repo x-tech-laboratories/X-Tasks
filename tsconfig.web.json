@@ -1,6 +1,9 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
-  "include": ["src/renderer/**/*", "src/preload/*.d.ts", "src/shared/**/*"],
+  "include": [
+    "src/renderer/**/*", "src/preload/*.d.ts", "src/shared/**/*",
+    "src/main/sql_database.ts", "src/main/task_database.ts", "src/main/sync_engine.ts", "src/main/sync_client.ts"
+  ],
   "compilerOptions": {
     "composite": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],

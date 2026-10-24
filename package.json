@@ -12,15 +12,21 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "app": "bash scripts/run.sh",
     "build:server": "npm run typecheck && vite build -c vite.web.config.ts && vite build -c vite.server.config.ts",
-    "server": "node out/server/index.js"
+    "server": "node out/server/index.js",
+    "build:android": "npm run typecheck && vite build -c vite.android.config.ts && cap sync android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "@sqlite.org/sqlite-wasm": "3.53.4-build2",
     "preact": "^10.29.8",
     "recurrence-input": "^3.1.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
     "@preact/preset-vite": "^2.10.6",
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.10.5",

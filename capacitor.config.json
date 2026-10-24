@@ -1,0 +1,8 @@
+{
+  "appId": "com.xtechlaboratories.xtasks",
+  "appName": "X-Tasks",
+  "webDir": "out/android",
+  "android": {
+    "allowMixedContent": true
+  }
+}

@@ -47,8 +47,10 @@
 - [x] Web server that serves the app to browsers, with a sign-in token, live updates and a NixOS module
 - [x] Sync the desktop app with the web server, offline first
 - [ ] Follow the theme setting in a browser
-- [ ] Fit the layout to phone screens and touch
-- [ ] Android app, built with Capacitor from the same page
+- [x] Fit the layout to phone screens, with the sidebar as a drawer
+- [ ] Reorder and tag tasks by touch, since dragging needs a mouse
+- [x] Android app, built with Capacitor from the same page
+- [ ] Backups on Android
 
 ## Quality
 

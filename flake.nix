@@ -13,12 +13,24 @@
         electron = pkgs.electron_43;
         nodejs = pkgs.nodejs_22;
 
+        # The Android SDK is unfree and needs its license accepted, so only the Android shell uses this package set.
+        android_pkgs = import nixpkgs {
+          inherit system;
+          config = { allowUnfree = true; android_sdk.accept_license = true; };
+        };
+        # The build-tools the Android Gradle plugin asks for by default.
+        android_build_tools = "35.0.0";
+        android_sdk = android_pkgs.androidenv.composeAndroidPackages {
+          platformVersions = [ "36" ];
+          buildToolsVersions = [ android_build_tools ];
+        };
+
         # What the desktop app and the web server share: the source, its npm packages and the Node they build with.
         npm_package = attributes: pkgs.buildNpmPackage ({
           version = (builtins.fromJSON (builtins.readFile ./package.json)).version;
           src = self;
 
-          npmDepsHash = "sha256-mWuun0jNBWr/1DHWJ+cKL1COZ611rQC0+AejaHGPPos=";
+          npmDepsHash = "sha256-iURxHOXUVX/Y6eJmr6w5vu8ldFSxqtSokJ3v94lGHH0=";
           inherit nodejs;
 
           # The npm-downloaded Electron cannot run on NixOS and the download needs the network.
@@ -105,6 +117,23 @@
             export ELECTRON_EXEC_PATH="${electron}/bin/electron"
 
             echo "x-tasks dev shell · node $(node -v) · electron ${electron.version}"
+          '';
+        };
+
+        # For building the Android app: `nix develop .#android`, then `npm run build:android` and `cd android && ./gradlew assembleDebug`.
+        devShells.android = pkgs.mkShell {
+          packages = [ nodejs android_pkgs.jdk21 android_sdk.androidsdk ];
+
+          shellHook = ''
+            export ELECTRON_SKIP_BINARY_DOWNLOAD=1
+            export ANDROID_HOME="${android_sdk.androidsdk}/libexec/android-sdk"
+            export ANDROID_SDK_ROOT="$ANDROID_HOME"
+            export JAVA_HOME="${android_pkgs.jdk21.home}"
+
+            # Gradle fetches its own aapt2, which cannot run on NixOS, so it is pointed at the SDK's.
+            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=$ANDROID_HOME/build-tools/${android_build_tools}/aapt2"
+
+            echo "x-tasks android shell · node $(node -v) · build-tools ${android_build_tools}"
           '';
         };
       }) // {

@@ -3,7 +3,8 @@ import { dirname, join } from 'node:path'
 
 import type { DatabaseBackup } from '@shared/settings'
 import { forget_sync_history } from './sync_engine'
-import { back_up_task_database, close_task_database, get_settings, open_database, open_task_database, task_database_path } from './task_database'
+import { open_task_database } from './node_task_database'
+import { back_up_task_database, close_task_database, get_settings, open_database, task_database_path } from './task_database'
 
 // ============================================================================
 // Backup files

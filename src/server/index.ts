@@ -5,7 +5,8 @@ import { parseArgs } from 'node:util'
 
 import { schedule_automatic_backups } from '../main/database_backups'
 import { stop_mcp_server } from '../main/mcp_server'
-import { close_task_database, has_changed_elsewhere, open_task_database } from '../main/task_database'
+import { open_task_database } from '../main/node_task_database'
+import { close_task_database, has_changed_elsewhere } from '../main/task_database'
 import { restart_mcp_server } from './bridge_handlers'
 import { announce_change, create_web_server } from './web_server'
 

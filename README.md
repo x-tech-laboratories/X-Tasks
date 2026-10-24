@@ -73,6 +73,23 @@ device. The server address and token are kept in `sync.json` beside the database
 Restoring a backup, on a device or the server, stops sync on the devices it affects until someone
 chooses again which copy to keep.
 
+## Android
+
+The Android app is the same page inside a Capacitor WebView. It keeps its own database on the
+phone, SQLite compiled to WebAssembly and saved in the app's storage after each change, and syncs
+with the web server under **Sync** in Settings, as the desktop app does. On a narrow screen the
+sidebar becomes a drawer behind the menu button, and a task's details fill the screen.
+
+```sh
+nix develop .#android   # node, a JDK and the Android SDK, whose license this shell accepts
+npm install
+npm run build:android   # builds the page and copies it into android/
+cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Android only allows https, so the server must sit behind TLS. The phone keeps no backups of its
+own; before it takes the server's tasks it saves its old ones in the app's storage.
+
 ## Layout
 
 - `src/main` — the Electron main process and the task database
@@ -80,7 +97,8 @@ chooses again which copy to keep.
 - `src/main/sync_engine.ts` — change tracking and merging; `src/main/sync_client.ts` syncs a device with the server
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
   `src/renderer/web_bridge.ts` sets up the same bridge over HTTP
-- `src/renderer` — the Preact interface
+- `src/renderer` — the Preact interface; `src/renderer/android` holds the Android app's database and bridge
+- `android` — the Capacitor Android project
 - `src/shared` — types and channel names used by both sides
 
 ## License

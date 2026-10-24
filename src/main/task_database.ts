@@ -1,10 +1,6 @@
-import { randomUUID } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
-
 import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, saved_task_duration, type PriorityScale, type Settings } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
+import type { SqlDatabase } from './sql_database'
 import { drop_sync_triggers, install_sync_triggers } from './sync_engine'
 
 // ============================================================================
@@ -143,7 +139,7 @@ const SCHEMA_MIGRATIONS = [
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
-function in_transaction(database: DatabaseSync, work: () => void): void {
+function in_transaction(database: SqlDatabase, work: () => void): void {
   database.exec('BEGIN')
   try {
     work()
@@ -155,7 +151,7 @@ function in_transaction(database: DatabaseSync, work: () => void): void {
 }
 
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
-function undo_reverted_list_tree(database: DatabaseSync): void {
+function undo_reverted_list_tree(database: SqlDatabase): void {
   const columns = database.prepare('PRAGMA table_info(task_lists)').all() as { name: string }[]
   if (!columns.some((column) => column.name === 'parent_id')) return
 
@@ -167,7 +163,7 @@ function undo_reverted_list_tree(database: DatabaseSync): void {
 }
 
 // Sync's triggers name table columns, so they come off while migrations reshape tables and go back on after.
-function migrate_schema(database: DatabaseSync): void {
+function migrate_schema(database: SqlDatabase): void {
   drop_sync_triggers(database)
   undo_reverted_list_tree(database)
   const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
@@ -200,20 +196,17 @@ interface TaskRow {
   position: number
 }
 
-let database: DatabaseSync | undefined
+let database: SqlDatabase | undefined
 let database_path = ''
 
 export function task_database_path(): string {
   return database_path
 }
 
-// Later calls without a path reopen the file opened before, as a restore does.
-export function open_task_database(path = database_path): void {
+// Takes over a connection opened for this platform, and brings its schema up to date; the path is where it lives, for showing and backups.
+export function attach_task_database(connection: SqlDatabase, path: string): void {
   database_path = path
-  mkdirSync(dirname(database_path), { recursive: true })
-
-  database = new DatabaseSync(database_path)
-  database.exec('PRAGMA journal_mode = WAL')
+  database = connection
   database.exec('PRAGMA foreign_keys = ON')
   migrate_schema(database)
   last_data_version = read_data_version(database)
@@ -227,7 +220,7 @@ export function close_task_database(): void {
 // SQLite bumps data_version only when another connection commits, so the app's own writes never count as a change.
 let last_data_version = 0
 
-function read_data_version(database: DatabaseSync): number {
+function read_data_version(database: SqlDatabase): number {
   return (database.prepare('PRAGMA data_version').get() as { data_version: number }).data_version
 }
 
@@ -244,7 +237,7 @@ export function back_up_task_database(backup_path: string): void {
   open_database().prepare('VACUUM INTO ?').run(backup_path)
 }
 
-export function open_database(): DatabaseSync {
+export function open_database(): SqlDatabase {
   if (!database) throw new Error('task database is not open')
   return database
 }
@@ -291,7 +284,7 @@ export function list_tasks(): Task[] {
 export function add_task(title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null): Task {
   const database = open_database()
   const task: Task = {
-    id: randomUUID(),
+    id: crypto.randomUUID(),
     title,
     notes: '',
     is_done: false,
@@ -326,13 +319,13 @@ export function set_task_done(task_id: string, is_done: boolean, done_at: string
     if (log_change.kind === 'add' && done_at !== null) {
       database
         .prepare('INSERT INTO task_completions (uid, task_id, done_at, occurrence_on) VALUES (?, ?, ?, ?)')
-        .run(randomUUID(), task_id, done_at, log_change.occurrence_on)
+        .run(crypto.randomUUID(), task_id, done_at, log_change.occurrence_on)
     }
     if (log_change.kind === 'remove') database.prepare(`DELETE FROM task_completions WHERE id = (${latest_entry})`).run(task_id)
     // A time given to a task never ticked starts its log.
     if (log_change.kind === 'retime' && done_at !== null) {
       const { changes } = database.prepare(`UPDATE task_completions SET done_at = ? WHERE id = (${latest_entry})`).run(done_at, task_id)
-      if (changes === 0) database.prepare('INSERT INTO task_completions (uid, task_id, done_at) VALUES (?, ?, ?)').run(randomUUID(), task_id, done_at)
+      if (changes === 0) database.prepare('INSERT INTO task_completions (uid, task_id, done_at) VALUES (?, ?, ?)').run(crypto.randomUUID(), task_id, done_at)
     }
   })
 }
@@ -406,7 +399,7 @@ export function list_tag_groups(): TagGroup[] {
 
 export function add_tag_group(name: string, is_rule: boolean): TagGroup {
   const group: TagGroup = {
-    id: randomUUID(),
+    id: crypto.randomUUID(),
     name,
     created_at: new Date().toISOString(),
     position: next_position('tag_groups'),
@@ -461,7 +454,7 @@ export function list_tags(): Tag[] {
 
 export function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null): Tag {
   const tag: Tag = {
-    id: randomUUID(),
+    id: crypto.randomUUID(),
     name,
     created_at: new Date().toISOString(),
     group_id,
@@ -545,7 +538,7 @@ export function apply_priority_scale(scale: PriorityScale): void {
       else {
         database
           .prepare("INSERT INTO tags (id, name, created_at, group_id, position) VALUES (?, ?, ?, 'priority', ?)")
-          .run(randomUUID(), name, new Date().toISOString(), index + 1)
+          .run(crypto.randomUUID(), name, new Date().toISOString(), index + 1)
       }
     })
 

@@ -319,17 +319,21 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
         </div>
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Backups</h2>
-        <BackupsEditor settings={settings} on_change={on_change} />
-      </section>
+      {window.x_settings.host !== 'android' && (
+        <section class="settings_group">
+          <h2 class="settings_heading">Backups</h2>
+          <BackupsEditor settings={settings} on_change={on_change} />
+        </section>
+      )}
 
-      <section class="settings_group">
-        <h2 class="settings_heading">MCP server</h2>
-        <McpEditor settings={settings} on_change={on_change} />
-      </section>
+      {window.x_settings.host !== 'android' && (
+        <section class="settings_group">
+          <h2 class="settings_heading">MCP server</h2>
+          <McpEditor settings={settings} on_change={on_change} />
+        </section>
+      )}
 
-      {window.x_settings.host === 'desktop' && (
+      {window.x_settings.host !== 'web' && (
         <section class="settings_group">
           <h2 class="settings_heading">Sync</h2>
           <SyncEditor />

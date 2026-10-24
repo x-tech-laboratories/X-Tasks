@@ -257,6 +257,21 @@ async function handle_request(request: IncomingMessage, response: ServerResponse
     return
   }
 
+  // The Android app calls from a page of its own; any origin may, since browsers send no cookies with it and the token is still needed.
+  if (pathname.startsWith('/api/')) {
+    response.setHeader('Access-Control-Allow-Origin', '*')
+    if (request.method === 'OPTIONS') {
+      response
+        .writeHead(204, {
+          'Access-Control-Allow-Methods': 'GET, POST',
+          'Access-Control-Allow-Headers': `authorization, content-type, ${CLIENT_ID_HEADER}`,
+          'Access-Control-Max-Age': '86400'
+        })
+        .end()
+      return
+    }
+  }
+
   if (!is_signed_in(request, options.access_token)) {
     // A page load goes to the login page, while a call from a page already open gets a plain refusal it can act on.
     if (pathname.startsWith('/api/')) return send(response, 401, 'sign in first')

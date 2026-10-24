@@ -1,41 +1,39 @@
-import { randomUUID } from 'node:crypto'
-import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-
 import {
   SYNC_EXCHANGE_PATH, SYNC_REPLACE_PATH, SYNC_SNAPSHOT_PATH, type SyncDirection, type SyncExchangeRequest, type SyncExchangeResponse, type SyncReplaceResponse,
   type SyncSnapshot, type SyncStatus
 } from '@shared/sync'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } from '@shared/web_api'
-import { create_backup } from './database_backups'
 import {
   apply_changes, collect_snapshot, collect_unpushed_changes, has_unpushed_changes, read_sync_state, replace_with_snapshot, write_sync_state
 } from './sync_engine'
-import { open_database, task_database_path } from './task_database'
+import { open_database } from './task_database'
 
 // ============================================================================
 // Server settings
 // ============================================================================
 
-// The server and its token live in a file beside the database, so a scratch database never syncs with the real server.
-interface SyncConfig {
+export interface SyncConfig {
   server_url: string
   token: string
 }
 
-function config_path(): string {
-  return join(dirname(task_database_path()), 'sync.json')
+// Where each platform keeps the server and its token, and how it saves a copy of the data before the server's replaces it.
+export interface SyncStorage {
+  read_config: () => SyncConfig | null
+  write_config: (config: SyncConfig) => void
+  remove_config: () => void
+  back_up_before_download: () => void | Promise<void>
 }
+
+let storage: SyncStorage | null = null
 
 function read_config(): SyncConfig | null {
-  if (!existsSync(config_path())) return null
-  return JSON.parse(readFileSync(config_path(), 'utf8')) as SyncConfig
+  return storage?.read_config() ?? null
 }
 
-// Only this user can read the file, since it holds the token.
-function write_config(config: SyncConfig): void {
-  writeFileSync(config_path(), JSON.stringify(config, null, 2), { mode: 0o600 })
-  chmodSync(config_path(), 0o600)
+function sync_storage(): SyncStorage {
+  if (!storage) throw new Error('sync has not been started')
+  return storage
 }
 
 // A trailing slash keeps the server's own folder when paths are resolved against it.
@@ -152,12 +150,12 @@ export async function connect_sync(server_url: string, token: string, direction:
   try {
     if (direction === 'download') {
       const snapshot = await request_server<SyncSnapshot>(config, SYNC_SNAPSHOT_PATH)
-      create_backup()
-      write_sync_state(database, { site: randomUUID() })
+      await sync_storage().back_up_before_download()
+      write_sync_state(database, { site: crypto.randomUUID() })
       replace_with_snapshot(database, snapshot.changes)
       write_sync_state(database, { server_generation: snapshot.generation, pulled_seq: snapshot.cursor, pushed_seq: read_sync_state(database).last_seq })
     } else {
-      write_sync_state(database, { site: randomUUID() })
+      write_sync_state(database, { site: crypto.randomUUID() })
       const snapshot = collect_snapshot(database)
       const response = await request_server<SyncReplaceResponse>(config, SYNC_REPLACE_PATH, { changes: snapshot.changes })
       write_sync_state(database, { server_generation: response.generation, pulled_seq: response.cursor, pushed_seq: snapshot.up_to_seq })
@@ -167,7 +165,7 @@ export async function connect_sync(server_url: string, token: string, direction:
     throw error
   }
 
-  write_config(config)
+  sync_storage().write_config(config)
   set_status({ state: 'idle', last_synced_at: new Date().toISOString(), error: '' })
   if (direction === 'download') announce_remote_change()
   start_background_sync()
@@ -177,7 +175,7 @@ export async function connect_sync(server_url: string, token: string, direction:
 // Stops syncing and forgets the server; the tasks on this device stay as they are.
 export function disconnect_sync(): SyncStatus {
   stop_background_sync()
-  if (existsSync(config_path())) rmSync(config_path())
+  sync_storage().remove_config()
   write_sync_state(open_database(), { server_generation: '' })
   status = { state: 'off', server_url: '', last_synced_at: '', error: '' }
   return status
@@ -192,7 +190,7 @@ const FULL_SYNC_MS = 60 * 1000
 const RETRY_AFTER_FAILURE_MS = 30 * 1000
 const EVENT_STREAM_RETRY_MS = 15 * 1000
 
-let timers: NodeJS.Timeout[] = []
+let timers: ReturnType<typeof setTimeout>[] = []
 let event_stream: AbortController | null = null
 let last_failure_at = 0
 
@@ -213,10 +211,13 @@ async function follow_server_events(config: SyncConfig, stream: AbortController)
   const response = await fetch(new URL(EVENTS_PATH, config.server_url), { headers: { authorization: `Bearer ${config.token}` }, signal: stream.signal })
   if (!response.ok || !response.body) throw new Error(`event stream answered ${response.status}`)
 
+  const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
-  for await (const chunk of response.body) {
-    buffer += decoder.decode(chunk as Uint8Array, { stream: true })
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) return
+    buffer += decoder.decode(value, { stream: true })
     let end: number
     while ((end = buffer.indexOf('\n\n')) >= 0) {
       const block = buffer.slice(0, end)
@@ -259,7 +260,8 @@ function stop_background_sync(): void {
 }
 
 // Starts syncing with the saved server, if there is one; the callback runs whenever changes from elsewhere land in the database.
-export function start_sync(on_remote_change: () => void): void {
+export function start_sync(platform_storage: SyncStorage, on_remote_change: () => void): void {
+  storage = platform_storage
   announce_remote_change = on_remote_change
   const config = read_config()
   if (!config) return

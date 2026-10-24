@@ -13,11 +13,13 @@ import {
   UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type CompletionLogChange, type TagRule, type TaskSchedule
 } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
+import { open_task_database } from './node_task_database'
+import { node_sync_storage } from './node_sync_storage'
 import { connect_sync, disconnect_sync, get_sync_status, start_sync, stop_sync, sync_now } from './sync_client'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
-  list_tasks, move_tag, move_tag_group, move_task, open_task_database, remove_tag, remove_tag_group, remove_task, set_setting, update_tag, update_tag_group,
+  list_tasks, move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, set_setting, update_tag, update_tag_group,
   set_task_done, set_task_my_day, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
   untag_task
 } from './task_database'
@@ -181,7 +183,7 @@ app.whenReady().then(() => {
   create_main_window()
   watch_for_outside_changes()
   schedule_automatic_backups()
-  start_sync(announce_sync_change)
+  start_sync(node_sync_storage, announce_sync_change)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) create_main_window()

@@ -31,6 +31,9 @@ const TASK_LAYOUT_CHOICES: { value: TaskLayout; label: string }[] = [
   { value: 'table', label: 'Table' }
 ]
 
+// A phone's keyboard covers half the screen, so the search box only takes focus at launch where there is a mouse.
+const IS_TOUCH_SCREEN = window.matchMedia('(pointer: coarse)').matches
+
 // ============================================================================
 // App
 // ============================================================================
@@ -47,6 +50,8 @@ export function App() {
   const [settings, set_settings] = useState<Settings | null>(null)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
   const [is_settings_open, set_is_settings_open] = useState(false)
+  // On a phone the sidebar is a drawer over the tasks, open only while this is set.
+  const [is_sidebar_open, set_is_sidebar_open] = useState(false)
   const [multibar_text, set_multibar_text] = useState('')
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
@@ -106,6 +111,7 @@ export function App() {
   function select_view(view: View): void {
     set_selected_view(view)
     set_is_settings_open(false)
+    set_is_sidebar_open(false)
     void window.x_settings.set_setting('last_view', view)
   }
 
@@ -482,13 +488,16 @@ export function App() {
   return (
     <div class="app">
       <form class="multibar" onSubmit={submit_multibar}>
+        <button type="button" class="menu_button" onClick={() => set_is_sidebar_open(!is_sidebar_open)} aria-label="Menu" aria-expanded={is_sidebar_open}>
+          ☰
+        </button>
         <input
           value={multibar_text}
           onInput={(event) => change_multibar_text(event.currentTarget.value)}
           onKeyDown={(event) => event.key === 'Escape' && set_multibar_text('')}
           placeholder={can_add_task ? 'Search, or press Enter to add a task' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
           aria-label="Search or add a task"
-          autofocus
+          autofocus={!IS_TOUCH_SCREEN}
         />
         {can_add_task && (
           <button type="submit" disabled={!is_searching}>
@@ -498,7 +507,7 @@ export function App() {
       </form>
 
       <div
-        class={selected_task ? 'app_body has_detail' : 'app_body'}
+        class={`app_body${selected_task ? ' has_detail' : ''}${is_sidebar_open ? ' is_sidebar_open' : ''}`}
         style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` }}
       >
         <Sidebar
@@ -514,7 +523,10 @@ export function App() {
           on_set_collapsed_ids={(ids) => void change_setting('collapsed_sidebar_ids', ids)}
           on_select_view={select_view}
           on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
-          on_open_settings={() => set_is_settings_open(true)}
+          on_open_settings={() => {
+            set_is_settings_open(true)
+            set_is_sidebar_open(false)
+          }}
           on_edit_tag_group={set_editing_group}
           on_remove_tag_group={remove_tag_group}
           on_move_tag_group={move_tag_group}
@@ -526,6 +538,7 @@ export function App() {
           on_tag_task={tag_task}
           on_context_menu={open_context_menu}
         />
+        {is_sidebar_open && <button class="sidebar_backdrop" onClick={() => set_is_sidebar_open(false)} aria-label="Close menu" />}
         <ResizeHandle
           side="left"
           width={settings.sidebar_width}
