@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
@@ -25,6 +25,7 @@ const TASK_DATE_CHOICES: { value: TaskDateField; label: string }[] = [
 const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'last', label: 'Last view used' },
   { value: 'my_day', label: 'My Day' },
+  { value: 'upcoming', label: 'Upcoming' },
   { value: 'all', label: 'All tasks' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
@@ -189,6 +190,25 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             type="checkbox"
             checked={settings.add_due_to_my_day}
             onChange={(event) => on_change('add_due_to_my_day', event.currentTarget.checked)}
+          />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Repeats in Upcoming</span>
+            <span class="setting_hint">How many days ahead Upcoming lists the later dates of repeating tasks. Zero lists none.</span>
+          </div>
+          <input
+            type="number"
+            min={UPCOMING_REPEAT_DAYS_RANGE.min}
+            max={UPCOMING_REPEAT_DAYS_RANGE.max}
+            step="1"
+            class="reschedule_days"
+            value={settings.upcoming_repeat_days}
+            onChange={(event) =>
+              on_change('upcoming_repeat_days', Math.min(UPCOMING_REPEAT_DAYS_RANGE.max, Math.max(UPCOMING_REPEAT_DAYS_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
+            }
+            aria-label="Days ahead"
           />
         </label>
 

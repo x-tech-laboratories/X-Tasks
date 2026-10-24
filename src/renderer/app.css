@@ -1106,6 +1106,33 @@ select:hover { border-color: var(--border-focus); }
 
 .clear_my_day_button { flex: none; }
 
+.group_by_date_button { flex: none; }
+.group_by_date_button.is_selected { border-color: var(--accent); color: var(--accent); }
+
+/* ========================================================================== */
+/* Date groups                                                                */
+/* ========================================================================== */
+
+.date_group_heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  background: var(--surface-secondary);
+  color: var(--text-heading);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+.date_group_heading:not(:first-child) { border-top: 1px solid var(--border-default); }
+.date_group_heading.is_overdue { color: var(--status-danger); }
+.date_group_count { color: var(--text-tertiary); font-weight: 400; }
+.task_list > .date_group_heading + .task_item > .task { border-top: 0; }
+
+.task.is_repeat { color: var(--text-secondary); }
+.task.is_repeat .task_title { font-style: italic; }
+.repeat_marker { width: 16px; color: var(--text-tertiary); text-align: center; }
+.row_spacer { flex: none; width: var(--row-height); }
+
 .my_day_button { align-self: flex-start; }
 
 .my_day_button.is_selected { border-color: var(--accent); color: var(--accent); }

@@ -95,6 +95,7 @@ export type RuleCondition =
 
 export type View =
   | { kind: 'my_day' }
+  | { kind: 'upcoming' }
   | { kind: 'all' }
   | { kind: 'active' }
   | { kind: 'completed' }

@@ -12,6 +12,7 @@ import {
   COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_date, column_width, date_filter_choices, default_column_width, group_column,
   has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
 } from './table'
+import type { RepeatOccurrence } from './dates'
 import { drop_placement, is_priority_tag, tag_color_style, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // A row's strip shows about a week of a daily routine.
@@ -591,6 +592,42 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           )}
         </ul>
       )}
+    </li>
+  )
+}
+
+// ============================================================================
+// Repeat row
+// ============================================================================
+
+interface RepeatItemProps {
+  repeat: RepeatOccurrence
+  actions: TaskActions
+}
+
+// A later date of a repeating task: it cannot be ticked or dragged, and clicking it opens the task itself.
+export function RepeatItem({ repeat, actions }: RepeatItemProps) {
+  const { task, task_date } = repeat
+
+  return (
+    <li class="task_item">
+      <div class="task is_repeat" onClick={() => actions.on_select(task)} title="A later date of this repeating task">
+        <span class="collapse_spacer" />
+        <span class="repeat_marker" aria-hidden="true">↻</span>
+        <span class="task_cell title_cell">
+          <span class="task_title">{task.title}</span>
+          {!actions.is_table && <span class="due_label">{task_date_label(task_date)}</span>}
+        </span>
+        {actions.is_table &&
+          actions.table_columns.map((column) => (
+            <span key={column} class="task_cell date_cell">
+              {(column === 'date' || column === actions.date_field) && <span class="due_label">{task_date_label(task_date)}</span>}
+            </span>
+          ))}
+        <span class="task_cell actions_cell">
+          <span class="row_spacer" />
+        </span>
+      </div>
     </li>
   )
 }

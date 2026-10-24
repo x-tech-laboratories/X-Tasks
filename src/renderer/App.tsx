@@ -1,3 +1,4 @@
+import { Fragment } from 'preact'
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
@@ -12,7 +13,8 @@ import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
-import { TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
+import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
+import { coming_repeats, group_by_date } from './dates'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
@@ -165,6 +167,11 @@ export function App() {
     const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags, tag_groups), my_day_for_new_task(selected_view, today))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_multibar_text('')
+    // Upcoming shows only dated tasks, so one added there is dated today.
+    if (selected_view.kind === 'upcoming') {
+      const schedule = { start_at: added_task.start_at, due_at: added_task.due_at, recurrence: added_task.recurrence }
+      set_task_schedule(added_task, settings!.task_date_field === 'start' ? { ...schedule, start_at: today } : { ...schedule, due_at: today })
+    }
   }
 
   // A subtask shows wherever its parent does, so it needs no tags of its own.
@@ -416,7 +423,7 @@ export function App() {
   const shown_since = my_day_since(settings, today)
   const search_text = multibar_text.trim().toLowerCase()
   const is_searching = search_text !== ''
-  const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match, settings.tag_scope))
+  const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match, settings.tag_scope, settings.task_date_field))
   const searched_tasks = settings.search_scope === 'all' ? tasks : view_tasks
   const visible_tasks = is_searching ? searched_tasks.filter((task) => task_matches_search(task, search_text)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
@@ -429,6 +436,12 @@ export function App() {
   const column_order = ordered_columns(settings.table_column_order, tag_groups)
   const table_columns = column_order.filter((column) => is_column_shown(column, settings.hidden_table_columns, settings.shown_table_columns))
   const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field, last_done_of) : nested_tasks
+
+  // Upcoming always groups by date and lists the later dates of repeating tasks; other views group only when asked.
+  const is_upcoming = selected_view.kind === 'upcoming'
+  const is_grouped = is_upcoming || settings.group_by_date
+  const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, today, settings.upcoming_repeat_days) : []
+  const date_groups = is_grouped ? group_by_date(task_tree, repeats, settings.task_date_field, today, is_sorted) : []
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
@@ -516,6 +529,7 @@ export function App() {
           tags={tags}
           my_day_since={shown_since}
           tag_scope={settings.tag_scope}
+          date_field={settings.task_date_field}
           selected_view={is_settings_open ? null : selected_view}
           is_settings_open={is_settings_open}
           dragged_task={dragged_task}
@@ -580,6 +594,16 @@ export function App() {
                     Clear
                   </button>
                 )}
+                {!is_upcoming && (
+                  <button
+                    class={settings.group_by_date ? 'group_by_date_button is_selected' : 'group_by_date_button'}
+                    aria-pressed={settings.group_by_date}
+                    onClick={() => void change_setting('group_by_date', !settings.group_by_date)}
+                    title="Show tasks under date headings"
+                  >
+                    By date
+                  </button>
+                )}
                 <div class="segmented_control" role="radiogroup" aria-label="Layout">
                   {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
                     <button
@@ -616,9 +640,22 @@ export function App() {
                     on_filter={set_table_filters}
                   />
                 )}
-                {task_tree.map((node) => (
-                  <TaskItem key={node.task.id} node={node} actions={task_actions} />
-                ))}
+                {is_grouped
+                  ? date_groups.map((group) => (
+                      <Fragment key={group.key}>
+                        <li class={group.key === 'overdue' ? 'date_group_heading is_overdue' : 'date_group_heading'}>
+                          {group.label}
+                          <span class="date_group_count">{group.nodes.length + group.repeats.length}</span>
+                        </li>
+                        {group.nodes.map((node) => (
+                          <TaskItem key={node.task.id} node={node} actions={task_actions} />
+                        ))}
+                        {group.repeats.map((repeat) => (
+                          <RepeatItem key={`${repeat.task.id}@${repeat.task_date}`} repeat={repeat} actions={task_actions} />
+                        ))}
+                      </Fragment>
+                    ))
+                  : task_tree.map((node) => <TaskItem key={node.task.id} node={node} actions={task_actions} />)}
               </ul>
 
               {visible_tasks.length === 0 && <p class="empty_message">{is_searching ? 'No tasks match the search.' : 'Nothing here yet.'}</p>}

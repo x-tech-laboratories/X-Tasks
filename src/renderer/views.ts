@@ -11,6 +11,7 @@ export type { View }
 
 export const BUILT_IN_VIEWS: { view: View; label: string }[] = [
   { view: { kind: 'my_day' }, label: 'My Day' },
+  { view: { kind: 'upcoming' }, label: 'Upcoming' },
   { view: { kind: 'all' }, label: 'All tasks' },
   { view: { kind: 'active' }, label: 'Active' },
   { view: { kind: 'completed' }, label: 'Completed' },
@@ -47,10 +48,11 @@ export function view_with_tag_toggled(view: View, tag: Tag, tags: Tag[], selecti
 
 // A task matches every selected tag, or at least one, through the tag itself or, unless scoped to its own, any tag below it; subtasks follow their parent into My Day.
 export function task_is_in_view(
-  task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string, tag_match: TagMatch = 'all', tag_scope: TagScope = 'subtags'
+  task: Task, view: View, all_tasks: Task[], tags: Tag[], my_day_since: string, tag_match: TagMatch = 'all', tag_scope: TagScope = 'subtags', date_field: TaskDateField = 'due'
 ): boolean {
   switch (view.kind) {
     case 'my_day': return task_and_ancestors(task, all_tasks).some((each) => is_in_my_day(each, my_day_since))
+    case 'upcoming': return !task.is_done && task_date_of(task, date_field) !== null
     case 'all': return true
     case 'active': return !task.is_done
     case 'completed': return task.is_done

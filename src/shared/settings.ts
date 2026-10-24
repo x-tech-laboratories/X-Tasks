@@ -8,7 +8,7 @@ import type { View } from './tasks'
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
 // The view the app opens on, where 'last' means the one shown when it was closed.
-export type LaunchView = 'last' | 'my_day' | 'all' | 'active' | 'completed' | 'reports'
+export type LaunchView = 'last' | 'my_day' | 'upcoming' | 'all' | 'active' | 'completed' | 'reports'
 
 // How the center pane shows tasks: a plain list, or a table with aligned columns.
 export type TaskLayout = 'list' | 'table'
@@ -95,6 +95,8 @@ export interface ReportWidget {
   hide_subtasks?: boolean
 }
 
+export const UPCOMING_REPEAT_DAYS_RANGE = { min: 0, max: 90 }
+
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
 
 export interface Settings {
@@ -116,6 +118,10 @@ export interface Settings {
   tag_scope: TagScope
   search_scope: SearchScope
   task_layout: TaskLayout
+  // When set, every view but Reports shows its tasks under date headings, as Upcoming always does.
+  group_by_date: boolean
+  // How many days ahead Upcoming shows the later dates of repeating tasks; zero shows none.
+  upcoming_repeat_days: number
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
   table_sort: TableSortKey[]
   // The order of the table's columns after the title; columns for groups added since come at the end.
@@ -166,6 +172,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tag_scope: 'subtags',
   search_scope: 'view',
   task_layout: 'list',
+  group_by_date: false,
+  upcoming_repeat_days: 7,
   table_sort: [],
   table_column_order: [],
   hidden_table_columns: [],
