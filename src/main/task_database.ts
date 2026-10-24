@@ -113,7 +113,8 @@ const SCHEMA_MIGRATIONS = [
   `ALTER TABLE tag_groups ADD COLUMN is_rule INTEGER NOT NULL DEFAULT 0;
    UPDATE tag_groups SET is_rule = 1, is_single_choice = 0
      WHERE EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NOT NULL)
-       AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NULL)`
+       AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NULL)`,
+  `ALTER TABLE tags ADD COLUMN color TEXT`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -426,7 +427,7 @@ export function list_tags(): Tag[] {
   return rows.map((row) => ({ ...row, rule: row.rule === null ? null : (JSON.parse(row.rule) as TagRule) }))
 }
 
-export function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null): Tag {
+export function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null): Tag {
   const tag: Tag = {
     id: randomUUID(),
     name,
@@ -434,22 +435,25 @@ export function add_tag(name: string, group_id: string, parent_id: string | null
     group_id,
     parent_id,
     position: next_position('tags'),
-    rule
+    rule,
+    color
   }
 
   open_database()
-    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position, rule) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position, rule === null ? null : JSON.stringify(rule))
+    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position, rule, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position, rule === null ? null : JSON.stringify(rule), color)
 
   return tag
 }
 
 // A rule tag is never held by hand, so giving the tag a rule takes it off every task that had it.
-export function update_tag(tag_id: string, name: string, rule: TagRule | null): void {
+export function update_tag(tag_id: string, name: string, rule: TagRule | null, color: string | null): void {
   const database = open_database()
 
   in_transaction(database, () => {
-    database.prepare('UPDATE tags SET name = ?, rule = ? WHERE id = ?').run(name, rule === null ? null : JSON.stringify(rule), tag_id)
+    database
+      .prepare('UPDATE tags SET name = ?, rule = ?, color = ? WHERE id = ?')
+      .run(name, rule === null ? null : JSON.stringify(rule), color, tag_id)
     if (rule !== null) database.prepare('DELETE FROM task_tags WHERE tag_id = ?').run(tag_id)
   })
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 
-import { EMPTY_RULE, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import { EMPTY_RULE, TAG_COLORS, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
 import { chain_tag_ids_of, subtree_ids, tag_path } from './views'
 
@@ -152,6 +152,48 @@ function ConditionRow({ condition, tags, groups, on_change, on_remove }: Conditi
 }
 
 // ============================================================================
+// Colour picker
+// ============================================================================
+
+// A row of swatches, a None choice, and the system colour chooser for any other colour.
+function ColorPicker({ color, on_change }: { color: string | null; on_change: (color: string | null) => void }) {
+  return (
+    <div class="tag_color_picker" role="radiogroup" aria-label="Colour">
+      <button
+        type="button"
+        class={color === null ? 'tag_color_swatch is_none is_chosen' : 'tag_color_swatch is_none'}
+        onClick={() => on_change(null)}
+        role="radio"
+        aria-checked={color === null}
+        aria-label="No colour"
+        title="No colour"
+      />
+      {TAG_COLORS.map((swatch) => (
+        <button
+          key={swatch}
+          type="button"
+          class={color === swatch ? 'tag_color_swatch is_chosen' : 'tag_color_swatch'}
+          style={{ '--tag-color': swatch }}
+          onClick={() => on_change(swatch)}
+          role="radio"
+          aria-checked={color === swatch}
+          aria-label={swatch}
+          title={swatch}
+        />
+      ))}
+      <input
+        type="color"
+        class={color !== null && !TAG_COLORS.includes(color) ? 'tag_color_custom is_chosen' : 'tag_color_custom'}
+        value={color ?? '#888888'}
+        onInput={(event) => on_change(event.currentTarget.value)}
+        aria-label="Other colour"
+        title="Other colour"
+      />
+    </div>
+  )
+}
+
+// ============================================================================
 // Filter dialog
 // ============================================================================
 
@@ -160,19 +202,21 @@ interface FilterDialogProps {
   name: string
   // The tag's rule, or null for a plain tag, which is only named here.
   rule: TagRule | null
+  color: string | null
   // The tag being edited, or null for a new one.
   tag_id: string | null
   tags: Tag[]
   groups: TagGroup[]
   tasks: Task[]
-  on_save: (name: string, rule: TagRule | null) => void
+  on_save: (name: string, rule: TagRule | null, color: string | null) => void
   on_close: () => void
 }
 
-// Names a tag and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
-export function FilterDialog({ heading, name, rule, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
+// Names and colours a tag and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
+export function FilterDialog({ heading, name, rule, color, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
+  const [color_draft, set_color_draft] = useState(color)
   const [rule_draft, set_rule_draft] = useState(rule ?? EMPTY_RULE)
 
   useEffect(() => dialog_ref.current?.showModal(), [])
@@ -196,7 +240,7 @@ export function FilterDialog({ heading, name, rule, tag_id, tags, groups, tasks,
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
-    on_save(trimmed_name, is_rule ? rule_draft : null)
+    on_save(trimmed_name, is_rule ? rule_draft : null, color_draft)
     on_close()
   }
 
@@ -221,6 +265,11 @@ export function FilterDialog({ heading, name, rule, tag_id, tags, groups, tasks,
           <span class="sidebar_heading">Name</span>
           <input value={name_draft} onInput={(event) => set_name_draft(event.currentTarget.value)} placeholder="Completed routines" autofocus />
         </label>
+
+        <div class="task_detail_field">
+          <span class="sidebar_heading">Colour</span>
+          <ColorPicker color={color_draft} on_change={set_color_draft} />
+        </div>
 
         {is_rule && (
           <>

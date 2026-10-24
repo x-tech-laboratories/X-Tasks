@@ -196,6 +196,11 @@ export function is_priority_tag(tag: Tag): boolean {
   return tag.group_id === PRIORITY_GROUP_ID
 }
 
+// Hands the tag's colour to its styles as --tag-color, or nothing when it has none.
+export function tag_color_style(tag: Tag): Record<string, string> | undefined {
+  return tag.color ? { '--tag-color': tag.color } : undefined
+}
+
 // ============================================================================
 // Nesting
 // ============================================================================

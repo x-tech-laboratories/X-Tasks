@@ -324,9 +324,9 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .priority_label {
   flex: none;
   padding: 0 var(--space-3);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--tag-color, var(--accent));
   border-radius: var(--radius-small);
-  color: var(--accent);
+  color: var(--tag-color, var(--accent));
   font-size: var(--text-caption);
   font-weight: 600;
 }
@@ -830,6 +830,50 @@ select:hover { border-color: var(--border-focus); }
 
 .tag_chip.is_rule { padding-right: var(--space-3); border: 1px dashed var(--border-hover); background: transparent; }
 
+/* A coloured tag is tinted with its colour and edged in it, keeping the text readable in either theme. */
+.tag_chip.has_color {
+  box-shadow: inset 0 0 0 1px var(--tag-color);
+  background: color-mix(in srgb, var(--tag-color) 18%, var(--surface-default));
+  color: var(--text-body);
+}
+
+.tag_chip.is_rule.has_color { border-color: var(--tag-color); box-shadow: none; }
+
+.tag_color_dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-3);
+  border-radius: 50%;
+  background: var(--tag-color);
+  vertical-align: 0.05em;
+}
+
+.tag_color_picker { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+
+.tag_color_swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--tag-color);
+  background-clip: content-box;
+}
+
+.tag_color_swatch:hover { border-color: var(--border-hover); }
+.tag_color_swatch.is_chosen { border-color: var(--text-heading); }
+
+/* No colour shows as an empty ring crossed by a slash. */
+.tag_color_swatch.is_none {
+  border-color: var(--border-control);
+  background: linear-gradient(135deg, transparent 45%, var(--border-control) 45%, var(--border-control) 55%, transparent 55%);
+}
+.tag_color_swatch.is_none.is_chosen { border-color: var(--text-heading); }
+
+.tag_color_custom { width: 30px; height: 24px; padding: 0 2px; border: 2px solid transparent; border-radius: var(--radius-small); cursor: pointer; }
+.tag_color_custom.is_chosen { border-color: var(--text-heading); }
+
 /* ========================================================================== */
 /* Tag tree select                                                            */
 /* ========================================================================== */
@@ -1127,7 +1171,7 @@ select:hover { border-color: var(--border-focus); }
 .report_tag_row { display: grid; grid-template-columns: minmax(80px, 160px) 1fr 40px; align-items: center; gap: var(--space-4); font-size: var(--text-control); }
 .report_tag_name { overflow: hidden; color: var(--text-body); text-overflow: ellipsis; white-space: nowrap; }
 .report_tag_track { height: 10px; }
-.report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); }
+.report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--tag-color, var(--accent)); }
 .report_tag_count { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 
 .report_table td:first-child { padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-6)); }

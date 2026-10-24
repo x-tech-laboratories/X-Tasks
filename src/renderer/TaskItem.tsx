@@ -12,7 +12,7 @@ import {
   COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_date, column_width, date_filter_choices, default_column_width, group_column,
   has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
 } from './table'
-import { drop_placement, is_priority_tag, tag_path, type DropPlacement, type TaskNode } from './views'
+import { drop_placement, is_priority_tag, tag_color_style, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // A row's strip shows about a week of a daily routine.
 const ROW_STRIP_LENGTH = 7
@@ -397,7 +397,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   function render_tag(tag: Tag) {
     if (tag.rule) {
       return (
-        <span key={tag.id} class="tag_chip is_rule" title={`${tag_path(tag, actions.tags)} (rule)`}>
+        <span key={tag.id} class={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)} title={`${tag_path(tag, actions.tags)} (rule)`}>
           {tag.name}
         </span>
       )
@@ -405,14 +405,14 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
     if (is_priority_tag(tag)) {
       return (
-        <span key={tag.id} class="priority_label" title={`Priority: ${tag_path(tag, actions.tags)}`}>
+        <span key={tag.id} class="priority_label" style={tag_color_style(tag)} title={`Priority: ${tag_path(tag, actions.tags)}`}>
           {tag.name}
         </span>
       )
     }
 
     return (
-      <span key={tag.id} class="tag_chip" title={tag_path(tag, actions.tags)}>
+      <span key={tag.id} class={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)} title={tag_path(tag, actions.tags)}>
         {tag.name}
         <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
           ×

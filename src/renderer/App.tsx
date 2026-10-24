@@ -327,25 +327,25 @@ export function App() {
     void window.x_tasks.move_tag_group(dragged.id, position)
   }
 
-  async function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null = null): Promise<void> {
-    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id, rule)
+  async function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null = null, color: string | null = null): Promise<void> {
+    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id, rule, color)
     set_tags((current_tags) => [...current_tags, added_tag])
     select_view({ kind: 'tag', tag_ids: [added_tag.id] })
   }
 
   // A tag that becomes a rule leaves every task that held it by hand.
-  function save_filter(name: string, rule: TagRule | null): void {
+  function save_filter(name: string, rule: TagRule | null, color: string | null): void {
     if (!filter_editing) return
-    if (!('tag' in filter_editing)) return void add_tag(name, filter_editing.group_id, filter_editing.parent_id, rule)
+    if (!('tag' in filter_editing)) return void add_tag(name, filter_editing.group_id, filter_editing.parent_id, rule, color)
 
     const tag_id = filter_editing.tag.id
-    set_tags((current_tags) => current_tags.map((each) => (each.id === tag_id ? { ...each, name, rule } : each)))
+    set_tags((current_tags) => current_tags.map((each) => (each.id === tag_id ? { ...each, name, rule, color } : each)))
     if (rule) {
       set_tasks((current_tasks) =>
         current_tasks.map((task) => (task.tag_ids.includes(tag_id) ? { ...task, tag_ids: task.tag_ids.filter((id) => id !== tag_id) } : task))
       )
     }
-    void window.x_tasks.update_tag(tag_id, name, rule)
+    void window.x_tasks.update_tag(tag_id, name, rule, color)
   }
 
   function remove_tag(tag: Tag): void {
@@ -664,6 +664,7 @@ export function App() {
             heading={'tag' in filter_editing ? 'Edit tag' : 'New rule tag'}
             name={'tag' in filter_editing ? filter_editing.tag.name : ''}
             rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
+            color={'tag' in filter_editing ? filter_editing.tag.color : null}
             tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
             tags={tags}
             groups={tag_groups}

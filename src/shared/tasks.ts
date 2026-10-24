@@ -58,7 +58,12 @@ export interface Tag {
   position: number
   // When set, the tag is never given by hand: it applies to every task this rule matches.
   rule: TagRule | null
+  // A colour as #rrggbb that marks the tag wherever it shows, or empty for none.
+  color: string | null
 }
+
+// The swatches offered when picking a tag colour; any other #rrggbb colour can be picked too.
+export const TAG_COLORS = ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#db2777', '#64748b']
 
 // ============================================================================
 // Tag rule
@@ -124,8 +129,8 @@ export interface TasksApi {
   move_tag_group: (group_id: string, position: number) => Promise<void>
 
   list_tags: () => Promise<Tag[]>
-  add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null) => Promise<Tag>
-  update_tag: (tag_id: string, name: string, rule: TagRule | null) => Promise<void>
+  add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null) => Promise<Tag>
+  update_tag: (tag_id: string, name: string, rule: TagRule | null, color: string | null) => Promise<void>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
 

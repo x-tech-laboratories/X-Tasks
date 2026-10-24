@@ -105,10 +105,12 @@ function register_bridge_handlers(): void {
   ipcMain.handle(MOVE_TAG_GROUP_CHANNEL, (_event, group_id: string, position: number) => move_tag_group(group_id, position))
 
   ipcMain.handle(LIST_TAGS_CHANNEL, () => list_tags())
-  ipcMain.handle(ADD_TAG_CHANNEL, (_event, name: string, group_id: string, parent_id: string | null, rule: TagRule | null) =>
-    add_tag(name, group_id, parent_id, rule)
+  ipcMain.handle(ADD_TAG_CHANNEL, (_event, name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null) =>
+    add_tag(name, group_id, parent_id, rule, color)
   )
-  ipcMain.handle(UPDATE_TAG_CHANNEL, (_event, tag_id: string, name: string, rule: TagRule | null) => update_tag(tag_id, name, rule))
+  ipcMain.handle(UPDATE_TAG_CHANNEL, (_event, tag_id: string, name: string, rule: TagRule | null, color: string | null) =>
+    update_tag(tag_id, name, rule, color)
+  )
   ipcMain.handle(REMOVE_TAG_CHANNEL, (_event, tag_id: string) => remove_tag(tag_id))
   ipcMain.handle(MOVE_TAG_CHANNEL, (_event, tag_id: string, parent_id: string | null, position: number) =>
     move_tag(tag_id, parent_id, position)

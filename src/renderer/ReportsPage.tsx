@@ -8,7 +8,7 @@ import { StreakStrip } from './StreakStrip'
 import {
   day_offset, first_report_day, streak_rows, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of
 } from './reports'
-import { tag_path } from './views'
+import { tag_color_style, tag_path } from './views'
 
 // ============================================================================
 // Choices
@@ -348,7 +348,7 @@ function TagBars({ rows, tags, group }: TagBarsProps) {
         <div key={tag?.id ?? 'none'} class="report_tag_row">
           <span class="report_tag_name">{tag ? tag_path(tag, tags) : `No ${group.name.toLowerCase()}`}</span>
           <span class="report_tag_track">
-            <span class="report_tag_bar" style={{ width: `${(count / busiest) * 100}%` }} />
+            <span class="report_tag_bar" style={{ ...(tag && tag_color_style(tag)), width: `${(count / busiest) * 100}%` }} />
           </span>
           <span class="report_tag_count">{count}</span>
         </div>

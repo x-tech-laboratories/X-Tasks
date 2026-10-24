@@ -112,7 +112,7 @@ function create_mcp_server(on_change: () => void): McpServer {
       return as_text(
         list_tag_groups().map((group) => ({
           ...group,
-          tags: tags.filter((tag) => tag.group_id === group.id).map(({ id, name, parent_id, rule }) => ({ id, name, parent_id, is_rule_tag: rule !== null }))
+          tags: tags.filter((tag) => tag.group_id === group.id).map(({ id, name, parent_id, rule, color }) => ({ id, name, parent_id, is_rule_tag: rule !== null, color }))
         }))
       )
     }

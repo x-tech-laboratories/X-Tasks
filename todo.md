@@ -25,6 +25,7 @@
 - [ ] Combine Active or Completed with the tag filter, such as Active tasks in Career
 - [x] Rule tags that apply themselves to every task matching user-set conditions, such as completed routines
 - [x] Reorder filter groups by dragging
+- [x] Give tags a colour, shown on their chips, sidebar rows and report bars
 
 ## Finding things
 

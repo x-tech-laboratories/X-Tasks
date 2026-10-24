@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import {
-  BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, is_tag_selected, subtree_ids, task_is_in_view, type DropPlacement,
+  BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, is_tag_selected, subtree_ids, tag_color_style, task_is_in_view, type DropPlacement,
   type SidePlacement, type View
 } from './views'
 
@@ -234,7 +234,10 @@ export function Sidebar({
             <span class="collapse_spacer" />
           )}
           <button class="sidebar_tag_select" onClick={() => on_toggle_tag(tag)} onDblClick={() => on_edit_tag(tag)}>
-            <span class="sidebar_label">{tag.name}</span>
+            <span class="sidebar_label">
+              {tag.color && <span class="tag_color_dot" style={tag_color_style(tag)} aria-hidden="true" />}
+              {tag.name}
+            </span>
             {tag.rule && <span class="rule_marker" title="Rule tag: applied to every task its rule matches">ƒ</span>}
             {count ? <span class="sidebar_count">{count}</span> : null}
           </button>
