@@ -18,7 +18,7 @@ import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
-  by_position, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
+  by_position, children_of, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
 
@@ -188,11 +188,11 @@ export function App() {
     if (next) {
       set_task_schedule(task, next)
       save_task_done(task, false, done_at, log_change)
-      return set_subtasks_done(task, false, done_at)
+      return reset_subtasks(task)
     }
 
     save_task_done(task, true, done_at, log_change)
-    set_subtasks_done(task, true, done_at)
+    complete_subtasks(task)
   }
 
   function save_task_done(task: Task, is_done: boolean, done_at: string | null, log_change: CompletionLogChange): void {
@@ -201,15 +201,16 @@ export function App() {
     void window.x_tasks.set_task_done(task.id, is_done, done_at, log_change)
   }
 
+  // Each open subtask is completed as if ticked by hand, so a recurring one moves to its next date instead.
+  function complete_subtasks(task: Task): void {
+    for (const child of children_of(task.id, tasks)) if (!child.is_done) toggle_task(child)
+  }
+
   // Subtasks reset by a recurring parent keep the time they were last done, and their ticks stay in the log.
-  function set_subtasks_done(task: Task, is_done: boolean, done_at: string): void {
+  function reset_subtasks(task: Task): void {
     const subtask_ids = subtree_ids(task.id, tasks)
     subtask_ids.delete(task.id)
-    for (const each of tasks) {
-      if (!subtask_ids.has(each.id) || each.is_done === is_done) continue
-      if (is_done) save_task_done(each, true, done_at, { kind: 'add', occurrence_on: recurrence_anchor(each) })
-      else save_task_done(each, false, each.done_at, { kind: 'none' })
-    }
+    for (const each of tasks) if (subtask_ids.has(each.id) && each.is_done) save_task_done(each, false, each.done_at, { kind: 'none' })
   }
 
   function set_task_my_day(task: Task, my_day_on: string | null): void {
