@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 
-import { EMPTY_RULE, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagRule, type Task } from '@shared/tasks'
+import { EMPTY_RULE, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
 import { chain_tag_ids_of, subtree_ids, tag_path } from './views'
 
@@ -29,6 +29,7 @@ const START_CHOICES: { value: StartCondition; label: string }[] = [
 interface ConditionRowProps {
   condition: RuleCondition
   tags: Tag[]
+  groups: TagGroup[]
   on_change: (condition: RuleCondition) => void
   on_remove: () => void
 }
@@ -59,8 +60,9 @@ function DaysInput({ days, on_change }: { days: number; on_change: (days: number
   )
 }
 
-function ConditionRow({ condition, tags, on_change, on_remove }: ConditionRowProps) {
+function ConditionRow({ condition, tags, groups, on_change, on_remove }: ConditionRowProps) {
   const plain_tags = tags.filter((tag) => !tag.rule)
+  const plain_groups = groups.filter((group) => !group.is_rule)
 
   function controls() {
     switch (condition.kind) {
@@ -75,6 +77,20 @@ function ConditionRow({ condition, tags, on_change, on_remove }: ConditionRowPro
               {plain_tags.map((tag) => (
                 <option key={tag.id} value={tag.id}>
                   {tag_path(tag, tags)}
+                </option>
+              ))}
+            </select>
+          </>
+        )
+      case 'group':
+        return (
+          <>
+            <TwoWaySelect value={condition.has_tag} labels={['has a tag from', 'has no tag from']} on_change={(has_tag) => on_change({ ...condition, has_tag })} />
+            <select value={condition.group_id} onChange={(event) => on_change({ ...condition, group_id: event.currentTarget.value })} aria-label="Filter group">
+              {!plain_groups.some((group) => group.id === condition.group_id) && <option value={condition.group_id}>Deleted group</option>}
+              {plain_groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
                 </option>
               ))}
             </select>
@@ -122,7 +138,7 @@ function ConditionRow({ condition, tags, on_change, on_remove }: ConditionRowPro
     <li class="rule_condition">
       <select
         value={condition.kind}
-        onChange={(event) => on_change(default_condition(event.currentTarget.value as ConditionKind, tags))}
+        onChange={(event) => on_change(default_condition(event.currentTarget.value as ConditionKind, tags, groups))}
         aria-label="Condition"
       >
         {CONDITION_CHOICES.map(({ kind, label }) => <option key={kind} value={kind}>{label}</option>)}
@@ -147,13 +163,14 @@ interface FilterDialogProps {
   // The tag being edited, or null for a new one.
   tag_id: string | null
   tags: Tag[]
+  groups: TagGroup[]
   tasks: Task[]
   on_save: (name: string, rule: TagRule | null) => void
   on_close: () => void
 }
 
 // Names a tag and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
-export function FilterDialog({ heading, name, rule, tag_id, tags, tasks, on_save, on_close }: FilterDialogProps) {
+export function FilterDialog({ heading, name, rule, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
   const [rule_draft, set_rule_draft] = useState(rule ?? EMPTY_RULE)
@@ -226,6 +243,7 @@ export function FilterDialog({ heading, name, rule, tag_id, tags, tasks, on_save
                   key={index}
                   condition={condition}
                   tags={condition_tags}
+                  groups={groups}
                   on_change={(changed) => change_condition(index, changed)}
                   on_remove={() => remove_condition(index)}
                 />
@@ -236,7 +254,7 @@ export function FilterDialog({ heading, name, rule, tag_id, tags, tasks, on_save
             <button
               type="button"
               class="rule_add"
-              onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags)] })}
+              onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags, groups)] })}
             >
               Add condition
             </button>

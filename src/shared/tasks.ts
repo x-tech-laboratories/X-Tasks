@@ -79,6 +79,7 @@ export type StartCondition = 'started' | 'not_started' | 'none'
 export type RuleCondition =
   | { kind: 'status'; is_done: boolean }
   | { kind: 'tag'; tag_id: string; has_tag: boolean }
+  | { kind: 'group'; group_id: string; has_tag: boolean }
   | { kind: 'due'; when: DueCondition; days: number }
   | { kind: 'start'; when: StartCondition }
   | { kind: 'completed_within'; days: number }

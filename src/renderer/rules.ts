@@ -1,4 +1,4 @@
-import type { RuleCondition, Tag, TagRule, Task } from '@shared/tasks'
+import type { RuleCondition, Tag, TagGroup, TagRule, Task } from '@shared/tasks'
 import { days_between, is_overdue, parse_task_date } from '@shared/schedule'
 import { subtree_ids } from './views'
 
@@ -11,6 +11,7 @@ export type ConditionKind = RuleCondition['kind']
 export const CONDITION_CHOICES: { kind: ConditionKind; label: string }[] = [
   { kind: 'status', label: 'Status' },
   { kind: 'tag', label: 'Tag' },
+  { kind: 'group', label: 'Filter group' },
   { kind: 'due', label: 'Due date' },
   { kind: 'start', label: 'Start date' },
   { kind: 'completed_within', label: 'Completed in the last' },
@@ -19,11 +20,12 @@ export const CONDITION_CHOICES: { kind: ConditionKind; label: string }[] = [
   { kind: 'title', label: 'Title contains' }
 ]
 
-// The condition a row starts as when its kind is picked; a tag condition starts on the first plain tag.
-export function default_condition(kind: ConditionKind, tags: Tag[]): RuleCondition {
+// The condition a row starts as when its kind is picked; a tag or group condition starts on the first plain one.
+export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagGroup[]): RuleCondition {
   switch (kind) {
     case 'status': return { kind, is_done: true }
     case 'tag': return { kind, tag_id: tags.find((tag) => !tag.rule)?.id ?? '', has_tag: true }
+    case 'group': return { kind, group_id: groups.find((group) => !group.is_rule)?.id ?? '', has_tag: false }
     case 'due': return { kind, when: 'overdue', days: 7 }
     case 'start': return { kind, when: 'started' }
     case 'completed_within': return { kind, days: 7 }
@@ -37,13 +39,17 @@ export function default_condition(kind: ConditionKind, tags: Tag[]): RuleConditi
 // Matching
 // ============================================================================
 
-// A tag condition looks at the task's own tags and those of the tasks above it, as tag filters do.
+// A tag or group condition looks at the task's own tags and those of the tasks above it, as tag filters do.
 function condition_holds(condition: RuleCondition, task: Task, chain_tag_ids: Set<string>, tags: Tag[], now: Date): boolean {
   switch (condition.kind) {
     case 'status': return task.is_done === condition.is_done
     case 'tag': {
       const tag_ids = subtree_ids(condition.tag_id, tags)
       const has_tag = [...tag_ids].some((id) => chain_tag_ids.has(id))
+      return has_tag === condition.has_tag
+    }
+    case 'group': {
+      const has_tag = tags.some((tag) => tag.group_id === condition.group_id && chain_tag_ids.has(tag.id))
       return has_tag === condition.has_tag
     }
     case 'due': {

@@ -666,6 +666,7 @@ export function App() {
             rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
             tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
             tags={tags}
+            groups={tag_groups}
             tasks={tasks}
             on_save={save_filter}
             on_close={() => set_filter_editing(null)}
