@@ -7,7 +7,7 @@
 - [x] Notes on a task
 - [x] Start and due dates
 - [x] Repeating tasks
-- [x] My Day, which can clear itself each day
+- [x] My Day, which can clear itself each day and take in due tasks by itself
 - [x] Streaks on repeating tasks, and a Reports page of cards for streaks and ticks
 - [ ] Upcoming view
 - [ ] Priorities
