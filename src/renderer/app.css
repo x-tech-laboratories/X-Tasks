@@ -289,7 +289,7 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
     border-radius: 0;
   }
 
-  .multibar { padding: var(--space-4); }
+  form.multibar { padding: var(--space-4); }
 
   .setting_row { flex-wrap: wrap; }
 }
