@@ -1184,6 +1184,8 @@ select:hover { border-color: var(--border-focus); }
 
 .clear_completed_button { flex: none; }
 
+.collapse_all_button, .expand_all_button { flex: none; }
+
 .grouping_select { flex: none; }
 .grouping_select.is_selected { border-color: var(--accent); color: var(--accent); }
 

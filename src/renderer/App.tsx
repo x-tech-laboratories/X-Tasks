@@ -24,7 +24,7 @@ import {
 } from './table'
 import {
   by_position, children_of, comes_due_between, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
-  tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
+  tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
 } from './views'
 
 // ============================================================================
@@ -209,6 +209,12 @@ export function App() {
   function set_task_collapsed(task: Task, is_collapsed: boolean): void {
     const other_ids = settings!.collapsed_task_ids.filter((id) => id !== task.id && tasks.some((each_task) => each_task.id === id))
     void change_setting('collapsed_task_ids', is_collapsed ? [...other_ids, task.id] : other_ids)
+  }
+
+  // Collapses or expands every given task at once, keeping the saved state of the rest.
+  function set_tasks_collapsed(task_ids: string[], is_collapsed: boolean): void {
+    const other_ids = settings!.collapsed_task_ids.filter((id) => !task_ids.includes(id) && tasks.some((each_task) => each_task.id === id))
+    void change_setting('collapsed_task_ids', is_collapsed ? [...other_ids, ...task_ids] : other_ids)
   }
 
   // ==========================================================================
@@ -615,6 +621,11 @@ export function App() {
 
   const can_add_task = selected_view.kind !== 'completed'
 
+  // The shown tasks that have shown subtasks, which the collapse and expand all buttons act on.
+  const parent_ids = parent_ids_of(task_tree)
+  const has_expanded_parent = parent_ids.some((id) => !settings.collapsed_task_ids.includes(id))
+  const has_collapsed_parent = parent_ids.some((id) => settings.collapsed_task_ids.includes(id))
+
   return (
     <div class="app">
       <form class="multibar" onSubmit={submit_multibar}>
@@ -716,6 +727,16 @@ export function App() {
                   <button class="clear_completed_button" onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
                     Clear completed
                   </button>
+                )}
+                {parent_ids.length > 0 && (
+                  <>
+                    <button class="collapse_all_button" onClick={() => set_tasks_collapsed(parent_ids, true)} disabled={!has_expanded_parent} title="Collapse every task with subtasks">
+                      Collapse all
+                    </button>
+                    <button class="expand_all_button" onClick={() => set_tasks_collapsed(parent_ids, false)} disabled={!has_collapsed_parent} title="Expand every task with subtasks">
+                      Expand all
+                    </button>
+                  </>
                 )}
                 {!is_upcoming && (
                   <select
@@ -883,6 +904,15 @@ export function App() {
       </div>
     </div>
   )
+}
+
+// ============================================================================
+// Collapsing
+// ============================================================================
+
+// The ids of every task in the tree that has children, at any depth.
+function parent_ids_of(nodes: TaskNode[]): string[] {
+  return nodes.flatMap((node) => (node.children.length > 0 ? [node.task.id, ...parent_ids_of(node.children)] : []))
 }
 
 // ============================================================================
