@@ -105,6 +105,24 @@ export type View =
   | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================
+// Task links
+// ============================================================================
+
+// A link such as x-tasks://task/<id> opens that task in the desktop app from any other program.
+export const TASK_LINK_SCHEME = 'x-tasks'
+
+const TASK_LINK_PATTERN = /^x-tasks:\/\/task\/([\w-]+)\/?$/i
+
+export function task_link(task_id: string): string {
+  return `${TASK_LINK_SCHEME}://task/${task_id}`
+}
+
+// The task a link names, or null when the text is not a task link.
+export function task_id_from_link(text: string): string | null {
+  return TASK_LINK_PATTERN.exec(text)?.[1] ?? null
+}
+
+// ============================================================================
 // Bridge contract
 // ============================================================================
 
@@ -136,6 +154,8 @@ export interface TasksApi {
 
   // Calls the listener whenever another program changes the database; returns a function that stops listening.
   on_database_changed: (listener: () => void) => () => void
+  // Only in the desktop app: calls the listener with each task a link opens, starting with one that launched the app.
+  on_open_task?: (listener: (task_id: string) => void) => () => void
 }
 
 export const LIST_TASKS_CHANNEL = 'tasks:list'
@@ -164,3 +184,5 @@ export const REMOVE_TAG_CHANNEL = 'tags:remove'
 export const MOVE_TAG_CHANNEL = 'tags:move'
 
 export const DATABASE_CHANGED_CHANNEL = 'database:changed'
+export const OPEN_TASK_CHANNEL = 'links:open-task'
+export const TAKE_LAUNCH_TASK_CHANNEL = 'links:take-launch-task'

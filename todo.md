@@ -47,6 +47,7 @@
 - [ ] Export and import tasks as JSON
 - [ ] Package the app with the Nix flake
 - [x] MCP server for AI assistants, turned on and given a port in settings
+- [x] Open a task in the desktop app from an x-tasks://task/<id> link, copied from its row menu
 - [x] Web server that serves the app to browsers, with a sign-in token, live updates and a NixOS module
 - [x] Sync the desktop app with the web server, offline first
 - [ ] Follow the theme setting in a browser

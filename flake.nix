@@ -134,6 +134,8 @@
               exec = "x-tasks %U";
               icon = "x-tasks";
               categories = [ "Office" "ProjectManagement" ];
+              # Opens x-tasks://task/<id> links in the app.
+              mimeTypes = [ "x-scheme-handler/x-tasks" ];
             })
           ];
 

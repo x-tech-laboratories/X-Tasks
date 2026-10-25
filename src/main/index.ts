@@ -9,9 +9,9 @@ import {
 } from '@shared/settings'
 import type { SyncDirection } from '@shared/sync'
 import {
-  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
+  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
-  UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type CompletionLogChange, type TagRule, type TaskSchedule
+  UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, task_id_from_link, type CompletionLogChange, type TagRule, type TaskSchedule
 } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { open_task_database } from './node_task_database'
@@ -83,6 +83,27 @@ function announce_sync_change(): void {
 
 function restart_mcp_server(): Promise<void> {
   return apply_mcp_settings(get_settings(), announce_mcp_change)
+}
+
+// ============================================================================
+// Task links
+// ============================================================================
+
+// The task a link at launch asked for, kept until the page is ready to take it.
+let launch_task_id: string | null = null
+
+function task_id_in(argv: string[]): string | null {
+  return argv.map(task_id_from_link).find((task_id) => task_id !== null) ?? null
+}
+
+// A second launch, such as a clicked task link, brings this window forward and opens the task it names.
+function open_from_second_launch(argv: string[]): void {
+  const main_window = BrowserWindow.getAllWindows()[0]
+  if (!main_window) return
+  if (main_window.isMinimized()) main_window.restore()
+  main_window.focus()
+  const task_id = task_id_in(argv)
+  if (task_id) main_window.webContents.send(OPEN_TASK_CHANNEL, task_id)
 }
 
 // ============================================================================
@@ -163,6 +184,12 @@ function register_bridge_handlers(): void {
   ipcMain.handle(GET_TRUSTED_CERTIFICATE_CHANNEL, () => get_trusted_certificate())
   ipcMain.handle(SET_TRUSTED_CERTIFICATE_CHANNEL, (_event, pem: string) => set_trusted_certificate(pem))
   ipcMain.handle(INSPECT_SERVER_CERTIFICATE_CHANNEL, (_event, server_url: string) => inspect_server_certificate(server_url))
+
+  ipcMain.handle(TAKE_LAUNCH_TASK_CHANNEL, () => {
+    const task_id = launch_task_id
+    launch_task_id = null
+    return task_id
+  })
 }
 
 // ============================================================================
@@ -181,29 +208,40 @@ function watch_for_outside_changes(): void {
 // Lifecycle
 // ============================================================================
 
-app.whenReady().then(() => {
-  open_task_database(process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db'))
-  apply_trusted_certificates()
-  // The page's light and dark colours follow this, so it is set before the window opens.
-  nativeTheme.themeSource = get_settings().theme
-  register_bridge_handlers()
-  void restart_mcp_server()
-  create_main_window()
-  watch_for_outside_changes()
-  schedule_automatic_backups()
-  start_sync(node_sync_storage, announce_sync_change)
+function start_app(): void {
+  launch_task_id = task_id_in(process.argv)
+  app.on('second-instance', (_event, argv) => open_from_second_launch(argv))
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) create_main_window()
+  app.whenReady().then(() => {
+    open_task_database(process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db'))
+    apply_trusted_certificates()
+    // The page's light and dark colours follow this, so it is set before the window opens.
+    nativeTheme.themeSource = get_settings().theme
+    register_bridge_handlers()
+    void restart_mcp_server()
+    create_main_window()
+    watch_for_outside_changes()
+    schedule_automatic_backups()
+    start_sync(node_sync_storage, announce_sync_change)
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) create_main_window()
+    })
   })
-})
 
-app.on('will-quit', () => {
-  stop_sync()
-  void stop_mcp_server()
-  close_task_database()
-})
+  app.on('will-quit', () => {
+    stop_sync()
+    void stop_mcp_server()
+    close_task_database()
+  })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}
+
+// Only the app on the default database takes task links from later launches, so a run on a test database never hands off to it.
+const takes_task_links = process.env.X_TASKS_DB === undefined
+
+if (takes_task_links && !app.requestSingleInstanceLock()) app.quit()
+else start_app()

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preac
 
 import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
-import type { Tag, TagGroup, Task } from '@shared/tasks'
+import { task_link, type Tag, type TagGroup, type Task } from '@shared/tasks'
 import type { OpenContextMenu } from './ContextMenu'
 import { StreakStrip } from './StreakStrip'
 import { ResizeHandle } from './ResizeHandle'
@@ -475,6 +475,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
       actions.is_in_my_day(task)
         ? { label: 'Remove from My Day', on_select: () => actions.on_set_my_day(task, false) }
         : { label: 'Add to My Day', on_select: () => actions.on_set_my_day(task, true) },
+      { label: 'Copy link', on_select: () => void navigator.clipboard?.writeText(task_link(task.id)) },
       { label: 'Delete', on_select: () => actions.on_remove(task), is_danger: true }
     ])
   }

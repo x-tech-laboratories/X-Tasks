@@ -7,7 +7,7 @@ import {
   INSPECT_SERVER_CERTIFICATE_CHANNEL, type SettingsApi
 } from '@shared/settings'
 import {
-  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
+  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
   UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
 } from '@shared/tasks'
@@ -43,6 +43,12 @@ const tasks_api: TasksApi = {
     const handle_change = (): void => listener()
     ipcRenderer.on(DATABASE_CHANGED_CHANNEL, handle_change)
     return () => ipcRenderer.removeListener(DATABASE_CHANGED_CHANNEL, handle_change)
+  },
+  on_open_task: (listener) => {
+    const handle_open = (_event: unknown, task_id: string): void => listener(task_id)
+    ipcRenderer.on(OPEN_TASK_CHANNEL, handle_open)
+    void ipcRenderer.invoke(TAKE_LAUNCH_TASK_CHANNEL).then((task_id: string | null) => task_id && listener(task_id))
+    return () => ipcRenderer.removeListener(OPEN_TASK_CHANNEL, handle_open)
   }
 }
 

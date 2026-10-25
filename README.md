@@ -132,6 +132,13 @@ authority** in the Sync settings; the app then accepts certificates it signed, a
 expired ones or ones for another host. The phone keeps no backups of its
 own; before it takes the server's tasks it saves its old ones in the app's storage.
 
+## Task links
+
+**Copy link** in a task's right-click menu copies a link such as `x-tasks://task/<id>`. Opening it from another
+program brings the desktop app forward with that task's details open, or starts the app if it is not running. The
+Nix package's desktop entry registers the `x-tasks` scheme. Only the app on the default database takes links from
+later launches, so a run with `X_TASKS_DB` set never hands its link to another window.
+
 ## Layout
 
 - `src/main` — the Electron main process and the task database

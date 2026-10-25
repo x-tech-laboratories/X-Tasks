@@ -107,6 +107,17 @@ export function App() {
     []
   )
 
+  // A task link clicked in another program opens that task's details over whatever is on screen.
+  useEffect(
+    () =>
+      window.x_tasks.on_open_task?.((task_id) => {
+        set_is_settings_open(false)
+        set_is_sidebar_open(false)
+        set_selected_task_id(task_id)
+      }),
+    []
+  )
+
   // Checks the date every minute, so My Day clears itself at midnight while the app is open.
   useEffect(() => {
     const timer = window.setInterval(() => set_today(format_task_date(new Date(), false)), 60 * 1000)
