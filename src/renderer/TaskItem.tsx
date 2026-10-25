@@ -374,6 +374,8 @@ export interface TaskActions {
   on_drag_start: (task: Task) => void
   on_drag_end: () => void
   can_drop_on: (target: Task) => boolean
+  // False in a sorted table, where a drop on a row can only nest the task inside it.
+  can_drop_beside: boolean
   on_drop: (target: Task, placement: DropPlacement) => void
 }
 
@@ -449,16 +451,20 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     actions.on_drag_start(task)
   }
 
+  function placement_at(event: DragEvent): DropPlacement {
+    return actions.can_drop_beside ? drop_placement(event, true) : 'inside'
+  }
+
   function drag_over(event: DragEvent): void {
     if (!actions.can_drop_on(task)) return
     event.preventDefault()
-    set_shown_placement(drop_placement(event, true))
+    set_shown_placement(placement_at(event))
   }
 
   function drop(event: DragEvent): void {
     event.preventDefault()
     set_shown_placement(null)
-    actions.on_drop(task, drop_placement(event, true))
+    actions.on_drop(task, placement_at(event))
   }
 
   // A click on the row opens its details, except on the checkbox and buttons, which do their own thing.

@@ -598,8 +598,9 @@ export function App() {
     last_done_of,
     on_drag_start: set_dragged_task,
     on_drag_end: () => set_dragged_task(null),
-    // A sorted table ignores the dragged order, so tasks can still be dragged onto tags but not between rows.
-    can_drop_on: (target) => !is_sorted && can_drop_task_on(target),
+    // A sorted table ignores the dragged order, so a task dropped on a row there nests inside it instead of landing beside it.
+    can_drop_on: can_drop_task_on,
+    can_drop_beside: !is_sorted,
     on_drop: drop_task
   }
 
