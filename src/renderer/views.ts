@@ -206,6 +206,17 @@ export function tag_color_style(tag: Tag): Record<string, string> | undefined {
   return tag.color ? { '--tag-color': tag.color } : undefined
 }
 
+// Puts the tag's icon in front of the text that names it, when it has one.
+export function with_icon(tag: Tag, text: string): string {
+  return tag.icon ? `${tag.icon} ${text}` : text
+}
+
+// The last character in the text, counting an emoji and its modifiers as one, or null when the text is blank.
+export function last_character(text: string): string | null {
+  const characters = [...new Intl.Segmenter().segment(text.trim())]
+  return characters.at(-1)?.segment ?? null
+}
+
 // ============================================================================
 // Nesting
 // ============================================================================

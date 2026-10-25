@@ -26,6 +26,7 @@
 - [x] Rule tags that apply themselves to every task matching user-set conditions, such as completed routines
 - [x] Reorder filter groups by dragging
 - [x] Give tags a colour, shown on their chips, sidebar rows and report bars
+- [x] Give tags an emoji icon, shown before their name wherever it shows
 
 ## Finding things
 

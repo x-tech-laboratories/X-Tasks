@@ -34,8 +34,8 @@ const tasks_api: TasksApi = {
   move_tag_group: (group_id, position) => ipcRenderer.invoke(MOVE_TAG_GROUP_CHANNEL, group_id, position),
 
   list_tags: () => ipcRenderer.invoke(LIST_TAGS_CHANNEL),
-  add_tag: (name, group_id, parent_id, rule, color) => ipcRenderer.invoke(ADD_TAG_CHANNEL, name, group_id, parent_id, rule, color),
-  update_tag: (tag_id, name, rule, color) => ipcRenderer.invoke(UPDATE_TAG_CHANNEL, tag_id, name, rule, color),
+  add_tag: (name, group_id, parent_id, rule, color, icon) => ipcRenderer.invoke(ADD_TAG_CHANNEL, name, group_id, parent_id, rule, color, icon),
+  update_tag: (tag_id, name, rule, color, icon) => ipcRenderer.invoke(UPDATE_TAG_CHANNEL, tag_id, name, rule, color, icon),
   remove_tag: (tag_id) => ipcRenderer.invoke(REMOVE_TAG_CHANNEL, tag_id),
   move_tag: (tag_id, parent_id, position) => ipcRenderer.invoke(MOVE_TAG_CHANNEL, tag_id, parent_id, position),
 

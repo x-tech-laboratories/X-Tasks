@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 
 import { EMPTY_RULE, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
-import { chain_tag_ids_of, subtree_ids, tag_path } from './views'
+import { chain_tag_ids_of, last_character, subtree_ids, tag_path } from './views'
 
 // ============================================================================
 // Choices
@@ -203,6 +203,7 @@ interface FilterDialogProps {
   // The tag's rule, or null for a plain tag, which is only named here.
   rule: TagRule | null
   color: string | null
+  icon: string | null
   // The preset colours offered as swatches.
   swatches: string[]
   // The tag being edited, or null for a new one.
@@ -210,15 +211,16 @@ interface FilterDialogProps {
   tags: Tag[]
   groups: TagGroup[]
   tasks: Task[]
-  on_save: (name: string, rule: TagRule | null, color: string | null) => void
+  on_save: (name: string, rule: TagRule | null, color: string | null, icon: string | null) => void
   on_close: () => void
 }
 
-// Names and colours a tag and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
-export function FilterDialog({ heading, name, rule, color, swatches, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
+// Names a tag, gives it a colour and an icon and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
+export function FilterDialog({ heading, name, rule, color, icon, swatches, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
   const [color_draft, set_color_draft] = useState(color)
+  const [icon_draft, set_icon_draft] = useState(icon)
   const [rule_draft, set_rule_draft] = useState(rule ?? EMPTY_RULE)
 
   useEffect(() => dialog_ref.current?.showModal(), [])
@@ -238,11 +240,18 @@ export function FilterDialog({ heading, name, rule, color, swatches, tag_id, tag
     set_rule_draft({ ...rule_draft, conditions: rule_draft.conditions.filter((_each, at) => at !== index) })
   }
 
+  // Typing or pasting keeps only the newest character, so a new emoji replaces the old one.
+  function change_icon(input: HTMLInputElement): void {
+    const character = last_character(input.value)
+    set_icon_draft(character)
+    input.value = character ?? ''
+  }
+
   function save(event: Event): void {
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
-    on_save(trimmed_name, is_rule ? rule_draft : null, color_draft)
+    on_save(trimmed_name, is_rule ? rule_draft : null, color_draft, icon_draft)
     on_close()
   }
 
@@ -272,6 +281,16 @@ export function FilterDialog({ heading, name, rule, color, swatches, tag_id, tag
           <span class="sidebar_heading">Colour</span>
           <ColorPicker color={color_draft} swatches={swatches} on_change={set_color_draft} />
         </div>
+
+        <label class="task_detail_field">
+          <span class="sidebar_heading">Icon</span>
+          <input
+            class="tag_icon_input"
+            value={icon_draft ?? ''}
+            onInput={(event) => change_icon(event.currentTarget)}
+            placeholder="Emoji"
+          />
+        </label>
 
         {is_rule && (
           <>

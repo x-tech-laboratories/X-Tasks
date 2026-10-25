@@ -83,10 +83,10 @@ interface ExampleTask {
   subtasks?: ExampleTask[]
 }
 
-const PROJECT_TAGS: { name: string; color: string; children?: string[] }[] = [
-  { name: 'Kitchen renovation', color: '#e8a33d', children: ['Plumbing', 'Cabinets'] },
-  { name: 'Side project', color: '#4f8fe6', children: ['Website', 'Launch'] },
-  { name: 'Trip to the coast', color: '#3fb27f' }
+const PROJECT_TAGS: { name: string; color: string; icon: string; children?: string[] }[] = [
+  { name: 'Kitchen renovation', color: '#e8a33d', icon: '🔨', children: ['Plumbing', 'Cabinets'] },
+  { name: 'Side project', color: '#4f8fe6', icon: '💻', children: ['Website', 'Launch'] },
+  { name: 'Trip to the coast', color: '#3fb27f', icon: '🏖️' }
 ]
 
 const EXAMPLE_TASKS: ExampleTask[] = [
@@ -180,8 +180,8 @@ function tag_id_named(name: string): string {
 function add_projects(): string {
   const group = add_tag_group(PROJECTS_GROUP, false)
   for (const project of PROJECT_TAGS) {
-    const parent = add_tag(project.name, group.id, null, null, project.color)
-    for (const child of project.children ?? []) add_tag(child, group.id, parent.id, null, null)
+    const parent = add_tag(project.name, group.id, null, null, project.color, project.icon)
+    for (const child of project.children ?? []) add_tag(child, group.id, parent.id, null, null, null)
   }
   return group.id
 }
@@ -219,7 +219,7 @@ function add_filters(group_ids: Map<string, string>): void {
   const group = add_tag_group('Filters', true)
   for (const filter of EXAMPLE_FILTERS) {
     const rule: TagRule = { match: filter.match, conditions: filter.conditions.map((condition) => resolved_condition(condition, group_ids)) }
-    add_tag(filter.name, group.id, null, rule, filter.color)
+    add_tag(filter.name, group.id, null, rule, filter.color, null)
   }
 }
 

@@ -920,6 +920,8 @@ select:hover { border-color: var(--border-focus); }
 
 .tag_color_picker { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 
+.tag_icon_input { width: 6em; }
+
 .tag_color_swatch {
   width: 22px;
   height: 22px;

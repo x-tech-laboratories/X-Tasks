@@ -9,7 +9,7 @@ import {
   describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor,
   with_recurrence
 } from '@shared/schedule'
-import { children_of, tag_color_style, tag_path } from './views'
+import { children_of, tag_color_style, tag_path, with_icon } from './views'
 
 // ============================================================================
 // Task detail
@@ -146,7 +146,7 @@ export function TaskDetail({
               <div class="tag_chips">
                 {task_tags.map((tag) => (
                   <span key={tag.id} class={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)}>
-                    {tag_path(tag, tags)}
+                    {with_icon(tag, tag_path(tag, tags))}
                     <button onClick={() => on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
                       ×
                     </button>
