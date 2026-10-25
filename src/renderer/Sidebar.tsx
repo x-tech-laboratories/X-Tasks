@@ -93,8 +93,10 @@ export function Sidebar({
   const [dragged_group, set_dragged_group] = useState<TagGroup | null>(null)
   const [group_drop_target, set_group_drop_target] = useState<{ group_id: string; placement: SidePlacement } | null>(null)
 
-  function open_count(view: View): number {
-    return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags, my_day_since, 'all', tag_scope, date_field)).length
+  // Completed counts its done tasks; every other view counts its open ones.
+  function view_count(view: View): number {
+    const is_counted = (task: Task) => (view.kind === 'completed' ? task.is_done : !task.is_done)
+    return tasks.filter((task) => is_counted(task) && task_is_in_view(task, view, tasks, tags, my_day_since, 'all', tag_scope, date_field)).length
   }
 
   // With empty tags hidden, a tag still shows while any task has it, done or not, while it is selected, or while it holds a tag that shows.
@@ -217,7 +219,7 @@ export function Sidebar({
   // ==========================================================================
 
   function view_button(view: View, label: string) {
-    const count = view.kind === 'completed' ? null : open_count(view)
+    const count = view_count(view)
 
     return (
       <button
@@ -234,7 +236,7 @@ export function Sidebar({
     const children = shown_children(tag.id, group_tags)
     const is_collapsed = collapsed_ids.includes(tag.id)
     const view: View = { kind: 'tag', tag_ids: [tag.id] }
-    const count = open_count(view)
+    const count = view_count(view)
     const row_class = [
       'sidebar_item sidebar_tag_row',
       is_tag_selected(selected_view, tag.id) && 'is_selected',
