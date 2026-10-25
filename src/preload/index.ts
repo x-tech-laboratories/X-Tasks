@@ -3,7 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import {
   CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
   RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, GET_SYNC_STATUS_CHANNEL,
-  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, type SettingsApi
+  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, GET_TRUSTED_CERTIFICATE_CHANNEL, SET_TRUSTED_CERTIFICATE_CHANNEL,
+  INSPECT_SERVER_CERTIFICATE_CHANNEL, type SettingsApi
 } from '@shared/settings'
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
@@ -61,9 +62,9 @@ const settings_api: SettingsApi = {
   connect_sync: (server_url, token, direction) => ipcRenderer.invoke(CONNECT_SYNC_CHANNEL, server_url, token, direction),
   disconnect_sync: () => ipcRenderer.invoke(DISCONNECT_SYNC_CHANNEL),
   sync_now: () => ipcRenderer.invoke(SYNC_NOW_CHANNEL),
-  // The desktop app trusts whatever authorities the system does.
-  get_trusted_certificate: () => Promise.resolve({ pem: '', subject: '' }),
-  set_trusted_certificate: () => Promise.reject(new Error('the desktop app uses the system certificates'))
+  get_trusted_certificate: () => ipcRenderer.invoke(GET_TRUSTED_CERTIFICATE_CHANNEL),
+  set_trusted_certificate: (pem) => ipcRenderer.invoke(SET_TRUSTED_CERTIFICATE_CHANNEL, pem),
+  inspect_server_certificate: (server_url) => ipcRenderer.invoke(INSPECT_SERVER_CERTIFICATE_CHANNEL, server_url)
 }
 
 contextBridge.exposeInMainWorld('x_tasks', tasks_api)

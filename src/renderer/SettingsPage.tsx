@@ -2,8 +2,9 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
+import { CertificateDialog } from './CertificateDialog'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
 
@@ -808,20 +809,37 @@ function SyncEditor() {
       )}
       {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
 
-      {window.x_settings.host === 'android' && <TrustedCertificateEditor />}
+      {window.x_settings.host !== 'web' && <TrustedCertificateEditor server_url={status.server_url || server_url} />}
     </>
   )
 }
 
-// On Android, takes the certificate authority of a server whose certificate the phone does not already trust, such as a home server's own.
-function TrustedCertificateEditor() {
+// Takes the certificate authority of a server whose certificate this device does not already trust, such as a home server's own.
+function TrustedCertificateEditor({ server_url }: { server_url: string }) {
   const [saved, set_saved] = useState<TrustedCertificate | null>(null)
   const [pem, set_pem] = useState('')
   const [error, set_error] = useState('')
+  const [offered, set_offered] = useState<ServerCertificate | null>(null)
+  const [is_reading, set_is_reading] = useState(false)
 
   useEffect(() => {
     void window.x_settings.get_trusted_certificate().then(set_saved)
   }, [])
+
+  // Reads the authority straight from the server, so it need not be found and pasted by hand.
+  async function read_from_server(): Promise<void> {
+    set_error('')
+    set_is_reading(true)
+    try {
+      const certificate = await window.x_settings.inspect_server_certificate(server_url.trim())
+      if (certificate) set_offered(certificate)
+      else set_error('Nothing to trust: the server is already trusted, uses http, or could not be reached.')
+    } catch (caught) {
+      set_error(error_message(caught))
+    } finally {
+      set_is_reading(false)
+    }
+  }
 
   async function save(text: string): Promise<void> {
     set_error('')
@@ -841,7 +859,7 @@ function TrustedCertificateEditor() {
         <div class="setting_text">
           <span class="setting_label">Trusted certificate authority</span>
           <span class="setting_hint">
-            {saved.subject ? `Trusting ${saved.subject} for the server.` : 'For a server with a self-signed or private certificate, paste the PEM certificate of the authority that signed it.'}
+            {saved.subject ? `Trusting ${saved.subject} for the server.` : 'For a server with a self-signed or private certificate: get its authority from the server, or paste the PEM certificate.'}
           </span>
           <textarea
             class="trusted_certificate_pem"
@@ -852,10 +870,21 @@ function TrustedCertificateEditor() {
             rows={4}
           />
         </div>
+        <button disabled={is_reading || server_url.trim() === ''} onClick={() => void read_from_server()}>Get from server</button>
         <button disabled={pem.trim() === ''} onClick={() => void save(pem)}>Trust</button>
         {saved.subject && <button onClick={() => void save('')}>Forget</button>}
       </div>
       {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
+      {offered && (
+        <CertificateDialog
+          certificate={offered}
+          server_url={server_url.trim()}
+          on_close={() => {
+            set_offered(null)
+            void window.x_settings.get_trusted_certificate().then(set_saved)
+          }}
+        />
+      )}
     </>
   )
 }

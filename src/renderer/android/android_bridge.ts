@@ -1,7 +1,7 @@
 import { App } from '@capacitor/app'
 import { registerPlugin } from '@capacitor/core'
 
-import type { McpStatus, Settings, SettingsApi, TrustedCertificate } from '@shared/settings'
+import type { McpStatus, ServerCertificate, Settings, SettingsApi, TrustedCertificate } from '@shared/settings'
 import type { TasksApi } from '@shared/tasks'
 import { connect_sync, disconnect_sync, get_sync_status, start_sync, sync_now, type SyncConfig, type SyncStorage } from '../../main/sync_client'
 import {
@@ -42,6 +42,7 @@ const MCP_OFF: McpStatus = { state: 'off', url: '', error: '' }
 const trusted_certificate_plugin = registerPlugin<{
   get: () => Promise<TrustedCertificate>
   set: (options: { pem: string }) => Promise<{ subject: string }>
+  inspect: (options: { url: string }) => Promise<ServerCertificate>
 }>('TrustedCertificate')
 
 // Each call runs straight on the database in this page; answers are promises so the page treats them as it does the desktop's.
@@ -118,7 +119,12 @@ export async function install_android_bridge(): Promise<void> {
     disconnect_sync: answer(disconnect_sync),
     sync_now,
     get_trusted_certificate: () => trusted_certificate_plugin.get(),
-    set_trusted_certificate: async (pem) => ({ pem: pem.trim(), subject: (await trusted_certificate_plugin.set({ pem })).subject })
+    set_trusted_certificate: async (pem) => ({ pem: pem.trim(), subject: (await trusted_certificate_plugin.set({ pem })).subject }),
+    // The plugin answers with an empty certificate when there is nothing to offer.
+    inspect_server_certificate: async (server_url) => {
+      const certificate = await trusted_certificate_plugin.inspect({ url: server_url }).catch(() => null)
+      return certificate?.pem ? certificate : null
+    }
   }
 
   window.x_tasks = tasks_api

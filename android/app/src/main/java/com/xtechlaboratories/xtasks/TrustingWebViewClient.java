@@ -31,7 +31,7 @@ public class TrustingWebViewClient extends BridgeWebViewClient {
         }
     }
 
-    private static boolean is_signed_by(X509Certificate server, X509Certificate authority) {
+    static boolean is_signed_by(X509Certificate server, X509Certificate authority) {
         try {
             server.checkValidity();
             server.verify(authority.getPublicKey());

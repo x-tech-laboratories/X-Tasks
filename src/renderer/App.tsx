@@ -9,6 +9,7 @@ import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
+import { UntrustedCertificatePrompt } from './CertificateDialog'
 import { FilterDialog } from './FilterDialog'
 import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
@@ -837,6 +838,8 @@ export function App() {
         )}
 
         {context_menu && <ContextMenu menu={context_menu} on_close={close_context_menu} />}
+
+        <UntrustedCertificatePrompt />
 
         {undo_message && (
           <div class="undo_bar" role="status">

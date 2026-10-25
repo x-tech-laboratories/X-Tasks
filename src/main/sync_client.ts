@@ -277,6 +277,8 @@ export function start_sync(platform_storage: SyncStorage, on_remote_change: () =
   if (read_sync_state(open_database()).server_generation === '') return ask_which_copy_to_keep('this device has not synced since a restore')
   set_status({ state: 'idle' })
   start_background_sync()
+  // Syncing straight away brings in what changed while the app was closed, and shows a problem now rather than a minute later.
+  void sync_now()
 }
 
 export function stop_sync(): void {

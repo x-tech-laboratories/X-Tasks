@@ -90,7 +90,8 @@ export function install_web_bridge(): void {
     disconnect_sync: () => Promise.resolve(NO_SYNC),
     sync_now: () => Promise.resolve(NO_SYNC),
     get_trusted_certificate: () => Promise.resolve({ pem: '', subject: '' }),
-    set_trusted_certificate: () => Promise.reject(new Error('a browser page uses the browser certificates'))
+    set_trusted_certificate: () => Promise.reject(new Error('a browser page uses the browser certificates')),
+    inspect_server_certificate: () => Promise.resolve(null)
   } as unknown as SettingsApi
 
   window.x_tasks = tasks_api

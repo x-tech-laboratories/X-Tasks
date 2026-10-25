@@ -5,6 +5,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
@@ -37,5 +38,29 @@ public class TrustedCertificatePlugin extends Plugin {
         } catch (CertificateException error) {
             call.reject("That is not a PEM certificate.");
         }
+    }
+
+    // Offers the authority behind a server certificate the phone would refuse; every field is empty when there is nothing to offer.
+    @PluginMethod
+    public void inspect(PluginCall call) {
+        String address = call.getString("url", "");
+        new Thread(() -> {
+            JSObject result = new JSObject().put("pem", "").put("subject", "").put("fingerprint", "");
+            try {
+                URL url = new URL(address);
+                if (url.getProtocol().equals("https")) {
+                    X509Certificate[] chain = ServerCertificate.read_chain(url.getHost(), url.getPort() == -1 ? 443 : url.getPort());
+                    X509Certificate signer = ServerCertificate.is_trusted(getContext(), chain) ? null : ServerCertificate.signer_of(chain);
+                    if (signer != null) {
+                        result.put("pem", ServerCertificate.pem(signer));
+                        result.put("subject", signer.getSubjectX500Principal().getName());
+                        result.put("fingerprint", ServerCertificate.fingerprint(signer));
+                    }
+                }
+            } catch (Exception error) {
+                // An unreachable server is reported by sync itself, so there is nothing to offer here.
+            }
+            call.resolve(result);
+        }).start();
     }
 }

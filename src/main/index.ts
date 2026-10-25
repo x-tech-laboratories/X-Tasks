@@ -1,11 +1,11 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
-import tls from 'node:tls'
 
 import {
   CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
   RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, GET_SYNC_STATUS_CHANNEL,
-  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, type Settings
+  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, GET_TRUSTED_CERTIFICATE_CHANNEL, SET_TRUSTED_CERTIFICATE_CHANNEL,
+  INSPECT_SERVER_CERTIFICATE_CHANNEL, type Settings
 } from '@shared/settings'
 import type { SyncDirection } from '@shared/sync'
 import {
@@ -17,6 +17,7 @@ import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_serve
 import { open_task_database } from './node_task_database'
 import { node_sync_storage } from './node_sync_storage'
 import { connect_sync, disconnect_sync, get_sync_status, start_sync, stop_sync, sync_now } from './sync_client'
+import { apply_trusted_certificates, get_trusted_certificate, inspect_server_certificate, set_trusted_certificate } from './trusted_certificate'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
@@ -159,6 +160,9 @@ function register_bridge_handlers(): void {
   ipcMain.handle(CONNECT_SYNC_CHANNEL, (_event, server_url: string, token: string, direction: SyncDirection) => connect_sync(server_url, token, direction))
   ipcMain.handle(DISCONNECT_SYNC_CHANNEL, () => disconnect_sync())
   ipcMain.handle(SYNC_NOW_CHANNEL, () => sync_now())
+  ipcMain.handle(GET_TRUSTED_CERTIFICATE_CHANNEL, () => get_trusted_certificate())
+  ipcMain.handle(SET_TRUSTED_CERTIFICATE_CHANNEL, (_event, pem: string) => set_trusted_certificate(pem))
+  ipcMain.handle(INSPECT_SERVER_CERTIFICATE_CHANNEL, (_event, server_url: string) => inspect_server_certificate(server_url))
 }
 
 // ============================================================================
@@ -177,14 +181,9 @@ function watch_for_outside_changes(): void {
 // Lifecycle
 // ============================================================================
 
-// Node's own requests trust only its built-in list, so sync to a server signed by a private authority needs the system's added too.
-function trust_system_certificates(): void {
-  tls.setDefaultCACertificates([...new Set([...tls.getCACertificates('default'), ...tls.getCACertificates('system')])])
-}
-
 app.whenReady().then(() => {
-  trust_system_certificates()
   open_task_database(process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db'))
+  apply_trusted_certificates()
   // The page's light and dark colours follow this, so it is set before the window opens.
   nativeTheme.themeSource = get_settings().theme
   register_bridge_handlers()
