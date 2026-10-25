@@ -43,6 +43,20 @@ claude mcp add --transport http x-tasks http://127.0.0.1:3917/mcp
 
 It offers tools to list tasks and tags, add, update, complete, reopen, tag, untag and remove tasks.
 
+### Importing Trilium notes
+
+`scripts/import_trilium_note.mjs` copies Trilium task notes in through this endpoint and Trilium's own
+MCP server. Each note becomes a task with its content and every attribute in the notes, its type,
+priority and area as tags, its dates and repeat rule, and its checklist and child notes as subtasks.
+
+```sh
+TRILIUM_ETAPI_TOKEN=... node scripts/import_trilium_note.mjs             # paste note ids one at a time
+TRILIUM_ETAPI_TOKEN=... node scripts/import_trilium_note.mjs --dry-run ID # show the tasks without adding them
+```
+
+A note whose title is already on the list is skipped, unless the existing task is empty, which is
+filled in instead. `TRILIUM_MCP_URL` and `X_TASKS_MCP_URL` change the endpoints.
+
 ## Web server
 
 `x-tasks-server` serves the same app to a browser, from a database of its own, so it can run on a
