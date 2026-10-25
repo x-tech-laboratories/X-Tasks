@@ -82,9 +82,16 @@ function set_status(changes: Partial<SyncStatus>): void {
   status = { ...status, ...changes }
 }
 
+// fetch reports every network problem as "fetch failed", so the reason underneath is shown with it.
+function describe_error(error: unknown): string {
+  if (!(error instanceof Error)) return String(error)
+  const cause = error.cause instanceof Error ? error.cause.message : ''
+  return cause ? `${error.message}: ${cause}` : error.message
+}
+
 // A refused token or a replaced server needs the user; anything else is the network, which is tried again later.
 function record_failure(error: unknown): void {
-  const message = error instanceof Error ? error.message : String(error)
+  const message = describe_error(error)
   if (error instanceof SyncHttpError && error.status === 409) {
     write_sync_state(open_database(), { server_generation: '' })
     ask_which_copy_to_keep("the server's tasks were replaced")

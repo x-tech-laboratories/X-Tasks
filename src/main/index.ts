@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
+import tls from 'node:tls'
 
 import {
   CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
@@ -176,7 +177,13 @@ function watch_for_outside_changes(): void {
 // Lifecycle
 // ============================================================================
 
+// Node's own requests trust only its built-in list, so sync to a server signed by a private authority needs the system's added too.
+function trust_system_certificates(): void {
+  tls.setDefaultCACertificates([...new Set([...tls.getCACertificates('default'), ...tls.getCACertificates('system')])])
+}
+
 app.whenReady().then(() => {
+  trust_system_certificates()
   open_task_database(process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db'))
   // The page's light and dark colours follow this, so it is set before the window opens.
   nativeTheme.themeSource = get_settings().theme
