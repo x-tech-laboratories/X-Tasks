@@ -62,5 +62,7 @@ export interface SyncStatus {
   server_url: string
   // When the last exchange with the server finished, as an ISO time; empty if never.
   last_synced_at: string
+  // How many rows this device changed that the server has not had yet.
+  pending_changes: number
   error: string
 }

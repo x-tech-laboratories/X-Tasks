@@ -67,7 +67,7 @@ function listen_for_changes(): void {
 // Bridge
 // ============================================================================
 
-const NO_SYNC: SyncStatus = { state: 'off', server_url: '', last_synced_at: '', error: '' }
+const NO_SYNC: SyncStatus = { state: 'off', server_url: '', last_synced_at: '', pending_changes: 0, error: '' }
 
 // Gives the page the same window.x_tasks and window.x_settings the desktop app's preload does, backed by the web server.
 export function install_web_bridge(): void {

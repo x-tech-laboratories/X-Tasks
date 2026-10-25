@@ -1,5 +1,6 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 
+import type { SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { TagScope, TaskDateField } from '@shared/settings'
 import type { OpenContextMenu } from './ContextMenu'
@@ -346,10 +347,66 @@ export function Sidebar({
       {tag_groups.map(group_section)}
 
       <section class="sidebar_section sidebar_footer">
+        <SyncButton on_open_settings={on_open_settings} />
         <button class={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>
           <span class="sidebar_label">Settings</span>
         </button>
       </section>
     </nav>
+  )
+}
+
+// ============================================================================
+// Sync button
+// ============================================================================
+
+const SYNC_STATUS_POLL_MS = 2000
+
+// Today's syncs show only the time; older ones show the day too.
+function format_synced_at(iso_time: string): string {
+  if (iso_time === '') return 'Not synced yet'
+  const time = new Date(iso_time)
+  const is_today = time.toDateString() === new Date().toDateString()
+  return `Synced ${is_today ? time.toLocaleTimeString(undefined, { timeStyle: 'short' }) : time.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`
+}
+
+function sync_label(status: SyncStatus): string {
+  if (status.state === 'syncing') return 'Syncing…'
+  if (status.state === 'offline') return 'Offline'
+  if (status.state === 'failed') return 'Sync failed'
+  if (status.state === 'needs_setup') return 'Sync needs setup'
+  return format_synced_at(status.last_synced_at)
+}
+
+// Shows when this device last synced and how many changes wait to go out; a click syncs now, or opens settings when sync needs the user.
+function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
+  const [status, set_status] = useState<SyncStatus | null>(null)
+
+  useEffect(() => {
+    const refresh = (): void => void window.x_settings.get_sync_status().then(set_status)
+    refresh()
+    const timer = setInterval(refresh, SYNC_STATUS_POLL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  if (!status || status.state === 'off') return null
+  const needs_user = status.state === 'failed' || status.state === 'needs_setup'
+
+  function click(): void {
+    if (needs_user) return on_open_settings()
+    set_status({ ...status!, state: 'syncing' })
+    void window.x_settings.sync_now().then(set_status)
+  }
+
+  return (
+    <button
+      class={needs_user ? 'sidebar_item sync_button sync_button_problem' : 'sidebar_item sync_button'}
+      title={status.error || `Sync with ${status.server_url}`}
+      disabled={status.state === 'syncing'}
+      onClick={click}
+    >
+      <span class="sidebar_label">{sync_label(status)}</span>
+      {status.pending_changes > 0 && <span class="sidebar_count">{status.pending_changes} pending</span>}
+    </button>
   )
 }

@@ -149,6 +149,13 @@ export function has_unpushed_changes(database: SqlDatabase): boolean {
   return database.prepare('SELECT 1 FROM sync_cells WHERE seq > ? AND site = ? LIMIT 1').get(pushed_seq, site) !== undefined
 }
 
+// How many rows this device changed that the server has not had yet.
+export function count_unpushed_rows(database: SqlDatabase): number {
+  const { site, pushed_seq } = read_sync_state(database)
+  const row = database.prepare('SELECT count(DISTINCT table_name || char(0) || row_key) AS count FROM sync_cells WHERE seq > ? AND site = ?').get(pushed_seq, site)
+  return (row as { count: number }).count
+}
+
 // A restored backup is no longer the data the server and other devices have seen, so this database starts a new generation and follows no server.
 export function forget_sync_history(database: SqlDatabase): void {
   write_sync_state(database, { generation: crypto.randomUUID(), server_generation: '' })

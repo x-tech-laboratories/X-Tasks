@@ -748,6 +748,9 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 
 .sidebar_footer { margin-top: auto; }
 
+.sync_button:disabled { cursor: default; }
+.sync_button_problem .sidebar_label { color: var(--status-danger); }
+
 /* ========================================================================== */
 /* Task detail                                                                */
 /* ========================================================================== */

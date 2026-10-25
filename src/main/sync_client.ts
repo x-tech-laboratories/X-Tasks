@@ -4,7 +4,7 @@ import {
 } from '@shared/sync'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } from '@shared/web_api'
 import {
-  apply_changes, collect_snapshot, collect_unpushed_changes, has_unpushed_changes, read_sync_state, replace_with_snapshot, write_sync_state
+  apply_changes, collect_snapshot, collect_unpushed_changes, count_unpushed_rows, has_unpushed_changes, read_sync_state, replace_with_snapshot, write_sync_state
 } from './sync_engine'
 import { open_database } from './task_database'
 
@@ -71,14 +71,15 @@ async function request_server<Result>(config: SyncConfig, path: string, body?: u
 // Status
 // ============================================================================
 
-let status: SyncStatus = { state: 'off', server_url: '', last_synced_at: '', error: '' }
+let status: Omit<SyncStatus, 'pending_changes'> = { state: 'off', server_url: '', last_synced_at: '', error: '' }
 let announce_remote_change: () => void = () => undefined
 
+// The pending count is read fresh each time, since every local edit changes it.
 export function get_sync_status(): SyncStatus {
-  return status
+  return { ...status, pending_changes: status.state === 'off' ? 0 : count_unpushed_rows(open_database()) }
 }
 
-function set_status(changes: Partial<SyncStatus>): void {
+function set_status(changes: Partial<typeof status>): void {
   status = { ...status, ...changes }
 }
 
@@ -136,7 +137,7 @@ export function sync_now(): Promise<SyncStatus> {
     .finally(() => {
       exchanging = null
     })
-  return exchanging.then(() => status)
+  return exchanging.then(get_sync_status)
 }
 
 // ============================================================================
@@ -176,7 +177,7 @@ export async function connect_sync(server_url: string, token: string, direction:
   set_status({ state: 'idle', last_synced_at: new Date().toISOString(), error: '' })
   if (direction === 'download') announce_remote_change()
   start_background_sync()
-  return status
+  return get_sync_status()
 }
 
 // Stops syncing and forgets the server; the tasks on this device stay as they are.
@@ -185,7 +186,7 @@ export function disconnect_sync(): SyncStatus {
   sync_storage().remove_config()
   write_sync_state(open_database(), { server_generation: '' })
   status = { state: 'off', server_url: '', last_synced_at: '', error: '' }
-  return status
+  return get_sync_status()
 }
 
 // ============================================================================
