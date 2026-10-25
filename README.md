@@ -105,9 +105,13 @@ cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/ap
 Install it with `adb install --user 0 -r app/build/outputs/apk/debug/app-debug.apk`. Without
 `--user 0`, a Samsung phone also installs it into its Dual Apps profile and shows two icons.
 
-Every push to `main` builds the debug APK on GitHub Actions and attaches it to the run as
-`x-tasks-debug-apk`. Each run signs it with a fresh debug key, so uninstall a locally built copy
-before installing it.
+Every push to `main` builds a signed release APK on GitHub Actions and publishes it as the
+[latest release](https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks.apk),
+numbered by the run so each one installs as an update. The release key is made once, inside
+`nix develop .#android`, with `scripts/android-signing-key.sh`. It saves the key and its password
+in `~/.local/share/x-tasks/signing` and uploads them as repository secrets. Back that folder up:
+Android installs an update only if it carries the same key. A debug build carries a different key,
+so it must be uninstalled before a release build will install.
 
 To try the app without a phone, use the emulator shell, which adds an Android 36 emulator:
 
