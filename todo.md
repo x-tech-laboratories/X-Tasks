@@ -15,6 +15,7 @@
 - [x] Reorder tasks by dragging
 - [x] Clear all completed tasks in a view
 - [x] Undo after removing a task
+- [x] Select several tasks and complete, reschedule, tag or delete them all at once
 
 ## Tags
 

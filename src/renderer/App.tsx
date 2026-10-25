@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Setting
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { BACK_EVENT } from './back_navigation'
-import { ContextMenu, type OpenContextMenu, type OpenMenu } from './ContextMenu'
+import { ContextMenu, type MenuItem, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
@@ -20,11 +20,11 @@ import { coming_repeats, group_by_date } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group } from './grouping'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
-  EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
+  EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
   by_position, children_of, comes_due_between, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
-  tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
+  tag_ids_for_new_task, tag_path, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
 } from './views'
 
 // ============================================================================
@@ -66,8 +66,14 @@ export function App() {
   const [multibar_text, set_multibar_text] = useState('')
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
+  // Tasks picked for a bulk action, apart from the one whose details are open.
+  const [picked_task_ids, set_picked_task_ids] = useState<string[]>([])
+  // The row a Shift+click picks from: the last one picked or opened.
+  const pick_anchor_id = useRef<string | null>(null)
+  // The rows on screen in order, for the shortcut that picks them all.
+  const shown_rows_ref = useRef<Task[]>([])
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
-  const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
+  const [rescheduling_task_ids, set_rescheduling_task_ids] = useState<string[]>([])
   const [now, set_now] = useState(() => format_task_date(new Date(), true))
   const today = now.slice(0, 10)
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
@@ -139,8 +145,7 @@ export function App() {
   // Closing the app deletes any tasks still waiting, and Ctrl+Z outside a text field undoes the last removal.
   useEffect(() => {
     const undo_on_shortcut = (event: KeyboardEvent): void => {
-      const is_typing = event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(event.target.tagName))
-      if (!is_typing && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z' && pending_removal.current) {
+      if (!is_typing(event) && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z' && pending_removal.current) {
         event.preventDefault()
         undo_removal()
       }
@@ -160,6 +165,7 @@ export function App() {
   // The chosen view is saved so the next launch can reopen it.
   function select_view(view: View): void {
     set_selected_view(view)
+    set_picked_task_ids([])
     set_is_settings_open(false)
     set_is_sidebar_open(false)
     void window.x_settings.set_setting('last_view', view)
@@ -176,9 +182,10 @@ export function App() {
   useEffect(() => {
     const step_back = (event: Event): void => {
       if (context_menu) set_context_menu(null)
-      else if (rescheduling_task_id) set_rescheduling_task_id(null)
+      else if (rescheduling_task_ids.length > 0) set_rescheduling_task_ids([])
       else if (filter_editing) set_filter_editing(null)
       else if (editing_group) set_editing_group(null)
+      else if (picked_task_ids.length > 0) set_picked_task_ids([])
       else if (selected_task_id) set_selected_task_id(null)
       else if (is_sidebar_open) set_is_sidebar_open(false)
       else if (is_settings_open) set_is_settings_open(false)
@@ -187,7 +194,24 @@ export function App() {
     }
     window.addEventListener(BACK_EVENT, step_back)
     return () => window.removeEventListener(BACK_EVENT, step_back)
-  }, [context_menu, rescheduling_task_id, filter_editing, editing_group, selected_task_id, is_sidebar_open, is_settings_open])
+  }, [context_menu, rescheduling_task_ids, filter_editing, editing_group, picked_task_ids, selected_task_id, is_sidebar_open, is_settings_open])
+
+  // Escape lets go of the picked tasks, and Ctrl+A picks every row on screen, both outside text fields, menus and dialogs.
+  useEffect(() => {
+    const pick_on_shortcut = (event: KeyboardEvent): void => {
+      if (is_typing(event) || context_menu || (event.target instanceof Element && event.target.closest('dialog'))) return
+      if (event.key === 'Escape' && picked_task_ids.length > 0) {
+        event.preventDefault()
+        set_picked_task_ids([])
+      } else if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'a' && shown_rows_ref.current.length > 0) {
+        event.preventDefault()
+        set_picked_task_ids(shown_rows_ref.current.map((task) => task.id))
+        set_selected_task_id(null)
+      }
+    }
+    window.addEventListener('keydown', pick_on_shortcut)
+    return () => window.removeEventListener('keydown', pick_on_shortcut)
+  }, [context_menu, picked_task_ids])
 
   // Changes a setting on screen only, as a panel does while its edge is being dragged.
   function show_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
@@ -560,6 +584,13 @@ export function App() {
     : is_grouped_by_date ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted) : []
   const shown_grouping = is_grouped ? settings.task_grouping : 'none'
 
+  // Every row on screen from top to bottom, leaving out those inside collapsed tasks; only these can be picked.
+  const shown_rows = is_settings_open || is_reports ? [] : rows_of(is_grouped ? task_groups.flatMap((group) => group.nodes) : task_tree, settings.collapsed_task_ids)
+  shown_rows_ref.current = shown_rows
+  // Picked tasks that leave the screen, through a search or a filter, are left out of every bulk action.
+  const picked_tasks = shown_rows.filter((task) => picked_task_ids.includes(task.id))
+  const is_picking = picked_tasks.length > 0
+
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
     const hidden = settings!.hidden_table_columns.filter((each) => each !== column)
@@ -574,6 +605,107 @@ export function App() {
     set_table_filters((filters) => without_column_filter(filters, column))
   }
 
+  // ==========================================================================
+  // Picking several tasks
+  // ==========================================================================
+
+  // A Ctrl+click while another task's details are open picks that one too, as a file manager does; picking always closes the details.
+  function toggle_picked(task: Task, with_open_task: boolean = false): void {
+    const current_ids = picked_tasks.map((each) => each.id)
+    const open_id = with_open_task && !is_picking && shown_rows.some((each) => each.id === selected_task_id) ? selected_task_id : null
+    const start_ids = open_id && open_id !== task.id ? [open_id] : current_ids
+    set_picked_task_ids(start_ids.includes(task.id) ? start_ids.filter((id) => id !== task.id) : [...start_ids, task.id])
+    pick_anchor_id.current = task.id
+    set_selected_task_id(null)
+  }
+
+  // Adds every row between the anchor and this one to the picked tasks, or picks just this one when there is no anchor on screen.
+  function pick_range(task: Task): void {
+    const anchor_id = is_picking ? pick_anchor_id.current : selected_task_id
+    const anchor_index = shown_rows.findIndex((each) => each.id === anchor_id)
+    const task_index = shown_rows.findIndex((each) => each.id === task.id)
+    if (anchor_index === -1 || task_index === -1) return toggle_picked(task)
+
+    const range_ids = shown_rows.slice(Math.min(anchor_index, task_index), Math.max(anchor_index, task_index) + 1).map((each) => each.id)
+    set_picked_task_ids([...new Set([...picked_tasks.map((each) => each.id), ...range_ids])])
+    pick_anchor_id.current = task.id
+    set_selected_task_id(null)
+  }
+
+  // The picked tasks with no picked ancestor to carry them along, counting only open ancestors when completing.
+  function picked_roots(is_completing: boolean): Task[] {
+    const picked_ids = new Set(picked_tasks.map((task) => task.id))
+    const task_by_id = new Map(tasks.map((task) => [task.id, task]))
+    return picked_tasks.filter((task) => {
+      for (let parent = task_by_id.get(task.parent_id ?? ''); parent; parent = task_by_id.get(parent.parent_id ?? '')) {
+        if (picked_ids.has(parent.id) && !(is_completing && parent.is_done)) return false
+      }
+      return true
+    })
+  }
+
+  // Completing a picked parent completes its subtasks itself, so a subtask picked along with it is not ticked twice.
+  function complete_picked(): void {
+    for (const task of picked_roots(true)) if (!task.is_done) toggle_task(task)
+  }
+
+  function reopen_picked(): void {
+    for (const task of picked_tasks) if (task.is_done) toggle_task(task)
+  }
+
+  function set_picked_my_day(is_added: boolean): void {
+    for (const task of picked_tasks) if (is_in_my_day(task, shown_since) !== is_added) set_task_my_day(task, is_added ? today : null)
+  }
+
+  // A tag every picked task holds is taken off them all; any other tag is given to them all.
+  function toggle_picked_tag(tag: Tag): void {
+    const is_on_all = picked_tasks.every((task) => task.tag_ids.includes(tag.id))
+    for (const task of picked_tasks) {
+      if (is_on_all) untag_task(task, tag)
+      else tag_task(task, tag)
+    }
+  }
+
+  function remove_picked(): void {
+    remove_tasks(picked_roots(false))
+    set_picked_task_ids([])
+  }
+
+  // Every plain tag, group by group in sidebar order, ticked when all the picked tasks hold it.
+  function tag_menu_items(): MenuItem[] {
+    return tag_groups.flatMap((group) =>
+      tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group.id && !tag.rule)).map((tag) => ({
+        label: `${group.name}: ${tag_path(tag, tags)}`,
+        is_chosen: picked_tasks.every((task) => task.tag_ids.includes(tag.id)),
+        on_select: () => toggle_picked_tag(tag)
+      }))
+    )
+  }
+
+  function open_tag_menu(event: MouseEvent): void {
+    const button = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    set_context_menu({ x: button.left, y: button.top, items: tag_menu_items() })
+  }
+
+  // The same actions as the bar at the foot of the window, for a right-click on any picked row.
+  function open_bulk_menu(event: MouseEvent): void {
+    const has_open = picked_tasks.some((task) => !task.is_done)
+    const has_done = picked_tasks.some((task) => task.is_done)
+    open_context_menu(event, [
+      ...(has_open ? [{ label: 'Mark done', on_select: complete_picked }] : []),
+      ...(has_done ? [{ label: 'Mark not done', on_select: reopen_picked }] : []),
+      { label: 'Reschedule…', on_select: () => set_rescheduling_task_ids(picked_tasks.map((task) => task.id)) },
+      all_picked_in_my_day
+        ? { label: 'Remove from My Day', on_select: () => set_picked_my_day(false) }
+        : { label: 'Add to My Day', on_select: () => set_picked_my_day(true) },
+      { label: 'Tags…', on_select: () => set_context_menu({ x: event.clientX, y: event.clientY, items: tag_menu_items() }) },
+      { label: 'Clear selection', on_select: () => set_picked_task_ids([]) },
+      { label: `Delete ${picked_tasks.length === 1 ? 'task' : `${picked_tasks.length} tasks`}`, on_select: remove_picked, is_danger: true }
+    ])
+  }
+
+  const all_picked_in_my_day = is_picking && picked_tasks.every((task) => is_in_my_day(task, shown_since))
+
   // The tags a task's row shows: its own and the rule tags that match it.
   function task_tags_of(task: Task): Tag[] {
     return [...tags.filter((tag) => task.tag_ids.includes(tag.id)), ...rule_tags_of(task, tasks, tags)]
@@ -581,7 +713,7 @@ export function App() {
 
   // The detail panel stays out of the way while the settings page is open.
   const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
-  const rescheduling_task = tasks.find((task) => task.id === rescheduling_task_id) ?? null
+  const rescheduling_tasks = tasks.filter((task) => rescheduling_task_ids.includes(task.id))
 
   const task_actions: TaskActions = {
     tags,
@@ -592,10 +724,20 @@ export function App() {
     date_field: settings.task_date_field,
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
-    on_select: (task) => set_selected_task_id(task.id),
+    // Opening a task's details ends any bulk selection, and makes it the row a Shift+click picks from.
+    on_select: (task) => {
+      set_picked_task_ids([])
+      set_selected_task_id(task.id)
+      pick_anchor_id.current = task.id
+    },
+    is_picking,
+    is_picked: (task) => is_picking && picked_task_ids.includes(task.id),
+    on_pick: toggle_picked,
+    on_pick_range: pick_range,
+    on_bulk_menu: open_bulk_menu,
     on_context_menu: open_context_menu,
     on_toggle: toggle_task,
-    on_reschedule: (task) => set_rescheduling_task_id(task.id),
+    on_reschedule: (task) => set_rescheduling_task_ids([task.id]),
     is_in_my_day: (task) => is_in_my_day(task, shown_since),
     on_set_my_day: (task, is_added) => set_task_my_day(task, is_added ? today : null),
     on_remove: remove_task,
@@ -839,7 +981,7 @@ export function App() {
             on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
             streak={streak_by_task_id.get(selected_task.id) ?? null}
             history={task_history(selected_task, tasks, completions)}
-            on_reschedule={(task) => set_rescheduling_task_id(task.id)}
+            on_reschedule={(task) => set_rescheduling_task_ids([task.id])}
             is_in_my_day={is_in_my_day(selected_task, shown_since)}
             on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
             on_remove={remove_task}
@@ -847,13 +989,13 @@ export function App() {
           />
         )}
 
-        {rescheduling_task && (
+        {rescheduling_tasks.length > 0 && (
           <ReschedulePopup
-            task={rescheduling_task}
+            tasks={rescheduling_tasks}
             options={settings.reschedule_options}
             date_field={settings.task_date_field}
             on_reschedule={set_task_schedule}
-            on_close={() => set_rescheduling_task_id(null)}
+            on_close={() => set_rescheduling_task_ids([])}
           />
         )}
 
@@ -889,6 +1031,31 @@ export function App() {
 
         <UntrustedCertificatePrompt />
 
+        {is_picking && (
+          <div class="selection_bar" role="toolbar" aria-label="Selected tasks">
+            <button class="selection_close_button" onClick={() => set_picked_task_ids([])} aria-label="Clear selection" title="Clear selection (Esc)">
+              ✕
+            </button>
+            <span class="selection_count" title="Click rows to add or remove them, Shift+click to add a range, Ctrl+A to select all">
+              {picked_tasks.length} selected
+            </span>
+            {picked_tasks.length < shown_rows.length && (
+              <button onClick={() => set_picked_task_ids(shown_rows.map((task) => task.id))}>Select all</button>
+            )}
+            <span class="selection_divider" />
+            {picked_tasks.some((task) => !task.is_done) && <button onClick={complete_picked}>Mark done</button>}
+            {picked_tasks.some((task) => task.is_done) && <button onClick={reopen_picked}>Mark not done</button>}
+            <button onClick={() => set_rescheduling_task_ids(picked_tasks.map((task) => task.id))}>Reschedule…</button>
+            <button onClick={() => set_picked_my_day(!all_picked_in_my_day)}>{all_picked_in_my_day ? 'Remove from My Day' : 'Add to My Day'}</button>
+            <button onMouseDown={(event) => event.stopPropagation()} onClick={(event) => (context_menu ? close_context_menu() : open_tag_menu(event))}>
+              Tags…
+            </button>
+            <button class="selection_delete_button" onClick={remove_picked}>
+              Delete
+            </button>
+          </div>
+        )}
+
         {undo_message && (
           <div class="undo_bar" role="status">
             <span class="undo_message">{undo_message}</span>
@@ -906,9 +1073,31 @@ export function App() {
 // Collapsing
 // ============================================================================
 
+// Every task in the tree from top to bottom, skipping what sits inside a collapsed task, each listed once.
+function rows_of(nodes: TaskNode[], collapsed_ids: string[]): Task[] {
+  const rows = new Map<string, Task>()
+  const visit = (each_nodes: TaskNode[]): void => {
+    for (const node of each_nodes) {
+      rows.set(node.task.id, node.task)
+      if (!collapsed_ids.includes(node.task.id)) visit(node.children)
+    }
+  }
+  visit(nodes)
+  return [...rows.values()]
+}
+
 // The ids of every task in the tree that has children, at any depth.
 function parent_ids_of(nodes: TaskNode[]): string[] {
   return nodes.flatMap((node) => (node.children.length > 0 ? [node.task.id, ...parent_ids_of(node.children)] : []))
+}
+
+// ============================================================================
+// Keyboard
+// ============================================================================
+
+// Shortcuts stay out of the way while text is being typed.
+function is_typing(event: KeyboardEvent): boolean {
+  return event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(event.target.tagName))
 }
 
 // ============================================================================

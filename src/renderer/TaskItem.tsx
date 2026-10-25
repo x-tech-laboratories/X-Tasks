@@ -355,6 +355,15 @@ export interface TaskActions {
   can_add_subtasks: boolean
   selected_task_id: string | null
   on_select: (task: Task) => void
+  // While any task is picked for a bulk action, a plain click on a row picks or unpicks it instead of opening it.
+  is_picking: boolean
+  is_picked: (task: Task) => boolean
+  // Picks or unpicks a row; a Ctrl+click also picks the task whose details are open, so they become a selection of two.
+  on_pick: (task: Task, with_open_task?: boolean) => void
+  // Picks every row from the last one picked or opened down or up to this one.
+  on_pick_range: (task: Task) => void
+  // The menu of bulk actions for every picked task, opened from any picked row.
+  on_bulk_menu: (event: MouseEvent) => void
   on_context_menu: OpenContextMenu
   on_toggle: (task: Task) => void
   on_reschedule: (task: Task) => void
@@ -457,14 +466,25 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     actions.on_drop(task, placement_at(event))
   }
 
-  // A click on the row opens its details, except on the checkbox and buttons, which do their own thing.
+  // A click on the row opens its details, or picks it with Ctrl, Shift or a bulk selection under way; the checkbox and buttons do their own thing.
   function click_row(event: MouseEvent): void {
-    if (!(event.target as HTMLElement).closest('input, button')) actions.on_select(task)
+    if ((event.target as HTMLElement).closest('input, button')) return
+    if (event.shiftKey) actions.on_pick_range(task)
+    else if (event.ctrlKey || event.metaKey) actions.on_pick(task, true)
+    else if (actions.is_picking) actions.on_pick(task)
+    else actions.on_select(task)
+  }
+
+  // Shift+click picks a range of rows, so it must not also highlight the text between them.
+  function press_row(event: MouseEvent): void {
+    if (event.shiftKey) event.preventDefault()
   }
 
   function open_menu(event: MouseEvent): void {
+    if (actions.is_picked(task)) return actions.on_bulk_menu(event)
     actions.on_context_menu(event, [
       { label: 'Open details', on_select: () => actions.on_select(task) },
+      { label: 'Select', on_select: () => actions.on_pick(task) },
       ...(actions.can_add_subtasks ? [{ label: 'Add subtask', on_select: () => set_is_adding_subtask(true) }] : []),
       { label: task.is_done ? 'Mark as not done' : 'Mark as done', on_select: () => actions.on_toggle(task) },
       { label: 'Reschedule…', on_select: () => actions.on_reschedule(task) },
@@ -477,6 +497,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   }
 
   const is_selected = actions.selected_task_id === task.id
+  const is_picked = actions.is_picked(task)
   // A broken streak shows a muted zero in the table, so it reads apart from a task that is not tracked at all.
   const streak_badge = streak && streak.current > 0 && (
     <span class="streak_badge" title={`${streak.current} in a row ${task.recurrence ? 'on time' : 'done with its routine'} · best ${streak.best}`}>
@@ -504,7 +525,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     )
   }
   const row_class = [
-    'task', task.is_done && 'is_done', is_selected && 'is_selected', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
+    'task', task.is_done && 'is_done', is_selected && 'is_selected', is_picked && 'is_picked', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
   ].filter(Boolean).join(' ')
 
   return (
@@ -513,6 +534,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         class={row_class}
         style={tint_tag && tag_color_style(tint_tag)}
         draggable
+        onMouseDown={press_row}
         onClick={click_row}
         onContextMenu={open_menu}
         onDragStart={start_drag}

@@ -148,6 +148,14 @@ authority** in the Sync settings; the app then accepts certificates it signed, a
 expired ones or ones for another host. The phone keeps no backups of its
 own; before it takes the server's tasks it saves its old ones in the app's storage.
 
+## Selecting several tasks
+
+Ctrl+click rows to select them, Shift+click to select a range, or Ctrl+A for every row on screen. On a phone,
+long-press a row and choose **Select**, then tap more rows. Selected rows turn blue with a bar down their left edge;
+the checkbox still only completes a task. A bar at the foot of the window marks them done or not done, reschedules
+them, adds them to My Day, tags them or deletes them all at once, and the same actions show on a selected row's
+right-click menu. Escape or the ✕ ends the selection.
+
 ## Task links
 
 **Copy link** in a task's right-click menu copies a link such as `x-tasks://task/<id>`. Opening it from another

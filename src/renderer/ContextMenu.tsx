@@ -8,6 +8,8 @@ export interface MenuItem {
   label: string
   on_select: () => void
   is_danger?: boolean
+  // Set on an item that can be ticked on or off, and shows whether it is ticked now.
+  is_chosen?: boolean
 }
 
 export interface OpenMenu {
@@ -23,7 +25,7 @@ interface ContextMenuProps {
   on_close: () => void
 }
 
-// Closes on any click outside it, Escape, scrolling or the window losing focus.
+// Closes on any click outside it, Escape, scrolling anything but itself, or the window losing focus.
 export function ContextMenu({ menu, on_close }: ContextMenuProps) {
   const menu_element = useRef<HTMLUListElement>(null)
   const [position, set_position] = useState({ left: menu.x, top: menu.y })
@@ -44,16 +46,19 @@ export function ContextMenu({ menu, on_close }: ContextMenuProps) {
     function close_on_escape(event: KeyboardEvent): void {
       if (event.key === 'Escape') on_close()
     }
+    function close_on_outside_scroll(event: Event): void {
+      if (!menu_element.current?.contains(event.target as Node)) on_close()
+    }
 
     window.addEventListener('mousedown', close_on_outside_press)
     window.addEventListener('keydown', close_on_escape)
     window.addEventListener('blur', on_close)
-    window.addEventListener('scroll', on_close, true)
+    window.addEventListener('scroll', close_on_outside_scroll, true)
     return () => {
       window.removeEventListener('mousedown', close_on_outside_press)
       window.removeEventListener('keydown', close_on_escape)
       window.removeEventListener('blur', on_close)
-      window.removeEventListener('scroll', on_close, true)
+      window.removeEventListener('scroll', close_on_outside_scroll, true)
     }
   }, [on_close])
 
@@ -62,8 +67,9 @@ export function ContextMenu({ menu, on_close }: ContextMenuProps) {
       {menu.items.map((item) => (
         <li key={item.label} role="none">
           <button
-            role="menuitem"
-            class={item.is_danger ? 'context_menu_item is_danger' : 'context_menu_item'}
+            role={item.is_chosen === undefined ? 'menuitem' : 'menuitemcheckbox'}
+            aria-checked={item.is_chosen}
+            class={['context_menu_item', item.is_danger && 'is_danger', item.is_chosen && 'is_chosen'].filter(Boolean).join(' ')}
             onClick={() => {
               on_close()
               item.on_select()
