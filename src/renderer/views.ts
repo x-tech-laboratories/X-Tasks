@@ -1,6 +1,6 @@
 import type { Settings, TagMatch, TagScope, TagSelection, TaskDateField } from '@shared/settings'
 import { PRIORITY_GROUP_ID, type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
-import { task_date_of } from '@shared/schedule'
+import { has_time, task_date_of } from '@shared/schedule'
 import { rule_matches } from './rules'
 
 export type { View }
@@ -96,10 +96,23 @@ export function is_in_my_day(task: Task, my_day_since: string): boolean {
   return task.my_day_on !== null && task.my_day_on >= my_day_since
 }
 
-// A task belongs in My Day by its chosen date once that day has come and it is still open.
-export function is_due_by(task: Task, today: string, date_field: TaskDateField): boolean {
+// The minute a task comes due by its chosen date; a date without a time comes due at midnight.
+function due_moment(task: Task, date_field: TaskDateField): string | null {
   const task_date = task_date_of(task, date_field)
-  return !task.is_done && task_date !== null && task_date.slice(0, 10) <= today
+  if (task_date === null) return null
+  return has_time(task_date) ? task_date : `${task_date}T00:00`
+}
+
+// A task belongs in My Day once its date and time have come and it is still open.
+export function is_due_by(task: Task, now: string, date_field: TaskDateField): boolean {
+  const moment = due_moment(task, date_field)
+  return !task.is_done && moment !== null && moment <= now
+}
+
+// An open task whose date and time fell after one minute and no later than another.
+export function comes_due_between(task: Task, after: string, now: string, date_field: TaskDateField): boolean {
+  const moment = due_moment(task, date_field)
+  return is_due_by(task, now, date_field) && moment !== null && moment > after
 }
 
 // New tasks added while My Day is shown go into it.

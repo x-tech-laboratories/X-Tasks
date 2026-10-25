@@ -111,8 +111,8 @@ export interface Settings {
   remove_done_from_my_day: boolean
   // When set, tasks due today or earlier go into My Day by themselves.
   add_due_to_my_day: boolean
-  // The last day due tasks were put in My Day, so ones taken out that day stay out.
-  due_added_to_my_day_on: string
+  // The minute up to which due tasks have been put in My Day, so ones taken out by hand stay out.
+  due_added_to_my_day_until: string
   priority_scale: PriorityScale
   tag_selection: TagSelection
   tag_match: TagMatch
@@ -171,7 +171,7 @@ export const DEFAULT_SETTINGS: Settings = {
   auto_clear_my_day: true,
   remove_done_from_my_day: true,
   add_due_to_my_day: false,
-  due_added_to_my_day_on: '',
+  due_added_to_my_day_until: '',
   priority_scale: 'high_medium_low',
   tag_selection: 'one_per_group',
   tag_match: 'all',

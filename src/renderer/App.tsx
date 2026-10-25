@@ -22,7 +22,7 @@ import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
-  by_position, children_of, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
+  by_position, children_of, comes_due_between, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type View
 } from './views'
 
@@ -67,7 +67,8 @@ export function App() {
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
   const [rescheduling_task_id, set_rescheduling_task_id] = useState<string | null>(null)
-  const [today, set_today] = useState(() => format_task_date(new Date(), false))
+  const [now, set_now] = useState(() => format_task_date(new Date(), true))
+  const today = now.slice(0, 10)
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
   const [editing_group, set_editing_group] = useState<TagGroup | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
@@ -118,19 +119,21 @@ export function App() {
     []
   )
 
-  // Checks the date every minute, so My Day clears itself at midnight while the app is open.
+  // Checks the clock every minute, so My Day clears itself at midnight and takes in tasks as they come due.
   useEffect(() => {
-    const timer = window.setInterval(() => set_today(format_task_date(new Date(), false)), 60 * 1000)
+    const timer = window.setInterval(() => set_now(format_task_date(new Date(), true)), 60 * 1000)
     return () => window.clearInterval(timer)
   }, [])
 
-  // Puts due tasks into My Day once a day, so ones taken out by hand stay out until tomorrow.
+  // Puts each task into My Day when its date and time arrive, once only, so ones taken out by hand stay out.
   useEffect(() => {
-    if (!has_loaded_tasks || !settings?.add_due_to_my_day || settings.due_added_to_my_day_on === today) return
+    if (!has_loaded_tasks || !settings?.add_due_to_my_day || settings.due_added_to_my_day_until === now) return
     const shown_since = my_day_since(settings, today)
-    for (const task of tasks) if (is_due_by(task, today, settings.task_date_field) && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
-    void change_setting('due_added_to_my_day_on', today)
-  }, [has_loaded_tasks, settings?.add_due_to_my_day, today])
+    for (const task of tasks) {
+      if (comes_due_between(task, settings.due_added_to_my_day_until, now, settings.task_date_field) && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
+    }
+    void change_setting('due_added_to_my_day_until', now)
+  }, [has_loaded_tasks, settings?.add_due_to_my_day, now])
 
   // Closing the app deletes any tasks still waiting, and Ctrl+Z outside a text field undoes the last removal.
   useEffect(() => {
@@ -247,7 +250,7 @@ export function App() {
     void window.x_tasks.set_task_schedule(task.id, schedule)
 
     if (!settings?.add_due_to_my_day || is_in_my_day(task, my_day_since(settings, today))) return
-    if (is_due_by({ ...task, ...schedule }, today, settings.task_date_field)) set_task_my_day(task, today)
+    if (is_due_by({ ...task, ...schedule }, now, settings.task_date_field)) set_task_my_day(task, today)
   }
 
   // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.
