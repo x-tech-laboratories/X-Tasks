@@ -315,6 +315,9 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .task_pane.is_table > * { flex: none; }
 .task_pane.is_table > .task_list { flex: 0 1 auto; min-height: 0; margin-bottom: 0; overflow: auto; }
 
+/* The vertical scrollbar starts below the sticky header instead of running up beside it. */
+.task_pane.is_table > .task_list::-webkit-scrollbar-track:vertical { margin-top: var(--table-header-height); }
+
 .task_pane_header { display: flex; align-items: baseline; gap: var(--space-5); }
 
 .task_pane_header h1 {
@@ -428,6 +431,7 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .task_list.is_table {
   --column-title-min: 240px;
   --column-actions: 56px;
+  --table-header-height: 34px;
 }
 
 /* Rows never get narrower than every column needs, so a table with many groups scrolls sideways instead of squeezing the titles. */
@@ -454,6 +458,7 @@ body.is_resizing { cursor: col-resize; user-select: none; }
   position: sticky;
   top: 0;
   z-index: 1;
+  height: var(--table-header-height);
   padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
   background: var(--surface-secondary);
   color: var(--text-secondary);
