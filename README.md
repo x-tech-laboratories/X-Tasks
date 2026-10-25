@@ -157,6 +157,15 @@ them, adds them to My Day, tags them or deletes them all at once, and the same a
 right-click menu. Dragging any selected row moves them all together, keeping their order, onto or beside
 another task or onto a sidebar tag. Escape or the ✕ ends the selection.
 
+## Quick add and search syntax
+
+The bar at the top searches as you type and adds a task on Enter. The button beside it picks how it reads each, apart:
+**Plain** takes the text as typed, **Todoist** (which Planify follows) reads `#tag`, `@label`, `p1`, dates such as
+`tomorrow at 5pm` and filters such as `today | overdue`, **GTG** reads `tags:`, `due:`, `start:`, `every:` and
+`!today !or !tomorrow`, and **Trilium** reads `#area=Career`, `#dueDate=TODAY+7` and `NOT(#recurrence)`. Each syntax lives
+in `src/renderer/syntax/`, sharing one reader for dates and repeats, and turns a search into one query that every syntax
+matches the same way. **Syntax help** in that menu, and the Syntax section of Settings, show examples of each.
+
 ## Task links
 
 **Copy link** in a task's right-click menu copies a link such as `x-tasks://task/<id>`. Opening it from another

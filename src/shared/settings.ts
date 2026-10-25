@@ -34,6 +34,9 @@ export type TagScope = 'subtags' | 'own'
 // Whether the multibar searches only the view on screen or every task.
 export type SearchScope = 'view' | 'all'
 
+// The ways of writing a new task's tags and dates, or a search, in the multibar, each borrowed from another app.
+export type SyntaxId = 'plain' | 'todoist' | 'gtg' | 'trilium'
+
 // What the task list puts its headings by: nothing, the date, or the tags of one filter group, named by "group:" and the group's id.
 export type TaskGrouping = 'none' | 'date' | `group:${string}`
 
@@ -114,6 +117,9 @@ export interface Settings {
   // When cleared, the sidebar leaves out tags no task has, done or not, unless selected or holding a tag that shows.
   show_empty_tags: boolean
   search_scope: SearchScope
+  // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
+  quick_add_syntax: SyntaxId
+  search_syntax: SyntaxId
   task_layout: TaskLayout
   // The headings every view but Reports and Upcoming shows its tasks under; Upcoming always goes by date.
   task_grouping: TaskGrouping
@@ -171,6 +177,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tag_scope: 'subtags',
   show_empty_tags: true,
   search_scope: 'view',
+  quick_add_syntax: 'todoist',
+  search_syntax: 'todoist',
   task_layout: 'list',
   task_grouping: 'none',
   upcoming_repeat_days: 7,

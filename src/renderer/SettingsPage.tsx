@@ -2,10 +2,12 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import { CertificateDialog } from './CertificateDialog'
 import { RecurrencePicker } from './RecurrencePicker'
+import { SyntaxExamples } from './SyntaxHelp'
+import { SYNTAXES, syntax_by_id, type SyntaxExample } from './syntax'
 import { duration_label, rule_format } from '@shared/schedule'
 
 // ============================================================================
@@ -53,6 +55,41 @@ const SEARCH_SCOPE_CHOICES: { value: SearchScope; label: string }[] = [
   { value: 'view', label: 'This view' },
   { value: 'all', label: 'All tasks' }
 ]
+
+// ============================================================================
+// Syntax setting
+// ============================================================================
+
+interface SyntaxSettingProps {
+  label: string
+  hint: string
+  value: SyntaxId
+  on_change: (id: SyntaxId) => void
+  examples_of: (id: SyntaxId) => SyntaxExample[]
+}
+
+// A syntax picker with what the chosen syntax looks like below it.
+function SyntaxSetting({ label, hint, value, on_change, examples_of }: SyntaxSettingProps) {
+  return (
+    <div class="syntax_setting">
+      <label class="setting_row">
+        <div class="setting_text">
+          <span class="setting_label">{label}</span>
+          <span class="setting_hint">{hint}</span>
+        </div>
+        <select value={value} onChange={(event) => on_change(event.currentTarget.value as SyntaxId)}>
+          {SYNTAXES.map((syntax) => (
+            <option key={syntax.id} value={syntax.id}>
+              {syntax.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p class="setting_hint">{syntax_by_id(value).summary}</p>
+      <SyntaxExamples examples={examples_of(value)} />
+    </div>
+  )
+}
 
 // ============================================================================
 // Settings page
@@ -313,6 +350,25 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           <SegmentedChoice label="Search" choices={SEARCH_SCOPE_CHOICES} value={settings.search_scope} on_change={(value) => on_change('search_scope', value)} />
         </div>
 
+      </section>
+
+      <section class="settings_group">
+        <h2 class="settings_heading">Syntax</h2>
+
+        <SyntaxSetting
+          label="Adding tasks"
+          hint="How Enter reads tags, dates and repeats out of what you typed; the rest becomes the title."
+          value={settings.quick_add_syntax}
+          on_change={(id) => on_change('quick_add_syntax', id)}
+          examples_of={(id) => syntax_by_id(id).quick_add_examples}
+        />
+        <SyntaxSetting
+          label="Searching"
+          hint="How typing in the bar filters tasks; words a syntax does not know are looked for in titles and notes."
+          value={settings.search_syntax}
+          on_change={(id) => on_change('search_syntax', id)}
+          examples_of={(id) => syntax_by_id(id).search_examples}
+        />
       </section>
 
       <section class="settings_group">

@@ -44,7 +44,7 @@ export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagG
 // ============================================================================
 
 // A tag, group or tagged condition looks at the task's own tags and those of the tasks above it, as tag filters do.
-function condition_holds(condition: RuleCondition, task: Task, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[], now: Date): boolean {
+export function condition_holds(condition: RuleCondition, task: Task, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[], now: Date): boolean {
   switch (condition.kind) {
     case 'status': return task.is_done === condition.is_done
     case 'tag': {

@@ -11,6 +11,8 @@ import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
 import { UntrustedCertificatePrompt } from './CertificateDialog'
 import { FilterDialog } from './FilterDialog'
+import { SyntaxHelpDialog, SyntaxPreview, syntax_button_label, syntax_menu_items } from './SyntaxHelp'
+import { query_matches, syntax_by_id, type SyntaxContext } from './syntax'
 import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar } from './Sidebar'
@@ -18,7 +20,7 @@ import { TaskDetail } from './TaskDetail'
 import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { coming_repeats, group_by_date } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group } from './grouping'
-import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
+import { format_task_date, next_schedule, parse_task_date, recurrence_anchor, with_recurrence } from '@shared/schedule'
 import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
@@ -64,6 +66,7 @@ export function App() {
   // On a phone the sidebar is a drawer over the tasks, open only while this is set.
   const [is_sidebar_open, set_is_sidebar_open] = useState(false)
   const [multibar_text, set_multibar_text] = useState('')
+  const [is_syntax_help_open, set_is_syntax_help_open] = useState(false)
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   // Tasks picked for a bulk action, apart from the one whose details are open.
@@ -247,15 +250,26 @@ export function App() {
     if (selected_view.kind === 'reports') select_view({ kind: 'all' })
   }
 
-  // The Completed view takes no new tasks, so pressing Enter there only searches.
+  // The names and relative dates the multibar's syntaxes read text against.
+  function syntax_context(): SyntaxContext {
+    return { tags, tag_groups, date_field: settings!.task_date_field, now: new Date() }
+  }
+
+  // The Completed view takes no new tasks, so pressing Enter there only searches; text that is all tags and dates adds nothing.
   async function submit_multibar(event: Event): Promise<void> {
     event.preventDefault()
-    const title = multibar_text.trim()
-    if (!title || selected_view.kind === 'completed') return
+    const text = multibar_text.trim()
+    if (!text || selected_view.kind === 'completed') return
+    const typed = syntax_by_id(settings!.quick_add_syntax).parse_quick_add(text, syntax_context())
+    if (!typed.title) return
 
-    const added_task = await window.x_tasks.add_task(title, null, tag_ids_for_new_task(selected_view, tags, tag_groups), my_day_for_new_task(selected_view, today))
+    const tag_ids = with_typed_tag_ids(tag_ids_for_new_task(selected_view, tags, tag_groups), typed.tag_ids, tags, tag_groups)
+    const added_task = await window.x_tasks.add_task(typed.title, null, tag_ids, my_day_for_new_task(selected_view, today))
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_multibar_text('')
+    if (typed.start_at || typed.due_at || typed.recurrence) {
+      return set_task_schedule(added_task, with_recurrence({ start_at: typed.start_at, due_at: typed.due_at, recurrence: '' }, typed.recurrence))
+    }
     // Upcoming shows only dated tasks, so one added there is dated today.
     if (selected_view.kind === 'upcoming') {
       const schedule = { start_at: added_task.start_at, due_at: added_task.due_at, recurrence: added_task.recurrence }
@@ -566,11 +580,14 @@ export function App() {
   const is_reports = selected_view.kind === 'reports'
   const is_table = settings.task_layout === 'table' && !is_reports
   const shown_since = my_day_since(settings, today)
-  const search_text = multibar_text.trim().toLowerCase()
-  const is_searching = search_text !== ''
+  const is_searching = multibar_text.trim() !== ''
+  const typing_context: SyntaxContext = { tags, tag_groups, date_field: settings.task_date_field, now: parse_task_date(now) }
+  const search = is_searching ? syntax_by_id(settings.search_syntax).parse_search(multibar_text, typing_context) : null
+  const typed_task = is_searching && selected_view.kind !== 'completed' ? syntax_by_id(settings.quick_add_syntax).parse_quick_add(multibar_text, typing_context) : null
+  const search_context = { all_tasks: tasks, tags, date_field: settings.task_date_field, now: typing_context.now }
   const view_tasks = tasks.filter((task) => task_is_in_view(task, selected_view, tasks, tags, shown_since, settings.tag_match, settings.tag_scope, settings.task_date_field))
   const searched_tasks = settings.search_scope === 'all' ? tasks : view_tasks
-  const visible_tasks = is_searching ? searched_tasks.filter((task) => task_matches_search(task, search_text)) : view_tasks
+  const visible_tasks = search ? searched_tasks.filter((task) => query_matches(search.query, task, search_context)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
 
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
@@ -795,12 +812,26 @@ export function App() {
           aria-label="Search or add a task"
           autofocus={!IS_TOUCH_SCREEN}
         />
+        <button
+          type="button"
+          class="syntax_button"
+          onClick={(event) =>
+            open_context_menu(
+              event,
+              syntax_menu_items(settings.quick_add_syntax, settings.search_syntax, (key, id) => void change_setting(key, id), () => set_is_syntax_help_open(true))
+            )
+          }
+          title="How the bar reads what you type"
+        >
+          {syntax_button_label(settings.quick_add_syntax, settings.search_syntax)}
+        </button>
         {can_add_task && (
           <button type="submit" disabled={!is_searching}>
             Add
           </button>
         )}
       </form>
+      <SyntaxPreview quick_add={typed_task} search_problems={search?.problems ?? []} tags={tags} />
 
       <div
         class={`app_body${selected_task ? ' has_detail' : ''}${is_sidebar_open ? ' is_sidebar_open' : ''}`}
@@ -1033,6 +1064,14 @@ export function App() {
           />
         )}
 
+        {is_syntax_help_open && (
+          <SyntaxHelpDialog
+            quick_add_syntax={settings.quick_add_syntax}
+            search_syntax={settings.search_syntax}
+            on_close={() => set_is_syntax_help_open(false)}
+          />
+        )}
+
         {editing_group && (
           <GroupDialog
             heading="Edit filter group"
@@ -1122,6 +1161,12 @@ function is_typing(event: KeyboardEvent): boolean {
 // ============================================================================
 
 // A task matches when its title or notes hold the search text, ignoring case.
-function task_matches_search(task: Task, search_text: string): boolean {
-  return task.title.toLowerCase().includes(search_text) || task.notes.toLowerCase().includes(search_text)
+// A typed tag from a single-choice group takes the place of the view's tag from that group.
+function with_typed_tag_ids(view_tag_ids: string[], typed_tag_ids: string[], tags: Tag[], tag_groups: TagGroup[]): string[] {
+  const group_of = (tag_id: string) => tags.find((tag) => tag.id === tag_id)?.group_id
+  const typed_single_groups = new Set(
+    typed_tag_ids.map(group_of).filter((group_id) => tag_groups.find((group) => group.id === group_id)?.is_single_choice)
+  )
+  const kept_view_ids = view_tag_ids.filter((tag_id) => !typed_single_groups.has(group_of(tag_id)) && !typed_tag_ids.includes(tag_id))
+  return [...kept_view_ids, ...typed_tag_ids]
 }

@@ -67,7 +67,7 @@ export function task_is_in_view(
 }
 
 // A plain tag is held by the task or a task above it; a rule tag is held whenever its rule matches.
-function task_has_tag(task: Task, tag_id: string, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[]): boolean {
+export function task_has_tag(task: Task, tag_id: string, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[]): boolean {
   const rule = tags.find((tag) => tag.id === tag_id)?.rule
   return rule ? rule_matches(rule, task, all_tasks, chain_tag_ids, tags) : chain_tag_ids.has(tag_id)
 }

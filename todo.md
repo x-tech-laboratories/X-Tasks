@@ -37,6 +37,7 @@
 - [x] Search across all tasks, or only the view on screen, from the bar at the top
 - [x] Filter the task table by title, date and tag, and sort it by several columns at once
 - [x] Show, hide, reorder and resize the task table's columns, including optional start, due and done date columns
+- [x] Read tags, dates and repeats when adding, and search with operators, in a syntax picked from the bar: Plain, Todoist, GTG or Trilium
 - [ ] Keyboard shortcuts for adding, completing and switching views
 
 ## App
