@@ -54,6 +54,28 @@ function Chevron({ is_open }: { is_open: boolean }) {
   )
 }
 
+// A cogwheel for the Settings button.
+function CogIcon() {
+  return (
+    <svg class="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+// Two circling arrows for the sync button; they turn while a sync runs.
+function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
+  return (
+    <svg class={is_spinning ? 'sidebar_icon is_spinning' : 'sidebar_icon'} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
+      <path d="M3 21v-5h5" />
+      <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
+  )
+}
+
 // Where the inline new-tag field is open: at the top of a group, or inside a tag.
 interface NewTagSpot {
   group_id: string
@@ -349,7 +371,10 @@ export function Sidebar({
       <section class="sidebar_section sidebar_footer">
         <SyncButton on_open_settings={on_open_settings} />
         <button class={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>
-          <span class="sidebar_label">Settings</span>
+          <span class="sidebar_icon_label">
+            <CogIcon />
+            <span class="sidebar_label">Settings</span>
+          </span>
         </button>
       </section>
     </nav>
@@ -367,7 +392,7 @@ function format_synced_at(iso_time: string): string {
   if (iso_time === '') return 'Not synced yet'
   const time = new Date(iso_time)
   const is_today = time.toDateString() === new Date().toDateString()
-  return `Synced ${is_today ? time.toLocaleTimeString(undefined, { timeStyle: 'short' }) : time.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`
+  return `Last synced ${is_today ? time.toLocaleTimeString(undefined, { timeStyle: 'short' }) : time.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`
 }
 
 function sync_label(status: SyncStatus): string {
@@ -375,7 +400,12 @@ function sync_label(status: SyncStatus): string {
   if (status.state === 'offline') return 'Offline'
   if (status.state === 'failed') return 'Sync failed'
   if (status.state === 'needs_setup') return 'Sync needs setup'
-  return format_synced_at(status.last_synced_at)
+  return 'Synced'
+}
+
+// The last sync time, then the problem if there is one.
+function sync_tooltip(status: SyncStatus): string {
+  return [format_synced_at(status.last_synced_at), status.error || `with ${status.server_url}`].join('\n')
 }
 
 // Shows when this device last synced and how many changes wait to go out; a click syncs now, or opens settings when sync needs the user.
@@ -401,11 +431,14 @@ function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
   return (
     <button
       class={needs_user ? 'sidebar_item sync_button sync_button_problem' : 'sidebar_item sync_button'}
-      title={status.error || `Sync with ${status.server_url}`}
+      title={sync_tooltip(status)}
       disabled={status.state === 'syncing'}
       onClick={click}
     >
-      <span class="sidebar_label">{sync_label(status)}</span>
+      <span class="sidebar_icon_label">
+        <SyncIcon is_spinning={status.state === 'syncing'} />
+        <span class="sidebar_label">{sync_label(status)}</span>
+      </span>
       {status.pending_changes > 0 && <span class="sidebar_count">{status.pending_changes} pending</span>}
     </button>
   )
