@@ -90,6 +90,20 @@ cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/ap
 Install it with `adb install --user 0 -r app/build/outputs/apk/debug/app-debug.apk`. Without
 `--user 0`, a Samsung phone also installs it into its Dual Apps profile and shows two icons.
 
+Every push to `main` builds the debug APK on GitHub Actions and attaches it to the run as
+`x-tasks-debug-apk`. Each run signs it with a fresh debug key, so uninstall a locally built copy
+before installing it.
+
+To try the app without a phone, use the emulator shell, which adds an Android 36 emulator:
+
+```sh
+nix develop .#android-emulator
+x-tasks-emulator &          # starts the emulator; its virtual device lives in ~/.local/share/x-tasks/avd
+x-tasks-emulator-install    # builds the app, then installs and opens it on the emulator only
+```
+
+`adb -s emulator-5554 reverse tcp:3918 tcp:3918` lets the emulator sync with a local server.
+
 Android only allows https, so the server must sit behind TLS; plain http works only to `localhost`,
 for testing through `adb reverse tcp:3918 tcp:3918`. The phone keeps no backups of its
 own; before it takes the server's tasks it saves its old ones in the app's storage.
