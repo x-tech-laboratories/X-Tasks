@@ -1,6 +1,7 @@
 import { App } from '@capacitor/app'
+import { registerPlugin } from '@capacitor/core'
 
-import type { McpStatus, Settings, SettingsApi } from '@shared/settings'
+import type { McpStatus, Settings, SettingsApi, TrustedCertificate } from '@shared/settings'
 import type { TasksApi } from '@shared/tasks'
 import { connect_sync, disconnect_sync, get_sync_status, start_sync, sync_now, type SyncConfig, type SyncStorage } from '../../main/sync_client'
 import {
@@ -36,6 +37,12 @@ function android_sync_storage(export_bytes: () => Uint8Array): SyncStorage {
 // ============================================================================
 
 const MCP_OFF: McpStatus = { state: 'off', url: '', error: '' }
+
+// The app's own native plugin, which keeps the authority where the WebView checks server certificates.
+const trusted_certificate_plugin = registerPlugin<{
+  get: () => Promise<TrustedCertificate>
+  set: (options: { pem: string }) => Promise<{ subject: string }>
+}>('TrustedCertificate')
 
 // Each call runs straight on the database in this page; answers are promises so the page treats them as it does the desktop's.
 function answer<Args extends unknown[], Result>(call: (...args: Args) => Result): (...args: Args) => Promise<Result> {
@@ -109,7 +116,9 @@ export async function install_android_bridge(): Promise<void> {
     get_sync_status: answer(get_sync_status),
     connect_sync,
     disconnect_sync: answer(disconnect_sync),
-    sync_now
+    sync_now,
+    get_trusted_certificate: () => trusted_certificate_plugin.get(),
+    set_trusted_certificate: async (pem) => ({ pem: pem.trim(), subject: (await trusted_certificate_plugin.set({ pem })).subject })
   }
 
   window.x_tasks = tasks_api

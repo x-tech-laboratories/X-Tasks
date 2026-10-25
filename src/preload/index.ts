@@ -60,7 +60,10 @@ const settings_api: SettingsApi = {
   get_sync_status: () => ipcRenderer.invoke(GET_SYNC_STATUS_CHANNEL),
   connect_sync: (server_url, token, direction) => ipcRenderer.invoke(CONNECT_SYNC_CHANNEL, server_url, token, direction),
   disconnect_sync: () => ipcRenderer.invoke(DISCONNECT_SYNC_CHANNEL),
-  sync_now: () => ipcRenderer.invoke(SYNC_NOW_CHANNEL)
+  sync_now: () => ipcRenderer.invoke(SYNC_NOW_CHANNEL),
+  // The desktop app trusts whatever authorities the system does.
+  get_trusted_certificate: () => Promise.resolve({ pem: '', subject: '' }),
+  set_trusted_certificate: () => Promise.reject(new Error('the desktop app uses the system certificates'))
 }
 
 contextBridge.exposeInMainWorld('x_tasks', tasks_api)

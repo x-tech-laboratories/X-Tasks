@@ -120,7 +120,10 @@ x-tasks-emulator-install    # builds the app, then installs and opens it on the 
 `adb -s emulator-5554 reverse tcp:3918 tcp:3918` lets the emulator sync with a local server.
 
 Android only allows https, so the server must sit behind TLS; plain http works only to `localhost`,
-for testing through `adb reverse tcp:3918 tcp:3918`. The phone keeps no backups of its
+for testing through `adb reverse tcp:3918 tcp:3918`. For a server whose certificate comes from a
+private or self-signed authority, paste that authority's PEM certificate under **Trusted certificate
+authority** in the Sync settings; the app then accepts certificates it signed, and still refuses
+expired ones or ones for another host. The phone keeps no backups of its
 own; before it takes the server's tasks it saves its old ones in the app's storage.
 
 ## Layout

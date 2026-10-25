@@ -1074,6 +1074,8 @@ select:hover { border-color: var(--border-focus); }
 .sync_input { width: 260px; }
 .settings_group > .sync_status { margin: var(--space-4) 0 0; }
 .settings_group > .sync_status_problem { color: var(--status-danger); }
+.trusted_certificate .setting_text { gap: var(--space-3); }
+.trusted_certificate_pem { width: 100%; font-family: ui-monospace, monospace; font-size: var(--text-caption); }
 
 /* ========================================================================== */
 /* Recurrence picker                                                          */

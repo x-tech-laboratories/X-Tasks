@@ -289,6 +289,16 @@ export interface SettingsApi {
   connect_sync: (server_url: string, token: string, direction: SyncDirection) => Promise<SyncStatus>
   disconnect_sync: () => Promise<SyncStatus>
   sync_now: () => Promise<SyncStatus>
+  // The certificate authority, as PEM, that the Android app trusts for a server with a private or self-signed certificate.
+  get_trusted_certificate: () => Promise<TrustedCertificate>
+  // Saves the authority, or forgets it when given an empty text, and answers with the name it was issued to.
+  set_trusted_certificate: (pem: string) => Promise<TrustedCertificate>
+}
+
+export interface TrustedCertificate {
+  pem: string
+  // The name the certificate was issued to, such as "CN=TechNet Root CA"; empty when none is set.
+  subject: string
 }
 
 export const GET_SETTINGS_CHANNEL = 'settings:get'

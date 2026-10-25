@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import { RecurrencePicker } from './RecurrencePicker'
 import { duration_label, rule_format } from '@shared/schedule'
@@ -806,6 +806,55 @@ function SyncEditor() {
       {status.state !== 'off' && (
         <p class={`setting_hint sync_status ${status.state === 'failed' || status.state === 'needs_setup' ? 'sync_status_problem' : ''}`}>{describe_sync_status(status)}</p>
       )}
+      {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
+
+      {window.x_settings.host === 'android' && <TrustedCertificateEditor />}
+    </>
+  )
+}
+
+// On Android, takes the certificate authority of a server whose certificate the phone does not already trust, such as a home server's own.
+function TrustedCertificateEditor() {
+  const [saved, set_saved] = useState<TrustedCertificate | null>(null)
+  const [pem, set_pem] = useState('')
+  const [error, set_error] = useState('')
+
+  useEffect(() => {
+    void window.x_settings.get_trusted_certificate().then(set_saved)
+  }, [])
+
+  async function save(text: string): Promise<void> {
+    set_error('')
+    try {
+      set_saved(await window.x_settings.set_trusted_certificate(text))
+      set_pem('')
+    } catch (caught) {
+      set_error(error_message(caught))
+    }
+  }
+
+  if (!saved) return null
+
+  return (
+    <>
+      <div class="setting_row trusted_certificate">
+        <div class="setting_text">
+          <span class="setting_label">Trusted certificate authority</span>
+          <span class="setting_hint">
+            {saved.subject ? `Trusting ${saved.subject} for the server.` : 'For a server with a self-signed or private certificate, paste the PEM certificate of the authority that signed it.'}
+          </span>
+          <textarea
+            class="trusted_certificate_pem"
+            value={pem}
+            onInput={(event) => set_pem(event.currentTarget.value)}
+            placeholder="-----BEGIN CERTIFICATE-----"
+            aria-label="Certificate authority in PEM form"
+            rows={4}
+          />
+        </div>
+        <button disabled={pem.trim() === ''} onClick={() => void save(pem)}>Trust</button>
+        {saved.subject && <button onClick={() => void save('')}>Forget</button>}
+      </div>
       {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
     </>
   )
