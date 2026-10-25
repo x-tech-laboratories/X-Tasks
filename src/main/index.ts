@@ -27,6 +27,13 @@ import {
 } from './task_database'
 
 // ============================================================================
+// Profile
+// ============================================================================
+
+// Dev runs set this so Electron's own profile stays apart from the installed app's.
+if (process.env.X_TASKS_USER_DATA) app.setPath('userData', process.env.X_TASKS_USER_DATA)
+
+// ============================================================================
 // Window
 // ============================================================================
 

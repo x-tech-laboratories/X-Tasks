@@ -21,7 +21,9 @@ different file.
 
 `npm run dev` and `npm run app` open `dev-data/tasks.db` instead, a database of example tasks, projects,
 habits with a few weeks of history, and filters, dated around the day it was made. It is made the
-first time either command runs, from `src/dev/seed_database.ts`, and is not kept in git.
+first time either command runs, from `src/dev/seed_database.ts`, and is not kept in git. Electron's own
+profile for these runs lives in `dev-data/profile` (set `X_TASKS_USER_DATA` to move it), so they never
+touch `~/.config/x-tasks`.
 
 ```sh
 npm run seed                                     # remake it from scratch, with fresh dates
