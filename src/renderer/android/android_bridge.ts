@@ -5,7 +5,7 @@ import type { McpStatus, ServerCertificate, Settings, SettingsApi, TrustedCertif
 import type { TasksApi } from '@shared/tasks'
 import { connect_sync, disconnect_sync, get_sync_status, start_sync, sync_now, type SyncConfig, type SyncStorage } from '../../main/sync_client'
 import {
-  add_tag, add_tag_group, add_task, apply_priority_scale, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
+  add_tag, add_tag_group, add_task, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
   move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, set_setting, set_task_done, set_task_my_day, set_task_notes,
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group
 } from '../../main/task_database'
@@ -101,7 +101,6 @@ export async function install_android_bridge(): Promise<void> {
     // Turning daily backups on or keeping fewer takes or deletes them straight away, as on the desktop.
     set_setting: async <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
       set_setting(key, value)
-      if (key === 'priority_scale') apply_priority_scale(value as Settings['priority_scale'])
       if (key === 'auto_backup' || key === 'auto_backups_to_keep') await backups.keep_automatic_backups()
     },
     get_database_path: answer(() => 'On this device'),

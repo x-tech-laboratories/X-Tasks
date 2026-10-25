@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type PriorityScale, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import { CertificateDialog } from './CertificateDialog'
 import { RecurrencePicker } from './RecurrencePicker'
@@ -31,11 +31,6 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
   { value: 'reports', label: 'Reports' }
-]
-
-const PRIORITY_SCALE_CHOICES: { value: PriorityScale; label: string }[] = [
-  { value: 'high_medium_low', label: 'High, Medium, Low' },
-  { value: 'moscow', label: 'MoSCoW' }
 ]
 
 const TAG_SELECTION_CHOICES: { value: TagSelection; label: string }[] = [
@@ -318,28 +313,6 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           <SegmentedChoice label="Search" choices={SEARCH_SCOPE_CHOICES} value={settings.search_scope} on_change={(value) => on_change('search_scope', value)} />
         </div>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Priority scale</span>
-            <span class="setting_hint">
-              The tags in the Priority group. MoSCoW is Must, Should, Could and Won't have. Tasks keep their rank when this
-              changes, and Won't have becomes Low.
-            </span>
-          </div>
-          <div class="segmented_control" role="radiogroup" aria-label="Priority scale">
-            {PRIORITY_SCALE_CHOICES.map(({ value, label }) => (
-              <button
-                key={value}
-                role="radio"
-                aria-checked={settings.priority_scale === value}
-                class={settings.priority_scale === value ? 'is_selected' : ''}
-                onClick={() => on_change('priority_scale', value)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
       <section class="settings_group">

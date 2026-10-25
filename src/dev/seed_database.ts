@@ -230,7 +230,7 @@ function seed(): void {
     remove_database(path)
   }
 
-  // The schema's own migrations add the preset Area, Priority and Type groups.
+  // The schema's own migrations add the preset Area, Type and both Priority groups.
   open_task_database(path)
   const projects_group_id = add_projects()
   for (const example of EXAMPLE_TASKS) add_example_task(example, null)

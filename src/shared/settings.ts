@@ -41,14 +41,6 @@ export type TaskGrouping = 'none' | 'date' | `group:${string}`
 export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
 export const DETAIL_WIDTH_RANGE = { min: 260, max: 720 }
 
-// The names given to the tags of the preset Priority group, from highest to lowest.
-export type PriorityScale = 'high_medium_low' | 'moscow'
-
-export const PRIORITY_SCALE_NAMES: Record<PriorityScale, string[]> = {
-  high_medium_low: ['High', 'Medium', 'Low'],
-  moscow: ['Must have', 'Should have', 'Could have', "Won't have"]
-}
-
 // A quick date offered by the Reschedule popup: a number of days from today, or the next date of a repeat rule counted from now.
 export interface RescheduleOption {
   id: string
@@ -116,7 +108,6 @@ export interface Settings {
   add_due_to_my_day: boolean
   // The minute up to which due tasks have been put in My Day, so ones taken out by hand stay out.
   due_added_to_my_day_until: string
-  priority_scale: PriorityScale
   tag_selection: TagSelection
   tag_match: TagMatch
   tag_scope: TagScope
@@ -175,7 +166,6 @@ export const DEFAULT_SETTINGS: Settings = {
   remove_done_from_my_day: true,
   add_due_to_my_day: false,
   due_added_to_my_day_until: '',
-  priority_scale: 'high_medium_low',
   tag_selection: 'one_per_group',
   tag_match: 'all',
   tag_scope: 'subtags',

@@ -4,7 +4,7 @@ import type { WebMethod } from '@shared/web_api'
 import { create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup } from '../main/database_backups'
 import { apply_mcp_settings, get_mcp_status } from '../main/mcp_server'
 import {
-  add_tag, add_tag_group, add_task, apply_priority_scale, get_settings, list_completions, list_tag_groups, list_tags, list_tasks, move_tag, move_tag_group,
+  add_tag, add_tag_group, add_task, get_settings, list_completions, list_tag_groups, list_tags, list_tasks, move_tag, move_tag_group,
   move_task, remove_tag, remove_tag_group, remove_task, set_setting, set_task_done, set_task_my_day, set_task_notes, set_task_schedule, set_task_title,
   tag_task, task_database_path, untag_task, update_tag, update_tag_group
 } from '../main/task_database'
@@ -40,7 +40,6 @@ export function create_bridge_handlers(context: BridgeContext): BridgeHandlers {
     // The theme is left to each browser, since the server has no window of its own to recolour.
     set_setting: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
       set_setting(key, value)
-      if (key === 'priority_scale') apply_priority_scale(value as Settings['priority_scale'])
       if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server(context)
       if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
     },

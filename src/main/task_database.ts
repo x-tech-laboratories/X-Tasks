@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, PRIORITY_SCALE_NAMES, saved_task_duration, type PriorityScale, type Settings } from '@shared/settings'
+import { DEFAULT_SETTINGS, saved_task_duration, type Settings } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import type { SqlDatabase } from './sql_database'
 import { drop_sync_triggers, install_sync_triggers } from './sync_engine'
@@ -136,7 +136,25 @@ const SCHEMA_MIGRATIONS = [
      PRIMARY KEY (table_name, row_key, column_name)
    ) WITHOUT ROWID;
    CREATE INDEX sync_cells_by_seq ON sync_cells (seq)`,
-  `ALTER TABLE tags ADD COLUMN icon TEXT`
+  `ALTER TABLE tags ADD COLUMN icon TEXT`,
+  // The Priority group becomes the MoSCoW or Standard group its tags already match, and the other is started beside it with ids every device shares.
+  `UPDATE tag_groups
+     SET name = CASE WHEN EXISTS (SELECT 1 FROM tags WHERE group_id = 'priority' AND parent_id IS NULL AND name = 'Must have')
+                     THEN 'Priority (MoSCoW)' ELSE 'Priority (Standard)' END
+     WHERE id = 'priority' AND name = 'Priority';
+   INSERT INTO tag_groups (id, name, created_at, position, is_single_choice)
+     SELECT column1, column2, strftime('%Y-%m-%dT%H:%M:%fZ'),
+            COALESCE((SELECT position FROM tag_groups WHERE id = 'priority') + 0.01, 0.5), 1
+     FROM (VALUES ('priority_moscow', 'Priority (MoSCoW)'), ('priority_standard', 'Priority (Standard)'))
+     WHERE NOT EXISTS (SELECT 1 FROM tag_groups WHERE name = column2);
+   INSERT INTO tags (id, name, created_at, group_id, position)
+     SELECT column1, column2, strftime('%Y-%m-%dT%H:%M:%fZ'), column3, column4
+     FROM (VALUES ('priority_moscow_must', 'Must have', 'priority_moscow', 1), ('priority_moscow_should', 'Should have', 'priority_moscow', 2),
+                  ('priority_moscow_could', 'Could have', 'priority_moscow', 3), ('priority_moscow_wont', 'Won''t have', 'priority_moscow', 4),
+                  ('priority_standard_high', 'High', 'priority_standard', 1), ('priority_standard_medium', 'Medium', 'priority_standard', 2),
+                  ('priority_standard_low', 'Low', 'priority_standard', 3))
+     WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = column3);
+   DELETE FROM settings WHERE key = 'priority_scale'`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -520,39 +538,4 @@ export function set_setting<Key extends keyof Settings>(key: Key, value: Setting
   open_database()
     .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value')
     .run(key, JSON.stringify(value))
-}
-
-// ============================================================================
-// Priority scale
-// ============================================================================
-
-// Renames the preset Priority tags rank by rank, so tasks keep their priority; a rank the new scale lacks merges into its lowest.
-export function apply_priority_scale(scale: PriorityScale): void {
-  const database = open_database()
-  const names = PRIORITY_SCALE_NAMES[scale]
-  if (!database.prepare("SELECT 1 FROM tag_groups WHERE id = 'priority'").get()) return
-
-  const ranks = database
-    .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position")
-    .all() as { id: string }[]
-
-  in_transaction(database, () => {
-    names.forEach((name, index) => {
-      const rank = ranks[index]
-      if (rank) database.prepare('UPDATE tags SET name = ?, position = ? WHERE id = ?').run(name, index + 1, rank.id)
-      else {
-        database
-          .prepare("INSERT INTO tags (id, name, created_at, group_id, position) VALUES (?, ?, ?, 'priority', ?)")
-          .run(crypto.randomUUID(), name, new Date().toISOString(), index + 1)
-      }
-    })
-
-    const lowest = database
-      .prepare("SELECT id FROM tags WHERE group_id = 'priority' AND parent_id IS NULL ORDER BY position LIMIT 1 OFFSET ?")
-      .get(names.length - 1) as { id: string }
-    for (const extra of ranks.slice(names.length)) {
-      database.prepare('INSERT OR IGNORE INTO task_tags (task_id, tag_id) SELECT task_id, ? FROM task_tags WHERE tag_id = ?').run(lowest.id, extra.id)
-      database.prepare('DELETE FROM tags WHERE id = ?').run(extra.id)
-    }
-  })
 }

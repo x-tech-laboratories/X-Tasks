@@ -243,7 +243,7 @@ function tags_of(note, groups, warnings) {
   const tags = []
   const wanted = [
     ['Type', labels_of(note, 'type').map((value) => TYPE_TAGS[value.toLowerCase()]).find(Boolean)],
-    ['Priority', PRIORITY_TAGS[label_of(note, 'priority') ?? '']],
+    ['Priority (MoSCoW)', PRIORITY_TAGS[label_of(note, 'priority') ?? '']],
     ['Area', label_of(note, 'area')?.replace(/^\d+-/, '')]
   ]
   for (const [group_name, tag_name] of wanted) {

@@ -1,5 +1,5 @@
 import type { Settings, TagMatch, TagScope, TagSelection, TaskDateField } from '@shared/settings'
-import { PRIORITY_GROUP_ID, type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
+import { type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
 import { has_time, task_date_of } from '@shared/schedule'
 import { rule_matches } from './rules'
 
@@ -208,10 +208,6 @@ function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
 export function tag_path(tag: Tag, tags: Tag[]): string {
   const parent = tags.find((each) => each.id === tag.parent_id)
   return parent ? `${tag_path(parent, tags)} › ${tag.name}` : tag.name
-}
-
-export function is_priority_tag(tag: Tag): boolean {
-  return tag.group_id === PRIORITY_GROUP_ID
 }
 
 // Hands the tag's colour to its styles as --tag-color, or nothing when it has none.

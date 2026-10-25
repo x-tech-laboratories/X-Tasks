@@ -20,7 +20,7 @@ import { connect_sync, disconnect_sync, get_sync_status, start_sync, stop_sync, 
 import { apply_trusted_certificates, get_trusted_certificate, inspect_server_certificate, set_trusted_certificate } from './trusted_certificate'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
-  add_tag, add_tag_group, add_task, apply_priority_scale, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
+  add_tag, add_tag_group, add_task, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
   list_tasks, move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, set_setting, update_tag, update_tag_group,
   set_task_done, set_task_my_day, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
   untag_task
@@ -156,7 +156,6 @@ function register_bridge_handlers(): void {
   ipcMain.handle(SET_SETTING_CHANNEL, <Key extends keyof Settings>(_event: unknown, key: Key, value: Settings[Key]) => {
     set_setting(key, value)
     if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
-    if (key === 'priority_scale') apply_priority_scale(value as Settings['priority_scale'])
     if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server()
     if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
   })

@@ -13,7 +13,7 @@ import {
   has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
 } from './table'
 import type { RepeatOccurrence } from './dates'
-import { drop_placement, is_priority_tag, tag_color_style, tag_path, with_icon, type DropPlacement, type TaskNode } from './views'
+import { drop_placement, tag_color_style, tag_path, with_icon, type DropPlacement, type TaskNode } from './views'
 
 // A row's strip shows about a week of a daily routine.
 const ROW_STRIP_LENGTH = 7
@@ -393,25 +393,15 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const [subtask_title, set_subtask_title] = useState('')
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
 
-  // The priority gets its own label, apart from the tag chips; rule tags that match join the task's own tags.
+  // Rule tags that match join the task's own tags.
   const task_tags = [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)]
-  const priority_tag = task_tags.find(is_priority_tag)
-  const chip_tags = task_tags.filter((tag) => !is_priority_tag(tag))
   const tint_tag = actions.tint_rows ? task_tags.find((tag) => tag.color) : undefined
 
-  // A priority shows as a plain label, a rule tag as a fixed chip, and any other tag as a chip that can be removed from the task.
+  // A rule tag shows as a fixed chip, and any other tag as a chip that can be removed from the task.
   function render_tag(tag: Tag, label: string = tag.name) {
     if (tag.rule) {
       return (
         <span key={tag.id} class={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)} title={`${tag_path(tag, actions.tags)} (rule)`}>
-          {with_icon(tag, label)}
-        </span>
-      )
-    }
-
-    if (is_priority_tag(tag)) {
-      return (
-        <span key={tag.id} class="priority_label" style={tag_color_style(tag)} title={`Priority: ${tag_path(tag, actions.tags)}`}>
           {with_icon(tag, label)}
         </span>
       )
@@ -569,8 +559,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         ) : (
           <>
             {date_cell('date')}
-            {priority_tag && render_tag(priority_tag)}
-            {chip_tags.map((tag) => render_tag(tag))}
+            {task_tags.map((tag) => render_tag(tag))}
           </>
         )}
 

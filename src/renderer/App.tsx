@@ -194,15 +194,9 @@ export function App() {
     set_settings((current_settings) => current_settings && { ...current_settings, [key]: value })
   }
 
-  // A new priority scale renames tags and can move tasks between them, so both are fetched again.
   async function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): Promise<void> {
     show_setting(key, value)
     await window.x_settings.set_setting(key, value)
-
-    if (key === 'priority_scale') {
-      set_tags(await window.x_tasks.list_tags())
-      set_tasks(without_pending(await window.x_tasks.list_tasks()))
-    }
   }
 
   // Ids of tasks deleted since are dropped whenever the list is saved again.
