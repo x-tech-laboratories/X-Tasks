@@ -506,6 +506,9 @@ export function get_settings(): Settings {
   for (const row of rows) {
     if (row.key in DEFAULT_SETTINGS) settings[row.key] = JSON.parse(row.value)
   }
+  // The older on-off date grouping carries over until a grouping is picked.
+  const old_group_by_date = rows.find((row) => row.key === 'group_by_date')
+  if (old_group_by_date?.value === 'true' && !rows.some((row) => row.key === 'task_grouping')) settings.task_grouping = 'date'
   settings.task_durations = (settings.task_durations as Parameters<typeof saved_task_duration>[0][]).map(saved_task_duration)
 
   return settings as unknown as Settings

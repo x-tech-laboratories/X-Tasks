@@ -13,8 +13,8 @@ export interface RepeatOccurrence {
   task_date: string
 }
 
-// The tasks and coming repeats that share a heading, such as Today, Friday or November.
-export interface DateGroup {
+// The tasks and coming repeats that share a heading, such as Today, November or a tag.
+export interface TaskGroup {
   key: string
   label: string
   nodes: TaskNode[]
@@ -56,9 +56,9 @@ function group_label(key: string, today: string): string {
 }
 
 // Splits the top tasks into date groups, earliest first with undated ones last; within a group tasks run by date and time.
-export function group_by_date(nodes: TaskNode[], repeats: RepeatOccurrence[], date_field: TaskDateField, now: string, keep_order: boolean): DateGroup[] {
+export function group_by_date(nodes: TaskNode[], repeats: RepeatOccurrence[], date_field: TaskDateField, now: string, keep_order: boolean): TaskGroup[] {
   const today = now.slice(0, 10)
-  const groups = new Map<string, DateGroup>()
+  const groups = new Map<string, TaskGroup>()
   const group_of = (key: string) => {
     if (!groups.has(key)) groups.set(key, { key, label: group_label(key, today), nodes: [], repeats: [] })
     return groups.get(key)!

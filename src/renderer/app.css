@@ -1184,14 +1184,14 @@ select:hover { border-color: var(--border-focus); }
 
 .clear_completed_button { flex: none; }
 
-.group_by_date_button { flex: none; }
-.group_by_date_button.is_selected { border-color: var(--accent); color: var(--accent); }
+.grouping_select { flex: none; }
+.grouping_select.is_selected { border-color: var(--accent); color: var(--accent); }
 
 /* ========================================================================== */
-/* Date groups                                                                */
+/* Task groups                                                                */
 /* ========================================================================== */
 
-.date_group_heading {
+.group_heading {
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
@@ -1201,10 +1201,10 @@ select:hover { border-color: var(--border-focus); }
   font-size: var(--text-caption);
   font-weight: 600;
 }
-.date_group_heading:not(:first-child) { border-top: 1px solid var(--border-default); }
-.date_group_heading.is_overdue { color: var(--status-danger); }
-.date_group_count { color: var(--text-tertiary); font-weight: 400; }
-.task_list > .date_group_heading + .task_item > .task { border-top: 0; }
+.group_heading:not(:first-child) { border-top: 1px solid var(--border-default); }
+.group_heading.is_overdue { color: var(--status-danger); }
+.group_count { color: var(--text-tertiary); font-weight: 400; }
+.task_list > .group_heading + .task_item > .task { border-top: 0; }
 
 .task.is_repeat { color: var(--text-secondary); }
 .task.is_repeat .task_title { font-style: italic; }

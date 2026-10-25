@@ -1,7 +1,7 @@
 import { Fragment } from 'preact'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 
-import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskLayout } from '@shared/settings'
+import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskLayout } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { BACK_EVENT } from './back_navigation'
@@ -17,6 +17,7 @@ import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { coming_repeats, group_by_date } from './dates'
+import { group_by_tag, grouping_choices, grouping_tag_group } from './grouping'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor } from '@shared/schedule'
 import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
@@ -546,11 +547,16 @@ export function App() {
   const table_columns = column_order.filter((column) => is_column_shown(column, settings.hidden_table_columns, settings.shown_table_columns))
   const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field, last_done_of) : nested_tasks
 
-  // Upcoming always groups by date and lists the later dates of repeating tasks; other views group only when asked.
+  // Upcoming always groups by date and lists the later dates of repeating tasks; other views group as picked.
   const is_upcoming = selected_view.kind === 'upcoming'
-  const is_grouped = is_upcoming || settings.group_by_date
+  const grouped_tag_group = is_upcoming ? null : grouping_tag_group(settings.task_grouping, tag_groups)
+  const is_grouped_by_date = is_upcoming || settings.task_grouping === 'date'
+  const is_grouped = is_grouped_by_date || grouped_tag_group !== null
   const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, now, settings.upcoming_repeat_days) : []
-  const date_groups = is_grouped ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted) : []
+  const task_groups = grouped_tag_group
+    ? group_by_tag(task_tree, grouped_tag_group, tags, task_tags_of)
+    : is_grouped_by_date ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted) : []
+  const shown_grouping = is_grouped ? settings.task_grouping : 'none'
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
@@ -712,14 +718,19 @@ export function App() {
                   </button>
                 )}
                 {!is_upcoming && (
-                  <button
-                    class={settings.group_by_date ? 'group_by_date_button is_selected' : 'group_by_date_button'}
-                    aria-pressed={settings.group_by_date}
-                    onClick={() => void change_setting('group_by_date', !settings.group_by_date)}
-                    title="Show tasks under date headings"
+                  <select
+                    class={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
+                    value={shown_grouping}
+                    onChange={(event) => void change_setting('task_grouping', event.currentTarget.value as TaskGrouping)}
+                    aria-label="Group by"
+                    title="Show tasks under headings by date or by the tags of a group"
                   >
-                    By date
-                  </button>
+                    {grouping_choices(tag_groups).map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                 )}
                 <div class="segmented_control" role="radiogroup" aria-label="Layout">
                   {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
@@ -758,11 +769,11 @@ export function App() {
                   />
                 )}
                 {is_grouped
-                  ? date_groups.map((group) => (
+                  ? task_groups.map((group) => (
                       <Fragment key={group.key}>
-                        <li class={group.key === 'overdue' ? 'date_group_heading is_overdue' : 'date_group_heading'}>
+                        <li class={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
                           {group.label}
-                          <span class="date_group_count">{group.nodes.length + group.repeats.length}</span>
+                          <span class="group_count">{group.nodes.length + group.repeats.length}</span>
                         </li>
                         {group.nodes.map((node) => (
                           <TaskItem key={node.task.id} node={node} actions={task_actions} />

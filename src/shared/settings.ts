@@ -34,6 +34,9 @@ export type TagScope = 'subtags' | 'own'
 // Whether the multibar searches only the view on screen or every task.
 export type SearchScope = 'view' | 'all'
 
+// What the task list puts its headings by: nothing, the date, or the tags of one filter group, named by "group:" and the group's id.
+export type TaskGrouping = 'none' | 'date' | `group:${string}`
+
 // The narrowest and widest each side panel can be dragged to.
 export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
 export const DETAIL_WIDTH_RANGE = { min: 260, max: 720 }
@@ -121,8 +124,8 @@ export interface Settings {
   show_empty_tags: boolean
   search_scope: SearchScope
   task_layout: TaskLayout
-  // When set, every view but Reports shows its tasks under date headings, as Upcoming always does.
-  group_by_date: boolean
+  // The headings every view but Reports and Upcoming shows its tasks under; Upcoming always goes by date.
+  task_grouping: TaskGrouping
   // How many days ahead Upcoming shows the later dates of repeating tasks; zero shows none.
   upcoming_repeat_days: number
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
@@ -179,7 +182,7 @@ export const DEFAULT_SETTINGS: Settings = {
   show_empty_tags: true,
   search_scope: 'view',
   task_layout: 'list',
-  group_by_date: false,
+  task_grouping: 'none',
   upcoming_repeat_days: 7,
   table_sort: [],
   table_column_order: [],
