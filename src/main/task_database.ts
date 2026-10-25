@@ -154,7 +154,20 @@ const SCHEMA_MIGRATIONS = [
                   ('priority_standard_high', 'High', 'priority_standard', 1), ('priority_standard_medium', 'Medium', 'priority_standard', 2),
                   ('priority_standard_low', 'Low', 'priority_standard', 3))
      WHERE EXISTS (SELECT 1 FROM tag_groups WHERE id = column3);
-   DELETE FROM settings WHERE key = 'priority_scale'`
+   DELETE FROM settings WHERE key = 'priority_scale'`,
+  // Actionable and Untagged rule tags start in a Filters rule group, one already made by hand or a new one, with ids every device shares.
+  `INSERT INTO tag_groups (id, name, created_at, position, is_rule)
+     SELECT 'filters', 'Filters', strftime('%Y-%m-%dT%H:%M:%fZ'), COALESCE((SELECT MAX(position) FROM tag_groups), 0) + 1, 1
+     WHERE NOT EXISTS (SELECT 1 FROM tag_groups WHERE id = 'filters' OR (name = 'Filters' AND is_rule = 1));
+   INSERT INTO tags (id, name, created_at, group_id, position, rule)
+     SELECT column1, column2, strftime('%Y-%m-%dT%H:%M:%fZ'),
+            (SELECT id FROM tag_groups WHERE id = 'filters' OR (name = 'Filters' AND is_rule = 1) ORDER BY id = 'filters' DESC, position LIMIT 1),
+            column3, column4
+     FROM (VALUES
+       ('filter_actionable', 'Actionable', 1,
+        '{"match":"all","conditions":[{"kind":"status","is_done":false},{"kind":"start","when":"passed_or_none"},{"kind":"open_subtasks","has_open":false}]}'),
+       ('filter_untagged', 'Untagged', 2, '{"match":"all","conditions":[{"kind":"tagged","is_tagged":false}]}'))
+     WHERE NOT EXISTS (SELECT 1 FROM tags WHERE id = column1)`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.

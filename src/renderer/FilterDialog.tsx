@@ -19,6 +19,7 @@ const DUE_CHOICES: { value: DueCondition; label: string }[] = [
 const START_CHOICES: { value: StartCondition; label: string }[] = [
   { value: 'started', label: 'has passed' },
   { value: 'not_started', label: 'has not passed or is not set' },
+  { value: 'passed_or_none', label: 'has passed or is not set' },
   { value: 'none', label: 'is not set' }
 ]
 
@@ -120,6 +121,12 @@ function ConditionRow({ condition, tags, groups, on_change, on_remove }: Conditi
       case 'subtask':
         return (
           <TwoWaySelect value={condition.is_subtask} labels={['is a subtask', 'is a top-level task']} on_change={(is_subtask) => on_change({ ...condition, is_subtask })} />
+        )
+      case 'open_subtasks':
+        return <TwoWaySelect value={condition.has_open} labels={['has some', 'has none']} on_change={(has_open) => on_change({ ...condition, has_open })} />
+      case 'tagged':
+        return (
+          <TwoWaySelect value={condition.is_tagged} labels={['has a tag', 'has no tags']} on_change={(is_tagged) => on_change({ ...condition, is_tagged })} />
         )
       case 'title':
         return (
@@ -230,7 +237,7 @@ export function FilterDialog({ heading, name, rule, color, icon, swatches, tag_i
   const own_ids = tag_id ? subtree_ids(tag_id, tags) : new Set<string>()
   const condition_tags = tags.filter((tag) => !own_ids.has(tag.id))
   const hand_count = tag_id ? tasks.filter((task) => task.tag_ids.includes(tag_id)).length : 0
-  const match_count = tasks.filter((task) => rule_matches(rule_draft, task, chain_tag_ids_of(task, tasks), tags)).length
+  const match_count = tasks.filter((task) => rule_matches(rule_draft, task, tasks, chain_tag_ids_of(task, tasks), tags)).length
 
   function change_condition(index: number, condition: RuleCondition): void {
     set_rule_draft({ ...rule_draft, conditions: rule_draft.conditions.map((each, at) => (at === index ? condition : each)) })

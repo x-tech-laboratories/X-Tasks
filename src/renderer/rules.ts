@@ -17,6 +17,8 @@ export const CONDITION_CHOICES: { kind: ConditionKind; label: string }[] = [
   { kind: 'completed_within', label: 'Completed in the last' },
   { kind: 'recurring', label: 'Repeats' },
   { kind: 'subtask', label: 'Nesting' },
+  { kind: 'open_subtasks', label: 'Open subtasks' },
+  { kind: 'tagged', label: 'Tags' },
   { kind: 'title', label: 'Title contains' }
 ]
 
@@ -31,6 +33,8 @@ export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagG
     case 'completed_within': return { kind, days: 7 }
     case 'recurring': return { kind, is_recurring: true }
     case 'subtask': return { kind, is_subtask: false }
+    case 'open_subtasks': return { kind, has_open: false }
+    case 'tagged': return { kind, is_tagged: false }
     case 'title': return { kind, text: '' }
   }
 }
@@ -39,8 +43,8 @@ export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagG
 // Matching
 // ============================================================================
 
-// A tag or group condition looks at the task's own tags and those of the tasks above it, as tag filters do.
-function condition_holds(condition: RuleCondition, task: Task, chain_tag_ids: Set<string>, tags: Tag[], now: Date): boolean {
+// A tag, group or tagged condition looks at the task's own tags and those of the tasks above it, as tag filters do.
+function condition_holds(condition: RuleCondition, task: Task, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[], now: Date): boolean {
   switch (condition.kind) {
     case 'status': return task.is_done === condition.is_done
     case 'tag': {
@@ -63,6 +67,7 @@ function condition_holds(condition: RuleCondition, task: Task, chain_tag_ids: Se
     }
     case 'start': {
       if (condition.when === 'none') return task.start_at === null
+      if (condition.when === 'passed_or_none') return task.start_at === null || parse_task_date(task.start_at) <= now
       const has_started = task.start_at !== null && parse_task_date(task.start_at) <= now
       return condition.when === 'started' ? has_started : !has_started
     }
@@ -70,11 +75,13 @@ function condition_holds(condition: RuleCondition, task: Task, chain_tag_ids: Se
       return task.is_done && task.done_at !== null && days_between(new Date(task.done_at), now) < condition.days
     case 'recurring': return (task.recurrence !== '') === condition.is_recurring
     case 'subtask': return (task.parent_id !== null) === condition.is_subtask
+    case 'open_subtasks': return all_tasks.some((each) => each.parent_id === task.id && !each.is_done) === condition.has_open
+    case 'tagged': return (chain_tag_ids.size > 0) === condition.is_tagged
     case 'title': return task.title.toLowerCase().includes(condition.text.trim().toLowerCase())
   }
 }
 
-export function rule_matches(rule: TagRule, task: Task, chain_tag_ids: Set<string>, tags: Tag[], now = new Date()): boolean {
-  const holds = (condition: RuleCondition) => condition_holds(condition, task, chain_tag_ids, tags, now)
+export function rule_matches(rule: TagRule, task: Task, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[], now = new Date()): boolean {
+  const holds = (condition: RuleCondition) => condition_holds(condition, task, all_tasks, chain_tag_ids, tags, now)
   return rule.match === 'all' ? rule.conditions.every(holds) : rule.conditions.length === 0 || rule.conditions.some(holds)
 }

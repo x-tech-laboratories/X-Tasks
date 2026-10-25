@@ -60,16 +60,16 @@ export function task_is_in_view(
     case 'tag': {
       const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
       const matched_ids = (tag_id: string) => (tag_scope === 'own' ? [tag_id] : [...subtree_ids(tag_id, tags)])
-      const matches = (tag_id: string) => matched_ids(tag_id).some((id) => task_has_tag(task, id, chain_tag_ids, tags))
+      const matches = (tag_id: string) => matched_ids(tag_id).some((id) => task_has_tag(task, id, all_tasks, chain_tag_ids, tags))
       return tag_match === 'any' ? view.tag_ids.some(matches) : view.tag_ids.every(matches)
     }
   }
 }
 
 // A plain tag is held by the task or a task above it; a rule tag is held whenever its rule matches.
-function task_has_tag(task: Task, tag_id: string, chain_tag_ids: Set<string>, tags: Tag[]): boolean {
+function task_has_tag(task: Task, tag_id: string, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[]): boolean {
   const rule = tags.find((tag) => tag.id === tag_id)?.rule
-  return rule ? rule_matches(rule, task, chain_tag_ids, tags) : chain_tag_ids.has(tag_id)
+  return rule ? rule_matches(rule, task, all_tasks, chain_tag_ids, tags) : chain_tag_ids.has(tag_id)
 }
 
 // The task's own tags and those of every task above it.
@@ -80,7 +80,7 @@ export function chain_tag_ids_of(task: Task, all_tasks: Task[]): Set<string> {
 // The rule tags whose rules match the task right now.
 export function rule_tags_of(task: Task, all_tasks: Task[], tags: Tag[]): Tag[] {
   const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
-  return tags.filter((tag) => tag.rule && rule_matches(tag.rule, task, chain_tag_ids, tags))
+  return tags.filter((tag) => tag.rule && rule_matches(tag.rule, task, all_tasks, chain_tag_ids, tags))
 }
 
 // ============================================================================

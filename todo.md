@@ -30,6 +30,7 @@
 - [x] Give tags an emoji icon, shown before their name wherever it shows
 - [x] Tint task rows with their tag's colour, as a setting
 - [x] Hide tags no task has from the sidebar, as a setting
+- [x] Preset Actionable and Untagged filters, with rule conditions for open subtasks, having no tags, and a start date that has passed or is not set
 
 ## Finding things
 

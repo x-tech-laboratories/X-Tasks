@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { format_task_date } from '@shared/schedule'
-import type { RuleCondition, TagRule } from '@shared/tasks'
+import { PRESET_FILTERS_GROUP_ID, type RuleCondition, type TagRule } from '@shared/tasks'
 import { open_task_database } from '../main/node_task_database'
 import {
   add_tag, add_tag_group, add_task, close_task_database, list_tags, set_setting, set_task_done, set_task_notes, set_task_schedule
@@ -215,11 +215,11 @@ function resolved_condition(condition: ExampleCondition, group_ids: Map<string, 
   return condition
 }
 
+// The examples join the preset Filters group that every new database starts with.
 function add_filters(group_ids: Map<string, string>): void {
-  const group = add_tag_group('Filters', true)
   for (const filter of EXAMPLE_FILTERS) {
     const rule: TagRule = { match: filter.match, conditions: filter.conditions.map((condition) => resolved_condition(condition, group_ids)) }
-    add_tag(filter.name, group.id, null, rule, filter.color, null)
+    add_tag(filter.name, PRESET_FILTERS_GROUP_ID, null, rule, filter.color, null)
   }
 }
 

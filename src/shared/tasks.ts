@@ -46,6 +46,9 @@ export interface TagGroup {
   is_rule: boolean
 }
 
+// The preset group of rule tags, such as Actionable and Untagged, that a new database starts with.
+export const PRESET_FILTERS_GROUP_ID = 'filters'
+
 export interface Tag {
   id: string
   name: string
@@ -75,7 +78,7 @@ export const EMPTY_RULE: TagRule = { match: 'all', conditions: [] }
 
 export type DueCondition = 'overdue' | 'today' | 'within_days' | 'any' | 'none'
 
-export type StartCondition = 'started' | 'not_started' | 'none'
+export type StartCondition = 'started' | 'not_started' | 'passed_or_none' | 'none'
 
 export type RuleCondition =
   | { kind: 'status'; is_done: boolean }
@@ -86,6 +89,8 @@ export type RuleCondition =
   | { kind: 'completed_within'; days: number }
   | { kind: 'recurring'; is_recurring: boolean }
   | { kind: 'subtask'; is_subtask: boolean }
+  | { kind: 'open_subtasks'; has_open: boolean }
+  | { kind: 'tagged'; is_tagged: boolean }
   | { kind: 'title'; text: string }
 
 // ============================================================================
