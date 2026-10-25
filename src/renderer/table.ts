@@ -110,12 +110,17 @@ export function sort_task_tree(
   last_done_of: LastDoneOf
 ): TaskNode[] {
   if (sort.length === 0) return nodes
-  const tag_rank = tag_ranks(tags)
+  const tag_rank = tag_ranks(tags, false)
+  const reversed_tag_rank = tag_ranks(tags, true)
 
   function sort_level(level: TaskNode[]): TaskNode[] {
     const sorted = [...level].sort((first, second) => {
       for (const key of sort) {
-        const order = compare_cells(cell_value(first.task, key.column), cell_value(second.task, key.column), key.is_descending)
+        // A descending tag column reverses each set of sibling tags but still puts a tag before the tags below it.
+        const is_tag_column = group_id_of(key.column) !== null
+        const ranks = is_tag_column && key.is_descending ? reversed_tag_rank : tag_rank
+        const flips = key.is_descending && !is_tag_column
+        const order = compare_cells(cell_value(first.task, key.column, ranks), cell_value(second.task, key.column, ranks), flips)
         if (order !== 0) return order
       }
       return by_position(first.task, second.task)
@@ -123,12 +128,12 @@ export function sort_task_tree(
     return sorted.map((node) => ({ ...node, children: sort_level(node.children) }))
   }
 
-  function cell_value(task: Task, column: string): CellValue {
+  function cell_value(task: Task, column: string, ranks_by_id: Map<string, number>): CellValue {
     if (column === 'title') return task.title
     if (is_date_column(column)) return column_date(task, column, date_field, last_done_of)
     if (column === 'streak') return streak_of(task)?.current ?? null
     const group_id = group_id_of(column)
-    const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => tag_rank.get(tag.id) ?? 0)
+    const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => ranks_by_id.get(tag.id) ?? 0)
     return ranks.length > 0 ? Math.min(...ranks) : null
   }
 
@@ -146,11 +151,12 @@ function compare_cells(first: CellValue, second: CellValue, is_descending: boole
   return is_descending ? -order : order
 }
 
-// Lists tags the way the sidebar shows them, each followed by the tags below it.
-export function tags_in_sidebar_order(tags: Tag[]): Tag[] {
+// Lists tags the way the sidebar shows them, each followed by the tags below it, with each set of siblings optionally reversed.
+export function tags_in_sidebar_order(tags: Tag[], is_reversed: boolean = false): Tag[] {
   const ordered: Tag[] = []
   const visit = (parent_id: string | null) => {
-    for (const tag of children_of(parent_id, tags).sort(by_position)) {
+    const siblings = children_of(parent_id, tags).sort(by_position)
+    for (const tag of is_reversed ? siblings.reverse() : siblings) {
       ordered.push(tag)
       visit(tag.id)
     }
@@ -160,8 +166,8 @@ export function tags_in_sidebar_order(tags: Tag[]): Tag[] {
 }
 
 // Numbers every tag in its sidebar order, so a tag column sorts the way its group reads, such as High before Low.
-function tag_ranks(tags: Tag[]): Map<string, number> {
-  return new Map(tags_in_sidebar_order(tags).map((tag, index) => [tag.id, index]))
+function tag_ranks(tags: Tag[], is_reversed: boolean): Map<string, number> {
+  return new Map(tags_in_sidebar_order(tags, is_reversed).map((tag, index) => [tag.id, index]))
 }
 
 // ============================================================================
