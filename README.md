@@ -107,7 +107,9 @@ Install it with `adb install --user 0 -r app/build/outputs/apk/debug/app-debug.a
 
 Every push to `main` builds a signed release APK on GitHub Actions and publishes it as the
 [latest release](https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks.apk),
-numbered by the run so each one installs as an update. The release key is made once, inside
+numbered by the run so each one installs as an update.
+[Add it to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/x-tech-laboratories/X-Tasks)
+to install it and get each new build as an update. The release key is made once, inside
 `nix develop .#android`, with `scripts/android-signing-key.sh`. It saves the key and its password
 in `~/.local/share/x-tasks/signing` and uploads them as repository secrets. Back that folder up:
 Android installs an update only if it carries the same key. A debug build carries a different key,
