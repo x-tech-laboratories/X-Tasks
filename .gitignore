@@ -5,3 +5,4 @@ dist/
 result
 result-*
 *.tsbuildinfo
+dev-data/

@@ -1,6 +1,6 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
-  "include": ["electron.vite.config.ts", "vite.web.config.ts", "vite.server.config.ts", "vite.android.config.ts", "src/main/**/*", "src/server/**/*", "src/preload/**/*", "src/shared/**/*"],
+  "include": ["electron.vite.config.ts", "vite.web.config.ts", "vite.server.config.ts", "vite.android.config.ts", "vite.seed.config.ts", "src/main/**/*", "src/server/**/*", "src/dev/**/*", "src/preload/**/*", "src/shared/**/*"],
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",

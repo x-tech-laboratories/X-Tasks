@@ -17,6 +17,21 @@ Tasks are stored in an SQLite database at `~/.config/x-tasks/tasks.db` on Linux,
 built-in `node:sqlite`, together with the choices made on the Settings page. Set `X_TASKS_DB` to use a
 different file.
 
+### Development database
+
+`npm run dev` and `npm run app` open `dev-data/tasks.db` instead, a database of example tasks, projects,
+habits with a few weeks of history, and filters, dated around the day it was made. It is made the
+first time either command runs, from `src/dev/seed_database.ts`, and is not kept in git.
+
+```sh
+npm run seed                                     # remake it from scratch, with fresh dates
+X_TASKS_DB=/path/to/other.db npm run app         # open another database instead
+npm run server -- --database dev-data/tasks.db   # serve it from the web server
+```
+
+The seeder refuses to write to `~/.config/x-tasks/tasks.db`. Add new example data to the lists in
+the seeder so every checkout gets it.
+
 ## MCP server
 
 Turn on **MCP server** in Settings to let AI assistants on this computer read and change tasks. It listens on
