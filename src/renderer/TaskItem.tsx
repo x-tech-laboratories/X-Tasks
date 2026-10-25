@@ -364,6 +364,10 @@ export interface TaskActions {
   on_pick_range: (task: Task) => void
   // The menu of bulk actions for every picked task, opened from any picked row.
   on_bulk_menu: (event: MouseEvent) => void
+  // How many tasks a drag from this row moves: all the picked ones from a picked row, otherwise one.
+  drag_count_of: (task: Task) => number
+  // Set while picked tasks are being dragged together, so every one of them shows as on the move.
+  is_dragging_picked: boolean
   on_context_menu: OpenContextMenu
   on_toggle: (task: Task) => void
   on_reschedule: (task: Task) => void
@@ -447,6 +451,8 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
   function start_drag(event: DragEvent): void {
     event.dataTransfer?.setData('text/plain', task.id)
+    const drag_count = actions.drag_count_of(task)
+    if (drag_count > 1) show_drag_badge(event, `${drag_count} tasks`)
     actions.on_drag_start(task)
   }
 
@@ -525,7 +531,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     )
   }
   const row_class = [
-    'task', task.is_done && 'is_done', is_selected && 'is_selected', is_picked && 'is_picked', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
+    'task', task.is_done && 'is_done', is_selected && 'is_selected', is_picked && 'is_picked', is_picked && actions.is_dragging_picked && 'is_dragged', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
   ].filter(Boolean).join(' ')
 
   return (
@@ -618,6 +624,16 @@ export function TaskItem({ node, actions }: TaskItemProps) {
       )}
     </li>
   )
+}
+
+// Shows a badge naming how many tasks are on the move under the pointer, instead of a picture of the one row grabbed.
+function show_drag_badge(event: DragEvent, label: string): void {
+  const badge = document.createElement('div')
+  badge.className = 'drag_badge'
+  badge.textContent = label
+  document.body.append(badge)
+  event.dataTransfer?.setDragImage(badge, -12, -12)
+  window.setTimeout(() => badge.remove())
 }
 
 // ============================================================================

@@ -1076,6 +1076,22 @@ select:hover { border-color: var(--border-focus); }
 .selection_divider { align-self: stretch; width: 1px; margin: var(--space-2) var(--space-2); background: var(--border-default); }
 .selection_bar .selection_delete_button { color: var(--status-danger); }
 
+/* Picked rows fade while they are dragged together, and the pointer carries a badge saying how many there are. */
+.task.is_picked.is_dragged { opacity: 0.5; }
+
+.drag_badge {
+  position: fixed;
+  top: -100px;
+  left: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-default);
+  background: var(--accent);
+  color: var(--text-on-fill);
+  font-size: var(--text-control);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* The undo bar moves up out of the way while the selection bar is showing. */
 .selection_bar ~ .undo_bar { bottom: calc(var(--space-5) + var(--control-height) + var(--space-6)); }
 

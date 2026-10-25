@@ -154,7 +154,8 @@ Ctrl+click rows to select them, Shift+click to select a range, or Ctrl+A for eve
 long-press a row and choose **Select**, then tap more rows. Selected rows turn blue with a bar down their left edge;
 the checkbox still only completes a task. A bar at the foot of the window marks them done or not done, reschedules
 them, adds them to My Day, tags them or deletes them all at once, and the same actions show on a selected row's
-right-click menu. Escape or the ✕ ends the selection.
+right-click menu. Dragging any selected row moves them all together, keeping their order, onto or beside
+another task or onto a sidebar tag. Escape or the ✕ ends the selection.
 
 ## Task links
 

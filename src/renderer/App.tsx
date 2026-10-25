@@ -23,7 +23,7 @@ import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
-  by_position, children_of, comes_due_between, is_due_by, is_in_my_day, launch_view, move_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
+  by_position, children_of, comes_due_between, is_due_by, is_in_my_day, launch_view, move_for_drop, moves_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, tag_path, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
 } from './views'
 
@@ -383,20 +383,35 @@ export function App() {
     remove_tasks(clearable_tasks)
   }
 
-  // A task cannot be dropped onto itself or anything nested under it.
+  // Grabbing a picked row drags every picked task along, in screen order, leaving out subtasks that already move with a picked parent.
+  function tasks_dragged_with(task: Task): Task[] {
+    return is_picking && picked_task_ids.includes(task.id) ? picked_roots(false) : [task]
+  }
+
+  // A task cannot be dropped onto itself or anything nested under it, nor onto any of the others dragged with it.
   function can_drop_task_on(target: Task): boolean {
-    return dragged_task !== null && !subtree_ids(dragged_task.id, tasks).has(target.id)
+    return dragged_task !== null && tasks_dragged_with(dragged_task).every((task) => !subtree_ids(task.id, tasks).has(target.id))
   }
 
   function drop_task(target: Task, placement: DropPlacement): void {
     if (!dragged_task || !can_drop_task_on(target)) return
-    const move = move_for_drop(dragged_task, target, placement, tasks)
+    const moved_tasks = tasks_dragged_with(dragged_task)
+    const moves = moves_for_drop(moved_tasks, target, placement, tasks)
+    const move_by_id = new Map(moved_tasks.map((task, index) => [task.id, moves[index]!]))
 
     set_tasks((current_tasks) =>
-      current_tasks.map((each) => (each.id === dragged_task.id ? { ...each, ...move } : each)).sort(by_position)
+      current_tasks.map((each) => {
+        const move = move_by_id.get(each.id)
+        return move ? { ...each, ...move } : each
+      }).sort(by_position)
     )
     set_dragged_task(null)
-    void window.x_tasks.move_task(dragged_task.id, move.parent_id, move.position)
+    for (const [task_id, move] of move_by_id) void window.x_tasks.move_task(task_id, move.parent_id, move.position)
+  }
+
+  // A task dropped on a sidebar tag gets it, and so does every task dragged along with it.
+  function tag_dragged_tasks(task: Task, tag: Tag): void {
+    for (const each of tasks_dragged_with(task)) tag_task(each, tag)
   }
 
   // In a one-tag-per-task group, the new tag replaces whichever tag of that group the task had; a rule tag is never given by hand.
@@ -735,6 +750,8 @@ export function App() {
     on_pick: toggle_picked,
     on_pick_range: pick_range,
     on_bulk_menu: open_bulk_menu,
+    drag_count_of: (task) => tasks_dragged_with(task).length,
+    is_dragging_picked: dragged_task !== null && is_picking && picked_task_ids.includes(dragged_task.id),
     on_context_menu: open_context_menu,
     on_toggle: toggle_task,
     on_reschedule: (task) => set_rescheduling_task_ids([task.id]),
@@ -816,7 +833,7 @@ export function App() {
           on_edit_tag={(tag) => set_filter_editing({ tag })}
           on_remove_tag={remove_tag}
           on_move_tag={move_tag}
-          on_tag_task={tag_task}
+          on_tag_task={tag_dragged_tasks}
           on_context_menu={open_context_menu}
         />
         {is_sidebar_open && <button class="sidebar_backdrop" onClick={() => set_is_sidebar_open(false)} aria-label="Close menu" />}

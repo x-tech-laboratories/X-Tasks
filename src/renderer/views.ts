@@ -304,6 +304,24 @@ export function move_for_drop<Item extends TreeItem>(dragged: Item, target: Item
   return { parent_id: target.parent_id, position: position_beside(children_of(target.parent_id, others), target, placement) }
 }
 
+// Moves several items together, keeping their order: inside the target after its last child, or in a run between it and its neighbour.
+export function moves_for_drop<Item extends TreeItem>(dragged: Item[], target: Item, placement: DropPlacement, items: Item[]): TreeMove[] {
+  const dragged_ids = new Set(dragged.map((item) => item.id))
+  const others = items.filter((item) => !dragged_ids.has(item.id))
+
+  if (placement === 'inside') {
+    const last_child_position = Math.max(target.position, ...children_of(target.id, others).map((item) => item.position))
+    return dragged.map((_, index) => ({ parent_id: target.id, position: last_child_position + index + 1 }))
+  }
+
+  const siblings = children_of(target.parent_id, others).sort(by_position)
+  const index = siblings.findIndex((sibling) => sibling.id === target.id)
+  const neighbour = siblings[placement === 'before' ? index - 1 : index + 1]
+  const low = placement === 'before' ? (neighbour?.position ?? target.position - 1) : target.position
+  const high = placement === 'before' ? target.position : (neighbour?.position ?? target.position + 1)
+  return dragged.map((_, index) => ({ parent_id: target.parent_id, position: low + ((high - low) * (index + 1)) / (dragged.length + 1) }))
+}
+
 // For a flat list such as the tag groups, where items only move before or after each other.
 export function position_for_drop<Item extends { id: string; position: number }>(
   dragged: Item,
