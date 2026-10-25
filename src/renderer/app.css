@@ -385,6 +385,11 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 .task:hover { background: var(--surface-secondary); }
 .task.is_selected { background: var(--surface-navigation-hover); }
 
+/* A tinted row keeps its tag's shade light enough to read in either theme, and selection still shows over it. */
+.task.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
+.task.has_tint:hover { background: color-mix(in srgb, var(--tag-color) 20%, var(--surface-default)); }
+.task.has_tint.is_selected { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-navigation-hover)); }
+
 .task_title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notes_marker { color: var(--text-tertiary); font-size: var(--text-caption); }
 .due_label { flex: none; color: var(--text-secondary); font-size: var(--text-caption); }

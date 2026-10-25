@@ -21,6 +21,7 @@ interface SidebarProps {
   selected_view: View | null
   // Whether a tag's count takes in the tasks of the tags inside it.
   tag_scope: TagScope
+  show_empty_tags: boolean
   // The task date that puts a task in Upcoming.
   date_field: TaskDateField
   is_settings_open: boolean
@@ -59,7 +60,7 @@ interface NewTagSpot {
 }
 
 export function Sidebar({
-  tasks, tag_groups, tags, my_day_since, selected_view, tag_scope, date_field, is_settings_open, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag, on_open_settings,
+  tasks, tag_groups, tags, my_day_since, selected_view, tag_scope, show_empty_tags, date_field, is_settings_open, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag, on_open_settings,
   on_edit_tag_group, on_remove_tag_group, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
 }: SidebarProps) {
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
@@ -71,6 +72,18 @@ export function Sidebar({
 
   function open_count(view: View): number {
     return tasks.filter((task) => !task.is_done && task_is_in_view(task, view, tasks, tags, my_day_since, 'all', tag_scope, date_field)).length
+  }
+
+  // With empty tags hidden, a tag still shows while any task has it, done or not, while it is selected, or while it holds a tag that shows.
+  function is_tag_shown(tag: Tag, group_tags: Tag[]): boolean {
+    if (show_empty_tags || is_tag_selected(selected_view, tag.id)) return true
+    const view: View = { kind: 'tag', tag_ids: [tag.id] }
+    if (tasks.some((task) => task_is_in_view(task, view, tasks, tags, my_day_since, 'all', tag_scope, date_field))) return true
+    return children_of(tag.id, group_tags).some((child) => is_tag_shown(child, group_tags))
+  }
+
+  function shown_children(parent_id: string | null, group_tags: Tag[]): Tag[] {
+    return children_of(parent_id, group_tags).filter((tag) => is_tag_shown(tag, group_tags))
   }
 
   // ==========================================================================
@@ -195,7 +208,7 @@ export function Sidebar({
   }
 
   function tag_branch(tag: Tag, depth: number, group_tags: Tag[]) {
-    const children = children_of(tag.id, group_tags)
+    const children = shown_children(tag.id, group_tags)
     const is_collapsed = collapsed_ids.includes(tag.id)
     const view: View = { kind: 'tag', tag_ids: [tag.id] }
     const count = open_count(view)
@@ -316,7 +329,7 @@ export function Sidebar({
           </button>
         </div>
 
-        {!is_collapsed && children_of(null, group_tags).map((tag) => tag_branch(tag, 0, group_tags))}
+        {!is_collapsed && shown_children(null, group_tags).map((tag) => tag_branch(tag, 0, group_tags))}
         {new_tag_form({ group_id: group.id, parent_id: null }, 0, `New tag in ${group.name}`)}
       </section>
     )

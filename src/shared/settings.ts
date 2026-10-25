@@ -117,6 +117,8 @@ export interface Settings {
   tag_selection: TagSelection
   tag_match: TagMatch
   tag_scope: TagScope
+  // When cleared, the sidebar leaves out tags no task has, done or not, unless selected or holding a tag that shows.
+  show_empty_tags: boolean
   search_scope: SearchScope
   task_layout: TaskLayout
   // When set, every view but Reports shows its tasks under date headings, as Upcoming always does.
@@ -153,6 +155,8 @@ export interface Settings {
   report_widgets: ReportWidget[]
   // When set, each tracked task's row shows its latest occurrences or rounds as a strip of dots.
   show_streak_strip_on_rows: boolean
+  // When set, each task row is tinted with the colour of its first coloured tag.
+  tint_rows_by_tag: boolean
   // When set, a backup is taken once a day, and only the newest of these are kept.
   auto_backup: boolean
   auto_backups_to_keep: number
@@ -172,6 +176,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tag_selection: 'one_per_group',
   tag_match: 'all',
   tag_scope: 'subtags',
+  show_empty_tags: true,
   search_scope: 'view',
   task_layout: 'list',
   group_by_date: false,
@@ -210,6 +215,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mcp_enabled: false,
   mcp_port: 3917,
   show_streak_strip_on_rows: false,
+  tint_rows_by_tag: false,
   report_widgets: [
     { id: 'streaks', kind: 'streaks', title: 'Routine streaks', tag_ids: [], days: 30, group_id: '' },
     { id: 'calendar', kind: 'calendar', title: 'Ticks per day', tag_ids: [], days: 182, group_id: '' },

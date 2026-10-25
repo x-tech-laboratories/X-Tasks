@@ -347,6 +347,8 @@ export interface TaskActions {
   tags: Tag[]
   tag_groups: TagGroup[]
   is_table: boolean
+  // Whether rows take a shade of their first coloured tag.
+  tint_rows: boolean
   // The table columns shown after the title, in order.
   table_columns: TableColumn[]
   date_field: TaskDateField
@@ -393,6 +395,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const task_tags = [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)]
   const priority_tag = task_tags.find(is_priority_tag)
   const chip_tags = task_tags.filter((tag) => !is_priority_tag(tag))
+  const tint_tag = actions.tint_rows ? task_tags.find((tag) => tag.color) : undefined
 
   // A priority shows as a plain label, a rule tag as a fixed chip, and any other tag as a chip that can be removed from the task.
   function render_tag(tag: Tag) {
@@ -503,12 +506,15 @@ export function TaskItem({ node, actions }: TaskItemProps) {
       </span>
     )
   }
-  const row_class = ['task', task.is_done && 'is_done', is_selected && 'is_selected', shown_placement && `drop_${shown_placement}`].filter(Boolean).join(' ')
+  const row_class = [
+    'task', task.is_done && 'is_done', is_selected && 'is_selected', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
+  ].filter(Boolean).join(' ')
 
   return (
     <li class="task_item">
       <div
         class={row_class}
+        style={tint_tag && tag_color_style(tint_tag)}
         draggable
         onClick={click_row}
         onContextMenu={open_menu}

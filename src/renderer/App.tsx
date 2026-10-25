@@ -565,6 +565,7 @@ export function App() {
     tags,
     tag_groups,
     is_table,
+    tint_rows: settings.tint_rows_by_tag,
     table_columns,
     date_field: settings.task_date_field,
     can_add_subtasks: selected_view.kind !== 'completed',
@@ -624,6 +625,7 @@ export function App() {
           tags={tags}
           my_day_since={shown_since}
           tag_scope={settings.tag_scope}
+          show_empty_tags={settings.show_empty_tags}
           date_field={settings.task_date_field}
           selected_view={is_settings_open ? null : selected_view}
           is_settings_open={is_settings_open}

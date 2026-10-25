@@ -127,6 +127,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             onChange={(event) => on_change('show_streak_strip_on_rows', event.currentTarget.checked)}
           />
         </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Tint task rows by tag</span>
+            <span class="setting_hint">Each task row takes a light shade of its first coloured tag, its own tags before rule tags.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.tint_rows_by_tag}
+            onChange={(event) => on_change('tint_rows_by_tag', event.currentTarget.checked)}
+          />
+        </label>
       </section>
 
       <section class="settings_group">
@@ -289,6 +301,14 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
           </div>
           <SegmentedChoice label="Parent tags show" choices={TAG_SCOPE_CHOICES} value={settings.tag_scope} on_change={(value) => on_change('tag_scope', value)} />
         </div>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Show empty tags</span>
+            <span class="setting_hint">When off, the sidebar hides tags no task has, done or not. A selected tag, and one holding a tag that shows, still shows.</span>
+          </div>
+          <input type="checkbox" checked={settings.show_empty_tags} onChange={(event) => on_change('show_empty_tags', event.currentTarget.checked)} />
+        </label>
 
         <div class="setting_row">
           <div class="setting_text">
