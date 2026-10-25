@@ -1,6 +1,6 @@
 import type { TaskDateField } from '@shared/settings'
 import type { Task } from '@shared/tasks'
-import { days_between, format_task_date, next_schedule, parse_task_date, task_date_of } from '@shared/schedule'
+import { days_between, format_task_date, is_overdue, next_schedule, parse_task_date, task_date_of } from '@shared/schedule'
 import type { TaskNode } from './views'
 
 // ============================================================================
@@ -27,11 +27,13 @@ const DAYS_SHOWN_ONE_BY_ONE = 7
 // Stops a rule that repeats every minute from filling the view.
 const MOST_REPEATS_PER_TASK = 50
 
-// Open tasks from past days are overdue, and done ones are earlier; days within a week stand alone, and later ones share their month.
-function group_key(task_date: string | null, is_done: boolean, today: string): string {
+// Open tasks past their date or time are overdue, and done ones from past days are earlier; days within a week stand alone, and later ones share their month.
+function group_key(task_date: string | null, is_done: boolean, now: string): string {
   if (task_date === null) return 'none'
   const day = task_date.slice(0, 10)
-  if (day < today) return is_done ? 'earlier' : 'overdue'
+  const today = now.slice(0, 10)
+  if (!is_done && is_overdue(task_date, parse_task_date(now))) return 'overdue'
+  if (day < today) return 'earlier'
   const day_offset = days_between(parse_task_date(today), parse_task_date(day))
   return day_offset < DAYS_SHOWN_ONE_BY_ONE ? day : day.slice(0, 7)
 }
@@ -54,7 +56,8 @@ function group_label(key: string, today: string): string {
 }
 
 // Splits the top tasks into date groups, earliest first with undated ones last; within a group tasks run by date and time.
-export function group_by_date(nodes: TaskNode[], repeats: RepeatOccurrence[], date_field: TaskDateField, today: string, keep_order: boolean): DateGroup[] {
+export function group_by_date(nodes: TaskNode[], repeats: RepeatOccurrence[], date_field: TaskDateField, now: string, keep_order: boolean): DateGroup[] {
+  const today = now.slice(0, 10)
   const groups = new Map<string, DateGroup>()
   const group_of = (key: string) => {
     if (!groups.has(key)) groups.set(key, { key, label: group_label(key, today), nodes: [], repeats: [] })
@@ -62,8 +65,8 @@ export function group_by_date(nodes: TaskNode[], repeats: RepeatOccurrence[], da
   }
 
   const dated_nodes = keep_order ? nodes : [...nodes].sort((first, second) => compare_dates(node_date(first, date_field), node_date(second, date_field)))
-  for (const node of dated_nodes) group_of(group_key(node_date(node, date_field), node.task.is_done, today)).nodes.push(node)
-  for (const repeat of repeats) group_of(group_key(repeat.task_date, false, today)).repeats.push(repeat)
+  for (const node of dated_nodes) group_of(group_key(node_date(node, date_field), node.task.is_done, now)).nodes.push(node)
+  for (const repeat of repeats) group_of(group_key(repeat.task_date, false, now)).repeats.push(repeat)
 
   return [...groups.values()].sort((first, second) => group_rank(first.key) - group_rank(second.key) || sort_day(first.key).localeCompare(sort_day(second.key)))
 }
@@ -96,9 +99,10 @@ function group_rank(key: string): number {
 // ============================================================================
 
 // The dates each open repeating task moves to after its current one, up to the given number of days from today.
-export function coming_repeats(tasks: Task[], date_field: TaskDateField, today: string, days_ahead: number): RepeatOccurrence[] {
+export function coming_repeats(tasks: Task[], date_field: TaskDateField, now: string, days_ahead: number): RepeatOccurrence[] {
   if (days_ahead <= 0) return []
-  const today_date = parse_task_date(today)
+  const now_date = parse_task_date(now)
+  const today_date = parse_task_date(now.slice(0, 10))
   const last_day = format_task_date(new Date(today_date.getFullYear(), today_date.getMonth(), today_date.getDate() + days_ahead), false)
   const repeats: RepeatOccurrence[] = []
 
@@ -110,7 +114,7 @@ export function coming_repeats(tasks: Task[], date_field: TaskDateField, today: 
       const task_date = next && task_date_of(next, date_field)
       if (!next || !task_date || task_date.slice(0, 10) > last_day) break
       // An overdue task's next dates can still be in the past, and those are skipped.
-      if (task_date.slice(0, 10) >= today) repeats.push({ task, task_date })
+      if (!is_overdue(task_date, now_date)) repeats.push({ task, task_date })
       current = { ...current, ...next }
     }
   }

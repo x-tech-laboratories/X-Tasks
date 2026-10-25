@@ -119,7 +119,7 @@ export function App() {
     []
   )
 
-  // Checks the clock every minute, so My Day clears itself at midnight and takes in tasks as they come due.
+  // Checks the clock every minute, so tasks turn overdue as their time passes and My Day takes in tasks as they come due.
   useEffect(() => {
     const timer = window.setInterval(() => set_now(format_task_date(new Date(), true)), 60 * 1000)
     return () => window.clearInterval(timer)
@@ -549,8 +549,8 @@ export function App() {
   // Upcoming always groups by date and lists the later dates of repeating tasks; other views group only when asked.
   const is_upcoming = selected_view.kind === 'upcoming'
   const is_grouped = is_upcoming || settings.group_by_date
-  const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, today, settings.upcoming_repeat_days) : []
-  const date_groups = is_grouped ? group_by_date(task_tree, repeats, settings.task_date_field, today, is_sorted) : []
+  const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, now, settings.upcoming_repeat_days) : []
+  const date_groups = is_grouped ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted) : []
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
