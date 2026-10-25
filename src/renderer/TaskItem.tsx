@@ -400,11 +400,11 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const tint_tag = actions.tint_rows ? task_tags.find((tag) => tag.color) : undefined
 
   // A priority shows as a plain label, a rule tag as a fixed chip, and any other tag as a chip that can be removed from the task.
-  function render_tag(tag: Tag) {
+  function render_tag(tag: Tag, label: string = tag.name) {
     if (tag.rule) {
       return (
         <span key={tag.id} class={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)} title={`${tag_path(tag, actions.tags)} (rule)`}>
-          {with_icon(tag, tag.name)}
+          {with_icon(tag, label)}
         </span>
       )
     }
@@ -412,14 +412,14 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     if (is_priority_tag(tag)) {
       return (
         <span key={tag.id} class="priority_label" style={tag_color_style(tag)} title={`Priority: ${tag_path(tag, actions.tags)}`}>
-          {with_icon(tag, tag.name)}
+          {with_icon(tag, label)}
         </span>
       )
     }
 
     return (
       <span key={tag.id} class={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)} title={tag_path(tag, actions.tags)}>
-        {with_icon(tag, tag.name)}
+        {with_icon(tag, label)}
         <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
           ×
         </button>
@@ -562,7 +562,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           actions.table_columns.map((column) =>
             is_date_column(column) ? date_cell(column) : column === 'streak' ? streak_cell : (
               <span key={column} class="task_cell">
-                {task_tags.filter((tag) => `group:${tag.group_id}` === column).map(render_tag)}
+                {task_tags.filter((tag) => `group:${tag.group_id}` === column).map((tag) => render_tag(tag, tag_path(tag, actions.tags)))}
               </span>
             )
           )
@@ -570,7 +570,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           <>
             {date_cell('date')}
             {priority_tag && render_tag(priority_tag)}
-            {chip_tags.map(render_tag)}
+            {chip_tags.map((tag) => render_tag(tag))}
           </>
         )}
 
