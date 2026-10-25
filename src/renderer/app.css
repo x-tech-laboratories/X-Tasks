@@ -277,8 +277,17 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 
   .task_detail { position: absolute; inset: 0; z-index: 10; border-left: 0; }
 
-  .task_pane { padding: var(--space-6) var(--space-5) 80px; }
+  main.task_pane { padding: var(--space-6) var(--space-5) 80px; }
   .task_pane_header { flex-wrap: wrap; row-gap: var(--space-3); }
+
+  /* The task list runs edge to edge, so rows get the full width of the screen. */
+  main.task_pane > .task_list {
+    margin-left: calc(-1 * var(--space-5));
+    margin-right: calc(-1 * var(--space-5));
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
 
   .multibar { padding: var(--space-4); }
 
