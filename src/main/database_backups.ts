@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-import type { DatabaseBackup } from '@shared/settings'
+import { AUTOMATIC_BACKUP_INTERVAL_MS, BACKUP_NAME_PATTERN, backup_name, describe_backup_name, type DatabaseBackup } from '@shared/settings'
 import { forget_sync_history } from './sync_engine'
 import { open_task_database } from './node_task_database'
 import { back_up_task_database, close_task_database, get_settings, open_database, task_database_path } from './task_database'
@@ -10,10 +10,6 @@ import { back_up_task_database, close_task_database, get_settings, open_database
 // Backup files
 // ============================================================================
 
-// A backup is named after the UTC time it was taken, with dashes for the colons a file name cannot always hold.
-const BACKUP_NAME_PATTERN = /^tasks-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z(-auto)?\.db$/
-
-const AUTOMATIC_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000
 const AUTOMATIC_BACKUP_CHECK_MS = 60 * 60 * 1000
 
 export function backup_folder(): string {
@@ -26,19 +22,8 @@ function backup_path(name: string): string {
   return join(backup_folder(), name)
 }
 
-function backup_name(taken_at: Date, is_automatic: boolean): string {
-  const timestamp = taken_at.toISOString().slice(0, 19).replaceAll(':', '-')
-  return `tasks-${timestamp}Z${is_automatic ? '-auto' : ''}.db`
-}
-
 function describe_backup(name: string): DatabaseBackup {
-  const [, date, hours, minutes, seconds, automatic_suffix] = BACKUP_NAME_PATTERN.exec(name)!
-  return {
-    name,
-    taken_at: `${date}T${hours}:${minutes}:${seconds}Z`,
-    size_bytes: statSync(backup_path(name)).size,
-    is_automatic: automatic_suffix !== undefined
-  }
+  return describe_backup_name(name, statSync(backup_path(name)).size)
 }
 
 // ============================================================================

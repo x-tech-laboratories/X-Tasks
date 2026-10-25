@@ -351,12 +351,10 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
         </div>
       </section>
 
-      {window.x_settings.host !== 'android' && (
-        <section class="settings_group">
-          <h2 class="settings_heading">Backups</h2>
-          <BackupsEditor settings={settings} on_change={on_change} />
-        </section>
-      )}
+      <section class="settings_group">
+        <h2 class="settings_heading">Backups</h2>
+        <BackupsEditor settings={settings} on_change={on_change} />
+      </section>
 
       {window.x_settings.host !== 'android' && (
         <section class="settings_group">
@@ -834,8 +832,11 @@ interface BackupsEditorProps {
 // Saved copies of the database, newest first, each of which can be restored or deleted.
 function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
   const [backups, set_backups] = useState<DatabaseBackup[]>([])
+  const [folder_name, set_folder_name] = useState('')
+  const needs_folder = window.x_settings.choose_backup_folder !== undefined
 
   async function refresh(): Promise<void> {
+    set_folder_name((await window.x_settings.get_backup_folder?.()) ?? '')
     set_backups(await window.x_settings.list_backups())
   }
 
@@ -846,6 +847,12 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
   // Turning these on or lowering the count can take or delete automatic backups, so the list is read again after.
   async function change_automatic<Key extends 'auto_backup' | 'auto_backups_to_keep'>(key: Key, value: Settings[Key]): Promise<void> {
     await on_change(key, value)
+    await refresh()
+  }
+
+  // A newly picked folder may already hold backups, and daily backups can start in it.
+  async function choose_folder(): Promise<void> {
+    await window.x_settings.choose_backup_folder?.()
     await refresh()
   }
 
@@ -875,13 +882,27 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
 
   return (
     <>
+      {needs_folder && (
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Backup folder</span>
+            <span class="setting_hint">
+              {folder_name || "Pick a folder in the phone's storage, such as Documents, where file managers and sync apps can reach the backups."}
+            </span>
+          </div>
+          <button onClick={() => void choose_folder()}>{folder_name ? 'Change' : 'Choose'}</button>
+        </div>
+      )}
+
       <div class="setting_row">
         <div class="setting_text">
           <span class="setting_label">Back up now</span>
           <span class="setting_hint">Saves a copy of every task, tag and setting, named by the time it was taken.</span>
         </div>
         {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>}
-        <button onClick={() => void create()}>Back up</button>
+        <button onClick={() => void create()} disabled={needs_folder && !folder_name}>
+          Back up
+        </button>
       </div>
 
       <label class="setting_row">

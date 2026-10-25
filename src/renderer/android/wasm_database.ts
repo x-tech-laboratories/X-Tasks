@@ -67,6 +67,8 @@ export interface WasmTaskDatabase {
   save_now: () => Promise<void>
   // The whole database as a file, for keeping a copy.
   export_bytes: () => Uint8Array
+  // Swaps the open database's contents for a saved copy; the caller saves it once it is ready.
+  replace_with: (bytes: Uint8Array) => void
 }
 
 const SAVE_DELAY_MS = 300
@@ -76,12 +78,14 @@ export async function open_wasm_database(): Promise<WasmTaskDatabase> {
   const sqlite3 = await sqlite3_init()
   const database = new sqlite3.oo1.DB(':memory:')
 
-  const saved = await read_file(DATABASE_FILE)
-  if (saved) {
-    const pointer = sqlite3.wasm.allocFromTypedArray(saved)
+  const load_bytes = (bytes: Uint8Array): void => {
+    const pointer = sqlite3.wasm.allocFromTypedArray(bytes)
     const flags = sqlite3.capi.SQLITE_DESERIALIZE_FREEONCLOSE | sqlite3.capi.SQLITE_DESERIALIZE_RESIZEABLE
-    database.checkRc(sqlite3.capi.sqlite3_deserialize(database.pointer!, 'main', pointer, saved.byteLength, saved.byteLength, flags))
+    database.checkRc(sqlite3.capi.sqlite3_deserialize(database.pointer!, 'main', pointer, bytes.byteLength, bytes.byteLength, flags))
   }
+
+  const saved = await read_file(DATABASE_FILE)
+  if (saved) load_bytes(saved)
 
   const export_bytes = (): Uint8Array => sqlite3.capi.sqlite3_js_db_export(database.pointer!)
   let save_timer: ReturnType<typeof setTimeout> | undefined
@@ -116,5 +120,5 @@ export async function open_wasm_database(): Promise<WasmTaskDatabase> {
     close: () => database.close()
   }
 
-  return { connection, save_now, export_bytes }
+  return { connection, save_now, export_bytes, replace_with: load_bytes }
 }

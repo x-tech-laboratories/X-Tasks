@@ -9,6 +9,7 @@ import {
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group
 } from '../../main/task_database'
 import { request_back } from '../back_navigation'
+import { android_backups } from './android_backups'
 import { BEFORE_SYNC_FILE, open_wasm_database, write_file } from './wasm_database'
 
 // ============================================================================
@@ -83,21 +84,27 @@ export async function install_android_bridge(): Promise<void> {
     }
   }
 
-  // Phones keep no backups of their own yet and run no MCP endpoint; the theme follows the system, as in a browser.
+  const backups = android_backups(database)
+
+  // Phones run no MCP endpoint; the theme follows the system, as in a browser.
   const settings_api: SettingsApi = {
     host: 'android',
     get_settings: answer(get_settings),
-    set_setting: answer(<Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
+    // Turning daily backups on or keeping fewer takes or deletes them straight away, as on the desktop.
+    set_setting: async <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
       set_setting(key, value)
       if (key === 'priority_scale') apply_priority_scale(value as Settings['priority_scale'])
-    }),
+      if (key === 'auto_backup' || key === 'auto_backups_to_keep') await backups.keep_automatic_backups()
+    },
     get_database_path: answer(() => 'On this device'),
     show_database_folder: () => Promise.resolve(),
-    list_backups: () => Promise.resolve([]),
-    create_backup: () => Promise.reject(new Error('backups are not kept on this device')),
-    restore_backup: () => Promise.reject(new Error('backups are not kept on this device')),
-    remove_backup: () => Promise.resolve(),
+    list_backups: backups.list_backups,
+    create_backup: backups.create_backup,
+    restore_backup: backups.restore_backup,
+    remove_backup: backups.remove_backup,
     show_backup_folder: () => Promise.resolve(),
+    get_backup_folder: backups.get_folder,
+    choose_backup_folder: backups.choose_folder,
     get_mcp_status: () => Promise.resolve(MCP_OFF),
     get_sync_status: answer(get_sync_status),
     connect_sync,
@@ -114,7 +121,10 @@ export async function install_android_bridge(): Promise<void> {
 
   // Android can stop a paused app at any time, so the database is saved as it goes to the background, and syncs as it comes back.
   void App.addListener('pause', () => void database.save_now())
-  void App.addListener('resume', () => void sync_now())
+  void App.addListener('resume', () => {
+    void sync_now()
+    void backups.keep_automatic_backups()
+  })
 
   // With nothing left to close, Back sends the app to the background rather than closing it.
   void App.addListener('backButton', () => {

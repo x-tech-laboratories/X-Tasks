@@ -248,6 +248,22 @@ export interface DatabaseBackup {
   is_automatic: boolean
 }
 
+// A backup is named after the UTC time it was taken, with dashes for the colons a file name cannot always hold.
+export const BACKUP_NAME_PATTERN = /^tasks-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z(-auto)?\.db$/
+
+export const AUTOMATIC_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000
+
+export function backup_name(taken_at: Date, is_automatic: boolean): string {
+  const timestamp = taken_at.toISOString().slice(0, 19).replaceAll(':', '-')
+  return `tasks-${timestamp}Z${is_automatic ? '-auto' : ''}.db`
+}
+
+// Reads the time and kind back out of a backup's name.
+export function describe_backup_name(name: string, size_bytes: number): DatabaseBackup {
+  const [, date, hours, minutes, seconds, automatic_suffix] = BACKUP_NAME_PATTERN.exec(name)!
+  return { name, taken_at: `${date}T${hours}:${minutes}:${seconds}Z`, size_bytes, is_automatic: automatic_suffix !== undefined }
+}
+
 // ============================================================================
 // Bridge contract
 // ============================================================================
@@ -264,6 +280,9 @@ export interface SettingsApi {
   restore_backup: (name: string) => Promise<void>
   remove_backup: (name: string) => Promise<void>
   show_backup_folder: () => Promise<void>
+  // Only on Android, where backups go to a folder picked once in the phone's storage; the name is empty until one is picked.
+  get_backup_folder?: () => Promise<string>
+  choose_backup_folder?: () => Promise<string>
   get_mcp_status: () => Promise<McpStatus>
   get_sync_status: () => Promise<SyncStatus>
   // An empty token keeps the one saved before, for choosing a direction again with the same server.
