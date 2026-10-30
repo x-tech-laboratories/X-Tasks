@@ -1,15 +1,15 @@
 import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
-import { format_task_date, is_overdue, task_date_of } from '@shared/schedule'
+import { days_between, duration_label, format_task_date, has_time, is_overdue, parse_task_date, task_date_of } from '@shared/schedule'
 import { by_position, children_of, task_is_in_view, type TaskNode } from './views'
 
 // ============================================================================
 // Columns
 // ============================================================================
 
-// A table column is the title, a date, the streak, or one filter group, named by "group:" and the group's id.
-export type TableColumn = 'title' | DateColumn | 'streak' | `group:${string}`
+// A table column is the title, a date, the duration, the streak, or one filter group, named by "group:" and the group's id.
+export type TableColumn = 'title' | DateColumn | 'duration' | 'streak' | `group:${string}`
 
 // The smart date shows the done date once a task is ticked and the date picked in settings before that; the others show one date each.
 export type DateColumn = 'date' | 'start' | 'due' | 'done'
@@ -19,7 +19,7 @@ export function is_date_column(column: string): column is DateColumn {
 }
 
 // The columns that stay hidden until turned on in the columns menu.
-const OPTIONAL_COLUMNS: TableColumn[] = ['start', 'due', 'done']
+const OPTIONAL_COLUMNS: TableColumn[] = ['start', 'due', 'done', 'duration']
 
 export function is_column_shown(column: TableColumn, hidden: string[], shown: string[]): boolean {
   return OPTIONAL_COLUMNS.includes(column) ? shown.includes(column) : !hidden.includes(column)
@@ -38,6 +38,32 @@ export function column_date(task: Task, column: DateColumn, date_field: TaskDate
     case 'due': return task.due_at
     case 'done': return done_date
   }
+}
+
+// How many minutes lie between a task's start and due dates, counting whole days when either has no time; empty when one is missing or due comes first.
+export function task_duration_minutes(task: Task): number | null {
+  if (task.start_at === null || task.due_at === null) return null
+  const start = parse_task_date(task.start_at)
+  const due = parse_task_date(task.due_at)
+  const minutes = has_time(task.start_at) && has_time(task.due_at)
+    ? Math.round((due.getTime() - start.getTime()) / 60_000)
+    : days_between(start, due) * MINUTES_IN_DAY
+  return minutes >= 0 ? minutes : null
+}
+
+const MINUTES_IN_DAY = 24 * 60
+
+// A duration in minutes named the way the task details name one, such as 1 week 2 days.
+export function task_duration_label(minutes: number): string {
+  const days = Math.floor(minutes / MINUTES_IN_DAY)
+  return duration_label({
+    id: '',
+    months: 0,
+    weeks: Math.floor(days / 7),
+    days: days % 7,
+    hours: Math.floor((minutes % MINUTES_IN_DAY) / 60),
+    minutes: minutes % 60
+  })
 }
 
 // The streak a task's row shows, or empty for a task that neither repeats nor sits under one that does.
@@ -67,6 +93,7 @@ export const COLUMN_WIDTH_RANGE = { min: 64, max: 480 }
 export function default_column_width(column: TableColumn): number {
   if (is_date_column(column)) return 104
   if (column === 'streak') return 84
+  if (column === 'duration') return 112
   return 124
 }
 
@@ -131,6 +158,7 @@ export function sort_task_tree(
   function cell_value(task: Task, column: string, ranks_by_id: Map<string, number>): CellValue {
     if (column === 'title') return task.title
     if (is_date_column(column)) return column_date(task, column, date_field, last_done_of)
+    if (column === 'duration') return task_duration_minutes(task)
     if (column === 'streak') return streak_of(task)?.current ?? null
     const group_id = group_id_of(column)
     const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => ranks_by_id.get(tag.id) ?? 0)
@@ -195,6 +223,17 @@ export function date_filter_choices(column: DateColumn): { value: DateFilter; la
   ]
 }
 
+// A duration filter keeps tasks at most a day or a week long, longer than a week, or without both a start and a due date.
+export type DurationFilter = 'any' | 'day' | 'week' | 'longer' | 'none'
+
+export const DURATION_FILTER_CHOICES: { value: DurationFilter; label: string }[] = [
+  { value: 'any', label: 'Any length' },
+  { value: 'day', label: 'A day or less' },
+  { value: 'week', label: 'A week or less' },
+  { value: 'longer', label: 'Over a week' },
+  { value: 'none', label: 'No duration' }
+]
+
 // Broken means a tracked task whose current streak is zero; untracked means one that neither repeats nor sits under one that does.
 export type StreakFilter = 'any' | 'active' | 'week' | 'month' | 'broken' | 'untracked'
 
@@ -211,22 +250,24 @@ export const STREAK_FILTER_CHOICES: { value: StreakFilter; label: string }[] = [
 export interface TableFilters {
   title: string
   dates: Partial<Record<DateColumn, DateFilter>>
+  duration: DurationFilter
   streak: StreakFilter
   group_tag_ids: Record<string, string>
 }
 
 export const NO_TAG_FILTER = 'none'
 
-export const EMPTY_TABLE_FILTERS: TableFilters = { title: '', dates: {}, streak: 'any', group_tag_ids: {} }
+export const EMPTY_TABLE_FILTERS: TableFilters = { title: '', dates: {}, duration: 'any', streak: 'any', group_tag_ids: {} }
 
 export function has_table_filters(filters: TableFilters): boolean {
-  return filters.title.trim() !== '' || Object.values(filters.dates).some((filter) => filter !== 'any') || filters.streak !== 'any' ||
+  return filters.title.trim() !== '' || Object.values(filters.dates).some((filter) => filter !== 'any') || filters.duration !== 'any' || filters.streak !== 'any' ||
     Object.values(filters.group_tag_ids).some(Boolean)
 }
 
 export function is_column_filtered(filters: TableFilters, column: TableColumn): boolean {
   if (column === 'title') return filters.title.trim() !== ''
   if (is_date_column(column)) return (filters.dates[column] ?? 'any') !== 'any'
+  if (column === 'duration') return filters.duration !== 'any'
   if (column === 'streak') return filters.streak !== 'any'
   return Boolean(filters.group_tag_ids[group_id_of(column)!])
 }
@@ -235,6 +276,7 @@ export function is_column_filtered(filters: TableFilters, column: TableColumn): 
 export function without_column_filter(filters: TableFilters, column: TableColumn): TableFilters {
   if (column === 'title') return { ...filters, title: '' }
   if (is_date_column(column)) return { ...filters, dates: { ...filters.dates, [column]: 'any' } }
+  if (column === 'duration') return { ...filters, duration: 'any' }
   if (column === 'streak') return { ...filters, streak: 'any' }
   return { ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id_of(column)!]: '' } }
 }
@@ -257,6 +299,7 @@ export function task_passes_filters(
       if (!missed_its_due_date(task)) return false
     } else if (!date_passes(task, column_date(task, column, date_field, last_done_of), filter, today)) return false
   }
+  if (!duration_passes(task_duration_minutes(task), filters.duration)) return false
   if (!streak_passes(streak_of(task), filters.streak)) return false
 
   return Object.entries(filters.group_tag_ids).every(([group_id, tag_id]) => {
@@ -265,6 +308,16 @@ export function task_passes_filters(
     if (tag_id !== NO_TAG_FILTER) return has_tag(tag_id)
     return !tags.some((tag) => tag.group_id === group_id && tag.parent_id === null && has_tag(tag.id))
   })
+}
+
+function duration_passes(minutes: number | null, filter: DurationFilter): boolean {
+  switch (filter) {
+    case 'any': return true
+    case 'day': return minutes !== null && minutes <= MINUTES_IN_DAY
+    case 'week': return minutes !== null && minutes <= 7 * MINUTES_IN_DAY
+    case 'longer': return minutes !== null && minutes > 7 * MINUTES_IN_DAY
+    case 'none': return minutes === null
+  }
 }
 
 function streak_passes(streak: RoutineStreak | null, filter: StreakFilter): boolean {

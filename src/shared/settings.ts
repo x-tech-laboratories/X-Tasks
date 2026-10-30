@@ -131,7 +131,7 @@ export interface Settings {
   table_column_order: string[]
   // The table columns left out; the title is always shown.
   hidden_table_columns: string[]
-  // The start, due and done columns turned on; they stay hidden until then.
+  // The start, due, done and duration columns turned on; they stay hidden until then.
   shown_table_columns: string[]
   // Widths in pixels of table columns dragged away from their default; the title takes whatever room is left.
   table_column_widths: Record<string, number>

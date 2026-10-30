@@ -9,8 +9,8 @@ import { StreakStrip } from './StreakStrip'
 import { ResizeHandle } from './ResizeHandle'
 import { is_overdue, task_date_label } from '@shared/schedule'
 import {
-  COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_date, column_width, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
+  COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_date, column_width, date_filter_choices, default_column_width, group_column,
+  has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, task_duration_label, task_duration_minutes, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
 } from './table'
 import type { RepeatOccurrence } from './dates'
 import { drop_placement, tag_color_style, tag_path, with_icon, type DropPlacement, type TaskNode } from './views'
@@ -69,6 +69,7 @@ export function TaskTableHeader({
     if (column === 'start') return 'Start'
     if (column === 'due') return 'Due'
     if (column === 'done') return 'Done'
+    if (column === 'duration') return 'Duration'
     if (column === 'streak') return 'Streak'
     return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
   }
@@ -201,6 +202,14 @@ export function TaskTableHeader({
           {date_filter_choices(column).map(({ value, label }) =>
             filter_choice(label, chosen === value, () => on_filter({ ...filters, dates: { ...filters.dates, [column]: value } }))
           )}
+        </FilterPopover>
+      )
+    }
+
+    if (open.column === 'duration') {
+      return (
+        <FilterPopover open={open} on_close={close_filter}>
+          {DURATION_FILTER_CHOICES.map(({ value, label }) => filter_choice(label, filters.duration === value, () => on_filter({ ...filters, duration: value })))}
         </FilterPopover>
       )
     }
@@ -530,6 +539,13 @@ export function TaskItem({ node, actions }: TaskItemProps) {
       </span>
     )
   }
+  const duration_minutes = task_duration_minutes(task)
+  const duration_cell = (
+    <span key="duration" class="task_cell date_cell">
+      {duration_minutes !== null && <span class="due_label">{task_duration_label(duration_minutes)}</span>}
+    </span>
+  )
+
   const row_class = [
     'task', task.is_done && 'is_done', is_selected && 'is_selected', is_picked && 'is_picked', is_picked && actions.is_dragging_picked && 'is_dragged', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
   ].filter(Boolean).join(' ')
@@ -578,7 +594,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
         {actions.is_table ? (
           actions.table_columns.map((column) =>
-            is_date_column(column) ? date_cell(column) : column === 'streak' ? streak_cell : (
+            is_date_column(column) ? date_cell(column) : column === 'duration' ? duration_cell : column === 'streak' ? streak_cell : (
               <span key={column} class="task_cell">
                 {task_tags.filter((tag) => `group:${tag.group_id}` === column).map((tag) => render_tag(tag, tag_path(tag, actions.tags)))}
               </span>
