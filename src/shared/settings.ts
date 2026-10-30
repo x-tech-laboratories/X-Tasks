@@ -146,6 +146,8 @@ export interface Settings {
   last_view: View
   // The tasks whose subtasks are folded away, kept so they stay folded after a restart.
   collapsed_task_ids: string[]
+  // When set, completing a task whose subtasks all end up done folds them away.
+  collapse_completed_branches: boolean
   // The sidebar's tag groups and tags folded shut, kept the same way.
   collapsed_sidebar_ids: string[]
   // When set, an MCP endpoint on this machine lets AI assistants read and change tasks.
@@ -212,6 +214,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tag_colors: ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#db2777', '#64748b'],
   last_view: { kind: 'all' },
   collapsed_task_ids: [],
+  collapse_completed_branches: false,
   collapsed_sidebar_ids: [],
   mcp_enabled: false,
   mcp_port: 3917,

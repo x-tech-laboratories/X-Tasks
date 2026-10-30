@@ -313,6 +313,26 @@ export function App() {
     complete_subtasks(task)
   }
 
+  // Ticks a task by hand, folding its subtasks away when that finishes its whole branch and the settings say to.
+  function tick_task(task: Task): void {
+    collapse_finished_branches([task])
+    toggle_task(task)
+  }
+
+  // Collapses each task about to be completed whose subtasks will all be done too, leaving every other task as it was.
+  function collapse_finished_branches(ticked_tasks: Task[]): void {
+    if (!settings?.collapse_completed_branches) return
+    const finished_ids = ticked_tasks.filter((task) => !task.is_done && finishes_branch(task)).map((task) => task.id)
+    if (finished_ids.length > 0) set_tasks_collapsed(finished_ids, true)
+  }
+
+  // A repeating task or subtask moves to its next date instead of staying done, so its branch never finishes.
+  function finishes_branch(task: Task): boolean {
+    const branch_ids = subtree_ids(task.id, tasks)
+    if (branch_ids.size === 1) return false
+    return tasks.every((each) => !branch_ids.has(each.id) || (each.id !== task.id && each.is_done) || next_schedule(each) === null)
+  }
+
   function save_task_done(task: Task, is_done: boolean, done_at: string | null, log_change: CompletionLogChange): void {
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, is_done, done_at } : each)))
     set_completions((current_completions) => completions_after(current_completions, task.id, done_at, log_change))
@@ -678,7 +698,9 @@ export function App() {
 
   // Completing a picked parent completes its subtasks itself, so a subtask picked along with it is not ticked twice.
   function complete_picked(): void {
-    for (const task of picked_roots(true)) if (!task.is_done) toggle_task(task)
+    const roots = picked_roots(true)
+    collapse_finished_branches(roots)
+    for (const task of roots) if (!task.is_done) toggle_task(task)
   }
 
   function reopen_picked(): void {
@@ -770,7 +792,7 @@ export function App() {
     drag_count_of: (task) => tasks_dragged_with(task).length,
     is_dragging_picked: dragged_task !== null && is_picking && picked_task_ids.includes(dragged_task.id),
     on_context_menu: open_context_menu,
-    on_toggle: toggle_task,
+    on_toggle: tick_task,
     on_reschedule: (task) => set_rescheduling_task_ids([task.id]),
     is_in_my_day: (task) => is_in_my_day(task, shown_since),
     on_set_my_day: (task, is_added) => set_task_my_day(task, is_added ? today : null),
@@ -1020,7 +1042,7 @@ export function App() {
             tags={tags}
             subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
             durations={settings.task_durations}
-            on_toggle={toggle_task}
+            on_toggle={tick_task}
             on_rename={rename_task}
             on_set_notes={set_task_notes}
             on_tag={tag_task}

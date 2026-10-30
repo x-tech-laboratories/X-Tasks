@@ -204,6 +204,18 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
 
         <label class="setting_row">
           <div class="setting_text">
+            <span class="setting_label">Collapse completed branches</span>
+            <span class="setting_hint">Completing a task folds its subtasks away once they are all done too. Other tasks stay as they are.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.collapse_completed_branches}
+            onChange={(event) => on_change('collapse_completed_branches', event.currentTarget.checked)}
+          />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
             <span class="setting_label">Clear My Day each day</span>
             <span class="setting_hint">My Day starts empty every morning. When off, tasks stay until you take them out.</span>
           </div>
