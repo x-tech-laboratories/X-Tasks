@@ -180,8 +180,8 @@ function tag_id_named(name: string): string {
 function add_projects(): string {
   const group = add_tag_group(PROJECTS_GROUP, false)
   for (const project of PROJECT_TAGS) {
-    const parent = add_tag(project.name, group.id, null, null, project.color, project.icon)
-    for (const child of project.children ?? []) add_tag(child, group.id, parent.id, null, null, null)
+    const parent = add_tag(project.name, group.id, null, null, project.color, project.icon, true)
+    for (const child of project.children ?? []) add_tag(child, group.id, parent.id, null, null, null, true)
   }
   return group.id
 }
@@ -219,7 +219,7 @@ function resolved_condition(condition: ExampleCondition, group_ids: Map<string, 
 function add_filters(group_ids: Map<string, string>): void {
   for (const filter of EXAMPLE_FILTERS) {
     const rule: TagRule = { match: filter.match, conditions: filter.conditions.map((condition) => resolved_condition(condition, group_ids)) }
-    add_tag(filter.name, PRESET_FILTERS_GROUP_ID, null, rule, filter.color, null)
+    add_tag(filter.name, PRESET_FILTERS_GROUP_ID, null, rule, filter.color, null, true)
   }
 }
 

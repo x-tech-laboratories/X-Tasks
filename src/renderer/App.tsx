@@ -11,7 +11,7 @@ import { ReschedulePopup } from './ReschedulePopup'
 import { ResizeHandle } from './ResizeHandle'
 import { UntrustedCertificatePrompt } from './CertificateDialog'
 import { FilterDialog } from './FilterDialog'
-import { SyntaxHelpDialog, SyntaxPreview, syntax_button_label, syntax_menu_items } from './SyntaxHelp'
+import { AddTaskRow, SyntaxHelpDialog, SyntaxPreview, syntax_button_label, syntax_menu_items } from './SyntaxHelp'
 import { query_matches, syntax_by_id, type SyntaxContext } from './syntax'
 import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
@@ -255,9 +255,8 @@ export function App() {
     return { tags, tag_groups, date_field: settings!.task_date_field, now: new Date() }
   }
 
-  // The Completed view takes no new tasks, so pressing Enter there only searches; text that is all tags and dates adds nothing.
-  async function submit_multibar(event: Event): Promise<void> {
-    event.preventDefault()
+  // Enter only searches; the Add task row under the bar adds what was typed. The Completed view takes no new tasks, and text that is all tags and dates adds nothing.
+  async function add_typed_task(): Promise<void> {
     const text = multibar_text.trim()
     if (!text || selected_view.kind === 'completed') return
     const typed = syntax_by_id(settings!.quick_add_syntax).parse_quick_add(text, syntax_context())
@@ -277,9 +276,9 @@ export function App() {
     }
   }
 
-  // A subtask shows wherever its parent does, so it needs no tags of its own.
+  // A subtask shows wherever its parent does, so it starts with the parent's tags only when the settings say so.
   async function add_subtask(parent: Task, title: string): Promise<void> {
-    const added_task = await window.x_tasks.add_task(title, parent.id, [], null)
+    const added_task = await window.x_tasks.add_task(title, parent.id, settings?.subtasks_inherit_tags ? parent.tag_ids : [], null)
     set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
@@ -519,26 +518,26 @@ export function App() {
   }
 
   async function add_tag(
-    name: string, group_id: string, parent_id: string | null, rule: TagRule | null = null, color: string | null = null, icon: string | null = null
+    name: string, group_id: string, parent_id: string | null, rule: TagRule | null = null, color: string | null = null, icon: string | null = null, shows_on_rows = true
   ): Promise<void> {
-    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id, rule, color, icon)
+    const added_tag = await window.x_tasks.add_tag(name, group_id, parent_id, rule, color, icon, shows_on_rows)
     set_tags((current_tags) => [...current_tags, added_tag])
     select_view({ kind: 'tag', tag_ids: [added_tag.id] })
   }
 
   // A tag that becomes a rule leaves every task that held it by hand.
-  function save_filter(name: string, rule: TagRule | null, color: string | null, icon: string | null): void {
+  function save_filter(name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean): void {
     if (!filter_editing) return
-    if (!('tag' in filter_editing)) return void add_tag(name, filter_editing.group_id, filter_editing.parent_id, rule, color, icon)
+    if (!('tag' in filter_editing)) return void add_tag(name, filter_editing.group_id, filter_editing.parent_id, rule, color, icon, shows_on_rows)
 
     const tag_id = filter_editing.tag.id
-    set_tags((current_tags) => current_tags.map((each) => (each.id === tag_id ? { ...each, name, rule, color, icon } : each)))
+    set_tags((current_tags) => current_tags.map((each) => (each.id === tag_id ? { ...each, name, rule, color, icon, shows_on_rows } : each)))
     if (rule) {
       set_tasks((current_tasks) =>
         current_tasks.map((task) => (task.tag_ids.includes(tag_id) ? { ...task, tag_ids: task.tag_ids.filter((id) => id !== tag_id) } : task))
       )
     }
-    void window.x_tasks.update_tag(tag_id, name, rule, color, icon)
+    void window.x_tasks.update_tag(tag_id, name, rule, color, icon, shows_on_rows)
   }
 
   function remove_tag(tag: Tag): void {
@@ -822,15 +821,18 @@ export function App() {
 
   return (
     <div class="app">
-      <form class="multibar" onSubmit={submit_multibar}>
+      <form class="multibar" onSubmit={(event) => event.preventDefault()}>
         <button type="button" class="menu_button" onClick={() => set_is_sidebar_open(!is_sidebar_open)} aria-label="Menu" aria-expanded={is_sidebar_open}>
           ☰
         </button>
         <input
           value={multibar_text}
           onInput={(event) => change_multibar_text(event.currentTarget.value)}
-          onKeyDown={(event) => event.key === 'Escape' && set_multibar_text('')}
-          placeholder={can_add_task ? 'Search, or press Enter to add a task' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') set_multibar_text('')
+            if (event.key === 'ArrowDown') document.querySelector<HTMLElement>('.add_task_row')?.focus()
+          }}
+          placeholder={can_add_task ? 'Search, or type a task to add' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
           aria-label="Search or add a task"
           autofocus={!IS_TOUCH_SCREEN}
         />
@@ -847,13 +849,8 @@ export function App() {
         >
           {syntax_button_label(settings.quick_add_syntax, settings.search_syntax)}
         </button>
-        {can_add_task && (
-          <button type="submit" disabled={!is_searching}>
-            Add
-          </button>
-        )}
       </form>
-      <SyntaxPreview quick_add={typed_task} search_problems={search?.problems ?? []} tags={tags} />
+      <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
 
       <div
         class={`app_body${selected_task ? ' has_detail' : ''}${is_sidebar_open ? ' is_sidebar_open' : ''}`}
@@ -976,6 +973,8 @@ export function App() {
                 </div>
               </header>
 
+              {typed_task?.title && <AddTaskRow quick_add={typed_task} tags={tags} on_add={() => void add_typed_task()} on_cancel={() => set_multibar_text('')} />}
+
               <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{
                   '--data-columns': table_columns.map((column) => `${column_width(settings.table_column_widths, column)}px`).join(' '),
                   '--data-width': `calc(${table_columns.reduce((total, column) => total + column_width(settings.table_column_widths, column), 0)}px + ${table_columns.length} * var(--space-4))`
@@ -1076,6 +1075,7 @@ export function App() {
             rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
             color={'tag' in filter_editing ? filter_editing.tag.color : null}
             icon={'tag' in filter_editing ? filter_editing.tag.icon : null}
+            shows_on_rows={'tag' in filter_editing ? filter_editing.tag.shows_on_rows : true}
             swatches={settings.tag_colors}
             tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
             tags={tags}

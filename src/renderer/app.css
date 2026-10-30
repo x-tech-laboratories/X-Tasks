@@ -1469,3 +1469,27 @@ select:hover { border-color: var(--border-focus); }
 @media (max-width: 700px) {
   .syntax_example { grid-template-columns: 1fr; gap: 0; }
 }
+
+.rule_row_toggle { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); color: var(--text-body); }
+
+/* The row that adds the typed task sits above the list, drawn like a task that is not there yet. */
+.add_task_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  width: 100%;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-default);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-default));
+  color: var(--text-body);
+  font-size: var(--text-control);
+  text-align: left;
+}
+
+.add_task_row:hover,
+.add_task_row:focus-visible { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); }
+.add_task_plus { color: var(--accent); font-weight: 700; }
+.add_task_label strong { color: var(--text-heading); }

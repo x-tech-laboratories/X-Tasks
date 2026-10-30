@@ -167,7 +167,10 @@ const SCHEMA_MIGRATIONS = [
        ('filter_actionable', 'Actionable', 1,
         '{"match":"all","conditions":[{"kind":"status","is_done":false},{"kind":"start","when":"passed_or_none"},{"kind":"open_subtasks","has_open":false}]}'),
        ('filter_untagged', 'Untagged', 2, '{"match":"all","conditions":[{"kind":"tagged","is_tagged":false}]}'))
-     WHERE NOT EXISTS (SELECT 1 FROM tags WHERE id = column1)`
+     WHERE NOT EXISTS (SELECT 1 FROM tags WHERE id = column1)`,
+  // Tags can be left off task rows; the preset Actionable and Untagged filters start off them, since nearly every task matches one.
+  `ALTER TABLE tags ADD COLUMN shows_on_rows INTEGER NOT NULL DEFAULT 1;
+   UPDATE tags SET shows_on_rows = 0 WHERE id IN ('filter_actionable', 'filter_untagged')`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -478,13 +481,14 @@ export function move_tag_group(group_id: string, position: number): void {
 // ============================================================================
 
 export function list_tags(): Tag[] {
-  const rows = open_database().prepare('SELECT * FROM tags ORDER BY position').all() as unknown as (Omit<Tag, 'rule'> & {
+  const rows = open_database().prepare('SELECT * FROM tags ORDER BY position').all() as unknown as (Omit<Tag, 'rule' | 'shows_on_rows'> & {
     rule: string | null
+    shows_on_rows: number
   })[]
-  return rows.map((row) => ({ ...row, rule: row.rule === null ? null : (JSON.parse(row.rule) as TagRule) }))
+  return rows.map((row) => ({ ...row, rule: row.rule === null ? null : (JSON.parse(row.rule) as TagRule), shows_on_rows: row.shows_on_rows !== 0 }))
 }
 
-export function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null, icon: string | null): Tag {
+export function add_tag(name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean): Tag {
   const tag: Tag = {
     id: crypto.randomUUID(),
     name,
@@ -494,24 +498,25 @@ export function add_tag(name: string, group_id: string, parent_id: string | null
     position: next_position('tags'),
     rule,
     color,
-    icon
+    icon,
+    shows_on_rows
   }
 
   open_database()
-    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position, rule, color, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position, rule === null ? null : JSON.stringify(rule), color, icon)
+    .prepare('INSERT INTO tags (id, name, created_at, group_id, parent_id, position, rule, color, icon, shows_on_rows) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(tag.id, tag.name, tag.created_at, tag.group_id, tag.parent_id, tag.position, rule === null ? null : JSON.stringify(rule), color, icon, shows_on_rows ? 1 : 0)
 
   return tag
 }
 
 // A rule tag is never held by hand, so giving the tag a rule takes it off every task that had it.
-export function update_tag(tag_id: string, name: string, rule: TagRule | null, color: string | null, icon: string | null): void {
+export function update_tag(tag_id: string, name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean): void {
   const database = open_database()
 
   in_transaction(database, () => {
     database
-      .prepare('UPDATE tags SET name = ?, rule = ?, color = ?, icon = ? WHERE id = ?')
-      .run(name, rule === null ? null : JSON.stringify(rule), color, icon, tag_id)
+      .prepare('UPDATE tags SET name = ?, rule = ?, color = ?, icon = ?, shows_on_rows = ? WHERE id = ?')
+      .run(name, rule === null ? null : JSON.stringify(rule), color, icon, shows_on_rows ? 1 : 0, tag_id)
     if (rule !== null) database.prepare('DELETE FROM task_tags WHERE tag_id = ?').run(tag_id)
   })
 }

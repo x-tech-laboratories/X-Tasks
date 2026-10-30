@@ -30,38 +30,62 @@ export function syntax_button_label(quick_add_syntax: SyntaxId, search_syntax: S
 }
 
 // ============================================================================
-// Preview
+// Add task row
 // ============================================================================
 
-interface SyntaxPreviewProps {
-  quick_add: QuickAdd | null
-  search_problems: string[]
-  tags: Tag[]
+// What a typed task would be given besides its title: the tags, dates and repeat the syntax read.
+function QuickAddDetails({ quick_add, tags }: { quick_add: QuickAdd; tags: Tag[] }) {
+  const added_tags = quick_add.tag_ids.map((tag_id) => tags.find((tag) => tag.id === tag_id)).filter((tag): tag is Tag => tag !== undefined)
+
+  return (
+    <>
+      {added_tags.map((tag) => (
+        <span key={tag.id} class={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)}>
+          {with_icon(tag, tag.name)}
+        </span>
+      ))}
+      {quick_add.start_at && <span class="due_label">Starts {task_date_label(quick_add.start_at)}</span>}
+      {quick_add.due_at && <span class="due_label">Due {task_date_label(quick_add.due_at)}</span>}
+      {quick_add.recurrence && <span class="due_label">↻ {describe_recurrence(quick_add)}</span>}
+    </>
+  )
 }
 
-// Shows under the multibar what Enter would add, and anything in the text either syntax could not read.
-export function SyntaxPreview({ quick_add, search_problems, tags }: SyntaxPreviewProps) {
-  const added_tags = quick_add ? quick_add.tag_ids.map((tag_id) => tags.find((tag) => tag.id === tag_id)).filter((tag): tag is Tag => tag !== undefined) : []
-  const problems = [...(quick_add?.problems ?? []), ...search_problems.map((problem) => `Search: ${problem}`)]
-  const sets_more = quick_add !== null && (added_tags.length > 0 || quick_add.start_at || quick_add.due_at || quick_add.recurrence)
-  if (!sets_more && problems.length === 0) return null
+interface AddTaskRowProps {
+  quick_add: QuickAdd
+  tags: Tag[]
+  on_add: () => void
+  on_cancel: () => void
+}
+
+// A row that is not a task yet: pressing it adds what was typed, with the tags and dates the syntax read, and Down from the bar reaches it.
+export function AddTaskRow({ quick_add, tags, on_add, on_cancel }: AddTaskRowProps) {
+  return (
+    <button
+      type="button"
+      class="add_task_row"
+      onClick={on_add}
+      onKeyDown={(event) => event.key === 'Escape' && on_cancel()}
+    >
+      <span class="add_task_plus" aria-hidden="true">+</span>
+      <span class="add_task_label">
+        Add task <strong>“{quick_add.title}”</strong>
+      </span>
+      <QuickAddDetails quick_add={quick_add} tags={tags} />
+    </button>
+  )
+}
+
+// ============================================================================
+// Problems
+// ============================================================================
+
+// Shows under the multibar anything in the text that either syntax could not read.
+export function SyntaxPreview({ problems }: { problems: string[] }) {
+  if (problems.length === 0) return null
 
   return (
     <div class="syntax_preview" aria-live="polite">
-      {quick_add && sets_more && (
-        <span class="syntax_preview_add">
-          <span class="syntax_preview_label">Enter adds</span>
-          <span class="syntax_preview_title">{quick_add.title || 'a task with no title'}</span>
-          {added_tags.map((tag) => (
-            <span key={tag.id} class={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)}>
-              {with_icon(tag, tag.name)}
-            </span>
-          ))}
-          {quick_add.start_at && <span class="due_label">Starts {task_date_label(quick_add.start_at)}</span>}
-          {quick_add.due_at && <span class="due_label">Due {task_date_label(quick_add.due_at)}</span>}
-          {quick_add.recurrence && <span class="due_label">↻ {describe_recurrence(quick_add)}</span>}
-        </span>
-      )}
       {problems.map((problem) => (
         <span key={problem} class="syntax_problem">
           {problem}

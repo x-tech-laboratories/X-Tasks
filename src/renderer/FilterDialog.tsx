@@ -211,6 +211,7 @@ interface FilterDialogProps {
   rule: TagRule | null
   color: string | null
   icon: string | null
+  shows_on_rows: boolean
   // The preset colours offered as swatches.
   swatches: string[]
   // The tag being edited, or null for a new one.
@@ -218,16 +219,17 @@ interface FilterDialogProps {
   tags: Tag[]
   groups: TagGroup[]
   tasks: Task[]
-  on_save: (name: string, rule: TagRule | null, color: string | null, icon: string | null) => void
+  on_save: (name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean) => void
   on_close: () => void
 }
 
 // Names a tag, gives it a colour and an icon and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
-export function FilterDialog({ heading, name, rule, color, icon, swatches, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
+export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, swatches, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
   const [color_draft, set_color_draft] = useState(color)
   const [icon_draft, set_icon_draft] = useState(icon)
+  const [shows_on_rows_draft, set_shows_on_rows_draft] = useState(shows_on_rows)
   const [rule_draft, set_rule_draft] = useState(rule ?? EMPTY_RULE)
 
   useEffect(() => dialog_ref.current?.showModal(), [])
@@ -258,7 +260,7 @@ export function FilterDialog({ heading, name, rule, color, icon, swatches, tag_i
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
-    on_save(trimmed_name, is_rule ? rule_draft : null, color_draft, icon_draft)
+    on_save(trimmed_name, is_rule ? rule_draft : null, color_draft, icon_draft, shows_on_rows_draft)
     on_close()
   }
 
@@ -297,6 +299,11 @@ export function FilterDialog({ heading, name, rule, color, icon, swatches, tag_i
             onInput={(event) => change_icon(event.currentTarget)}
             placeholder="Emoji"
           />
+        </label>
+
+        <label class="rule_row_toggle">
+          <input type="checkbox" checked={shows_on_rows_draft} onChange={(event) => set_shows_on_rows_draft(event.currentTarget.checked)} />
+          Show on task rows
         </label>
 
         {is_rule && (

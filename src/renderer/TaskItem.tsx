@@ -416,7 +416,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
 
   // Rule tags that match join the task's own tags.
-  const task_tags = [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)]
+  const task_tags = [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)].filter((tag) => tag.shows_on_rows)
   const tint_tag = actions.tint_rows ? task_tags.find((tag) => tag.color) : undefined
 
   // A rule tag shows as a fixed chip, and any other tag as a chip that can be removed from the task.

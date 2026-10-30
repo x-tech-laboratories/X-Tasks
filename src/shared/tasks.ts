@@ -62,6 +62,8 @@ export interface Tag {
   color: string | null
   // An emoji shown before the tag's name wherever it shows, or empty for none.
   icon: string | null
+  // When cleared, the tag is left off task rows, though it still filters and shows in the sidebar and the details panel.
+  shows_on_rows: boolean
 }
 
 // ============================================================================
@@ -149,8 +151,8 @@ export interface TasksApi {
   move_tag_group: (group_id: string, position: number) => Promise<void>
 
   list_tags: () => Promise<Tag[]>
-  add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null, icon: string | null) => Promise<Tag>
-  update_tag: (tag_id: string, name: string, rule: TagRule | null, color: string | null, icon: string | null) => Promise<void>
+  add_tag: (name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean) => Promise<Tag>
+  update_tag: (tag_id: string, name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean) => Promise<void>
   remove_tag: (tag_id: string) => Promise<void>
   move_tag: (tag_id: string, parent_id: string | null, position: number) => Promise<void>
 

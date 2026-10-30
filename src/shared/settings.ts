@@ -117,6 +117,8 @@ export interface Settings {
   // When cleared, the sidebar leaves out tags no task has, done or not, unless selected or holding a tag that shows.
   show_empty_tags: boolean
   search_scope: SearchScope
+  // When set, a new subtask starts with its parent's tags; otherwise it shows under whichever tags its parent has, with none of its own.
+  subtasks_inherit_tags: boolean
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
@@ -179,6 +181,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tag_scope: 'subtags',
   show_empty_tags: true,
   search_scope: 'view',
+  subtasks_inherit_tags: false,
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',

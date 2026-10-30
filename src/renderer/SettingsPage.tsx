@@ -178,6 +178,14 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
 
         <label class="setting_row">
           <div class="setting_text">
+            <span class="setting_label">Subtasks start with their parent's tags</span>
+            <span class="setting_hint">A new subtask is given its parent's tags when added. Either way it already shows wherever its parent does.</span>
+          </div>
+          <input type="checkbox" checked={settings.subtasks_inherit_tags} onChange={(event) => on_change('subtasks_inherit_tags', event.currentTarget.checked)} />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
             <span class="setting_label">Open on launch</span>
             <span class="setting_hint">The view shown when the app starts.</span>
           </div>
