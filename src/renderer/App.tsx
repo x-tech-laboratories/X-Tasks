@@ -267,7 +267,7 @@ export function App() {
     set_tasks((current_tasks) => [...current_tasks, added_task])
     set_multibar_text('')
     if (typed.start_at || typed.due_at || typed.recurrence) {
-      return set_task_schedule(added_task, with_recurrence({ start_at: typed.start_at, due_at: typed.due_at, recurrence: '' }, typed.recurrence))
+      return set_task_schedule(added_task, with_recurrence({ start_at: typed.start_at, due_at: typed.due_at, recurrence: '' }, typed.recurrence, undefined, settings!.task_date_field))
     }
     // Upcoming shows only dated tasks, so one added there is dated today.
     if (selected_view.kind === 'upcoming') {
@@ -296,11 +296,11 @@ export function App() {
     if (task.is_done) return save_task_done(task, false, null, { kind: 'remove' })
 
     const done_at = new Date().toISOString()
-    const log_change: CompletionLogChange = { kind: 'add', occurrence_on: recurrence_anchor(task) }
+    const log_change: CompletionLogChange = { kind: 'add', occurrence_on: recurrence_anchor(task, settings?.task_date_field ?? 'due') }
     // A completed top-level task can leave My Day, as the settings choose.
     const leaves_my_day = Boolean(settings?.remove_done_from_my_day) && task.parent_id === null && task.my_day_on !== null
     if (leaves_my_day) set_task_my_day(task, null)
-    const next = next_schedule(task)
+    const next = next_schedule(task, settings?.task_date_field ?? 'due')
     if (next) {
       // A next occurrence that is already due goes back into My Day.
       set_task_schedule(leaves_my_day ? { ...task, my_day_on: null } : task, next)
@@ -329,7 +329,7 @@ export function App() {
   function finishes_branch(task: Task): boolean {
     const branch_ids = subtree_ids(task.id, tasks)
     if (branch_ids.size === 1) return false
-    return tasks.every((each) => !branch_ids.has(each.id) || (each.id !== task.id && each.is_done) || next_schedule(each) === null)
+    return tasks.every((each) => !branch_ids.has(each.id) || (each.id !== task.id && each.is_done) || next_schedule(each, settings?.task_date_field ?? 'due') === null)
   }
 
   function save_task_done(task: Task, is_done: boolean, done_at: string | null, log_change: CompletionLogChange): void {
@@ -976,9 +976,9 @@ export function App() {
               {typed_task?.title && <AddTaskRow quick_add={typed_task} tags={tags} on_add={() => void add_typed_task()} on_cancel={() => set_multibar_text('')} />}
 
               <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{
-                  '--data-columns': table_columns.map((column) => `${column_width(settings.table_column_widths, column)}px`).join(' '),
-                  '--data-width': `calc(${table_columns.reduce((total, column) => total + column_width(settings.table_column_widths, column), 0)}px + ${table_columns.length} * var(--space-4))`
-                }}>
+                '--data-columns': table_columns.map((column) => `${column_width(settings.table_column_widths, column)}px`).join(' '),
+                '--data-width': `calc(${table_columns.reduce((total, column) => total + column_width(settings.table_column_widths, column), 0)}px + ${table_columns.length} * var(--space-4))`
+              }}>
                 {is_table && visible_tasks.length > 0 && (
                   <TaskTableHeader
                     tag_groups={tag_groups}
@@ -998,19 +998,19 @@ export function App() {
                 )}
                 {is_grouped
                   ? task_groups.map((group) => (
-                      <Fragment key={group.key}>
-                        <li class={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
-                          {group.label}
-                          <span class="group_count">{group.nodes.length + group.repeats.length}</span>
-                        </li>
-                        {group.nodes.map((node) => (
-                          <TaskItem key={node.task.id} node={node} actions={task_actions} />
-                        ))}
-                        {group.repeats.map((repeat) => (
-                          <RepeatItem key={`${repeat.task.id}@${repeat.task_date}`} repeat={repeat} actions={task_actions} />
-                        ))}
-                      </Fragment>
-                    ))
+                    <Fragment key={group.key}>
+                      <li class={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
+                        {group.label}
+                        <span class="group_count">{group.nodes.length + group.repeats.length}</span>
+                      </li>
+                      {group.nodes.map((node) => (
+                        <TaskItem key={node.task.id} node={node} actions={task_actions} />
+                      ))}
+                      {group.repeats.map((repeat) => (
+                        <RepeatItem key={`${repeat.task.id}@${repeat.task_date}`} repeat={repeat} actions={task_actions} />
+                      ))}
+                    </Fragment>
+                  ))
                   : task_tree.map((node) => <TaskItem key={node.task.id} node={node} actions={task_actions} />)}
               </ul>
 
@@ -1039,6 +1039,7 @@ export function App() {
             task={selected_task}
             tag_groups={tag_groups}
             tags={tags}
+            date_field={settings.task_date_field}
             subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
             durations={settings.task_durations}
             on_toggle={tick_task}

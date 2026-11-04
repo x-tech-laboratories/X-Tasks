@@ -110,7 +110,7 @@ export function coming_repeats(tasks: Task[], date_field: TaskDateField, now: st
     if (task.is_done || !task.recurrence || task_date_of(task, date_field) === null) continue
     let current: Task = task
     for (let count = 0; count < MOST_REPEATS_PER_TASK; count++) {
-      const next = next_schedule(current)
+      const next = next_schedule(current, date_field)
       const task_date = next && task_date_of(next, date_field)
       if (!next || !task_date || task_date.slice(0, 10) > last_day) break
       // An overdue task's next dates can still be in the past, and those are skipped.
