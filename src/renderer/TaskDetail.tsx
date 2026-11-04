@@ -4,7 +4,7 @@ import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
-import type { TaskDuration } from '@shared/settings'
+import type { TaskDateField, TaskDuration } from '@shared/settings'
 import {
   describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor,
   with_recurrence
@@ -19,6 +19,7 @@ interface TaskDetailProps {
   task: Task
   tag_groups: TagGroup[]
   tags: Tag[]
+  date_field: TaskDateField
   subtask_count: number
   durations: TaskDuration[]
   on_toggle: (task: Task) => void
@@ -38,7 +39,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, subtask_count, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, date_field, subtask_count, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -196,7 +197,7 @@ export function TaskDetail({
       <div class="task_detail_field">
         <span class="sidebar_heading">Repeat</span>
         <button class="recurrence_button" onClick={() => set_is_picking_recurrence(true)}>
-          {describe_recurrence(schedule)}
+          {describe_recurrence(schedule, date_field)}
         </button>
       </div>
 
@@ -220,8 +221,8 @@ export function TaskDetail({
       {is_picking_recurrence && (
         <RecurrencePicker
           recurrence={task.recurrence}
-          anchor={recurrence_anchor(schedule)}
-          on_save={(recurrence) => on_set_schedule(task, with_recurrence(schedule, recurrence))}
+          anchor={recurrence_anchor(schedule, date_field)}
+          on_save={(recurrence) => on_set_schedule(task, with_recurrence(schedule, recurrence, undefined, date_field))}
           on_close={() => set_is_picking_recurrence(false)}
         />
       )}

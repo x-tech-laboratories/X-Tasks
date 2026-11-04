@@ -104,9 +104,9 @@ export function duration_between(durations: TaskDuration[], start_at: string | n
 // Recurrence
 // ============================================================================
 
-// The due date anchors the rule, or the start date when there is no due date.
-export function recurrence_anchor(schedule: TaskSchedule): string | null {
-  return schedule.due_at ?? schedule.start_at
+// The chosen date anchors the rule, or the other date when the chosen one is missing.
+export function recurrence_anchor(schedule: TaskSchedule, field: TaskDateField = 'due'): string | null {
+  return field === 'start' ? schedule.start_at ?? schedule.due_at : schedule.due_at ?? schedule.start_at
 }
 
 // rrule numbers frequencies from YEARLY at 0, so HOURLY and everything shorter is 4 or more.
@@ -117,9 +117,9 @@ export function rule_format(anchor: string | null): RuleFormat {
   return { time_mode: 'floating', all_day: anchor === null || !has_time(anchor) }
 }
 
-export function describe_recurrence(schedule: TaskSchedule): string {
+export function describe_recurrence(schedule: TaskSchedule, field: TaskDateField = 'due'): string {
   if (!schedule.recurrence) return 'Does not repeat'
-  return describe_rule(schedule.recurrence, rule_format(recurrence_anchor(schedule))) || 'Custom rule'
+  return describe_rule(schedule.recurrence, rule_format(recurrence_anchor(schedule, field))) || 'Custom rule'
 }
 
 // The clock time a rule sets, such as 09:30 for BYHOUR=9;BYMINUTE=30, or null when it repeats on whole days.
@@ -138,20 +138,22 @@ function rule_time(recurrence: string, now: Date): { hours: number; minutes: num
 }
 
 // Sets the rule, and gives the anchor a time when the rule repeats by the hour or at set times and the anchor has none.
-export function with_recurrence(schedule: TaskSchedule, recurrence: string, now = new Date()): TaskSchedule {
-  const anchor = recurrence_anchor(schedule)
+export function with_recurrence(schedule: TaskSchedule, recurrence: string, now = new Date(), field: TaskDateField = 'due'): TaskSchedule {
+  const anchor = recurrence_anchor(schedule, field)
   const time = recurrence ? rule_time(recurrence, now) : null
   if (time === null || (anchor !== null && has_time(anchor))) return { ...schedule, recurrence }
 
   const day = anchor === null ? now : parse_task_date(anchor)
   const timed_anchor = format_task_date(new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.hours, time.minutes), true)
-  if (schedule.due_at === null && schedule.start_at !== null) return { ...schedule, start_at: timed_anchor, recurrence }
-  return { ...schedule, due_at: timed_anchor, recurrence }
+  if (anchor === schedule.start_at) return { ...schedule, start_at: timed_anchor, recurrence }
+  if (anchor === schedule.due_at) return { ...schedule, due_at: timed_anchor, recurrence }
+  if (schedule.start_at === null) return { ...schedule, due_at: timed_anchor, recurrence }
+  return { ...schedule, start_at: timed_anchor, recurrence }
 }
 
 // The date rescheduling moves: the chosen date, or the other one when the task lacks it.
 function moved_anchor(schedule: TaskSchedule, field: TaskDateField): string | null {
-  return field === 'start' ? schedule.start_at ?? schedule.due_at : recurrence_anchor(schedule)
+  return field === 'start' ? schedule.start_at ?? schedule.due_at : recurrence_anchor(schedule, field)
 }
 
 // Puts the anchor date at new_anchor and moves the other date by the same number of days, keeping its own time.
@@ -177,10 +179,10 @@ function moved_dates(schedule: TaskSchedule, new_anchor: Date, field: TaskDateFi
 }
 
 // Moves a recurring task's dates to its next occurrence, keeping the gap between start and due; null once the rule has ended.
-export function next_schedule(task: Task): TaskSchedule | null {
+export function next_schedule(task: Task, field: TaskDateField = 'due'): TaskSchedule | null {
   if (!task.recurrence) return null
 
-  const anchor = recurrence_anchor(task)
+  const anchor = recurrence_anchor(task, field)
   const anchor_date = anchor ? parse_task_date(anchor) : start_of_day(new Date())
   let next: ReturnType<typeof next_occurrence>
   try {
@@ -190,7 +192,7 @@ export function next_schedule(task: Task): TaskSchedule | null {
   }
   if (!next) return null
 
-  return { ...moved_dates(task, next.next_date), recurrence: next.rule }
+  return { ...moved_dates(task, next.next_date, field), recurrence: next.rule }
 }
 
 // ============================================================================

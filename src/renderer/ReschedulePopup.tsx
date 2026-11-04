@@ -28,7 +28,7 @@ export function ReschedulePopup({ tasks, options, date_field, on_reschedule, on_
   const choices = options.map((option) => ({ option, day: reschedule_day(option) }))
   // The Next recurrence choice shows only when every task repeats, and its day only when there is one task.
   const repeats = tasks.every((task) => task.recurrence)
-  const next_recurrences = repeats ? tasks.map((task) => ({ task, next: next_schedule(task) })) : []
+  const next_recurrences = repeats ? tasks.map((task) => ({ task, next: next_schedule(task, date_field) })) : []
   const has_next_recurrence = next_recurrences.some(({ next }) => next)
   const only_next = tasks.length === 1 ? next_recurrences[0]?.next : null
   const next_recurrence_date =
