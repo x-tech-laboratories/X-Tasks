@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type McpStatus, type OverdueRepeatReschedule, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
@@ -26,6 +26,12 @@ const THEME_CHOICES: { value: ThemeChoice; label: string }[] = [
 const TASK_DATE_CHOICES: { value: TaskDateField; label: string }[] = [
   { value: 'due', label: 'Due date' },
   { value: 'start', label: 'Start date' }
+]
+
+const OVERDUE_REPEAT_CHOICES: { value: OverdueRepeatReschedule; label: string }[] = [
+  { value: 'off', label: 'Leave them overdue' },
+  { value: 'today', label: 'Move to today' },
+  { value: 'next', label: 'Move to next repeat' }
 ]
 
 const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
@@ -279,6 +285,19 @@ export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag
             checked={settings.add_due_to_my_day}
             onChange={(event) => on_change('add_due_to_my_day', event.currentTarget.checked)}
           />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Overdue repeating tasks</span>
+            <span class="setting_hint">Each day, open repeating tasks whose task date has passed move to today, or skip ahead to their first repeat date from today on.</span>
+          </div>
+          <select
+            value={settings.reschedule_overdue_repeats}
+            onChange={(event) => on_change('reschedule_overdue_repeats', event.currentTarget.value as OverdueRepeatReschedule)}
+          >
+            {OVERDUE_REPEAT_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+          </select>
         </label>
 
         <label class="setting_row">

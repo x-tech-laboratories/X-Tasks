@@ -1,6 +1,6 @@
 import { describe_rule, next_from_now, next_occurrence, parse_rule, type RuleFormat } from 'recurrence-input'
 
-import { DURATION_UNITS, type RescheduleOption, type TaskDateField, type TaskDuration } from '@shared/settings'
+import { DURATION_UNITS, type OverdueRepeatReschedule, type RescheduleOption, type TaskDateField, type TaskDuration } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
@@ -220,4 +220,32 @@ export function rescheduled(task: Task, day: Date, field: TaskDateField): TaskSc
     new_anchor.setHours(anchor_date.getHours(), anchor_date.getMinutes())
   }
   return { ...moved_dates(task, new_anchor, field), recurrence: task.recurrence }
+}
+
+// ============================================================================
+// Overdue repeats
+// ============================================================================
+
+// How many occurrences an overdue repeat skips at most while looking for one from today on.
+const MOST_SKIPPED_REPEATS = 1000
+
+function is_before_today(task_date: string, now: Date): boolean {
+  return days_between(now, parse_task_date(task_date)) < 0
+}
+
+// Where an open repeating task whose date lies before today moves, or null when it stays put.
+export function overdue_repeat_schedule(task: Task, mode: OverdueRepeatReschedule, field: TaskDateField, now = new Date()): TaskSchedule | null {
+  const task_date = task_date_of(task, field)
+  if (mode === 'off' || task.is_done || !task.recurrence || task_date === null || !is_before_today(task_date, now)) return null
+  if (mode === 'today') return rescheduled(task, start_of_day(now), field)
+
+  let current: Task = task
+  for (let count = 0; count < MOST_SKIPPED_REPEATS; count++) {
+    const next = next_schedule(current, field)
+    const next_date = next && task_date_of(next, field)
+    if (!next || !next_date) return null
+    if (!is_before_today(next_date, now)) return next
+    current = { ...current, ...next }
+  }
+  return null
 }

@@ -20,7 +20,7 @@ import { TaskDetail } from './TaskDetail'
 import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { coming_repeats, group_by_date } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
-import { format_task_date, next_schedule, parse_task_date, recurrence_anchor, task_date_of, with_recurrence } from '@shared/schedule'
+import { format_task_date, next_schedule, overdue_repeat_schedule, parse_task_date, recurrence_anchor, task_date_of, with_recurrence } from '@shared/schedule'
 import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
@@ -146,6 +146,15 @@ export function App() {
     }
     void change_setting('due_added_to_my_day_until', now)
   }, [has_loaded_tasks, settings?.add_due_to_my_day, now])
+
+  // Moves repeating tasks left from earlier days to today or their next date, when the app opens and as each day begins.
+  useEffect(() => {
+    if (!has_loaded_tasks || !settings || settings.reschedule_overdue_repeats === 'off') return
+    for (const task of tasks) {
+      const schedule = overdue_repeat_schedule(task, settings.reschedule_overdue_repeats, settings.task_date_field)
+      if (schedule) set_task_schedule(task, schedule)
+    }
+  }, [has_loaded_tasks, settings?.reschedule_overdue_repeats, settings?.task_date_field, today])
 
   // Closing the app deletes any tasks still waiting, and Ctrl+Z outside a text field undoes the last removal.
   useEffect(() => {

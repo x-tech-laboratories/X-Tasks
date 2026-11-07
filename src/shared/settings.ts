@@ -40,6 +40,9 @@ export type SyntaxId = 'plain' | 'todoist' | 'gtg' | 'trilium'
 // What the task list puts its headings by: nothing, the date, or the tags of one filter group, named by "group:" and the group's id.
 export type TaskGrouping = 'none' | 'date' | `group:${string}`
 
+// Whether overdue repeating tasks stay put, move to today, or move to their first repeat date from today on.
+export type OverdueRepeatReschedule = 'off' | 'today' | 'next'
+
 // Whether one grouping serves every view, each view keeps the grouping picked in it, or a picked grouping stays until saved for that view.
 export type GroupingMemory = 'shared' | 'automatic' | 'on_demand'
 
@@ -114,6 +117,8 @@ export interface Settings {
   remove_future_from_my_day: boolean
   // When set, tasks due today or earlier go into My Day by themselves.
   add_due_to_my_day: boolean
+  // Where overdue repeating tasks move by themselves each day.
+  reschedule_overdue_repeats: OverdueRepeatReschedule
   // The minute up to which due tasks have been put in My Day, so ones taken out by hand stay out.
   due_added_to_my_day_until: string
   tag_selection: TagSelection
@@ -185,6 +190,7 @@ export const DEFAULT_SETTINGS: Settings = {
   remove_future_from_my_day: true,
   add_due_to_my_day: false,
   due_added_to_my_day_until: '',
+  reschedule_overdue_repeats: 'off',
   tag_selection: 'one_per_group',
   tag_match: 'all',
   tag_scope: 'subtags',
