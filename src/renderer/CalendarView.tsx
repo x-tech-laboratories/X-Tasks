@@ -8,6 +8,7 @@ import 'fullcalendar/themes/classic/theme.css'
 import 'fullcalendar/themes/classic/palette.css'
 import { useEffect, useRef, useState } from 'react'
 
+import { Segmented } from '@x-tech-laboratories/x-libs/web/react/controls'
 import type { CalendarSpan, TaskDateField } from '@shared/settings'
 import { days_between, format_task_date, has_time } from '@shared/schedule'
 import type { Tag, Task, TaskSchedule } from '@shared/tasks'
@@ -126,13 +127,7 @@ export function CalendarView(props: CalendarViewProps) {
           ›
         </button>
         <h2 className="calendar_title">{title}</h2>
-        <div className="segmented_control" role="radiogroup" aria-label="Calendar span">
-          {SPAN_CHOICES.map(({ value, label }) => (
-            <button key={value} role="radio" aria-checked={props.span === value} className={props.span === value ? 'is_selected' : ''} onClick={() => props.on_change_span(value)}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented label="Calendar span" choices={SPAN_CHOICES} value={props.span} on_change={props.on_change_span} />
       </div>
       <div className="calendar_grid" ref={element} />
     </div>

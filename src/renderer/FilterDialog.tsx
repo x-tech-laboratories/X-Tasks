@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+
+import { ColorPicker } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 
 import { EMPTY_RULE, type DueCondition, type LinkDirection, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import type { TaskRelationship } from '@shared/settings'
@@ -203,7 +206,7 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
         {CONDITION_CHOICES.map(({ kind, label }) => <option key={kind} value={kind}>{label}</option>)}
       </select>
       {controls()}
-      <button type="button" className="remove_button" onClick={on_remove} aria-label="Remove condition">
+      <button type="button" className="icon danger" onClick={on_remove} aria-label="Remove condition">
         ×
       </button>
     </li>
@@ -211,50 +214,10 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
 }
 
 // ============================================================================
-// Colour picker
-// ============================================================================
-
-// A row of swatches, a None choice, and the system colour chooser for any other colour.
-function ColorPicker({ color, swatches, on_change }: { color: string | null; swatches: string[]; on_change: (color: string | null) => void }) {
-  return (
-    <div className="tag_color_picker" role="radiogroup" aria-label="Colour">
-      <button
-        type="button"
-        className={color === null ? 'tag_color_swatch is_none is_chosen' : 'tag_color_swatch is_none'}
-        onClick={() => on_change(null)}
-        role="radio"
-        aria-checked={color === null}
-        aria-label="No colour"
-        title="No colour"
-      />
-      {swatches.map((swatch) => (
-        <button
-          key={swatch}
-          type="button"
-          className={color === swatch ? 'tag_color_swatch is_chosen' : 'tag_color_swatch'}
-          style={{ '--tag-color': swatch } as CSSProperties}
-          onClick={() => on_change(swatch)}
-          role="radio"
-          aria-checked={color === swatch}
-          aria-label={swatch}
-          title={swatch}
-        />
-      ))}
-      <input
-        type="color"
-        className={color !== null && !swatches.includes(color) ? 'tag_color_custom is_chosen' : 'tag_color_custom'}
-        value={color ?? '#888888'}
-        onChange={(event) => on_change(event.currentTarget.value)}
-        aria-label="Other colour"
-        title="Other colour"
-      />
-    </div>
-  )
-}
-
-// ============================================================================
 // Filter dialog
 // ============================================================================
+
+const FORM_ID = 'filter_dialog_form'
 
 interface FilterDialogProps {
   heading: string
@@ -278,14 +241,12 @@ interface FilterDialogProps {
 
 // Names a tag, gives it a colour and an icon and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
 export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, swatches, tag_id, tags, groups, tasks, relationships, on_save, on_close }: FilterDialogProps) {
-  const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
   const [color_draft, set_color_draft] = useState(color)
   const [icon_draft, set_icon_draft] = useState(icon)
   const [shows_on_rows_draft, set_shows_on_rows_draft] = useState(shows_on_rows)
   const [rule_draft, set_rule_draft] = useState(rule ?? EMPTY_RULE)
 
-  useEffect(() => dialog_ref.current?.showModal(), [])
 
   const is_rule = rule !== null
   // A rule cannot test for its own tag or the tags below it.
@@ -323,38 +284,36 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
     return hand_count === 1 ? '1 task has this tag' : `${hand_count} tasks have this tag`
   }
 
-  // Escape closes only this dialog, not the task panel behind it.
   return (
-    <dialog
-      ref={dialog_ref}
-      className="recurrence_dialog rule_dialog"
-      onClose={on_close}
-      onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
+    <Dialog
+      title={heading}
+      on_close={on_close}
+      wide={is_rule}
+      buttons={
+        <>
+          <span className="muted dialog_count">{count_text()}</span>
+          <button type="button" onClick={on_close}>Cancel</button>
+          <button type="submit" form={FORM_ID} className="accent solid" disabled={!name_draft.trim()}>Save</button>
+        </>
+      }
     >
-      <form onSubmit={save}>
-        <h2 className="recurrence_dialog_heading">{heading}</h2>
-
-        <label className="task_detail_field">
-          <span className="sidebar_heading">Name</span>
+      <form id={FORM_ID} className="dialog_form" onSubmit={save}>
+        <label className="field">
+          <span className="field-label">Name</span>
           <input value={name_draft} onChange={(event) => set_name_draft(event.currentTarget.value)} placeholder="Completed routines" autoFocus />
         </label>
 
-        <div className="task_detail_field">
-          <span className="sidebar_heading">Colour</span>
-          <ColorPicker color={color_draft} swatches={swatches} on_change={set_color_draft} />
+        <div className="field">
+          <span className="field-label">Colour</span>
+          <ColorPicker label="Colour" value={color_draft} swatches={swatches} on_change={set_color_draft} />
         </div>
 
-        <label className="task_detail_field">
-          <span className="sidebar_heading">Icon</span>
-          <input
-            className="tag_icon_input"
-            value={icon_draft ?? ''}
-            onChange={(event) => change_icon(event.currentTarget)}
-            placeholder="Emoji"
-          />
+        <label className="field">
+          <span className="field-label">Icon</span>
+          <input className="tag_icon_input" value={icon_draft ?? ''} onChange={(event) => change_icon(event.currentTarget)} placeholder="Emoji" />
         </label>
 
-        <label className="rule_row_toggle">
+        <label className="check">
           <input type="checkbox" checked={shows_on_rows_draft} onChange={(event) => set_shows_on_rows_draft(event.currentTarget.checked)} />
           Show on task rows
         </label>
@@ -363,11 +322,7 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
           <>
             <div className="rule_match">
               Tasks matching
-              <select
-                value={rule_draft.match}
-                onChange={(event) => set_rule_draft({ ...rule_draft, match: event.currentTarget.value as TagRule['match'] })}
-                aria-label="Match"
-              >
+              <select value={rule_draft.match} onChange={(event) => set_rule_draft({ ...rule_draft, match: event.currentTarget.value as TagRule['match'] })} aria-label="Match">
                 <option value="all">all</option>
                 <option value="any">any</option>
               </select>
@@ -388,28 +343,18 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
                 />
               ))}
             </ul>
-            {rule_draft.conditions.length === 0 && <p className="setting_hint">With no conditions, every task matches.</p>}
+            {rule_draft.conditions.length === 0 && <p className="setting-hint">With no conditions, every task matches.</p>}
 
             <button
               type="button"
-              className="rule_add"
+              className="start_button"
               onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags, groups)] })}
             >
               Add condition
             </button>
           </>
         )}
-
-        <footer className="recurrence_dialog_footer">
-          <span className="rule_count">{count_text()}</span>
-          <button type="button" onClick={on_close}>
-            Cancel
-          </button>
-          <button type="submit" className="primary_button" disabled={!name_draft.trim()}>
-            Save
-          </button>
-        </footer>
       </form>
-    </dialog>
+    </Dialog>
   )
 }

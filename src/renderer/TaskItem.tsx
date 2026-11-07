@@ -1,364 +1,29 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent as ReactDragEvent, type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
+import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
-import type { TableSortKey, TaskDateField } from '@shared/settings'
+import { set_drag_badge } from '@x-tech-laboratories/x-libs/web/drag'
+import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
+import type { TaskDateField } from '@shared/settings'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import { task_link, type Tag, type TagGroup, type Task } from '@shared/tasks'
-import type { OpenContextMenu } from './ContextMenu'
 import { StreakStrip } from './StreakStrip'
-import { ResizeHandle } from './ResizeHandle'
+import { TagChip } from './TagChip'
 import { is_overdue, task_date_label } from '@shared/schedule'
-import {
-  COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, column_date, column_width, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_date_column, tags_in_sidebar_order, task_duration_label, task_duration_minutes, type DateColumn, type LastDoneOf, type TableColumn, type TableFilters
-} from './table'
+import { column_date, task_duration_label, task_duration_minutes, type DateColumn, type LastDoneOf } from './table'
 import type { RepeatOccurrence } from './dates'
-import { drop_placement, tag_color_style, tag_path, with_icon, type DropPlacement, type TaskNode } from './views'
+import { drop_placement, tag_color_style, tag_path, type DropPlacement, type TaskNode } from './views'
 
 // A row's strip shows about a week of a daily routine.
 const ROW_STRIP_LENGTH = 7
 
 // ============================================================================
-// Table header
-// ============================================================================
-
-interface TaskTableHeaderProps {
-  tag_groups: TagGroup[]
-  tags: Tag[]
-  // Every column after the title in its order, and the ones of them shown.
-  column_order: TableColumn[]
-  shown_columns: TableColumn[]
-  on_move_column: (column: TableColumn, target: TableColumn, is_after: boolean) => void
-  on_show_column: (column: TableColumn, is_shown: boolean) => void
-  column_widths: Record<string, number>
-  // Called as a column's edge is dragged, then once with the width it was let go at.
-  on_resize_column: (column: TableColumn, width: number) => void
-  on_resize_column_end: (column: TableColumn, width: number) => void
-  sort: TableSortKey[]
-  on_sort: (column: TableColumn, is_adding: boolean) => void
-  filters: TableFilters
-  on_filter: (filters: TableFilters) => void
-}
-
-// Where a popover hangs from, in window coordinates.
-interface PopoverPoint {
-  x: number
-  y: number
-}
-
-// The open filter popover: the column it belongs to and the corner of its icon it hangs from.
-interface OpenFilter extends PopoverPoint {
-  column: TableColumn
-}
-
-// The column names above the rows in the table layout; each sorts the table, its funnel icon filters it, and dragging it moves the column.
-export function TaskTableHeader({
-  tag_groups, tags, column_order, shown_columns, on_move_column, on_show_column, column_widths, on_resize_column, on_resize_column_end,
-  sort, on_sort, filters, on_filter
-}: TaskTableHeaderProps) {
-  const [open_filter, set_open_filter] = useState<OpenFilter | null>(null)
-  const close_filter = useCallback(() => set_open_filter(null), [])
-  const [columns_menu, set_columns_menu] = useState<PopoverPoint | null>(null)
-  const close_columns_menu = useCallback(() => set_columns_menu(null), [])
-  const [dragged_column, set_dragged_column] = useState<TableColumn | null>(null)
-  const [drop_target, set_drop_target] = useState<{ column: TableColumn; is_after: boolean } | null>(null)
-
-  function column_label(column: TableColumn): string {
-    if (column === 'title') return 'Task'
-    if (column === 'date') return 'Date'
-    if (column === 'start') return 'Start'
-    if (column === 'due') return 'Due'
-    if (column === 'done') return 'Done'
-    if (column === 'duration') return 'Duration'
-    if (column === 'streak') return 'Streak'
-    return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
-  }
-
-  function open_columns_menu(event: ReactMouseEvent): void {
-    event.preventDefault()
-    if (event.type === 'click') {
-      const button = (event.currentTarget as HTMLElement).getBoundingClientRect()
-      set_columns_menu({ x: button.right, y: button.bottom + 4 })
-    } else {
-      set_columns_menu({ x: event.clientX, y: event.clientY })
-    }
-  }
-
-  // ==========================================================================
-  // Moving columns
-  // ==========================================================================
-
-  // A column dropped on the left half of another goes before it, and on the right half after it.
-  function drag_over_column(column: TableColumn, event: ReactDragEvent): void {
-    if (!dragged_column || column === 'title') return
-    event.preventDefault()
-    const cell = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    set_drop_target({ column, is_after: event.clientX > cell.left + cell.width / 2 })
-  }
-
-  function drop_column(event: ReactDragEvent): void {
-    event.preventDefault()
-    if (dragged_column && drop_target && dragged_column !== drop_target.column) {
-      on_move_column(dragged_column, drop_target.column, drop_target.is_after)
-    }
-    end_column_drag()
-  }
-
-  function end_column_drag(): void {
-    set_dragged_column(null)
-    set_drop_target(null)
-  }
-
-  function toggle_filter(column: TableColumn, event: ReactMouseEvent): void {
-    if (open_filter?.column === column) return set_open_filter(null)
-    const icon = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    set_open_filter({ column, x: icon.left, y: icon.bottom + 4 })
-  }
-
-  // A sorted column shows its direction, and its place in the sort once more than one column is sorted.
-  function header_cell(column: TableColumn, class_name = '') {
-    const label = column_label(column)
-    const index = sort.findIndex((key) => key.column === column)
-    const key = sort[index]
-    const is_filtered = is_column_filtered(filters, column)
-    const is_movable = column !== 'title'
-    const cell_class = [
-      'header_cell', class_name, is_filtered && 'is_filtered', open_filter?.column === column && 'is_filter_open',
-      dragged_column === column && 'is_dragged', drop_target?.column === column && (drop_target.is_after ? 'drop_after' : 'drop_before')
-    ].filter(Boolean).join(' ')
-    return (
-      <span
-        key={column}
-        className={cell_class}
-        draggable={is_movable}
-        onDragStart={(event) => {
-          event.dataTransfer?.setData('text/plain', column)
-          set_dragged_column(column)
-        }}
-        onDragEnd={end_column_drag}
-        onDragOver={(event) => drag_over_column(column, event)}
-        onDragLeave={() => set_drop_target(null)}
-        onDrop={drop_column}
-        title={is_movable ? 'Drag to move this column' : undefined}
-      >
-        <button
-          className={key ? 'sort_button is_sorted' : 'sort_button'}
-          onClick={(event) => on_sort(column, event.shiftKey)}
-          title="Click to sort by this column, Shift+click to add it to the sort"
-          aria-sort={key ? (key.is_descending ? 'descending' : 'ascending') : undefined}
-        >
-          <span className="sort_label">{label}</span>
-          {key && <span className="sort_marker">{key.is_descending ? '▼' : '▲'}{sort.length > 1 && <sup>{index + 1}</sup>}</span>}
-        </button>
-        <button
-          className="filter_button"
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => toggle_filter(column, event)}
-          aria-label={`Filter by ${label}`}
-          title={is_filtered ? `Filtered by ${label}` : `Filter by ${label}`}
-        >
-          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path d="M2 3h12l-4.5 5.5V13l-3 1.5v-6z" />
-          </svg>
-        </button>
-        {is_movable && (
-          <ResizeHandle
-            side="left"
-            width={column_width(column_widths, column)}
-            min_width={COLUMN_WIDTH_RANGE.min}
-            max_width={COLUMN_WIDTH_RANGE.max}
-            default_width={default_column_width(column)}
-            on_resize={(width) => on_resize_column(column, width)}
-            on_resize_end={(width) => on_resize_column_end(column, width)}
-            label={`Resize the ${label} column`}
-            class_name="column_resizer"
-          />
-        )}
-      </span>
-    )
-  }
-
-  // The title filters by typed text; the date and each group pick one choice from a list.
-  function filter_popover(open: OpenFilter) {
-    if (open.column === 'title') {
-      return (
-        <FilterPopover open={open} on_close={close_filter}>
-          <input
-            value={filters.title}
-            onChange={(event) => on_filter({ ...filters, title: event.currentTarget.value })}
-            onKeyDown={(event) => event.key === 'Enter' && close_filter()}
-            placeholder="Title contains"
-            aria-label="Filter by title"
-          />
-        </FilterPopover>
-      )
-    }
-
-    if (is_date_column(open.column)) {
-      const column = open.column
-      const chosen = filters.dates[column] ?? 'any'
-      return (
-        <FilterPopover open={open} on_close={close_filter}>
-          {date_filter_choices(column).map(({ value, label }) =>
-            filter_choice(label, chosen === value, () => on_filter({ ...filters, dates: { ...filters.dates, [column]: value } }))
-          )}
-        </FilterPopover>
-      )
-    }
-
-    if (open.column === 'duration') {
-      return (
-        <FilterPopover open={open} on_close={close_filter}>
-          {DURATION_FILTER_CHOICES.map(({ value, label }) => filter_choice(label, filters.duration === value, () => on_filter({ ...filters, duration: value })))}
-        </FilterPopover>
-      )
-    }
-
-    if (open.column === 'streak') {
-      return (
-        <FilterPopover open={open} on_close={close_filter}>
-          {STREAK_FILTER_CHOICES.map(({ value, label }) => filter_choice(label, filters.streak === value, () => on_filter({ ...filters, streak: value })))}
-        </FilterPopover>
-      )
-    }
-
-    const group_id = open.column.slice('group:'.length)
-    const chosen_id = filters.group_tag_ids[group_id] ?? ''
-    const choose = (tag_id: string) => on_filter({ ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id]: tag_id } })
-    return (
-      <FilterPopover open={open} on_close={close_filter}>
-        {filter_choice('Any', chosen_id === '', () => choose(''))}
-        {filter_choice('None', chosen_id === NO_TAG_FILTER, () => choose(NO_TAG_FILTER))}
-        {tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group_id)).map((tag) =>
-          filter_choice(tag_path(tag, tags), chosen_id === tag.id, () => choose(tag.id))
-        )}
-      </FilterPopover>
-    )
-  }
-
-  function filter_choice(label: string, is_chosen: boolean, on_choose: () => void) {
-    return (
-      <button
-        key={label}
-        className={is_chosen ? 'context_menu_item is_chosen' : 'context_menu_item'}
-        role="menuitemradio"
-        aria-checked={is_chosen}
-        onClick={() => {
-          on_choose()
-          close_filter()
-        }}
-      >
-        {label}
-      </button>
-    )
-  }
-
-  return (
-    <li className="task_table_header" onContextMenu={open_columns_menu}>
-      {header_cell('title', 'title_cell')}
-      {shown_columns.map((column) => header_cell(column))}
-      <span className="actions_cell">
-        {has_table_filters(filters) && (
-          <button className="clear_filters_button" onClick={() => on_filter(EMPTY_TABLE_FILTERS)} title="Clear filters">
-            Clear
-          </button>
-        )}
-        <button
-          className="filter_button columns_button"
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => (columns_menu ? close_columns_menu() : open_columns_menu(event))}
-          aria-label="Show or hide columns"
-          title="Show or hide columns"
-        >
-          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path d="M2 2h3v12H2zm4.5 0h3v12h-3zM11 2h3v12h-3z" />
-          </svg>
-        </button>
-      </span>
-      {open_filter && filter_popover(open_filter)}
-      {columns_menu && (
-        <FilterPopover open={columns_menu} on_close={close_columns_menu}>
-          <label className="context_menu_item columns_choice is_fixed">
-            <input type="checkbox" checked disabled />
-            Task
-          </label>
-          {column_order.map((column) => (
-            <label key={column} className="context_menu_item columns_choice">
-              <input
-                type="checkbox"
-                checked={shown_columns.includes(column)}
-                onChange={(event) => on_show_column(column, event.currentTarget.checked)}
-              />
-              {column_label(column)}
-            </label>
-          ))}
-        </FilterPopover>
-      )}
-    </li>
-  )
-}
-
-interface FilterPopoverProps {
-  open: PopoverPoint
-  on_close: () => void
-  children: ReactNode
-}
-
-// Hangs below a column's funnel icon, or wherever it was opened, and closes on any click outside it, Escape, scrolling or the window losing focus.
-function FilterPopover({ open, on_close, children }: FilterPopoverProps) {
-  const popover_element = useRef<HTMLDivElement>(null)
-  const [position, set_position] = useState({ left: open.x, top: open.y })
-
-  // Shifts the popover back on screen when it would spill past the right or bottom edge.
-  useLayoutEffect(() => {
-    const size = popover_element.current!.getBoundingClientRect()
-    set_position({
-      left: Math.min(open.x, window.innerWidth - size.width - 4),
-      top: Math.min(open.y, window.innerHeight - size.height - 4)
-    })
-  }, [open])
-
-  // A text filter is ready to type into as soon as it opens.
-  useEffect(() => popover_element.current?.querySelector('input')?.focus(), [])
-
-  useEffect(() => {
-    function close_on_outside_press(event: MouseEvent): void {
-      if (!popover_element.current?.contains(event.target as Node)) on_close()
-    }
-    function close_on_escape(event: KeyboardEvent): void {
-      if (event.key === 'Escape') on_close()
-    }
-
-    window.addEventListener('mousedown', close_on_outside_press)
-    window.addEventListener('keydown', close_on_escape)
-    window.addEventListener('blur', on_close)
-    window.addEventListener('scroll', on_close, true)
-    return () => {
-      window.removeEventListener('mousedown', close_on_outside_press)
-      window.removeEventListener('keydown', close_on_escape)
-      window.removeEventListener('blur', on_close)
-      window.removeEventListener('scroll', on_close, true)
-    }
-  }, [on_close])
-
-  return (
-    <div ref={popover_element} className="context_menu filter_popover" role="menu" style={{ left: `${position.left}px`, top: `${position.top}px` }}>
-      {children}
-    </div>
-  )
-}
-
-// ============================================================================
-// Task item
+// Task actions
 // ============================================================================
 
 export interface TaskActions {
   tags: Tag[]
   tag_groups: TagGroup[]
-  is_table: boolean
   // Whether rows take a shade of their first coloured tag.
   tint_rows: boolean
-  // The table columns shown after the title, in order.
-  table_columns: TableColumn[]
   date_field: TaskDateField
   can_add_subtasks: boolean
   selected_task_id: string | null
@@ -371,12 +36,11 @@ export interface TaskActions {
   // Picks every row from the last one picked or opened down or up to this one.
   on_pick_range: (task: Task) => void
   // The menu of bulk actions for every picked task, opened from any picked row.
-  on_bulk_menu: (event: ReactMouseEvent) => void
+  on_bulk_menu: (event: MouseEvent) => void
   // How many tasks a drag from this row moves: all the picked ones from a picked row, otherwise one.
   drag_count_of: (task: Task) => number
   // Set while picked tasks are being dragged together, so every one of them shows as on the move.
   is_dragging_picked: boolean
-  on_context_menu: OpenContextMenu
   on_toggle: (task: Task) => void
   on_reschedule: (task: Task) => void
   is_in_my_day: (task: Task) => boolean
@@ -400,217 +64,212 @@ export interface TaskActions {
   on_drop: (target: Task, placement: DropPlacement) => void
 }
 
+// The tags a row shows: the task's own, then the rule tags that match it, leaving out tags hidden from rows.
+export function row_tags_of(task: Task, actions: TaskActions): Tag[] {
+  return [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)].filter((tag) => tag.shows_on_rows)
+}
+
+// The shade of the task's first coloured tag, when rows are tinted.
+export function row_tint_style(task: Task, actions: TaskActions): CSSProperties | undefined {
+  const tint_tag = actions.tint_rows ? row_tags_of(task, actions).find((tag) => tag.color) : undefined
+  return tint_tag && (tag_color_style(tint_tag) as CSSProperties)
+}
+
+// A click on a row opens its details, or picks it with Ctrl, Shift or a bulk selection under way; its checkbox and buttons do their own thing.
+export function click_task(task: Task, actions: TaskActions, event: MouseEvent): void {
+  if ((event.target as HTMLElement).closest('input, button, a')) return
+  if (event.shiftKey) actions.on_pick_range(task)
+  else if (event.ctrlKey || event.metaKey) actions.on_pick(task, true)
+  else if (actions.is_picking) actions.on_pick(task)
+  else actions.on_select(task)
+}
+
+// A right-click on a picked row offers the bulk actions, and on any other row that task's own.
+export function open_task_menu(task: Task, actions: TaskActions, event: MouseEvent, on_add_subtask?: () => void): void {
+  if (actions.is_picked(task)) return actions.on_bulk_menu(event)
+  const items: MenuItem[] = [
+    { label: 'Open details', run: () => actions.on_select(task) },
+    { label: 'Select', run: () => actions.on_pick(task) },
+    ...(on_add_subtask && actions.can_add_subtasks ? [{ label: 'Add subtask', run: on_add_subtask }] : []),
+    { label: task.is_done ? 'Mark as not done' : 'Mark as done', run: () => actions.on_toggle(task) },
+    { label: 'Reschedule…', run: () => actions.on_reschedule(task) },
+    actions.is_in_my_day(task)
+      ? { label: 'Remove from My Day', run: () => actions.on_set_my_day(task, false) }
+      : { label: 'Add to My Day', run: () => actions.on_set_my_day(task, true) },
+    { label: 'Copy link', run: () => void navigator.clipboard?.writeText(task_link(task.id)) },
+    { label: 'Delete', run: () => actions.on_remove(task), danger: true, separator_before: true }
+  ]
+  open_context_menu(event, items)
+}
+
+// Starts dragging a task, with a badge naming how many move when several picked tasks go together.
+export function start_task_drag(task: Task, actions: TaskActions, event: DragEvent): void {
+  event.dataTransfer?.setData('text/plain', task.id)
+  const drag_count = actions.drag_count_of(task)
+  if (drag_count > 1) set_drag_badge(event, `${drag_count} tasks`)
+  actions.on_drag_start(task)
+}
+
+// ============================================================================
+// Cells
+// ============================================================================
+
+// The marks after a task's title: My Day, notes, repeats, the streak and the latest occurrences.
+export function TitleMarks({ task, actions, show_streak }: { task: Task; actions: TaskActions; show_streak: boolean }) {
+  const row_history = actions.history_of(task)
+  return (
+    <>
+      {actions.is_in_my_day(task) && <span className="task_mark" title="In My Day">☀</span>}
+      {task.notes && <span className="task_mark" title="Has notes">≡</span>}
+      {task.recurrence && <span className="task_mark" title="Repeats">↻</span>}
+      {show_streak && <StreakBadge task={task} streak={actions.streak_of(task)} show_broken={false} />}
+      {row_history.length > 0 && <StreakStrip history={row_history} limit={ROW_STRIP_LENGTH} />}
+    </>
+  )
+}
+
+// A broken streak shows a muted zero where asked, so it reads apart from a task that is not tracked at all.
+export function StreakBadge({ task, streak, show_broken }: { task: Task; streak: RoutineStreak | null; show_broken: boolean }) {
+  if (!streak) return null
+  if (streak.current > 0) {
+    return (
+      <span className="streak_badge" title={`${streak.current} in a row ${task.recurrence ? 'on time' : 'done with its routine'} · best ${streak.best}`}>
+        🔥 {streak.current}
+      </span>
+    )
+  }
+  return show_broken ? <span className="streak_badge is_broken" title={`No streak · best ${streak.best}`}>0</span> : null
+}
+
+// The smart date says "Done" before a done date, since it shows other dates too; only it and the due date can be overdue.
+export function DateLabel({ task, column, actions }: { task: Task; column: DateColumn; actions: TaskActions }) {
+  const date = column_date(task, column, actions.date_field, actions.last_done_of)
+  if (!date) return null
+  const is_late = (column === 'date' || column === 'due') && !task.is_done && is_overdue(date)
+  return (
+    <span className={is_late ? 'due_label is_overdue' : 'due_label'}>
+      {column === 'date' && task.is_done && task.done_at ? 'Done ' : ''}
+      {task_date_label(date)}
+    </span>
+  )
+}
+
+export function DurationLabel({ task }: { task: Task }) {
+  const minutes = task_duration_minutes(task)
+  return minutes === null ? null : <span className="due_label">{task_duration_label(minutes)}</span>
+}
+
+// ============================================================================
+// Subtask form
+// ============================================================================
+
+// A field for a new subtask's title; it closes when emptied and left, or on Escape.
+export function SubtaskForm({ on_add, on_close }: { on_add: (title: string) => void; on_close: () => void }) {
+  const [title, set_title] = useState('')
+
+  function submit(event: FormEvent): void {
+    event.preventDefault()
+    const trimmed = title.trim()
+    if (!trimmed) return
+    on_add(trimmed)
+    set_title('')
+  }
+
+  return (
+    <form className="subtask_form" onSubmit={submit}>
+      <input
+        value={title}
+        onChange={(event) => set_title(event.currentTarget.value)}
+        onKeyDown={(event) => event.key === 'Escape' && on_close()}
+        onBlur={() => !title.trim() && on_close()}
+        placeholder="Subtask"
+        aria-label="New subtask"
+        autoFocus
+      />
+    </form>
+  )
+}
+
+// ============================================================================
+// Task item
+// ============================================================================
+
 interface TaskItemProps {
   node: TaskNode
   actions: TaskActions
 }
 
+// One task in the list layout, with its subtasks nested under it.
 export function TaskItem({ node, actions }: TaskItemProps) {
   const { task, children } = node
-  const streak = actions.streak_of(task)
-  const row_history = actions.history_of(task)
   const is_collapsed = actions.is_collapsed(task)
   const [is_adding_subtask, set_is_adding_subtask] = useState(false)
-  const [subtask_title, set_subtask_title] = useState('')
   const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
 
-  // Rule tags that match join the task's own tags.
-  const task_tags = [...actions.tags.filter((tag) => task.tag_ids.includes(tag.id)), ...actions.rule_tags_of(task)].filter((tag) => tag.shows_on_rows)
-  const tint_tag = actions.tint_rows ? task_tags.find((tag) => tag.color) : undefined
-
-  // A rule tag shows as a fixed chip, and any other tag as a chip that can be removed from the task.
-  function render_tag(tag: Tag, label: string = tag.name) {
-    if (tag.rule) {
-      return (
-        <span key={tag.id} className={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)} title={`${tag_path(tag, actions.tags)} (rule)`}>
-          {with_icon(tag, label)}
-        </span>
-      )
-    }
-
-    return (
-      <span key={tag.id} className={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)} title={tag_path(tag, actions.tags)}>
-        {with_icon(tag, label)}
-        <button onClick={() => actions.on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
-          ×
-        </button>
-      </span>
-    )
-  }
-
-  function submit_subtask(event: FormEvent): void {
-    event.preventDefault()
-    const title = subtask_title.trim()
-    if (!title) return
-
+  function add_subtask(title: string): void {
     actions.on_add_subtask(task, title)
-    set_subtask_title('')
     if (is_collapsed) actions.on_set_collapsed(task, false)
   }
 
-  function close_subtask_form(): void {
-    set_is_adding_subtask(false)
-    set_subtask_title('')
-  }
-
-  // ==========================================================================
-  // Dragging
-  // ==========================================================================
-
-  function start_drag(event: ReactDragEvent): void {
-    event.dataTransfer?.setData('text/plain', task.id)
-    const drag_count = actions.drag_count_of(task)
-    if (drag_count > 1) show_drag_badge(event, `${drag_count} tasks`)
-    actions.on_drag_start(task)
-  }
-
-  function placement_at(event: ReactDragEvent): DropPlacement {
+  function placement_at(event: DragEvent): DropPlacement {
     return actions.can_drop_beside ? drop_placement(event, true) : 'inside'
   }
 
-  function drag_over(event: ReactDragEvent): void {
+  function drag_over(event: DragEvent): void {
     if (!actions.can_drop_on(task)) return
     event.preventDefault()
     set_shown_placement(placement_at(event))
   }
 
-  function drop(event: ReactDragEvent): void {
+  function drop(event: DragEvent): void {
     event.preventDefault()
     set_shown_placement(null)
     actions.on_drop(task, placement_at(event))
   }
 
-  // A click on the row opens its details, or picks it with Ctrl, Shift or a bulk selection under way; the checkbox and buttons do their own thing.
-  function click_row(event: ReactMouseEvent): void {
-    if ((event.target as HTMLElement).closest('input, button')) return
-    if (event.shiftKey) actions.on_pick_range(task)
-    else if (event.ctrlKey || event.metaKey) actions.on_pick(task, true)
-    else if (actions.is_picking) actions.on_pick(task)
-    else actions.on_select(task)
-  }
-
-  // Shift+click picks a range of rows, so it must not also highlight the text between them.
-  function press_row(event: ReactMouseEvent): void {
-    if (event.shiftKey) event.preventDefault()
-  }
-
-  function open_menu(event: ReactMouseEvent): void {
-    if (actions.is_picked(task)) return actions.on_bulk_menu(event)
-    actions.on_context_menu(event, [
-      { label: 'Open details', on_select: () => actions.on_select(task) },
-      { label: 'Select', on_select: () => actions.on_pick(task) },
-      ...(actions.can_add_subtasks ? [{ label: 'Add subtask', on_select: () => set_is_adding_subtask(true) }] : []),
-      { label: task.is_done ? 'Mark as not done' : 'Mark as done', on_select: () => actions.on_toggle(task) },
-      { label: 'Reschedule…', on_select: () => actions.on_reschedule(task) },
-      actions.is_in_my_day(task)
-        ? { label: 'Remove from My Day', on_select: () => actions.on_set_my_day(task, false) }
-        : { label: 'Add to My Day', on_select: () => actions.on_set_my_day(task, true) },
-      { label: 'Copy link', on_select: () => void navigator.clipboard?.writeText(task_link(task.id)) },
-      { label: 'Delete', on_select: () => actions.on_remove(task), is_danger: true }
-    ])
-  }
-
-  const is_selected = actions.selected_task_id === task.id
   const is_picked = actions.is_picked(task)
-  // A broken streak shows a muted zero in the table, so it reads apart from a task that is not tracked at all.
-  const streak_badge = streak && streak.current > 0 && (
-    <span className="streak_badge" title={`${streak.current} in a row ${task.recurrence ? 'on time' : 'done with its routine'} · best ${streak.best}`}>
-      🔥 {streak.current}
-    </span>
-  )
-  const streak_cell = (
-    <span key="streak" className="task_cell streak_cell">
-      {streak_badge || (streak && <span className="streak_badge is_broken" title={`No streak · best ${streak.best}`}>0</span>)}
-    </span>
-  )
-
-  // The smart date says "Done" before a done date, since it shows other dates too; only it and the due date can be overdue.
-  function date_cell(column: DateColumn) {
-    const date = column_date(task, column, actions.date_field, actions.last_done_of)
-    const is_late = (column === 'date' || column === 'due') && !task.is_done && date !== null && is_overdue(date)
-    return (
-      <span key={column} className="task_cell date_cell">
-        {date && (
-          <span className={is_late ? 'due_label is_overdue' : 'due_label'}>
-            {column === 'date' && task.is_done && task.done_at ? 'Done ' : ''}{task_date_label(date)}
-          </span>
-        )}
-      </span>
-    )
-  }
-  const duration_minutes = task_duration_minutes(task)
-  const duration_cell = (
-    <span key="duration" className="task_cell date_cell">
-      {duration_minutes !== null && <span className="due_label">{task_duration_label(duration_minutes)}</span>}
-    </span>
-  )
-
   const row_class = [
-    'task', task.is_done && 'is_done', is_selected && 'is_selected', is_picked && 'is_picked', is_picked && actions.is_dragging_picked && 'is_dragged', tint_tag && 'has_tint', shown_placement && `drop_${shown_placement}`
+    'task', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', is_picked && 'is_picked',
+    is_picked && actions.is_dragging_picked && 'is_dragged', actions.tint_rows && row_tint_style(task, actions) && 'has_tint', shown_placement && `drop_${shown_placement}`
   ].filter(Boolean).join(' ')
 
   return (
     <li className="task_item">
       <div
         className={row_class}
-        style={tint_tag && tag_color_style(tint_tag)}
+        style={row_tint_style(task, actions)}
         draggable
-        onMouseDown={press_row}
-        onClick={click_row}
-        onContextMenu={open_menu}
-        onDragStart={start_drag}
+        onMouseDown={(event) => event.shiftKey && event.preventDefault()}
+        onClick={(event) => click_task(task, actions, event)}
+        onContextMenu={(event) => open_task_menu(task, actions, event, () => set_is_adding_subtask(true))}
+        onDragStart={(event) => start_task_drag(task, actions, event)}
         onDragEnd={actions.on_drag_end}
         onDragOver={drag_over}
         onDragLeave={() => set_shown_placement(null)}
         onDrop={drop}
       >
         {children.length > 0 ? (
-          <button
-            className="collapse_button"
-            onClick={() => actions.on_set_collapsed(task, !is_collapsed)}
-            aria-label={is_collapsed ? 'Expand' : 'Collapse'}
-          >
+          <button className="icon tree-toggle" onClick={() => actions.on_set_collapsed(task, !is_collapsed)} aria-label={is_collapsed ? 'Expand' : 'Collapse'}>
             {is_collapsed ? '▸' : '▾'}
           </button>
         ) : (
-          <span className="collapse_spacer" />
+          <span className="tree-spacer" />
         )}
 
-        <input
-          type="checkbox"
-          checked={task.is_done}
-          onChange={() => actions.on_toggle(task)}
-          aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'}
-        />
-        <span className="task_cell title_cell">
+        <input type="checkbox" checked={task.is_done} onChange={() => actions.on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
+        <span className="task_title_cell">
           <span className="task_title">{task.title}</span>
-          {actions.is_in_my_day(task) && <span className="notes_marker" title="In My Day">☀</span>}
-          {task.notes && <span className="notes_marker" title="Has notes">≡</span>}
-          {task.recurrence && <span className="notes_marker" title="Repeats">↻</span>}
-          {!actions.is_table && streak_badge}
-          {row_history.length > 0 && <StreakStrip history={row_history} limit={ROW_STRIP_LENGTH} />}
+          <TitleMarks task={task} actions={actions} show_streak />
         </span>
+        <DateLabel task={task} column="date" actions={actions} />
+        {row_tags_of(task, actions).map((tag) => (
+          <TagChip key={tag.id} tag={tag} title={tag_path(tag, actions.tags)} on_remove={() => actions.on_untag(task, tag)} />
+        ))}
 
-        {actions.is_table ? (
-          actions.table_columns.map((column) =>
-            is_date_column(column) ? date_cell(column) : column === 'duration' ? duration_cell : column === 'streak' ? streak_cell : (
-              <span key={column} className="task_cell">
-                {task_tags.filter((tag) => `group:${tag.group_id}` === column).map((tag) => render_tag(tag, tag_path(tag, actions.tags)))}
-              </span>
-            )
-          )
-        ) : (
-          <>
-            {date_cell('date')}
-            {task_tags.map((tag) => render_tag(tag))}
-          </>
-        )}
-
-        <span className="task_cell actions_cell">
-          {is_collapsed && <span className="subtask_count">{children.length}</span>}
-
+        <span className="task_row_end">
+          {is_collapsed && <span className="tree-count">{children.length}</span>}
           {actions.can_add_subtasks && (
-            <button className="row_button" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
+            <button className="icon row_button" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
               +
             </button>
           )}
@@ -622,33 +281,11 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           {children.map((child) => (
             <TaskItem key={child.task.id} node={child} actions={actions} />
           ))}
-
-          {is_adding_subtask && (
-            <form className="subtask_form" onSubmit={submit_subtask}>
-              <input
-                value={subtask_title}
-                onChange={(event) => set_subtask_title(event.currentTarget.value)}
-                onKeyDown={(event) => event.key === 'Escape' && close_subtask_form()}
-                onBlur={() => !subtask_title.trim() && close_subtask_form()}
-                placeholder="Subtask"
-                autoFocus
-              />
-            </form>
-          )}
+          {is_adding_subtask && <SubtaskForm on_add={add_subtask} on_close={() => set_is_adding_subtask(false)} />}
         </ul>
       )}
     </li>
   )
-}
-
-// Shows a badge naming how many tasks are on the move under the pointer, instead of a picture of the one row grabbed.
-function show_drag_badge(event: ReactDragEvent, label: string): void {
-  const badge = document.createElement('div')
-  badge.className = 'drag_badge'
-  badge.textContent = label
-  document.body.append(badge)
-  event.dataTransfer?.setDragImage(badge, -12, -12)
-  window.setTimeout(() => badge.remove())
 }
 
 // ============================================================================
@@ -667,21 +304,12 @@ export function RepeatItem({ repeat, actions }: RepeatItemProps) {
   return (
     <li className="task_item">
       <div className="task is_repeat" onClick={() => actions.on_select(task)} title="A later date of this repeating task">
-        <span className="collapse_spacer" />
+        <span className="tree-spacer" />
         <span className="repeat_marker" aria-hidden="true">↻</span>
-        <span className="task_cell title_cell">
+        <span className="task_title_cell">
           <span className="task_title">{task.title}</span>
-          {!actions.is_table && <span className="due_label">{task_date_label(task_date)}</span>}
         </span>
-        {actions.is_table &&
-          actions.table_columns.map((column) => (
-            <span key={column} className="task_cell date_cell">
-              {(column === 'date' || column === actions.date_field) && <span className="due_label">{task_date_label(task_date)}</span>}
-            </span>
-          ))}
-        <span className="task_cell actions_cell">
-          <span className="row_spacer" />
-        </span>
+        <span className="due_label">{task_date_label(task_date)}</span>
       </div>
     </li>
   )

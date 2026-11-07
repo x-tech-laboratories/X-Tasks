@@ -1,16 +1,20 @@
-import { Fragment } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { theme_choice, type Theme } from '@x-tech-laboratories/x-libs/web/theme'
+import { SearchBox, Segmented } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
+import { Shell } from '@x-tech-laboratories/x-libs/web/react/shell'
+import { ResizeHandle } from '@x-tech-laboratories/x-libs/web/react/split'
+import { undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
+import type { TreeMove } from '@x-tech-laboratories/x-libs/web/tree'
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { BACK_EVENT } from './back_navigation'
 import { BoardView, DONE_COLUMN, NO_TAG_COLUMN, OPEN_COLUMN, date_columns, status_columns, tag_columns } from './BoardView'
 import { CalendarView } from './CalendarView'
-import { ContextMenu, type MenuItem, type OpenContextMenu, type OpenMenu } from './ContextMenu'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
-import { ResizeHandle } from './ResizeHandle'
 import { UntrustedCertificatePrompt } from './CertificateDialog'
 import { FilterDialog } from './FilterDialog'
 import { GANTT_SCALE_CHOICES, GanttView } from './GanttView'
@@ -19,18 +23,20 @@ import { AddTaskRow, SyntaxHelpDialog, SyntaxPreview, syntax_button_label, synta
 import { query_matches, syntax_by_id, type SyntaxContext } from './syntax'
 import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
-import { Sidebar } from './Sidebar'
+import { Sidebar, SidebarFoot } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
-import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
+import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
+import { TaskTable } from './TaskTable'
 import { coming_repeats, group_by_date } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
 import { format_task_date, next_schedule, overdue_repeat_schedule, parse_task_date, recurrence_anchor, rescheduled, task_date_of, with_recurrence } from '@shared/schedule'
 import {
-  EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
+  EMPTY_TABLE_FILTERS, has_table_filters, ordered_columns, sort_task_tree, tag_ranks, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type SortContext, type StreakOf,
+  type TableColumn, type TableFilters
 } from './table'
 import {
-  by_position, children_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, move_for_drop, moves_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
-  tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
+  by_position, children_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, moves_for_drop, my_day_for_new_task, my_day_since, nest_tasks, rule_tags_of, subtree_ids,
+  tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type TaskNode, type View
 } from './views'
 
 // ============================================================================
@@ -50,8 +56,8 @@ const UNDO_DELAY_MS = 8000
 // The tag open in the filter dialog: an existing one, or a new rule tag about to be added at a spot in a group.
 type FilterEditing = { tag: Tag } | { group_id: string; parent_id: string | null }
 
-// Tasks taken off the screen but not yet deleted: the ones removed, everything under them, and the timer that deletes them.
-type PendingRemoval = { root_ids: string[]; tasks: Task[]; timer: number }
+// Tasks taken off the screen but not yet deleted, everything under them included, and the toast that deletes them unless undone.
+type PendingRemoval = { tasks: Task[]; toast: Undoable }
 
 export function App() {
   const [tasks, set_tasks] = useState<Task[]>([])
@@ -74,7 +80,6 @@ export function App() {
   const pick_anchor_id = useRef<string | null>(null)
   // The rows on screen in order, for the shortcut that picks them all.
   const shown_rows_ref = useRef<Task[]>([])
-  const [context_menu, set_context_menu] = useState<OpenMenu | null>(null)
   const [rescheduling_task_ids, set_rescheduling_task_ids] = useState<string[]>([])
   const [now, set_now] = useState(() => format_task_date(new Date(), true))
   const today = now.slice(0, 10)
@@ -85,8 +90,15 @@ export function App() {
   const [unsaved_groupings, set_unsaved_groupings] = useState<Record<string, TaskGrouping>>({})
   // Layouts picked in a view but not yet saved for it, the same way.
   const [unsaved_layouts, set_unsaved_layouts] = useState<Record<string, ViewLayout>>({})
-  const [undo_message, set_undo_message] = useState<string | null>(null)
   const pending_removal = useRef<PendingRemoval | null>(null)
+
+  // The theme is a setting, so it follows the database and syncs with it.
+  const settings_ref = useRef(settings)
+  settings_ref.current = settings
+  const theme = useMemo(
+    () => theme_choice({ read: () => settings_ref.current?.theme, write: (chosen: Theme) => void change_setting('theme', chosen) }),
+    []
+  )
 
   // Tasks waiting to be deleted stay hidden when the list is fetched again.
   function without_pending(loaded_tasks: Task[]): Task[] {
@@ -157,6 +169,7 @@ export function App() {
     }
   }, [has_loaded_tasks, settings?.reschedule_overdue_repeats, settings?.task_date_field, today])
 
+
   // Closing the app deletes any tasks still waiting, and Ctrl+Z outside a text field undoes the last removal.
   useEffect(() => {
     const undo_on_shortcut = (event: KeyboardEvent): void => {
@@ -186,17 +199,11 @@ export function App() {
     void window.x_settings.set_setting('last_view', view)
   }
 
-  const open_context_menu: OpenContextMenu = (event, items) => {
-    event.preventDefault()
-    set_context_menu({ x: event.clientX, y: event.clientY, items })
-  }
-
-  const close_context_menu = useCallback(() => set_context_menu(null), [])
-
   // The phone's Back button closes whatever sits on top, from a menu down to Settings, as Android apps do.
   useEffect(() => {
     const step_back = (event: Event): void => {
-      if (context_menu) set_context_menu(null)
+      const open_menu = document.querySelector<HTMLElement>('[popover]:popover-open')
+      if (open_menu) open_menu.hidePopover()
       else if (rescheduling_task_ids.length > 0) set_rescheduling_task_ids([])
       else if (filter_editing) set_filter_editing(null)
       else if (editing_group) set_editing_group(null)
@@ -209,12 +216,12 @@ export function App() {
     }
     window.addEventListener(BACK_EVENT, step_back)
     return () => window.removeEventListener(BACK_EVENT, step_back)
-  }, [context_menu, rescheduling_task_ids, filter_editing, editing_group, picked_task_ids, selected_task_id, is_sidebar_open, is_settings_open])
+  }, [rescheduling_task_ids, filter_editing, editing_group, picked_task_ids, selected_task_id, is_sidebar_open, is_settings_open])
 
   // Escape lets go of the picked tasks, and Ctrl+A picks every row on screen, both outside text fields, menus and dialogs.
   useEffect(() => {
     const pick_on_shortcut = (event: KeyboardEvent): void => {
-      if (is_typing(event) || context_menu || (event.target instanceof Element && event.target.closest('dialog'))) return
+      if (is_typing(event) || document.querySelector('dialog[open], [popover]:popover-open')) return
       if (event.key === 'Escape' && picked_task_ids.length > 0) {
         event.preventDefault()
         set_picked_task_ids([])
@@ -226,7 +233,7 @@ export function App() {
     }
     window.addEventListener('keydown', pick_on_shortcut)
     return () => window.removeEventListener('keydown', pick_on_shortcut)
-  }, [context_menu, picked_task_ids])
+  }, [picked_task_ids])
 
   // Changes a setting on screen only, as a panel does while its edge is being dragged.
   function show_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): void {
@@ -235,6 +242,7 @@ export function App() {
 
   async function change_setting<Key extends keyof Settings>(key: Key, value: Settings[Key]): Promise<void> {
     show_setting(key, value)
+    if (key === 'theme') theme.apply(value as Theme)
     await window.x_settings.set_setting(key, value)
   }
 
@@ -394,35 +402,35 @@ export function App() {
   function remove_tasks(removed_tasks: Task[]): void {
     finish_removal()
     const removed_ids = new Set(removed_tasks.flatMap((task) => [...subtree_ids(task.id, tasks)]))
-    pending_removal.current = {
-      root_ids: removed_tasks.map((task) => task.id),
+    const root_ids = removed_tasks.map((task) => task.id)
+    const message = removed_tasks.length === 1 ? `Deleted "${removed_tasks[0]!.title}"` : `Deleted ${removed_tasks.length} tasks`
+    const removal: PendingRemoval = {
       tasks: tasks.filter((task) => removed_ids.has(task.id)),
-      timer: window.setTimeout(finish_removal, UNDO_DELAY_MS)
+      // The database removes the subtasks along with their parents; an undone removal fetches the list again, which never lost them.
+      toast: undoable(message, {
+        duration_in_milliseconds: UNDO_DELAY_MS,
+        commit: () => {
+          if (pending_removal.current === removal) pending_removal.current = null
+          for (const task_id of root_ids) void window.x_tasks.remove_task(task_id)
+        },
+        undo: () => {
+          if (pending_removal.current === removal) pending_removal.current = null
+          void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
+        }
+      })
     }
+    pending_removal.current = removal
     set_tasks((current_tasks) =>
       current_tasks.filter((each) => !removed_ids.has(each.id)).map((each) => ({ ...each, links: each.links.filter((link) => !removed_ids.has(link.other_id)) }))
     )
-    set_undo_message(removed_tasks.length === 1 ? `Deleted "${removed_tasks[0]!.title}"` : `Deleted ${removed_tasks.length} tasks`)
   }
 
-  // Deletes the waiting tasks from the database; the database removes their subtasks along with them.
   function finish_removal(): void {
-    const removal = pending_removal.current
-    if (!removal) return
-    pending_removal.current = null
-    window.clearTimeout(removal.timer)
-    for (const task_id of removal.root_ids) void window.x_tasks.remove_task(task_id)
-    set_undo_message(null)
+    pending_removal.current?.toast.finish()
   }
 
-  // The database never lost the waiting tasks, so fetching the list again puts them back in their places.
   function undo_removal(): void {
-    const removal = pending_removal.current
-    if (!removal) return
-    pending_removal.current = null
-    window.clearTimeout(removal.timer)
-    void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
-    set_undo_message(null)
+    pending_removal.current?.toast.undo()
   }
 
   // Deletes the completed tasks on screen, after asking if the settings say to, along with their history in the reports.
@@ -561,12 +569,9 @@ export function App() {
     void window.x_tasks.remove_tag_group(group.id)
   }
 
-  function move_tag_group(dragged: TagGroup, target: TagGroup, placement: SidePlacement): void {
-    if (dragged.id === target.id) return
-    const position = position_for_drop(dragged, target, placement, tag_groups)
-
-    set_tag_groups((current_groups) => current_groups.map((each) => (each.id === dragged.id ? { ...each, position } : each)).sort(by_position))
-    void window.x_tasks.move_tag_group(dragged.id, position)
+  function move_tag_group(group: TagGroup, position: number): void {
+    set_tag_groups((current_groups) => current_groups.map((each) => (each.id === group.id ? { ...each, position } : each)).sort(by_position))
+    void window.x_tasks.move_tag_group(group.id, position)
   }
 
   async function add_tag(
@@ -611,12 +616,9 @@ export function App() {
     if (remaining_view !== selected_view) select_view(remaining_view)
   }
 
-  function move_tag(dragged: Tag, target: Tag, placement: DropPlacement): void {
-    if (subtree_ids(dragged.id, tags).has(target.id)) return
-    const move = move_for_drop(dragged, target, placement, tags)
-
-    set_tags((current_tags) => current_tags.map((each) => (each.id === dragged.id ? { ...each, ...move } : each)).sort(by_position))
-    void window.x_tasks.move_tag(dragged.id, move.parent_id, move.position)
+  function move_tag(tag: Tag, move: TreeMove): void {
+    set_tags((current_tags) => current_tags.map((each) => (each.id === tag.id ? { ...each, ...move } : each)).sort(by_position))
+    void window.x_tasks.move_tag(tag.id, move.parent_id, move.position)
   }
 
   // ==========================================================================
@@ -681,8 +683,8 @@ export function App() {
   )
   const clearable_tasks = shown_tasks.filter((task) => fully_done_ids.has(task.id) && (task.parent_id === null || !fully_done_ids.has(task.parent_id)))
   const column_order = ordered_columns(settings.table_column_order, tag_groups)
-  const table_columns = column_order.filter((column) => is_column_shown(column, settings.hidden_table_columns, settings.shown_table_columns))
-  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, tags, task_tags_of, streak_of, settings.task_date_field, last_done_of) : nested_tasks
+  const sort_context: SortContext = { tags_of: task_tags_of, streak_of, date_field: settings.task_date_field, last_done_of, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
+  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, sort_context) : nested_tasks
 
   // Upcoming always groups by date and lists the later dates of repeating tasks; other views group as picked.
   const is_upcoming = selected_view.kind === 'upcoming'
@@ -721,7 +723,7 @@ export function App() {
 
   function save_grouping(): void {
     void change_setting('view_groupings', with_view_grouping(settings!, selected_view, picked_grouping))
-    set_unsaved_groupings(({ [view_key(selected_view)]: _, ...others }) => others)
+    set_unsaved_groupings((current) => without_key(current, view_key(selected_view)))
   }
 
   // A layout picked in the header changes the shared one, this view's saved one, or only what is shown until saved.
@@ -738,7 +740,7 @@ export function App() {
 
   function save_layout(): void {
     void change_setting('view_layouts', with_view_layout(settings!, selected_view, view_layout))
-    set_unsaved_layouts(({ [view_key(selected_view)]: _, ...others }) => others)
+    set_unsaved_layouts((current) => without_key(current, view_key(selected_view)))
   }
 
   // A card moved between tag columns swaps those tags, between days moves its date, and between To do and Done ticks it.
@@ -846,15 +848,15 @@ export function App() {
     return tag_groups.flatMap((group) =>
       tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group.id && !tag.rule)).map((tag) => ({
         label: `${group.name}: ${tag_path(tag, tags)}`,
-        is_chosen: picked_tasks.every((task) => task.tag_ids.includes(tag.id)),
-        on_select: () => toggle_picked_tag(tag)
+        checked: picked_tasks.every((task) => task.tag_ids.includes(tag.id)),
+        run: () => toggle_picked_tag(tag)
       }))
     )
   }
 
   function open_tag_menu(event: ReactMouseEvent): void {
     const button = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    set_context_menu({ x: button.left, y: button.top, items: tag_menu_items() })
+    open_context_menu({ clientX: button.left, clientY: button.top, preventDefault: () => undefined }, tag_menu_items())
   }
 
   // The same actions as the bar at the foot of the window, for a right-click on any picked row.
@@ -862,15 +864,15 @@ export function App() {
     const has_open = picked_tasks.some((task) => !task.is_done)
     const has_done = picked_tasks.some((task) => task.is_done)
     open_context_menu(event, [
-      ...(has_open ? [{ label: 'Mark done', on_select: complete_picked }] : []),
-      ...(has_done ? [{ label: 'Mark not done', on_select: reopen_picked }] : []),
-      { label: 'Reschedule…', on_select: () => set_rescheduling_task_ids(picked_tasks.map((task) => task.id)) },
+      ...(has_open ? [{ label: 'Mark done', run: complete_picked }] : []),
+      ...(has_done ? [{ label: 'Mark not done', run: reopen_picked }] : []),
+      { label: 'Reschedule…', run: () => set_rescheduling_task_ids(picked_tasks.map((task) => task.id)) },
       all_picked_in_my_day
-        ? { label: 'Remove from My Day', on_select: () => set_picked_my_day(false) }
-        : { label: 'Add to My Day', on_select: () => set_picked_my_day(true) },
-      { label: 'Tags…', on_select: () => set_context_menu({ x: event.clientX, y: event.clientY, items: tag_menu_items() }) },
-      { label: 'Clear selection', on_select: () => set_picked_task_ids([]) },
-      { label: `Delete ${picked_tasks.length === 1 ? 'task' : `${picked_tasks.length} tasks`}`, on_select: remove_picked, is_danger: true }
+        ? { label: 'Remove from My Day', run: () => set_picked_my_day(false) }
+        : { label: 'Add to My Day', run: () => set_picked_my_day(true) },
+      { label: 'Tags…', run: () => open_context_menu({ clientX: event.clientX, clientY: event.clientY, preventDefault: () => undefined }, tag_menu_items()) },
+      { label: 'Clear selection', run: () => set_picked_task_ids([]) },
+      { label: `Delete ${picked_tasks.length === 1 ? 'task' : `${picked_tasks.length} tasks`}`, run: remove_picked, danger: true, separator_before: true }
     ])
   }
 
@@ -888,9 +890,7 @@ export function App() {
   const task_actions: TaskActions = {
     tags,
     tag_groups,
-    is_table,
     tint_rows: settings.tint_rows_by_tag,
-    table_columns,
     date_field: settings.task_date_field,
     can_add_subtasks: selected_view.kind !== 'completed',
     selected_task_id,
@@ -907,7 +907,6 @@ export function App() {
     on_bulk_menu: open_bulk_menu,
     drag_count_of: (task) => tasks_dragged_with(task).length,
     is_dragging_picked: dragged_task !== null && is_picking && picked_task_ids.includes(dragged_task.id),
-    on_context_menu: open_context_menu,
     on_toggle: tick_task,
     on_reschedule: (task) => set_rescheduling_task_ids([task.id]),
     is_in_my_day: (task) => is_in_my_day(task, shown_since),
@@ -936,406 +935,369 @@ export function App() {
   const has_expanded_parent = parent_ids.some((id) => !settings.collapsed_task_ids.includes(id))
   const has_collapsed_parent = parent_ids.some((id) => settings.collapsed_task_ids.includes(id))
 
-  return (
-    <div className="app">
-      <form className="multibar" onSubmit={(event) => event.preventDefault()}>
-        <button type="button" className="menu_button" onClick={() => set_is_sidebar_open(!is_sidebar_open)} aria-label="Menu" aria-expanded={is_sidebar_open}>
-          ☰
-        </button>
-        <input
-          value={multibar_text}
-          onChange={(event) => change_multibar_text(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') set_multibar_text('')
-            if (event.key === 'ArrowDown') document.querySelector<HTMLElement>('.add_task_row')?.focus()
-          }}
-          placeholder={can_add_task ? 'Search, or type a task to add' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
-          aria-label="Search or add a task"
-          autoFocus={!IS_TOUCH_SCREEN}
-        />
-        <button
-          type="button"
-          className="syntax_button"
-          onClick={(event) =>
-            open_context_menu(
-              event,
-              syntax_menu_items(settings.quick_add_syntax, settings.search_syntax, (key, id) => void change_setting(key, id), () => set_is_syntax_help_open(true))
-            )
-          }
-          title="How the bar reads what you type"
-        >
-          {syntax_button_label(settings.quick_add_syntax, settings.search_syntax)}
-        </button>
-      </form>
-      <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
+  function open_settings(): void {
+    set_is_settings_open(true)
+    set_is_sidebar_open(false)
+  }
 
-      <div
-        className={`app_body${selected_task ? ' has_detail' : ''}${is_sidebar_open ? ' is_sidebar_open' : ''}`}
-        style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` } as CSSProperties}
+  const multibar = (
+    <form
+      className="multibar"
+      onSubmit={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowDown') document.querySelector<HTMLElement>('.add_task_row')?.focus()
+      }}
+    >
+      <SearchBox
+        auto_focus={!IS_TOUCH_SCREEN}
+        label={can_add_task ? 'Search, or type a task to add' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
+        value={multibar_text}
+        on_input={change_multibar_text}
+      />
+      <button
+        type="button"
+        className="syntax_button"
+        onClick={(event) =>
+          open_context_menu(
+            event,
+            syntax_menu_items(settings.quick_add_syntax, settings.search_syntax, (key, id) => void change_setting(key, id), () => set_is_syntax_help_open(true))
+          )
+        }
+        title="How the bar reads what you type"
       >
-        <Sidebar
-          tasks={tasks}
-          tag_groups={tag_groups}
-          tags={tags}
-          my_day_since={shown_since}
-          tag_scope={settings.tag_scope}
-          show_empty_tags={settings.show_empty_tags}
-          date_field={settings.task_date_field}
-          selected_view={is_settings_open ? null : selected_view}
-          is_settings_open={is_settings_open}
-          dragged_task={dragged_task}
-          collapsed_ids={settings.collapsed_sidebar_ids}
-          on_set_collapsed_ids={(ids) => void change_setting('collapsed_sidebar_ids', ids)}
-          on_select_view={select_view}
-          on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
-          on_open_settings={() => {
-            set_is_settings_open(true)
-            set_is_sidebar_open(false)
-          }}
-          on_edit_tag_group={set_editing_group}
-          on_remove_tag_group={remove_tag_group}
-          on_move_tag_group={move_tag_group}
-          on_add_tag={add_tag}
-          on_add_rule_tag={(group_id, parent_id) => set_filter_editing({ group_id, parent_id })}
-          on_edit_tag={(tag) => set_filter_editing({ tag })}
-          on_remove_tag={remove_tag}
-          on_move_tag={move_tag}
-          on_tag_task={tag_dragged_tasks}
-          on_context_menu={open_context_menu}
-        />
-        {is_sidebar_open && <button className="sidebar_backdrop" onClick={() => set_is_sidebar_open(false)} aria-label="Close menu" />}
-        <ResizeHandle
-          side="left"
-          width={settings.sidebar_width}
-          min_width={SIDEBAR_WIDTH_RANGE.min}
-          max_width={SIDEBAR_WIDTH_RANGE.max}
-          default_width={DEFAULT_SETTINGS.sidebar_width}
-          on_resize={(width) => show_setting('sidebar_width', width)}
-          on_resize_end={(width) => void change_setting('sidebar_width', width)}
-          label="Resize sidebar"
-        />
+        {syntax_button_label(settings.quick_add_syntax, settings.search_syntax)}
+      </button>
+    </form>
+  )
 
-        <main className={is_wide && !is_settings_open ? `task_pane is_table is_${layout}` : 'task_pane'}>
-          {is_settings_open ? (
-            <SettingsPage
-              settings={settings}
-              tags={tags}
-              tag_groups={tag_groups}
-              tasks={tasks}
-              on_change={change_setting}
-              on_change_relationships={change_relationships}
-              on_add_tag_group={add_tag_group}
-            />
-          ) : is_reports ? (
-            <ReportsPage
-              widgets={settings.report_widgets}
-              tasks={tasks}
-              completions={completions}
-              tags={tags}
-              tag_groups={tag_groups}
-              today={today}
-              on_change_widgets={(widgets) => void change_setting('report_widgets', widgets)}
-              on_select_task={(task) => set_selected_task_id(task.id)}
-              on_context_menu={open_context_menu}
-            />
-          ) : (
+  const sidebar = (
+    <Sidebar
+      tasks={tasks}
+      tag_groups={tag_groups}
+      tags={tags}
+      my_day_since={shown_since}
+      tag_scope={settings.tag_scope}
+      show_empty_tags={settings.show_empty_tags}
+      date_field={settings.task_date_field}
+      selected_view={is_settings_open ? null : selected_view}
+      dragged_task={dragged_task}
+      collapsed_ids={settings.collapsed_sidebar_ids}
+      on_set_collapsed_ids={(ids) => void change_setting('collapsed_sidebar_ids', ids)}
+      on_select_view={select_view}
+      on_toggle_tag={(tag) => select_view(view_with_tag_toggled(selected_view, tag, tags, settings.tag_selection))}
+      on_edit_tag_group={set_editing_group}
+      on_remove_tag_group={remove_tag_group}
+      on_move_tag_group={move_tag_group}
+      on_add_tag={add_tag}
+      on_add_rule_tag={(group_id, parent_id) => set_filter_editing({ group_id, parent_id })}
+      on_edit_tag={(tag) => set_filter_editing({ tag })}
+      on_remove_tag={remove_tag}
+      on_move_tag={move_tag}
+      on_tag_task={tag_dragged_tasks}
+    />
+  )
+
+  const task_pane = is_settings_open ? (
+    <SettingsPage
+      settings={settings}
+      tags={tags}
+      tag_groups={tag_groups}
+      tasks={tasks}
+      on_change={change_setting}
+      on_change_relationships={change_relationships}
+      on_add_tag_group={add_tag_group}
+    />
+  ) : is_reports ? (
+    <ReportsPage
+      widgets={settings.report_widgets}
+      tasks={tasks}
+      completions={completions}
+      tags={tags}
+      tag_groups={tag_groups}
+      today={today}
+      on_change_widgets={(widgets) => void change_setting('report_widgets', widgets)}
+      on_select_task={(task) => set_selected_task_id(task.id)}
+    />
+  ) : (
+    <>
+      <header className="task_pane_header">
+        <h1>{view_title(selected_view, tags)}</h1>
+        {selected_view.kind === 'my_day' && (
+          <span className="muted">{parse_task_date(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+        )}
+        <span className="muted remaining_count">{remaining_count} left</span>
+        <span className="toolbar">
+          {selected_view.kind === 'my_day' && visible_tasks.length > 0 && <button onClick={clear_my_day}>Clear</button>}
+          {clearable_tasks.length > 0 && (
+            <button onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
+              Clear completed
+            </button>
+          )}
+          {parent_ids.length > 0 && (layout === 'list' || layout === 'table' || layout === 'gantt') && (
             <>
-              <header className="task_pane_header">
-                <h1>{view_title(selected_view, tags)}</h1>
-                {selected_view.kind === 'my_day' && (
-                  <span className="my_day_date">
-                    {parse_task_date(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </span>
-                )}
-                <span className="remaining_count">{remaining_count} left</span>
-                {selected_view.kind === 'my_day' && visible_tasks.length > 0 && (
-                  <button className="clear_my_day_button" onClick={clear_my_day}>
-                    Clear
-                  </button>
-                )}
-                {clearable_tasks.length > 0 && (
-                  <button className="clear_completed_button" onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
-                    Clear completed
-                  </button>
-                )}
-                {parent_ids.length > 0 && (layout === 'list' || layout === 'table' || layout === 'gantt') && (
-                  <>
-                    <button className="collapse_all_button" onClick={() => set_tasks_collapsed(parent_ids, true)} disabled={!has_expanded_parent} title="Collapse every task with subtasks">
-                      Collapse all
-                    </button>
-                    <button className="expand_all_button" onClick={() => set_tasks_collapsed(parent_ids, false)} disabled={!has_collapsed_parent} title="Expand every task with subtasks">
-                      Expand all
-                    </button>
-                  </>
-                )}
-                {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && (
-                  <select
-                    className={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
-                    value={shown_grouping}
-                    onChange={(event) => pick_grouping(event.currentTarget.value as TaskGrouping)}
-                    aria-label="Group by"
-                    title="Show tasks under headings by date or by the tags of a group"
-                  >
-                    {grouping_choices(tag_groups).map(({ value, label }) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && has_unsaved_grouping && (
-                  <button className="save_grouping_button" onClick={save_grouping} title="Keep this grouping for this view">
-                    Save grouping
-                  </button>
-                )}
-                {layout === 'gantt' && (
-                  <div className="segmented_control" role="radiogroup" aria-label="Gantt scale">
-                    {GANTT_SCALE_CHOICES.map(({ value, label }) => (
-                      <button
-                        key={value}
-                        role="radio"
-                        aria-checked={view_layout.gantt_scale === value}
-                        className={view_layout.gantt_scale === value ? 'is_selected' : ''}
-                        onClick={() => pick_layout({ gantt_scale: value })}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {has_unsaved_layout && (
-                  <button className="save_grouping_button" onClick={save_layout} title="Keep this layout for this view">
-                    Save layout
-                  </button>
-                )}
-                <div className="segmented_control" role="radiogroup" aria-label="Layout">
-                  {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
-                    <button
-                      key={value}
-                      role="radio"
-                      aria-checked={layout === value}
-                      className={layout === value ? 'is_selected' : ''}
-                      onClick={() => pick_layout({ layout: value })}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </header>
-
-              {typed_task?.title && <AddTaskRow quick_add={typed_task} tags={tags} on_add={() => void add_typed_task()} on_cancel={() => set_multibar_text('')} />}
-
-              {layout === 'board' && visible_tasks.length > 0 && (
-                <BoardView
-                  columns={board_columns}
-                  actions={task_actions}
-                  column_group_id={grouped_tag_group?.id ?? null}
-                  open_dependency_count={(task) => (waits_on.get(task.id) ?? []).filter((id) => open_task_ids.has(id)).length}
-                  on_move={move_on_board}
-                />
-              )}
-              {layout === 'calendar' && (
-                <CalendarView
-                  tasks={shown_tasks}
-                  tags_of={task_tags_of}
-                  date_field={settings.task_date_field}
-                  now={now}
-                  span={view_layout.calendar_span}
-                  slot_minutes={settings.calendar_slot_minutes}
-                  slot_label_minutes={settings.calendar_slot_label_minutes}
-                  selected_task_id={selected_task_id}
-                  on_change_span={(calendar_span) => pick_layout({ calendar_span })}
-                  on_select={task_actions.on_select}
-                  on_set_schedule={set_task_schedule}
-                />
-              )}
-              {layout === 'gantt' && visible_tasks.length > 0 && (
-                <GanttView
-                  rows={shown_rows}
-                  waits_on={waits_on}
-                  scale={view_layout.gantt_scale}
-                  selected_task_id={selected_task_id}
-                  on_change_scale={(gantt_scale) => pick_layout({ gantt_scale })}
-                  on_select={task_actions.on_select}
-                  on_set_schedule={set_task_schedule}
-                />
-              )}
-
-              {(layout === 'list' || layout === 'table') && <ul className={is_table ? 'task_list is_table' : 'task_list'} style={{
-                '--data-columns': table_columns.map((column) => `${column_width(settings.table_column_widths, column)}px`).join(' '),
-                '--data-width': `calc(${table_columns.reduce((total, column) => total + column_width(settings.table_column_widths, column), 0)}px + ${table_columns.length} * var(--space-4))`
-              } as CSSProperties}>
-                {is_table && visible_tasks.length > 0 && (
-                  <TaskTableHeader
-                    tag_groups={tag_groups}
-                    tags={tags}
-                    column_order={column_order}
-                    shown_columns={table_columns}
-                    on_move_column={(column, target, is_after) => void change_setting('table_column_order', move_column(column_order, column, target, is_after))}
-                    on_show_column={show_table_column}
-                    column_widths={settings.table_column_widths}
-                    on_resize_column={(column, width) => show_setting('table_column_widths', { ...settings.table_column_widths, [column]: width })}
-                    on_resize_column_end={(column, width) => void change_setting('table_column_widths', { ...settings.table_column_widths, [column]: width })}
-                    sort={settings.table_sort}
-                    on_sort={(column, is_adding) => void change_setting('table_sort', sort_after_click(settings.table_sort, column, is_adding))}
-                    filters={table_filters}
-                    on_filter={set_table_filters}
-                  />
-                )}
-                {is_grouped
-                  ? task_groups.map((group) => (
-                    <Fragment key={group.key}>
-                      <li className={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
-                        {group.label}
-                        <span className="group_count">{group.nodes.length + group.repeats.length}</span>
-                      </li>
-                      {group.nodes.map((node) => (
-                        <TaskItem key={node.task.id} node={node} actions={task_actions} />
-                      ))}
-                      {group.repeats.map((repeat) => (
-                        <RepeatItem key={`${repeat.task.id}@${repeat.task_date}`} repeat={repeat} actions={task_actions} />
-                      ))}
-                    </Fragment>
-                  ))
-                  : task_tree.map((node) => <TaskItem key={node.task.id} node={node} actions={task_actions} />)}
-              </ul>}
-
-              {visible_tasks.length === 0 && layout !== 'calendar' && <p className="empty_message">{is_searching ? 'No tasks match the search.' : 'Nothing here yet.'}</p>}
-              {visible_tasks.length > 0 && task_tree.length === 0 && <p className="empty_message">No tasks match the filters.</p>}
+              <button onClick={() => set_tasks_collapsed(parent_ids, true)} disabled={!has_expanded_parent} title="Collapse every task with subtasks">
+                Collapse all
+              </button>
+              <button onClick={() => set_tasks_collapsed(parent_ids, false)} disabled={!has_collapsed_parent} title="Expand every task with subtasks">
+                Expand all
+              </button>
             </>
           )}
-        </main>
+          {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && (
+            <select
+              value={shown_grouping}
+              onChange={(event) => pick_grouping(event.currentTarget.value as TaskGrouping)}
+              aria-label="Group by"
+              title="Show tasks under headings by date or by the tags of a group"
+            >
+              {grouping_choices(tag_groups).map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+          {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && has_unsaved_grouping && (
+            <button onClick={save_grouping} title="Keep this grouping for this view">
+              Save grouping
+            </button>
+          )}
+          {layout === 'gantt' && <Segmented label="Gantt scale" choices={GANTT_SCALE_CHOICES} value={view_layout.gantt_scale} on_change={(gantt_scale) => pick_layout({ gantt_scale })} />}
+          {has_unsaved_layout && (
+            <button onClick={save_layout} title="Keep this layout for this view">
+              Save layout
+            </button>
+          )}
+          <Segmented label="Layout" choices={TASK_LAYOUT_CHOICES} value={layout} on_change={(value) => pick_layout({ layout: value })} />
+        </span>
+      </header>
+
+      {typed_task?.title && <AddTaskRow quick_add={typed_task} tags={tags} on_add={() => void add_typed_task()} on_cancel={() => set_multibar_text('')} />}
+
+      {layout === 'board' && visible_tasks.length > 0 && (
+        <BoardView
+          columns={board_columns}
+          actions={task_actions}
+          column_group_id={grouped_tag_group?.id ?? null}
+          open_dependency_count={(task) => (waits_on.get(task.id) ?? []).filter((id) => open_task_ids.has(id)).length}
+          on_move={move_on_board}
+        />
+      )}
+      {layout === 'calendar' && (
+        <CalendarView
+          tasks={shown_tasks}
+          tags_of={task_tags_of}
+          date_field={settings.task_date_field}
+          now={now}
+          span={view_layout.calendar_span}
+          slot_minutes={settings.calendar_slot_minutes}
+          slot_label_minutes={settings.calendar_slot_label_minutes}
+          selected_task_id={selected_task_id}
+          on_change_span={(calendar_span) => pick_layout({ calendar_span })}
+          on_select={task_actions.on_select}
+          on_set_schedule={set_task_schedule}
+        />
+      )}
+      {layout === 'gantt' && visible_tasks.length > 0 && (
+        <GanttView
+          rows={shown_rows}
+          waits_on={waits_on}
+          scale={view_layout.gantt_scale}
+          selected_task_id={selected_task_id}
+          on_change_scale={(gantt_scale) => pick_layout({ gantt_scale })}
+          on_select={task_actions.on_select}
+          on_set_schedule={set_task_schedule}
+        />
+      )}
+
+      {layout === 'table' && visible_tasks.length > 0 && (
+        <TaskTable
+          tree={task_tree}
+          groups={is_grouped ? task_groups : null}
+          is_grouped_by_date={is_grouped_by_date}
+          actions={task_actions}
+          tags={tags}
+          tag_groups={tag_groups}
+          tags_of={task_tags_of}
+          column_order={column_order}
+          hidden_columns={settings.hidden_table_columns}
+          shown_columns={settings.shown_table_columns}
+          column_widths={settings.table_column_widths}
+          sort={settings.table_sort}
+          filters={table_filters}
+          collapsed_ids={settings.collapsed_task_ids}
+          on_column_order_change={(order) => void change_setting('table_column_order', order)}
+          on_show_column={show_table_column}
+          on_column_widths_change={(widths, done) => (done ? void change_setting('table_column_widths', widths) : show_setting('table_column_widths', widths))}
+          on_sort_change={(sort) => void change_setting('table_sort', sort)}
+          on_filters_change={set_table_filters}
+          on_collapsed_change={(ids) => void change_setting('collapsed_task_ids', ids)}
+        />
+      )}
+
+      {layout === 'list' && (
+        <ul className="task_list">
+          {is_grouped
+            ? task_groups.map((group) => (
+                <li key={group.key} className="task_group">
+                  <h2 className={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
+                    {group.label}
+                    <span className="group_count">{group.nodes.length + group.repeats.length}</span>
+                  </h2>
+                  <ul className="task_list">
+                    {group.nodes.map((node) => (
+                      <TaskItem key={node.task.id} node={node} actions={task_actions} />
+                    ))}
+                    {group.repeats.map((repeat) => (
+                      <RepeatItem key={`${repeat.task.id}@${repeat.task_date}`} repeat={repeat} actions={task_actions} />
+                    ))}
+                  </ul>
+                </li>
+              ))
+            : task_tree.map((node) => <TaskItem key={node.task.id} node={node} actions={task_actions} />)}
+        </ul>
+      )}
+
+      {visible_tasks.length === 0 && layout !== 'calendar' && <p className="empty">{is_searching ? 'No tasks match the search.' : 'Nothing here yet.'}</p>}
+      {visible_tasks.length > 0 && task_tree.length === 0 && <p className="empty">No tasks match the filters.</p>}
+    </>
+  )
+
+  return (
+    <Shell
+      brand="X-Tasks"
+      brand_href="?"
+      theme={theme}
+      tools={multibar}
+      sidebar={sidebar}
+      sidebar_foot={<SidebarFoot is_settings_open={is_settings_open} on_open_settings={open_settings} />}
+      sidebar_width={{
+        default_width: DEFAULT_SETTINGS.sidebar_width,
+        min: SIDEBAR_WIDTH_RANGE.min,
+        max: SIDEBAR_WIDTH_RANGE.max,
+        width: settings.sidebar_width,
+        on_change: (width, done) => (done ? void change_setting('sidebar_width', width) : show_setting('sidebar_width', width))
+      }}
+      menu_open={is_sidebar_open}
+      on_menu_open_change={set_is_sidebar_open}
+      main_class={selected_task ? 'task_main has_detail' : 'task_main'}
+      view_key={is_settings_open ? 'settings' : view_key(selected_view)}
+    >
+      <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
+      <div className="task_panes" style={{ '--detail-width': `${settings.detail_width}px` } as CSSProperties}>
+        <div className={is_wide && !is_settings_open ? `task_pane is_wide is_${layout}` : 'task_pane'}>{task_pane}</div>
 
         {selected_task && (
-          <ResizeHandle
-            side="right"
-            width={settings.detail_width}
-            min_width={DETAIL_WIDTH_RANGE.min}
-            max_width={DETAIL_WIDTH_RANGE.max}
-            default_width={DEFAULT_SETTINGS.detail_width}
-            on_resize={(width) => show_setting('detail_width', width)}
-            on_resize_end={(width) => void change_setting('detail_width', width)}
-            label="Resize task details"
-          />
-        )}
-
-        {selected_task && (
-          <TaskDetail
-            key={selected_task.id}
-            task={selected_task}
-            tag_groups={tag_groups}
-            tags={tags}
-            date_field={settings.task_date_field}
-            subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
-            tasks={tasks}
-            relationships={settings.task_relationships}
-            on_link={link_tasks}
-            on_unlink={unlink_tasks}
-            durations={settings.task_durations}
-            on_toggle={tick_task}
-            on_rename={rename_task}
-            on_set_notes={set_task_notes}
-            on_tag={tag_task}
-            on_untag={untag_task}
-            on_set_schedule={set_task_schedule}
-            on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
-            streak={streak_by_task_id.get(selected_task.id) ?? null}
-            history={task_history(selected_task, tasks, completions)}
-            on_reschedule={(task) => set_rescheduling_task_ids([task.id])}
-            is_in_my_day={is_in_my_day(selected_task, shown_since)}
-            on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
-            on_remove={remove_task}
-            on_close={() => set_selected_task_id(null)}
-          />
-        )}
-
-        {rescheduling_tasks.length > 0 && (
-          <ReschedulePopup
-            tasks={rescheduling_tasks}
-            options={settings.reschedule_options}
-            date_field={settings.task_date_field}
-            on_reschedule={set_task_schedule}
-            on_close={() => set_rescheduling_task_ids([])}
-          />
-        )}
-
-        {filter_editing && (
-          <FilterDialog
-            heading={'tag' in filter_editing ? 'Edit tag' : 'New rule tag'}
-            name={'tag' in filter_editing ? filter_editing.tag.name : ''}
-            rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
-            color={'tag' in filter_editing ? filter_editing.tag.color : null}
-            icon={'tag' in filter_editing ? filter_editing.tag.icon : null}
-            shows_on_rows={'tag' in filter_editing ? filter_editing.tag.shows_on_rows : true}
-            swatches={settings.tag_colors}
-            tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
-            tags={tags}
-            groups={tag_groups}
-            tasks={tasks}
-            relationships={settings.task_relationships}
-            on_save={save_filter}
-            on_close={() => set_filter_editing(null)}
-          />
-        )}
-
-        {is_syntax_help_open && (
-          <SyntaxHelpDialog
-            quick_add_syntax={settings.quick_add_syntax}
-            search_syntax={settings.search_syntax}
-            on_close={() => set_is_syntax_help_open(false)}
-          />
-        )}
-
-        {editing_group && (
-          <GroupDialog
-            heading="Edit filter group"
-            group={editing_group}
-            tags={tags}
-            tasks={tasks}
-            on_save={(name, is_rule, is_single_choice) => update_tag_group(editing_group, name, is_rule, is_single_choice)}
-            on_close={() => set_editing_group(null)}
-          />
-        )}
-
-        {context_menu && <ContextMenu menu={context_menu} on_close={close_context_menu} />}
-
-        <UntrustedCertificatePrompt />
-
-        {is_picking && (
-          <div className="selection_bar" role="toolbar" aria-label="Selected tasks">
-            <button className="selection_close_button" onClick={() => set_picked_task_ids([])} aria-label="Clear selection" title="Clear selection (Esc)">
-              ✕
-            </button>
-            <span className="selection_count" title="Click rows to add or remove them, Shift+click to add a range, Ctrl+A to select all">
-              {picked_tasks.length} selected
-            </span>
-            {picked_tasks.length < shown_rows.length && (
-              <button onClick={() => set_picked_task_ids(shown_rows.map((task) => task.id))}>Select all</button>
-            )}
-            <span className="selection_divider" />
-            {picked_tasks.some((task) => !task.is_done) && <button onClick={complete_picked}>Mark done</button>}
-            {picked_tasks.some((task) => task.is_done) && <button onClick={reopen_picked}>Mark not done</button>}
-            <button onClick={() => set_rescheduling_task_ids(picked_tasks.map((task) => task.id))}>Reschedule…</button>
-            <button onClick={() => set_picked_my_day(!all_picked_in_my_day)}>{all_picked_in_my_day ? 'Remove from My Day' : 'Add to My Day'}</button>
-            <button onMouseDown={(event) => event.stopPropagation()} onClick={(event) => (context_menu ? close_context_menu() : open_tag_menu(event))}>
-              Tags…
-            </button>
-            <button className="selection_delete_button" onClick={remove_picked}>
-              Delete
-            </button>
-          </div>
-        )}
-
-        {undo_message && (
-          <div className="undo_bar" role="status">
-            <span className="undo_message">{undo_message}</span>
-            <button className="undo_button" onClick={undo_removal}>
-              Undo
-            </button>
+          <div className="detail_pane">
+            <ResizeHandle
+              side="right"
+              size={settings.detail_width}
+              min={DETAIL_WIDTH_RANGE.min}
+              max={DETAIL_WIDTH_RANGE.max}
+              default_size={DEFAULT_SETTINGS.detail_width}
+              on_resize={(width) => show_setting('detail_width', width)}
+              on_resize_end={(width) => void change_setting('detail_width', width)}
+              label="Resize task details"
+              class_name="detail_resize"
+            />
+            <TaskDetail
+              key={selected_task.id}
+              task={selected_task}
+              tag_groups={tag_groups}
+              tags={tags}
+              date_field={settings.task_date_field}
+              subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
+              tasks={tasks}
+              relationships={settings.task_relationships}
+              on_link={link_tasks}
+              on_unlink={unlink_tasks}
+              durations={settings.task_durations}
+              on_toggle={tick_task}
+              on_rename={rename_task}
+              on_set_notes={set_task_notes}
+              on_tag={tag_task}
+              on_untag={untag_task}
+              on_set_schedule={set_task_schedule}
+              on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
+              streak={streak_by_task_id.get(selected_task.id) ?? null}
+              history={task_history(selected_task, tasks, completions)}
+              on_reschedule={(task) => set_rescheduling_task_ids([task.id])}
+              is_in_my_day={is_in_my_day(selected_task, shown_since)}
+              on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
+              on_remove={remove_task}
+              on_close={() => set_selected_task_id(null)}
+            />
           </div>
         )}
       </div>
-    </div>
+
+      {rescheduling_tasks.length > 0 && (
+        <ReschedulePopup
+          tasks={rescheduling_tasks}
+          options={settings.reschedule_options}
+          date_field={settings.task_date_field}
+          on_reschedule={set_task_schedule}
+          on_close={() => set_rescheduling_task_ids([])}
+        />
+      )}
+
+      {filter_editing && (
+        <FilterDialog
+          heading={'tag' in filter_editing ? 'Edit tag' : 'New rule tag'}
+          name={'tag' in filter_editing ? filter_editing.tag.name : ''}
+          rule={'tag' in filter_editing ? filter_editing.tag.rule : EMPTY_RULE}
+          color={'tag' in filter_editing ? filter_editing.tag.color : null}
+          icon={'tag' in filter_editing ? filter_editing.tag.icon : null}
+          shows_on_rows={'tag' in filter_editing ? filter_editing.tag.shows_on_rows : true}
+          swatches={settings.tag_colors}
+          tag_id={'tag' in filter_editing ? filter_editing.tag.id : null}
+          tags={tags}
+          groups={tag_groups}
+          tasks={tasks}
+          relationships={settings.task_relationships}
+          on_save={save_filter}
+          on_close={() => set_filter_editing(null)}
+        />
+      )}
+
+      {is_syntax_help_open && (
+        <SyntaxHelpDialog quick_add_syntax={settings.quick_add_syntax} search_syntax={settings.search_syntax} on_close={() => set_is_syntax_help_open(false)} />
+      )}
+
+      {editing_group && (
+        <GroupDialog
+          heading="Edit filter group"
+          group={editing_group}
+          tags={tags}
+          tasks={tasks}
+          on_save={(name, is_rule, is_single_choice) => update_tag_group(editing_group, name, is_rule, is_single_choice)}
+          on_close={() => set_editing_group(null)}
+        />
+      )}
+
+      <UntrustedCertificatePrompt />
+
+      {is_picking && (
+        <div className="selection_bar" role="toolbar" aria-label="Selected tasks">
+          <button className="icon" onClick={() => set_picked_task_ids([])} aria-label="Clear selection" title="Clear selection (Esc)">
+            ✕
+          </button>
+          <span className="selection_count" title="Click rows to add or remove them, Shift+click to add a range, Ctrl+A to select all">
+            {picked_tasks.length} selected
+          </span>
+          {picked_tasks.length < shown_rows.length && <button onClick={() => set_picked_task_ids(shown_rows.map((task) => task.id))}>Select all</button>}
+          <span className="selection_divider" />
+          {picked_tasks.some((task) => !task.is_done) && <button onClick={complete_picked}>Mark done</button>}
+          {picked_tasks.some((task) => task.is_done) && <button onClick={reopen_picked}>Mark not done</button>}
+          <button onClick={() => set_rescheduling_task_ids(picked_tasks.map((task) => task.id))}>Reschedule…</button>
+          <button onClick={() => set_picked_my_day(!all_picked_in_my_day)}>{all_picked_in_my_day ? 'Remove from My Day' : 'Add to My Day'}</button>
+          <button onClick={open_tag_menu}>Tags…</button>
+          <button className="danger" onClick={remove_picked}>
+            Delete
+          </button>
+        </div>
+      )}
+    </Shell>
   )
 }
 
@@ -1383,4 +1345,13 @@ function with_typed_tag_ids(view_tag_ids: string[], typed_tag_ids: string[], tag
   )
   const kept_view_ids = view_tag_ids.filter((tag_id) => !typed_single_groups.has(group_of(tag_id)) && !typed_tag_ids.includes(tag_id))
   return [...kept_view_ids, ...typed_tag_ids]
+}
+
+// ============================================================================
+// Records
+// ============================================================================
+
+// The record without one key, such as a view's unsaved choice once it is saved.
+function without_key<Value>(record: Record<string, Value>, key: string): Record<string, Value> {
+  return Object.fromEntries(Object.entries(record).filter(([each_key]) => each_key !== key))
 }

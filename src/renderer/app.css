@@ -1,50 +1,8 @@
-/* ========================================================================== */
-/* Halon colour tokens                                                        */
-/* ========================================================================== */
+/* X-Tasks' own layout and the parts only it draws, on Halon's tokens; Halon's halon.css styles every shared widget. */
 
-:root {
-  color-scheme: light dark;
-  --surface-root: #f1f5f9;
-  --surface-default: #ffffff;
-  --surface-secondary: #f1f5f9;
-  --surface-navigation-hover: #e2e8f0;
-  --text-heading: #0f172a;
-  --text-body: #1a1a2e;
-  --text-secondary: #475569;
-  --text-tertiary: #64748b;
-  --text-on-fill: #fff;
-  --border-default: #e2e8f0;
-  --border-hover: #cbd5e1;
-  --border-control: #8792a3;
-  --border-focus: var(--accent);
-  --accent: #2563eb;
-  --focus-ring: rgba(37, 99, 235, 0.15);
-  --status-danger: #dc2626;
-  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-item: 0 1px 2px rgba(15, 23, 42, 0.12);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-root: #060b14;
-    --surface-default: #16213a;
-    --surface-secondary: #060b14;
-    --surface-navigation-hover: #101b2d;
-    --text-heading: #f8fafc;
-    --text-body: #e2e8f0;
-    --text-secondary: #cbd5e1;
-    --text-tertiary: #94a3b8;
-    --text-on-fill: #0b1220;
-    --border-default: #334155;
-    --border-hover: #475569;
-    --border-control: #64748b;
-    --accent: #60a5fa;
-    --focus-ring: rgba(96, 165, 250, 0.28);
-    --status-danger: #f87171;
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.27), 0 1px 2px rgba(15, 23, 42, 0.2);
-    --shadow-item: 0 1px 2px rgba(15, 23, 42, 0.5);
-  }
-}
+/* ========================================================================== */
+/* Host theme                                                                 */
+/* ========================================================================== */
 
 /* Inside the Linux sidebar the page takes the sidebar's own colours, handed to it as --sidebar-* variables. */
 html.follows_host_theme {
@@ -52,9 +10,11 @@ html.follows_host_theme {
   --surface-root: var(--sidebar-bg);
   --surface-default: var(--sidebar-base);
   --surface-secondary: var(--sidebar-bg);
+  --surface-navigation: var(--sidebar-bg);
   --surface-navigation-hover: var(--sidebar-hover);
   --text-heading: var(--sidebar-fg);
   --text-body: var(--sidebar-fg);
+  --text-on-navigation: var(--sidebar-fg);
   --text-secondary: color-mix(in srgb, var(--sidebar-fg) 80%, var(--sidebar-bg));
   --text-tertiary: color-mix(in srgb, var(--sidebar-fg) 65%, var(--sidebar-bg));
   --text-on-fill: var(--sidebar-accent-fg);
@@ -67,1448 +27,118 @@ html.follows_host_theme {
 }
 
 /* ========================================================================== */
-/* Halon metric tokens                                                        */
+/* Frame                                                                      */
 /* ========================================================================== */
 
-:root {
-  --font-family-interface:
-    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Cantarell,
-    "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  --space-1: 2px;
-  --space-2: 4px;
-  --space-3: 6px;
-  --space-4: 8px;
-  --space-5: 12px;
-  --space-6: 16px;
-  --space-7: 24px;
-  --space-8: 32px;
-  --control-height: 32px;
-  --control-padding-x: 14px;
-  --row-height: 28px;
-  --focus-ring-width: 3px;
-  --radius-small: 4px;
-  --radius-default: 8px;
-  --text-label: 11px;
-  --text-caption: 12px;
-  --text-control: 13px;
-  --text-prose: 14px;
-  --text-h3: 15px;
-  --text-h1: 26px;
-  --letter-spacing-caps: 0.04em;
-  --letter-spacing-display: -0.01em;
-  --line-height-ui: 16px;
-  --line-height-body: 1.55;
-  --duration-fast: 0.12s;
-}
+/* The bar takes the room between the brand and the theme button. */
+.multibar { display: flex; flex: 1; align-items: center; gap: var(--space-3); min-width: 0; }
+.multibar input.filter { flex: 1; min-width: 0; }
+.syntax_button { flex: none; font-size: var(--text-caption); }
+
+.syntax_preview { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
+
+/* The sidebar scrolls its views and tags while its foot stays at the bottom. */
+.sidebar { overflow-y: auto; }
+.sidebar_views { display: flex; flex-direction: column; gap: var(--border-width); margin-bottom: var(--space-4); }
+.sidebar_views a, .sidebar_foot a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.sidebar_foot { display: flex; flex-direction: column; gap: var(--border-width); margin-top: auto; padding-top: var(--space-4); }
+.sidebar_count { flex: none; color: var(--text-tertiary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+.sidebar_icon_label { display: inline-flex; align-items: center; gap: var(--space-3); }
+.sidebar_icon { width: var(--icon-size-small); height: var(--icon-size-small); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sidebar_icon.is_spinning { animation: spin 1s linear infinite; }
+.sync_button { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-color: transparent; background: transparent; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* A group's row reads as a heading over its tags, and a row's add button waits for the pointer. */
+.sidebar_group_row .tree-label { color: var(--text-secondary); font-size: var(--text-caption); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
+.sidebar_add { visibility: hidden; }
+.tree-row:hover .sidebar_add, .sidebar_add:focus-visible { visibility: visible; }
+.tag_color_dot { display: inline-block; width: 8px; height: 8px; margin-right: var(--space-3); border-radius: 50%; background: var(--tag-color); }
 
 /* ========================================================================== */
-/* Base                                                                       */
+/* Panes                                                                      */
 /* ========================================================================== */
 
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  background: var(--surface-root);
-  color: var(--text-body);
-  font: var(--text-prose) / var(--line-height-body) var(--font-family-interface);
-}
-
-::selection { background: var(--focus-ring); }
-
-:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: 0; }
-
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 5px; background: var(--border-hover) padding-box; }
-::-webkit-scrollbar-thumb:hover { background-color: var(--text-tertiary); }
-
-/* ========================================================================== */
-/* Controls                                                                   */
-/* ========================================================================== */
-
-button {
-  height: var(--control-height);
-  padding: 7px var(--control-padding-x);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-small);
-  background: transparent;
-  color: var(--text-body);
-  font: 500 var(--text-control) / var(--line-height-ui) var(--font-family-interface);
-  cursor: pointer;
-  transition: border-color var(--duration-fast), color var(--duration-fast), opacity var(--duration-fast);
-}
-
-button:hover { border-color: var(--accent); }
-
-input[type="text"],
-input[type="url"],
-input[type="password"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-input:not([type]) {
-  height: var(--control-height);
-  padding: 7px 11px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-small);
-  background: var(--surface-default);
-  color: var(--text-body);
-  font: 400 var(--text-control) / var(--line-height-ui) var(--font-family-interface);
-  transition: border-color var(--duration-fast);
-}
-
-input[type="text"]:hover,
-input[type="url"]:hover,
-input[type="password"]:hover,
-input[type="number"]:hover,
-input[type="date"]:hover,
-input[type="time"]:hover,
-input:not([type]):hover { border-color: var(--border-focus); }
-
-input[type="text"]:focus,
-input[type="url"]:focus,
-input[type="password"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-input[type="time"]:focus,
-input:not([type]):focus {
-  border-color: var(--border-focus);
-  outline: var(--focus-ring-width) solid var(--focus-ring);
-}
-
-input::placeholder { color: var(--text-tertiary); }
-
-select,
-textarea {
-  padding: 7px 11px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-small);
-  background: var(--surface-default);
-  color: var(--text-body);
-  font: 400 var(--text-control) / var(--line-height-ui) var(--font-family-interface);
-  transition: border-color var(--duration-fast);
-}
-
-select { height: var(--control-height); padding-top: 0; padding-bottom: 0; }
-textarea { line-height: var(--line-height-body); resize: none; }
-
-select:hover,
-textarea:hover { border-color: var(--border-focus); }
-
-select:focus,
-textarea:focus { border-color: var(--border-focus); outline: var(--focus-ring-width) solid var(--focus-ring); }
-
-textarea::placeholder { color: var(--text-tertiary); }
-
-input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
-
-.remove_button {
-  width: var(--row-height);
-  height: var(--row-height);
-  padding: 0;
-  border-color: transparent;
-  color: var(--text-secondary);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.remove_button:hover { border-color: var(--border-default); color: var(--status-danger); }
-
-.danger_button { color: var(--status-danger); }
-.danger_button:hover { border-color: var(--status-danger); }
-
-/* ========================================================================== */
-/* Layout                                                                     */
-/* ========================================================================== */
-
-.app { display: flex; flex-direction: column; height: 100vh; }
-
-.app_body { position: relative; display: grid; flex: 1; grid-template-columns: var(--sidebar-width) 1fr; min-height: 0; }
-.app_body.has_detail { grid-template-columns: var(--sidebar-width) 1fr var(--detail-width); }
-
-/* The handles sit over the panel borders, so they take no grid column of their own. */
-.resize_handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 5;
-  width: 7px;
-  cursor: col-resize;
-  touch-action: none;
-}
-.resize_handle.is_left { left: calc(var(--sidebar-width) - 4px); }
-.resize_handle.is_right { right: calc(var(--detail-width) - 4px); }
-.resize_handle::after {
-  content: "";
-  position: absolute;
-  inset: 0 3px;
-  background: transparent;
-  transition: background 120ms;
-}
-.resize_handle:hover::after,
-.resize_handle:focus-visible::after,
-.resize_handle.is_dragging::after { background: var(--accent); }
-.resize_handle:focus-visible { outline: none; }
-
-/* The menu button and the backdrop behind an open drawer only show on a phone. */
-.menu_button,
-.sidebar_backdrop { display: none; }
-
-/* On a phone the sidebar slides over the tasks as a drawer, and a task's details cover the whole screen. */
-@media (max-width: 700px) {
-  .app_body,
-  .app_body.has_detail { grid-template-columns: 1fr; }
-
-  .resize_handle { display: none; }
-
-  .multibar .menu_button {
-    display: block;
-    flex: none;
-    padding: 0 var(--space-4);
-    border-color: var(--border-default);
-    background: var(--surface-default);
-    color: var(--text-body);
-    font-size: 18px;
-  }
-
-  .sidebar {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 20;
-    width: min(85vw, 320px);
-    transform: translateX(-100%);
-    transition: transform var(--duration-fast);
-  }
-  .app_body.is_sidebar_open .sidebar { transform: none; box-shadow: var(--shadow-card); }
-
-  .sidebar_backdrop {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 19;
-    height: auto;
-    border: 0;
-    border-radius: 0;
-    background: rgba(15, 23, 42, 0.4);
-  }
-
-  .task_detail { position: absolute; inset: 0; z-index: 10; border-left: 0; }
-
-  main.task_pane { padding: var(--space-6) var(--space-5) 80px; }
-  .task_pane_header { flex-wrap: wrap; row-gap: var(--space-3); }
-
-  /* The task list runs edge to edge, so rows get the full width of the screen. */
-  main.task_pane > .task_list {
-    margin-left: calc(-1 * var(--space-5));
-    margin-right: calc(-1 * var(--space-5));
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
-  }
-
-  /* A row's date and tags wrap onto the lines below its title, so a task with many tags still shows its title. */
-  .task_list:not(.is_table) .task { flex-wrap: wrap; justify-content: flex-start; row-gap: var(--space-2); }
-  .task_list:not(.is_table) .task_title { flex: 1 0 60%; }
-
-  form.multibar { padding: var(--space-4); }
-
-  .setting_row { flex-wrap: wrap; }
-}
-
-/* Keeps the column cursor and stops text being selected while a panel edge is dragged. */
-body.is_resizing { cursor: col-resize; user-select: none; }
-
-.task_pane {
-  min-width: 0;
+/* The tasks and a task's details sit side by side, the details staying in view while the tasks scroll. */
+.task_panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+.task_main.has_detail .task_panes { grid-template-columns: minmax(0, 1fr) var(--detail-width); }
+.task_pane { min-width: 0; }
+.detail_pane {
+  position: sticky;
+  top: calc(var(--frame-height) + var(--space-4));
+  align-self: start;
+  max-height: calc(100vh - var(--frame-height) - var(--space-8));
   overflow-y: auto;
-  width: 100%;
-  padding: 28px var(--space-8) 80px;
-  background: var(--surface-default);
+  padding-left: var(--space-5);
+  border-left: var(--border-width) solid var(--border-default);
 }
+.detail_pane > .detail_resize { position: absolute; top: 0; bottom: 0; left: 0; }
 
-.task_pane > * { max-width: 720px; margin-left: auto; margin-right: auto; }
+.task_pane_header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); margin-bottom: var(--space-6); }
+.task_pane_header .toolbar { margin-left: auto; }
 
-/* The table layout takes the whole pane, since it grows a column for every filter group. */
-.task_pane.is_table > * { max-width: none; margin-left: 0; margin-right: 0; }
-
-/* The table scrolls inside the pane, so its scrollbars stay in view at the bottom and right of the window. */
-.task_pane.is_table { display: flex; flex-direction: column; overflow: hidden; padding-bottom: var(--space-7); }
-.task_pane.is_table > * { flex: none; }
-.task_pane.is_table > .task_list { flex: 0 1 auto; min-height: 0; margin-bottom: 0; overflow: auto; }
-
-/* The vertical scrollbar starts below the sticky header instead of running up beside it. */
-.task_pane.is_table > .task_list::-webkit-scrollbar-track:vertical { margin-top: var(--table-header-height); }
-
-.task_pane_header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-5); }
-
-.task_pane_header h1 {
-  white-space: nowrap;
-  margin: 0 0 var(--space-6);
-  color: var(--text-heading);
-  font-size: var(--text-h1);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-display);
+/* On a phone a task's details cover the tasks. */
+@media (max-width: 768px) {
+  .task_main.has_detail .task_panes { grid-template-columns: minmax(0, 1fr); }
+  .task_main.has_detail .task_pane { display: none; }
+  .detail_pane { position: static; max-height: none; padding-left: 0; border-left: 0; }
+  .detail_pane > .detail_resize { display: none; }
 }
-
-.remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
-
-/* ========================================================================== */
-/* Multibar                                                                   */
-/* ========================================================================== */
-
-.multibar {
-  display: flex;
-  flex: none;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--border-default);
-  background: var(--surface-secondary);
-}
-
-.multibar input { flex: 1; }
-
-.multibar button {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--text-on-fill);
-}
-
-.multibar button:hover { opacity: 0.85; }
-.multibar button:disabled { opacity: 0.5; cursor: default; }
 
 /* ========================================================================== */
 /* Task list                                                                  */
 /* ========================================================================== */
 
-.task_list {
-  list-style: none;
-  margin-top: 0;
-  margin-bottom: var(--space-7);
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-}
-
+.task_list { margin: 0; padding: 0; list-style: none; }
+.task_pane > .task_list { border: var(--border-width) solid var(--border-default); border-radius: var(--radius-default); }
 .task_list:empty { display: none; }
+.subtask_list { margin: 0 0 0 var(--space-7); padding: 0; list-style: none; }
+.task_group + .task_group { border-top: var(--border-width) solid var(--border-default); }
+.task_group > .task_list > .task_item:first-child > .task { border-top: 0; }
 
 .task {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
-  border-top: 1px solid var(--border-default);
+  min-height: var(--row-height);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+  border-top: var(--border-width) solid var(--border-default);
   font-size: var(--text-control);
+  cursor: pointer;
 }
-
-.task_list > .task_item:first-child > .task { border-top: 0; }
-
-.task { cursor: pointer; }
+.task_pane > .task_list > .task_item:first-child > .task { border-top: 0; }
 .task:hover { background: var(--surface-secondary); }
-.task.is_selected { background: var(--surface-navigation-hover); }
+.task.is_repeat { color: var(--text-secondary); font-style: italic; }
 
-/* A tinted row keeps its tag's shade light enough to read in either theme, and selection still shows over it. */
-.task.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
-.task.has_tint:hover { background: color-mix(in srgb, var(--tag-color) 20%, var(--surface-default)); }
-.task.has_tint.is_selected { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-navigation-hover)); }
-
-/* A row picked for a bulk action shows an accent wash and a bar down its left edge, never a tick, since a tick means done. */
-.task.is_picked,
-.task.is_picked:hover { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); box-shadow: inset 3px 0 0 var(--accent); }
-
-.task_title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notes_marker { color: var(--text-tertiary); font-size: var(--text-caption); }
-.due_label { flex: none; color: var(--text-secondary); font-size: var(--text-caption); }
+.task_title_cell { display: flex; flex: 1; align-items: center; gap: var(--space-3); min-width: 0; }
+.task_title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task_row_end { display: flex; flex: none; align-items: center; gap: var(--space-2); }
+.task_mark, .repeat_marker { flex: none; color: var(--text-tertiary); font-size: var(--text-caption); }
+.due_label { flex: none; color: var(--text-secondary); font-size: var(--text-caption); white-space: nowrap; }
 .due_label.is_overdue { color: var(--status-danger); }
-
-.task.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
-
 .row_button { visibility: hidden; }
-
-.task:hover .row_button,
-.task button:focus-visible { visibility: visible; }
-
-.row_button {
-  width: var(--row-height);
-  height: var(--row-height);
-  padding: 0;
-  border-color: transparent;
-  color: var(--text-secondary);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.row_button:hover { border-color: var(--border-default); color: var(--text-heading); }
-
-/* ========================================================================== */
-/* Task table                                                                 */
-/* ========================================================================== */
-
-/* In the list layout the cells add no boxes of their own, so the row lays out as one line. */
-.task_cell { display: contents; }
-
-.task_list.is_table {
-  --column-title-min: 240px;
-  --column-actions: 56px;
-  --table-header-height: 34px;
-}
-
-/* Rows never get narrower than every column needs, so a table with many groups scrolls sideways instead of squeezing the titles. */
-.task_list.is_table > li {
-  min-width: calc(
-    var(--space-2) + var(--space-4) + 24px + 16px + var(--column-title-min) + var(--column-actions) + 3 * var(--space-4) + var(--data-width, 0px)
-  );
-}
-
-/* Fixed-width columns on the right keep every row lined up, while nested rows give up width from the title. */
-.task_list.is_table .task,
-.task_table_header {
-  display: grid;
-  grid-template-columns:
-    24px 16px minmax(0, 1fr) var(--data-columns,) var(--column-actions);
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.task_list.is_table .task_cell { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow: hidden; }
-.task_list.is_table .actions_cell { justify-content: flex-end; }
-
-.task_table_header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  height: var(--table-header-height);
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
-  font-size: var(--text-label);
-  font-weight: 600;
-}
-
-/* A long group name is cut short so it stays inside its column. */
-.task_table_header > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* A line in the gap after each column name separates it from the next; the title's own content still cuts off at its edge. */
-.task_table_header > .header_cell { position: relative; overflow: visible; }
-.task_table_header > .header_cell::after {
-  content: "";
-  position: absolute;
-  top: calc(-1 * var(--space-2));
-  bottom: calc(-1 * var(--space-2));
-  right: calc(var(--space-4) / -2);
-  width: 1px;
-  background: var(--border-default);
-  pointer-events: none;
-}
-
-/* A column's edge is a wider strip over its separator that turns the accent colour while hovered or dragged. */
-.column_resizer {
-  position: absolute;
-  top: calc(-1 * var(--space-3));
-  bottom: calc(-1 * var(--space-3));
-  right: calc(var(--space-4) / -2 - 4px);
-  z-index: 1;
-  width: 9px;
-  cursor: col-resize;
-  touch-action: none;
-}
-.column_resizer::after { content: ""; position: absolute; inset: 0 4px; background: transparent; transition: background 120ms; }
-.column_resizer:hover::after,
-.column_resizer:focus-visible::after,
-.column_resizer.is_dragging::after { background: var(--accent); }
-.column_resizer:focus-visible { outline: none; }
-
-/* The header skips the collapse and checkbox columns, so its first cell starts at the title. */
-.task_table_header .title_cell { grid-column: 3; }
-
-.header_cell { display: flex; align-items: center; gap: var(--space-2); }
-
-/* Each column name is a button that sorts by it, styled to read as a plain heading. */
-.sort_button {
-  display: flex;
-  align-items: center;
-  flex: 0 1 auto;
-  gap: var(--space-2);
-  min-width: 0;
-  height: auto;
-  padding: 0;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-.sort_button:hover,
-.sort_button.is_sorted { color: var(--text-heading); }
-
-.sort_label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sort_marker { flex: none; font-size: 9px; }
-.sort_marker sup { margin-left: 1px; font-size: 9px; }
-
-.task_table_header .actions_cell { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
-
-/* The columns button stays in view, unlike the funnels that wait for the pointer. */
-.filter_button.columns_button { visibility: visible; }
-
-/* The header's last cell stays pinned to the right edge and grows leftwards to fit Clear, so the columns button is in reach while a wide table scrolls sideways. */
-.task_table_header > .actions_cell {
-  position: sticky;
-  right: calc(-1 * var(--space-4));
-  z-index: 2;
-  justify-self: end;
-  width: max-content;
-  margin-right: calc(-1 * var(--space-4));
-  padding-right: var(--space-4);
-  padding-left: var(--space-2);
-  overflow: visible;
-  background: var(--surface-secondary);
-}
-
-/* A column being dragged fades, and a line marks the side of the column it would land on. */
-.header_cell.is_dragged { opacity: 0.4; }
-.header_cell.drop_before { box-shadow: inset 2px 0 var(--accent); }
-.header_cell.drop_after { box-shadow: inset -2px 0 var(--accent); }
-
-.filter_popover .columns_choice input { width: auto; margin: 0; }
-.context_menu_item.columns_choice { display: flex; align-items: center; gap: var(--space-3); cursor: pointer; }
-.context_menu_item.columns_choice.is_fixed { cursor: default; opacity: 0.6; }
-.clear_filters_button { height: 22px; padding: 0 var(--space-4); font-size: var(--text-label); }
-
-/* The funnel shows when the pointer is over its column, and stays while that column is filtered or its popover is open. */
-.filter_button {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 0;
-  color: var(--text-tertiary);
-  visibility: hidden;
-}
-
-.filter_button svg { fill: currentColor; }
-.filter_button:hover { color: var(--text-heading); }
-
-.header_cell:hover .filter_button,
-.header_cell.is_filter_open .filter_button,
-.filter_button:focus-visible { visibility: visible; }
-
-.header_cell.is_filtered .filter_button { visibility: visible; color: var(--accent); }
-
-.filter_popover { max-height: 320px; overflow-y: auto; font-size: var(--text-control); }
-.filter_popover input { width: 220px; }
-.context_menu_item.is_chosen { color: var(--accent); font-weight: 600; }
-
-/* ========================================================================== */
-/* Subtasks                                                                   */
-/* ========================================================================== */
-
-.subtask_list { list-style: none; margin: 0 0 0 28px; padding: 0; }
-
-.collapse_button {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border-color: transparent;
-  color: var(--text-secondary);
-}
-
-.collapse_button:hover { border-color: transparent; color: var(--text-heading); }
-.collapse_spacer { flex: none; width: 24px; }
-
-.subtask_count {
-  padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-small);
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
-  font-size: var(--text-label);
-  font-weight: 600;
-}
-
-.subtask_form {
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-8);
-  border-top: 1px solid var(--border-default);
-}
-
+.task:hover .row_button, tr:hover .row_button, .row_button:focus-visible { visibility: visible; }
+.subtask_form { padding: var(--space-2) var(--space-4) var(--space-2) var(--space-8); }
 .subtask_form input { width: 100%; }
 
-.empty_message { color: var(--text-tertiary); font-size: var(--text-control); text-align: center; }
+.group_heading { display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-2); background: var(--surface-secondary); font-size: var(--text-caption); }
+.group_heading.is_overdue, tr.group-row.is_overdue th { color: var(--status-danger); }
+.group_count { margin-left: var(--space-3); color: var(--text-tertiary); font-weight: 400; }
 
-/* ========================================================================== */
-/* Dragging                                                                   */
-/* ========================================================================== */
-
+/* Done, opened, picked and tinted rows, the same in the list and the table. */
+.task.is_done .task_title, .task_row.is_done .task_title, .board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
+.task.is_selected, .task_row.is_selected td, .board_card.is_selected { background: var(--surface-navigation-hover); }
+.task.has_tint, .task_row.has_tint td, .board_card.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
+/* A row picked for a bulk action shows an accent wash and a bar down its left edge, never a tick, since a tick means done. */
+.task.is_picked, .task_row.is_picked td, .board_card.is_picked { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); }
+.task.is_picked, .task_row.is_picked td:first-child, .board_card.is_picked { box-shadow: inset 3px 0 0 var(--accent); }
+.task.is_dragged, .task_row.is_dragged { opacity: 0.5; }
 
 .drop_before { box-shadow: inset 0 2px 0 var(--accent); }
 .drop_after { box-shadow: inset 0 -2px 0 var(--accent); }
 .drop_inside { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* ========================================================================== */
-/* Sidebar                                                                    */
-/* ========================================================================== */
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  overflow-y: auto;
-  padding: var(--space-6) var(--space-4) 0;
-  border-right: 1px solid var(--border-default);
-  background: var(--surface-secondary);
-}
-
-.sidebar_brand {
-  margin-bottom: var(--space-5);
-  padding: 0 var(--space-4);
-  color: var(--text-heading);
-  font-size: var(--text-h3);
-  font-weight: 600;
-}
-
-.sidebar_section { display: flex; flex-direction: column; gap: var(--space-1); }
-
-/* A thin rule sits between each list and the one above it. */
-.sidebar_section + .sidebar_section { padding-top: var(--space-5); border-top: 1px solid var(--border-default); }
-
-.sidebar_heading {
-  margin: 0 0 var(--space-2);
-  padding: 0 var(--space-4);
-  color: var(--text-secondary);
-  font-size: var(--text-label);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-caps);
-  text-transform: uppercase;
-}
-
-.sidebar_item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: var(--row-height);
-  padding: var(--space-3) var(--space-4);
-  border: 0;
-  color: var(--text-body);
-  font-weight: 400;
-  text-align: left;
-  transition: background-color var(--duration-fast), color var(--duration-fast);
-}
-
-.sidebar_item:hover { background: var(--surface-navigation-hover); color: var(--text-heading); }
-
-.sidebar_item.is_selected {
-  background: var(--surface-default);
-  color: var(--text-heading);
-  font-weight: 500;
-  box-shadow: var(--shadow-item);
-}
-
-.sidebar_label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar_count { color: var(--text-tertiary); font-size: var(--text-caption); }
-
-/* The whole row is the highlighted pill, so its add and remove buttons sit inside it. */
-.sidebar_tag_row { width: auto; padding: 0 var(--space-2) 0 0; border-radius: var(--radius-small); gap: var(--space-1); }
-
-.sidebar_tag_select {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-width: 0;
-  height: 100%;
-  padding: 0 var(--space-2) 0 0;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-.sidebar_tag_row .row_button { display: none; flex: none; width: 24px; height: 24px; font-size: 16px; }
-.sidebar_tag_row:hover .row_button,
-.sidebar_tag_row:focus-within .row_button { display: block; visibility: visible; }
-
-.new_tag_form input { width: 100%; margin-top: var(--space-4); }
-
-.sidebar_group_header { display: flex; align-items: center; gap: var(--space-1); }
-.sidebar_group_header .row_button { visibility: hidden; flex: none; }
-.sidebar_group_header:hover .row_button,
-.sidebar_group_header button:focus-visible { visibility: visible; }
-
-.sidebar_group_toggle {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.chevron {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform 0.15s ease;
-}
-
-.chevron.is_open { transform: rotate(90deg); }
-.collapse_button .chevron { display: block; margin: auto; }
-
-/* The footer stays pinned to the bottom while the lists above it scroll underneath. */
-.sidebar_footer {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
-  padding-bottom: var(--space-6);
-  background: var(--surface-secondary);
-}
-
-.sidebar_icon_label { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
-
-.sidebar_icon {
-  flex: none;
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.sidebar_icon.is_spinning { animation: sidebar_icon_spin 1s linear infinite; }
-
-@keyframes sidebar_icon_spin { to { transform: rotate(360deg); } }
-
-.sync_button:disabled { cursor: default; }
-.sync_button_problem .sidebar_label { color: var(--status-danger); }
-
-/* ========================================================================== */
-/* Task detail                                                                */
-/* ========================================================================== */
-
-.task_detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  overflow-y: auto;
-  padding: var(--space-6);
-  border-left: 1px solid var(--border-default);
-  background: var(--surface-secondary);
-}
-
-.task_detail_header { display: flex; align-items: center; gap: var(--space-4); }
-.task_detail_header .remove_button { flex: none; }
-
-.task_detail .task_detail_title {
-  flex: 1;
-  min-width: 0;
-  border-color: transparent;
-  background: transparent;
-  color: var(--text-heading);
-  font-size: var(--text-h3);
-  font-weight: 600;
-}
-
-.task_detail_field { display: flex; flex-direction: column; }
-.task_detail_field .sidebar_heading { padding: 0; }
-
-.date_field { display: flex; align-items: center; gap: var(--space-3); }
-.date_field input[type="date"] { flex: 1; min-width: 0; }
-.date_field input[type="time"] { width: 96px; }
-.date_field .remove_button { flex: none; }
-
-.recurrence_button { overflow: hidden; background: var(--surface-default); font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-
-.task_detail_notes { flex: 1; min-height: 160px; }
-.task_detail_notes textarea { flex: 1; }
-
-.task_detail_footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-
-/* ========================================================================== */
-/* Settings                                                                   */
-/* ========================================================================== */
-
-.settings_group { margin-bottom: var(--space-7); }
-
-.settings_heading {
-  margin: 0 0 var(--space-4);
-  color: var(--text-secondary);
-  font-size: var(--text-label);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-caps);
-  text-transform: uppercase;
-}
-
-.setting_row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-6);
-  padding: var(--space-5) var(--space-6);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-}
-
-.setting_row + .setting_row { margin-top: var(--space-4); }
-
-label.setting_row { cursor: pointer; }
-
-.setting_text { display: flex; flex: 1; flex-direction: column; gap: var(--space-1); min-width: 0; }
-.setting_label { color: var(--text-heading); font-size: var(--text-control); font-weight: 500; }
-.setting_hint { color: var(--text-tertiary); font-size: var(--text-caption); }
-.setting_path { overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
-
-.setting_row > button { flex: none; }
-
-select {
-  flex: none;
-  height: var(--control-height);
-  padding: 0 var(--space-4);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-small);
-  background: var(--surface-default);
-  color: var(--text-body);
-  font: 400 var(--text-control) / var(--line-height-ui) var(--font-family-interface);
-  cursor: pointer;
-}
-
-select:hover { border-color: var(--border-focus); }
-
-.segmented_control {
-  display: flex;
-  flex: none;
-  padding: var(--space-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-small);
-  background: var(--surface-secondary);
-}
-
-.segmented_control button {
-  height: 26px;
-  padding: 0 var(--space-5);
-  border: 0;
-  color: var(--text-secondary);
-}
-
-.segmented_control button:hover { color: var(--text-heading); }
-
-.segmented_control button.is_selected {
-  background: var(--surface-default);
-  color: var(--text-heading);
-  box-shadow: var(--shadow-item);
-}
-
-/* On a phone the search box and the layout picker shrink to the screen rather than pushing the page sideways. */
-@media (max-width: 700px) {
-  .multibar input { min-width: 0; }
-  .segmented_control { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .segmented_control::-webkit-scrollbar { display: none; }
-  .segmented_control button { padding: 0 var(--space-3); }
-}
-
-/* ========================================================================== */
-/* Tags on tasks                                                              */
-/* ========================================================================== */
-
-.tag_chip {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-1) 0 var(--space-3);
-  border-radius: var(--radius-small);
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-}
-
-.tag_chip button {
-  padding: 0 var(--space-1);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  line-height: 1.4;
-}
-
-.tag_chip button:hover { color: var(--status-danger); }
-
-.tag_chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.tag_chips + select { margin-top: var(--space-3); }
-
-.tag_chip.is_rule { padding-right: var(--space-3); border: 1px dashed var(--border-hover); background: transparent; }
-
-/* A coloured tag is tinted with its colour and edged in it, keeping the text readable in either theme. */
-.tag_chip.has_color {
-  box-shadow: inset 0 0 0 1px var(--tag-color);
-  background: color-mix(in srgb, var(--tag-color) 18%, var(--surface-default));
-  color: var(--text-body);
-}
-
-.tag_chip.is_rule.has_color { border-color: var(--tag-color); box-shadow: none; }
-
-.tag_color_dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: var(--space-3);
-  border-radius: 50%;
-  background: var(--tag-color);
-  vertical-align: 0.05em;
-}
-
-.tag_color_picker { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-
-.tag_icon_input { width: 6em; }
-
-.tag_color_swatch {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  background: var(--tag-color);
-  background-clip: content-box;
-}
-
-.tag_color_swatch:hover { border-color: var(--border-hover); }
-.tag_color_swatch.is_chosen { border-color: var(--text-heading); }
-
-/* No colour shows as an empty ring crossed by a slash. */
-.tag_color_swatch.is_none {
-  border-color: var(--border-control);
-  background: linear-gradient(135deg, transparent 45%, var(--border-control) 45%, var(--border-control) 55%, transparent 55%);
-}
-.tag_color_swatch.is_none.is_chosen { border-color: var(--text-heading); }
-
-.tag_color_custom { width: 30px; height: 24px; padding: 0 2px; border: 2px solid transparent; border-radius: var(--radius-small); cursor: pointer; }
-.tag_color_custom.is_chosen { border-color: var(--text-heading); }
-
-/* ========================================================================== */
-/* Tag tree select                                                            */
-/* ========================================================================== */
-
-.tree_select,
-.tree_select::picker(select) { appearance: base-select; }
-
-.tree_select { display: flex; align-items: center; }
-.tree_select > button { display: contents; }
-.tree_select::picker-icon { margin-left: auto; color: var(--text-tertiary); }
-
-.tree_select::picker(select) {
-  max-height: 320px;
-  padding: var(--space-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-}
-
-.tree_select option {
-  min-height: var(--row-height);
-  padding: 0 var(--space-4) 0 calc(var(--space-4) + var(--depth, 0) * var(--space-6));
-  border-radius: var(--radius-small);
-  color: var(--text-body);
-}
-
-.tree_select option:hover,
-.tree_select option:focus-visible { background: var(--surface-navigation-hover); color: var(--text-heading); outline: none; }
-.tree_select option:checked { color: var(--accent); font-weight: 600; }
-.tree_select option:disabled { color: var(--text-tertiary); }
-
-.tree_select option .tree_option_path,
-.tree_select selectedcontent .tree_option_name { display: none; }
-.tree_select selectedcontent .tree_option_path { display: inline; }
-
-/* ========================================================================== */
-/* Undo bar                                                                   */
-/* ========================================================================== */
-
-/* Sits at the foot of the window after a removal, until it is undone or times out. */
-.undo_bar {
-  position: fixed;
-  z-index: 10;
-  bottom: var(--space-5);
-  left: 50%;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  max-width: calc(100vw - 32px);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-  transform: translateX(-50%);
-}
-
-.undo_message {
-  overflow: hidden;
-  color: var(--text-body);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.undo_button { flex: none; color: var(--accent); }
-
-/* ========================================================================== */
-/* Selection bar                                                              */
-/* ========================================================================== */
-
-/* Sits at the foot of the window while tasks are picked, holding what can be done to all of them at once. */
-.selection_bar {
-  position: fixed;
-  z-index: 10;
-  bottom: var(--space-5);
-  left: 50%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  width: max-content;
-  max-width: calc(100vw - 32px);
-  padding: var(--space-2);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-  transform: translateX(-50%);
-}
-
-.selection_bar button { border-color: transparent; }
-.selection_bar button:hover { background: var(--surface-navigation-hover); }
-.selection_close_button { width: var(--control-height); padding: 0; }
-.selection_count { padding: 0 var(--space-4) 0 var(--space-2); color: var(--accent); font-weight: 600; white-space: nowrap; cursor: help; }
-.selection_divider { align-self: stretch; width: 1px; margin: var(--space-2) var(--space-2); background: var(--border-default); }
-.selection_bar .selection_delete_button { color: var(--status-danger); }
-
-/* Picked rows fade while they are dragged together, and the pointer carries a badge saying how many there are. */
-.task.is_picked.is_dragged { opacity: 0.5; }
-
-.drag_badge {
-  position: fixed;
-  top: -100px;
-  left: 0;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-default);
-  background: var(--accent);
-  color: var(--text-on-fill);
-  font-size: var(--text-control);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* The undo bar moves up out of the way while the selection bar is showing. */
-.selection_bar ~ .undo_bar { bottom: calc(var(--space-5) + var(--control-height) + var(--space-6)); }
-
-/* ========================================================================== */
-/* Context menu                                                               */
-/* ========================================================================== */
-
-.context_menu {
-  position: fixed;
-  z-index: 10;
-  min-width: 160px;
-  margin: 0;
-  padding: var(--space-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-  list-style: none;
-  max-height: calc(100vh - 8px);
-  overflow-y: auto;
-}
-
-.context_menu_item {
-  display: block;
-  width: 100%;
-  height: var(--row-height);
-  padding: 0 var(--space-4);
-  border: 0;
-  color: var(--text-body);
-  font-weight: 400;
-  text-align: left;
-}
-
-.context_menu_item:hover,
-.context_menu_item:focus-visible { background: var(--surface-navigation-hover); color: var(--text-heading); }
-.context_menu_item.is_danger { color: var(--status-danger); }
-
-/* ========================================================================== */
-/* Reschedule                                                                 */
-/* ========================================================================== */
-
-.reschedule_button { align-self: flex-start; }
-
-.reschedule_dialog { width: min(400px, calc(100vw - 2 * var(--space-7))); }
-
-.reschedule_choices { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); }
-
-.reschedule_choice { display: flex; justify-content: space-between; gap: var(--space-4); font-weight: 400; text-align: left; }
-
-.reschedule_day { color: var(--text-tertiary); }
-
-.reschedule_choice:disabled { opacity: 0.5; cursor: default; }
-
-.settings_group > .setting_hint { display: block; margin: 0 0 var(--space-4); }
-
-.reschedule_option { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
-.reschedule_option > input:not([type]) { flex: 1; min-width: 0; }
-.reschedule_option .reschedule_days { width: 72px; }
-.reschedule_option .reschedule_rule { flex: 1; min-width: 0; }
-.reschedule_option .remove_button { flex: none; }
-.reschedule_option .saved_grouping_view { flex: 1; min-width: 0; }
-.reschedule_option .remove_button:disabled { opacity: 0.3; cursor: default; }
-.reschedule_option .tag_color_hex { flex: 1; min-width: 0; font-family: monospace; }
-
-.reschedule_add { margin-top: var(--space-4); }
-
-.duration_amount { display: flex; flex: none; align-items: center; gap: var(--space-1); color: var(--text-secondary); }
-.duration_amount input { width: 52px; }
-.duration_preview { flex: 1; min-width: 0; padding-left: var(--space-3); border-left: 1px solid var(--border-hover); overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
-
-.backup_row { gap: var(--space-3); padding: var(--space-3) var(--space-5); }
-.backup_keep { width: 72px; }
-.backup_empty { margin: var(--space-4) 0 0; }
-
-.mcp_port { width: 96px; }
-.mcp_error { margin: var(--space-4) 0 0; color: var(--status-danger); }
-.sync_input { width: 260px; }
-.settings_group > .sync_status { margin: var(--space-4) 0 0; }
-.settings_group > .sync_status_problem { color: var(--status-danger); }
-.trusted_certificate .setting_text { gap: var(--space-3); }
-.trusted_certificate_pem { width: 100%; font-family: ui-monospace, monospace; font-size: var(--text-caption); }
-
-/* ========================================================================== */
-/* Recurrence picker                                                          */
-/* ========================================================================== */
-
-.recurrence_dialog {
-  width: min(560px, calc(100vw - 2 * var(--space-7)));
-  padding: var(--space-7);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  color: var(--text-body);
-  box-shadow: var(--shadow-card);
-}
-
-.recurrence_dialog::backdrop { background: rgba(15, 23, 42, 0.4); }
-
-.recurrence_dialog_heading { margin: 0 0 var(--space-5); color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
-
-.recurrence_dialog_footer { display: flex; justify-content: flex-end; gap: var(--space-4); margin-top: var(--space-6); }
-
-.primary_button { border-color: var(--accent); background: var(--accent); color: var(--text-on-fill); }
-.primary_button:hover { opacity: 0.85; }
-
-.recurrence-input__enabled { display: flex; align-items: center; gap: var(--space-4); font-weight: 500; }
-.recurrence-input__row-label { width: 64px; color: var(--text-secondary); font-size: var(--text-control); }
-.recurrence-input__controls { gap: var(--space-3); }
-.recurrence-input__number { width: 72px; }
-/* Task dates stop at minutes, so the picker offers no secondly rule. */
-.recurrence-input__repeat option[value="SECONDLY"] { display: none; }
-
-.recurrence-input__toggle-label {
-  min-width: 40px;
-  padding: var(--space-2) var(--space-4);
-  border-color: var(--border-default);
-  border-radius: var(--radius-small);
-  font-size: var(--text-control);
-  opacity: 1;
-}
-
-.recurrence-input__toggle-label:hover { border-color: var(--accent); }
-
-.recurrence-input__toggle-input:checked + .recurrence-input__toggle-label {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--text-on-fill);
-}
-
-.recurrence-input__toggle-input:focus-visible + .recurrence-input__toggle-label {
-  outline: var(--focus-ring-width) solid var(--focus-ring);
-}
-
-.recurrence-input__summary { color: var(--text-secondary); font-size: var(--text-control); }
-.recurrence-input__summary--invalid { color: var(--status-danger); }
-
-/* ========================================================================== */
-/* My Day                                                                     */
-/* ========================================================================== */
-
-.my_day_date { color: var(--text-secondary); font-size: var(--text-control); }
-
-.clear_my_day_button { flex: none; }
-
-.clear_completed_button { flex: none; }
-
-.collapse_all_button, .expand_all_button { flex: none; }
-
-.grouping_select { flex: none; }
-.grouping_select.is_selected { border-color: var(--accent); color: var(--accent); }
-
-.save_grouping_button { flex: none; }
-
-/* ========================================================================== */
-/* Task groups                                                                */
-/* ========================================================================== */
-
-.group_heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-2);
-  background: var(--surface-secondary);
-  color: var(--text-heading);
-  font-size: var(--text-caption);
-  font-weight: 600;
-}
-.group_heading:not(:first-child) { border-top: 1px solid var(--border-default); }
-.group_heading.is_overdue { color: var(--status-danger); }
-.group_count { color: var(--text-tertiary); font-weight: 400; }
-.task_list > .group_heading + .task_item > .task { border-top: 0; }
-
-.task.is_repeat { color: var(--text-secondary); }
-.task.is_repeat .task_title { font-style: italic; }
-.repeat_marker { width: 16px; color: var(--text-tertiary); text-align: center; }
-.row_spacer { flex: none; width: var(--row-height); }
-
-.my_day_button { align-self: flex-start; }
-
-.my_day_button.is_selected { border-color: var(--accent); color: var(--accent); }
-
-/* ========================================================================== */
-/* Rule tags                                                                  */
-/* ========================================================================== */
-
-.rule_marker { color: var(--text-tertiary); font-size: var(--text-caption); font-style: italic; }
-
-.rule_dialog { width: min(640px, calc(100vw - 2 * var(--space-7))); }
-
-.filter_type { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
-.filter_type .sidebar_heading { padding: 0; }
-
-.group_dialog { width: min(480px, calc(100vw - 2 * var(--space-7))); }
-.certificate_dialog { width: min(520px, calc(100vw - 2 * var(--space-7))); }
-.certificate_details { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3) var(--space-5); margin: var(--space-5) 0; }
-.certificate_details .sidebar_heading { padding: 0; }
-.certificate_details dd { margin: 0; overflow-wrap: anywhere; }
-.group_warning { color: var(--status-danger); }
-.group_option { display: flex; align-items: flex-start; gap: var(--space-4); margin-top: var(--space-5); }
-.group_option input { margin-top: 3px; }
-
-.rule_match { display: flex; align-items: center; gap: var(--space-4); margin: var(--space-6) 0 var(--space-4); font-size: var(--text-control); }
-
-.rule_conditions { display: flex; flex-direction: column; gap: var(--space-3); margin: 0 0 var(--space-4); padding: 0; list-style: none; }
-
-.rule_condition { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.rule_condition .remove_button { margin-left: auto; }
-.rule_condition .rule_days { width: 72px; }
-.rule_condition .rule_text { flex: 1; min-width: 120px; }
-
-.rule_unit { color: var(--text-secondary); font-size: var(--text-control); }
-
-.rule_count { margin-right: auto; align-self: center; color: var(--text-tertiary); font-size: var(--text-caption); }
-
-/* ========================================================================== */
-/* Streaks                                                                    */
-/* ========================================================================== */
-
-.streak_badge { flex: none; color: var(--text-secondary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-.streak_badge.is_broken { color: var(--text-tertiary); }
-
-.streak_summary { color: var(--text-secondary); font-size: var(--text-control); }
-
-/* ========================================================================== */
-/* Reports                                                                    */
-/* ========================================================================== */
-
-.report_add_button { margin-left: auto; }
-
-.report_card {
-  margin-bottom: var(--space-6);
-  padding: var(--space-5) var(--space-6) var(--space-6);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-card);
-}
-
-.report_card_header { display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-5); }
-.report_card_header h2 { margin: 0; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
-.report_card_header .remove_button { margin-left: auto; align-self: center; }
-
-.report_card_caption { margin: 0; color: var(--text-tertiary); font-size: var(--text-caption); }
-
-.report_empty { margin: 0; color: var(--text-tertiary); font-size: var(--text-control); }
-
-.report_editor {
-  display: grid;
-  grid-template-columns: 1fr 96px;
-  gap: var(--space-4) var(--space-5);
-  margin-bottom: var(--space-6);
-  padding: var(--space-5);
-  border-radius: var(--radius-small);
-  background: var(--surface-secondary);
-}
-
-.report_editor_tags { grid-column: 1 / -1; }
-.report_editor_done { grid-column: 2; }
-
-/* The streak table */
-
-.report_table { width: 100%; border-collapse: collapse; font-size: var(--text-control); }
-.report_table th { padding: var(--space-2) var(--space-3); color: var(--text-tertiary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-align: left; text-transform: uppercase; }
-.report_table td { padding: var(--space-3); border-top: 1px solid var(--border-default); color: var(--text-body); }
-.report_table .is_number { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
-
-.report_task_link { height: auto; padding: 0; border: 0; background: transparent; color: var(--text-body); font-weight: 400; text-align: left; }
-.report_task_link:hover { color: var(--accent); }
-
-/* The calendar of ticks per day, one column per week */
-
-.report_calendar_scroll { overflow-x: auto; }
-
-.report_calendar {
-  display: grid;
-  grid-template-columns: repeat(var(--week-count), 12px);
-  grid-auto-rows: 12px;
-  gap: 3px;
-  width: max-content;
-  margin-bottom: var(--space-4);
-}
-
-.report_calendar_month { overflow: visible; color: var(--text-tertiary); font-size: var(--text-label); line-height: 12px; white-space: nowrap; }
-
-.report_calendar_day { border-radius: 2px; background: var(--surface-secondary); }
-.report_calendar_day.is_outside { background: transparent; }
-.report_calendar_day.level_1 { background: color-mix(in srgb, var(--accent) 30%, var(--surface-default)); }
-.report_calendar_day.level_2 { background: color-mix(in srgb, var(--accent) 55%, var(--surface-default)); }
-.report_calendar_day.level_3 { background: color-mix(in srgb, var(--accent) 80%, var(--surface-default)); }
-.report_calendar_day.level_4 { background: var(--accent); }
-
-.report_calendar_day:not(.is_outside):hover { outline: 2px solid var(--text-secondary); outline-offset: 1px; }
-
-/* Ticks per week */
-
-.report_week_bars { display: flex; align-items: stretch; gap: 2px; height: 96px; border-bottom: 1px solid var(--border-default); }
-.report_week { display: flex; flex: 1; align-items: flex-end; min-width: 0; }
-.report_week:hover .report_week_bar { opacity: 0.75; }
-.report_week_bar { width: 100%; min-height: 0; border-radius: 4px 4px 0 0; background: var(--accent); }
-
-.report_week_axis { display: flex; justify-content: space-between; margin-top: var(--space-2); color: var(--text-tertiary); font-size: var(--text-caption); }
-
-/* Ticks by tag */
-
-.report_tag_bars { display: flex; flex-direction: column; gap: var(--space-3); }
-
-.report_tag_row { display: grid; grid-template-columns: minmax(80px, 160px) 1fr 40px; align-items: center; gap: var(--space-4); font-size: var(--text-control); }
-.report_tag_name { overflow: hidden; color: var(--text-body); text-overflow: ellipsis; white-space: nowrap; }
-.report_tag_track { height: 10px; }
-.report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--tag-color, var(--accent)); }
-.report_tag_count { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
-
-.report_table td:first-child { padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-6)); }
-.report_table tr.is_subtask .report_task_link { color: var(--text-secondary); }
-.report_table tr.is_subtask td { border-top-style: dashed; }
-
-.report_editor_check { display: flex; grid-column: 1 / -1; align-items: center; gap: var(--space-3); color: var(--text-body); font-size: var(--text-control); cursor: pointer; }
-
-/* The table keeps its number columns in view, and a narrow strip drops its oldest dots first. */
-.report_table { table-layout: fixed; }
-.report_table .report_strip_cell { width: 30%; }
-.report_card { container-type: inline-size; }
-@container (max-width: 440px) { .report_table .report_strip_cell { display: none; } }
-.report_strip_cell .streak_strip { display: flex; flex-wrap: nowrap; justify-content: flex-end; overflow: hidden; }
-.streak_dot { flex: none; }
-
-.streak_strip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; }
-.task_detail_field .streak_strip { margin-top: var(--space-3); }
-
-.streak_dot { width: 10px; height: 10px; box-sizing: border-box; border: 2px solid var(--accent); border-radius: 50%; }
-.streak_dot.is_on_time { background: var(--accent); }
-.streak_dot.is_late { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
-.streak_dot.is_missed { border-color: var(--status-danger); background: transparent; }
-.streak_dot.is_pending { border: 2px dashed var(--border-control); background: transparent; }
-
-/* ========================================================================== */
-/* Syntax                                                                     */
-/* ========================================================================== */
-
-/* The syntax button sits quietly beside the bar, unlike the filled Add button. */
-.multibar .syntax_button {
-  flex: none;
-  border-color: var(--border-default);
-  background: var(--surface-default);
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-}
-
-.syntax_preview {
-  display: flex;
-  flex: none;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-5);
-  padding: var(--space-2) var(--space-6);
-  border-bottom: 1px solid var(--border-default);
-  background: var(--surface-secondary);
-  font-size: var(--text-caption);
-}
-
-.syntax_preview_add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.syntax_preview_label { color: var(--text-tertiary); }
-.syntax_preview_title { color: var(--text-heading); font-weight: 600; }
-.syntax_problem { color: var(--status-danger); }
-
-.syntax_setting + .syntax_setting { margin-top: var(--space-5); }
-
-.syntax_examples { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; }
-.syntax_example { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: baseline; }
-.syntax_example dt { min-width: 0; overflow-wrap: anywhere; }
-.syntax_example dd { margin: 0; color: var(--text-secondary); font-size: var(--text-caption); }
-.syntax_example code { padding: 1px var(--space-2); border-radius: var(--radius-small); background: var(--surface-secondary); font-size: var(--text-caption); }
-
-.syntax_help_dialog { width: min(680px, calc(100vw - 2 * var(--space-7))); }
-.syntax_help_section { margin-top: var(--space-6); }
-
-@media (max-width: 700px) {
-  .syntax_example { grid-template-columns: 1fr; gap: 0; }
-}
-
-.rule_row_toggle { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); color: var(--text-body); }
-
-/* The row that adds the typed task sits above the list, drawn like a task that is not there yet. */
 .add_task_row {
   display: flex;
   flex-wrap: wrap;
@@ -1516,102 +146,154 @@ select:hover { border-color: var(--border-focus); }
   gap: var(--space-2) var(--space-4);
   width: 100%;
   margin-bottom: var(--space-5);
-  padding: var(--space-4) var(--space-5);
-  border: 1px dashed var(--accent);
-  border-radius: var(--radius-default);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-default));
-  color: var(--text-body);
-  font-size: var(--text-control);
+  border-style: dashed;
+  border-color: var(--accent);
   text-align: left;
 }
-
-.add_task_row:hover,
-.add_task_row:focus-visible { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); }
 .add_task_plus { color: var(--accent); font-weight: 700; }
-.add_task_label strong { color: var(--text-heading); }
 
 /* ========================================================================== */
-/* Board, calendar and Gantt layouts                                          */
+/* Task table                                                                 */
 /* ========================================================================== */
 
-/* These layouts fill the rest of the pane below its header and scroll inside it. */
-.task_pane.is_board > .board_view,
-.task_pane.is_calendar > .calendar_view,
-.task_pane.is_gantt > .gantt_view { flex: 1 1 auto; min-height: 0; }
+.task_row { cursor: pointer; }
+.task_row td.title_column { width: 100%; }
+.task_row .task_title_cell input[type="checkbox"] { flex: none; }
+.task_row.is_repeat { color: var(--text-secondary); font-style: italic; }
 
-.board_view { display: flex; align-items: flex-start; gap: var(--space-5); overflow: auto; padding-bottom: var(--space-4); }
+/* ========================================================================== */
+/* Tags on tasks                                                              */
+/* ========================================================================== */
 
-.board_column {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  width: 272px;
-  max-height: 100%;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-default);
-  background: var(--surface-secondary);
-}
-
-.board_column.is_drop_target { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring); }
-
-.board_column_heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
-  margin: 0;
-  padding: var(--space-5) var(--space-5) var(--space-4);
-  color: var(--text-heading);
-  font-size: var(--text-control);
-  font-weight: 600;
-}
-
-.board_column_heading.is_overdue { color: var(--status-danger); }
-
-.board_cards { display: flex; flex-direction: column; gap: var(--space-4); min-height: var(--row-height); margin: 0; padding: 0 var(--space-4) var(--space-4); overflow-y: auto; list-style: none; }
-
-.board_card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-small);
-  background: var(--surface-default);
-  box-shadow: var(--shadow-item);
-  cursor: pointer;
-}
-
-.board_card:hover { border-color: var(--border-hover); }
-.board_card.is_selected { background: var(--surface-navigation-hover); }
-.board_card.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
-.board_card.is_picked { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); box-shadow: inset 3px 0 0 var(--accent); }
-.board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
-
-.board_card_title { display: flex; align-items: flex-start; gap: var(--space-4); font-size: var(--text-control); line-height: var(--line-height-ui); }
-.board_card_title input { flex: none; margin: 0; }
-.board_card_details { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.board_card_details:empty { display: none; }
-
+.tag_chip { flex: none; }
+.tag_chip button.icon { width: auto; height: auto; padding: 0 var(--space-1); border: 0; }
+.tag_chip.is_rule { border-style: dashed; }
+/* A coloured tag is tinted with its colour and edged in it, keeping the text readable in either theme. */
+.tag_chip.has_color { border-color: var(--tag-color); background: color-mix(in srgb, var(--tag-color) 18%, var(--surface-default)); color: var(--text-body); }
 .dependency_chip.is_done { color: var(--text-tertiary); text-decoration: line-through; }
+
+/* ========================================================================== */
+/* Task details                                                               */
+/* ========================================================================== */
+
+.task_detail { display: flex; flex-direction: column; gap: var(--space-5); padding-bottom: var(--space-6); }
+.task_detail .field { display: flex; }
+.task_detail_header { display: flex; align-items: center; gap: var(--space-3); }
+.task_detail_title { flex: 1; min-width: 0; font-size: var(--text-h3); font-weight: 600; }
+.task_detail_notes textarea { min-height: 120px; resize: vertical; }
+.task_detail_footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .relationship_group { display: flex; flex-direction: column; gap: var(--space-2); }
-.relationship_label { color: var(--text-secondary); font-size: var(--text-caption); }
-.relationship_dialog { width: min(560px, calc(100vw - 2 * var(--space-7))); }
-.relationship_dialog_row { display: flex; gap: var(--space-4); }
-.relationship_dialog_row select { flex: 1; min-width: 0; }
-.relationship_dialog_row select:first-child { flex: 0 1 auto; }
-.relationship_names { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); flex: 1; min-width: 0; }
+.start_button { align-self: flex-start; }
+.streak_badge { flex: none; color: var(--text-secondary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.streak_badge.is_broken { color: var(--text-tertiary); }
+
+/* ========================================================================== */
+/* Dialogs                                                                    */
+/* ========================================================================== */
+
+.dialog_form { display: flex; flex-direction: column; gap: var(--space-5); }
+.dialog_form .field { display: flex; }
+.dialog_count { margin-right: auto; align-self: center; }
+.inline_fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.inline_fields select { flex: 1; min-width: 0; }
+.tag_icon_input { width: 6em; }
+
+.reschedule_choices { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); }
+.reschedule_choice { display: flex; justify-content: space-between; gap: var(--space-4); text-align: left; }
+
+.rule_match { display: flex; align-items: center; gap: var(--space-4); }
+.rule_conditions { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.rule_condition { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.rule_condition > button:last-child { margin-left: auto; }
+.rule_days { width: 72px; }
+.rule_text { flex: 1; min-width: 120px; }
+.rule_unit { color: var(--text-secondary); font-size: var(--text-control); }
+
+.syntax_examples code { overflow-wrap: anywhere; }
+
+/* The repeat picker's own parts, laid out on the page's spacing. */
+.recurrence-input__enabled { display: flex; align-items: center; gap: var(--space-4); font-weight: 500; }
+.recurrence-input__row-label { width: 64px; color: var(--text-secondary); font-size: var(--text-control); }
+.recurrence-input__controls { gap: var(--space-3); }
+.recurrence-input__number { width: 72px; }
+/* Task dates stop at minutes, so the picker offers no secondly rule. */
+.recurrence-input__repeat option[value="SECONDLY"] { display: none; }
+.recurrence-input__toggle-label { min-width: 40px; padding: var(--space-2) var(--space-4); border-color: var(--border-default); border-radius: var(--radius-small); font-size: var(--text-control); opacity: 1; }
+.recurrence-input__toggle-input:checked + .recurrence-input__toggle-label { border-color: var(--accent); background: var(--accent); color: var(--text-on-fill); }
+.recurrence-input__toggle-input:focus-visible + .recurrence-input__toggle-label { outline: var(--focus-ring-width) solid var(--focus-ring); }
+.recurrence-input__summary { color: var(--text-secondary); font-size: var(--text-control); }
+.recurrence-input__summary--invalid { color: var(--status-danger); }
+
+/* ========================================================================== */
+/* Settings                                                                   */
+/* ========================================================================== */
+
+.reschedule_option { flex-wrap: wrap; gap: var(--space-3); }
+.reschedule_option > input:not([type]), .reschedule_rule, .tag_color_hex { flex: 1; min-width: 0; }
+.tag_color_hex { font-family: var(--font-family-monospace); }
+.reschedule_days, .backup_keep, .duration_amount input { width: 72px; }
+.mcp_port { width: 96px; }
+.sync_input { width: min(260px, 100%); }
+.reschedule_add, .report_editor_done, .report_add_button { justify-self: start; }
+.duration_amount { display: flex; align-items: center; gap: var(--space-1); color: var(--text-secondary); }
+.duration_preview { flex: 1; min-width: 0; overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+.relationship_names { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
 .relationship_names input { flex: 1; min-width: 100px; }
 
-/* The calendar and chart take the app's colours, so they follow the light and dark themes with it. */
+/* ========================================================================== */
+/* Selection bar                                                              */
+/* ========================================================================== */
+
+/* Floats at the foot of the window while tasks are picked for a bulk action. */
+.selection_bar {
+  position: fixed;
+  bottom: var(--space-5);
+  left: 50%;
+  z-index: var(--layer-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100vw - 2 * var(--space-5));
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-default);
+  box-shadow: var(--shadow-floating);
+  transform: translateX(-50%);
+}
+.selection_count { padding: 0 var(--space-4) 0 var(--space-2); color: var(--accent); font-weight: 600; white-space: nowrap; cursor: help; }
+.selection_divider { align-self: stretch; width: var(--border-width); margin: var(--space-2); background: var(--border-default); }
+/* The toasts move up out of the way while the selection bar shows. */
+body:has(.selection_bar) .toasts { bottom: calc(var(--space-5) + var(--control-height) + var(--space-6)); }
+
+/* ========================================================================== */
+/* Board                                                                      */
+/* ========================================================================== */
+
+.board_view { display: flex; align-items: flex-start; gap: var(--space-5); overflow: auto; padding-bottom: var(--space-4); }
+.board_column { display: flex; flex: none; flex-direction: column; width: 272px; border: var(--border-width) solid var(--border-default); border-radius: var(--radius-default); background: var(--surface-secondary); }
+.board_column.is_drop_target { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring); }
+.board_column_heading { display: flex; align-items: baseline; gap: var(--space-4); padding: var(--space-5) var(--space-5) var(--space-4); font-size: var(--text-control); }
+.board_column_heading.is_overdue { color: var(--status-danger); }
+.board_cards { display: flex; flex-direction: column; gap: var(--space-4); min-height: var(--row-height); margin: 0; padding: 0 var(--space-4) var(--space-4); list-style: none; }
+.board_card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-small); background: var(--surface-default); box-shadow: var(--shadow-item); cursor: pointer; }
+.board_card:hover { border-color: var(--border-hover); }
+.board_card_title { display: flex; align-items: flex-start; gap: var(--space-4); font-size: var(--text-control); }
+.board_card_details { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.board_card_details:empty { display: none; }
+.subtask_count { color: var(--text-secondary); font-size: var(--text-caption); }
+
+/* ========================================================================== */
+/* Calendar and Gantt chart                                                   */
+/* ========================================================================== */
+
+/* The calendar and chart take the page's colours, so they follow the light and dark themes with it. */
 .calendar_view { display: flex; flex-direction: column; gap: var(--space-5); }
-
 .calendar_toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.calendar_title { flex: 1; margin: 0 0 0 var(--space-4); color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; white-space: nowrap; }
-
+.calendar_title { flex: 1; margin-left: var(--space-4); white-space: nowrap; }
 .calendar_grid {
-  flex: 1 1 auto;
   min-height: 480px;
-  color: var(--text-body);
   font-size: var(--text-control);
   --fc-classic-button: var(--surface-default);
   --fc-classic-button-border: var(--border-control);
@@ -1631,14 +313,13 @@ select:hover { border-color: var(--border-focus); }
   --fc-classic-highlight: var(--focus-ring);
   --fc-classic-now: var(--status-danger);
 }
-
 .calendar_grid .is_done { opacity: 0.55; text-decoration: line-through; }
 .calendar_grid .is_selected { outline: 2px solid var(--text-heading); outline-offset: 1px; }
 .calendar_grid .calendar_repeat { opacity: 0.5; border-style: dashed; }
 
 .gantt_view {
   overflow: auto;
-  border: 1px solid var(--border-default);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-default);
   --g-arrow-color: var(--text-secondary);
   --g-bar-color: color-mix(in srgb, var(--accent) 30%, var(--surface-default));
@@ -1659,6 +340,66 @@ select:hover { border-color: var(--border-focus); }
   --g-weekend-label-color: var(--border-hover);
   --g-handle-color: var(--text-secondary);
 }
-
 .gantt_view .bar-wrapper.is_done { opacity: 0.55; }
 .gantt_view .bar-wrapper.is_selected .bar { stroke: var(--text-heading); stroke-width: 2; }
+
+/* ========================================================================== */
+/* Streaks and reports                                                        */
+/* ========================================================================== */
+
+.streak_strip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.streak_dot { flex: none; width: 10px; height: 10px; border: 2px solid var(--accent); border-radius: 50%; }
+.streak_dot.is_on_time { background: var(--accent); }
+.streak_dot.is_late { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
+.streak_dot.is_missed { border-color: var(--status-danger); background: transparent; }
+.streak_dot.is_pending { border-style: dashed; border-color: var(--border-control); background: transparent; }
+
+.report_editor { display: grid; grid-template-columns: 1fr 96px; gap: var(--space-4) var(--space-5); margin-bottom: var(--space-6); }
+.report_editor_tags { grid-column: 1 / -1; }
+
+.report_table { width: 100%; table-layout: fixed; }
+.report_table .is_number { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+.report_table td:first-child { padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-6)); }
+.report_table .report_strip_cell { width: 30%; }
+.report_strip_cell .streak_strip { display: flex; flex-wrap: nowrap; justify-content: flex-end; overflow: hidden; }
+.report_table tr.is_subtask .report_task_link { color: var(--text-secondary); }
+.report_task_link { height: auto; padding: 0; border: 0; background: transparent; text-align: left; }
+
+.report_calendar_scroll { overflow-x: auto; }
+.report_calendar { display: grid; grid-template-columns: repeat(var(--week-count), 12px); grid-auto-rows: 12px; gap: 3px; width: max-content; margin-bottom: var(--space-4); }
+.report_calendar_month { color: var(--text-tertiary); font-size: var(--text-label); line-height: 12px; white-space: nowrap; }
+.report_calendar_day { border-radius: 2px; background: var(--surface-secondary); }
+.report_calendar_day.is_outside { background: transparent; }
+.report_calendar_day.level_1 { background: color-mix(in srgb, var(--accent) 30%, var(--surface-default)); }
+.report_calendar_day.level_2 { background: color-mix(in srgb, var(--accent) 55%, var(--surface-default)); }
+.report_calendar_day.level_3 { background: color-mix(in srgb, var(--accent) 80%, var(--surface-default)); }
+.report_calendar_day.level_4 { background: var(--accent); }
+
+.report_week_bars { display: flex; align-items: stretch; gap: 2px; height: 96px; border-bottom: var(--border-width) solid var(--border-default); }
+.report_week { display: flex; flex: 1; align-items: flex-end; min-width: 0; }
+.report_week_bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); }
+.report_week_axis { display: flex; justify-content: space-between; margin-top: var(--space-2); color: var(--text-tertiary); font-size: var(--text-caption); }
+
+.report_tag_bars { display: flex; flex-direction: column; gap: var(--space-3); }
+.report_tag_row { display: grid; grid-template-columns: minmax(80px, 160px) 1fr 40px; align-items: center; gap: var(--space-4); font-size: var(--text-control); }
+.report_tag_name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report_tag_track { height: 10px; }
+.report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--tag-color, var(--accent)); }
+.report_tag_count { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ========================================================================== */
+/* Shared widgets Halon does not style yet                                    */
+/* ========================================================================== */
+
+/* These X-Libs widgets wait on Halon rules; each is drawn here only as far as the page needs. */
+.drag-badge { position: fixed; top: -100px; left: 0; padding: var(--space-2) var(--space-4); border-radius: var(--radius-default); background: var(--accent); color: var(--text-on-fill); font-weight: 600; white-space: nowrap; }
+.date-time-inputs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.color-picker { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.color-swatch { width: 22px; height: 22px; padding: 0; border: 2px solid transparent; border-radius: 50%; background: var(--swatch-color); background-clip: content-box; }
+.color-swatch[aria-checked="true"], .color-custom.chosen { border-color: var(--text-heading); }
+.color-swatch.none { border-color: var(--border-control); background: linear-gradient(135deg, transparent 45%, var(--border-control) 45%, var(--border-control) 55%, transparent 55%); }
+.color-custom { width: 30px; height: 24px; padding: 0 2px; border: 2px solid transparent; }
+tr.group-row th { background: var(--surface-secondary); font-size: var(--text-caption); text-align: left; }
+tr.drop-before td { box-shadow: inset 0 2px 0 var(--accent); }
+tr.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
+tr.drop-inside td { background: color-mix(in srgb, var(--accent) 12%, var(--surface-default)); }

@@ -1,6 +1,7 @@
 import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
+import { ordered_columns as ordered_column_ids, sorted_tree, type TreeRow } from '@x-tech-laboratories/x-libs/web/tables'
 import { days_between, duration_label, format_task_date, has_time, is_overdue, parse_task_date, task_date_of } from '@shared/schedule'
 import { by_position, children_of, task_is_in_view, type TaskNode } from './views'
 
@@ -77,14 +78,14 @@ function group_id_of(column: string): string | null {
   return column.startsWith('group:') ? column.slice('group:'.length) : null
 }
 
+// Every column after the title, in the order a table starts with.
+export function all_table_columns(tag_groups: TagGroup[]): TableColumn[] {
+  return ['date', ...OPTIONAL_COLUMNS, 'streak', ...tag_groups.map(group_column)]
+}
+
 // Lists the columns after the title in their saved order, leaving out removed groups and placing any column not yet saved just after the one before it.
 export function ordered_columns(saved_order: string[], tag_groups: TagGroup[]): TableColumn[] {
-  const all_columns: TableColumn[] = ['date', ...OPTIONAL_COLUMNS, 'streak', ...tag_groups.map(group_column)]
-  const ordered = saved_order.filter((column): column is TableColumn => all_columns.includes(column as TableColumn))
-  all_columns.forEach((column, index) => {
-    if (!ordered.includes(column)) ordered.splice(index === 0 ? 0 : ordered.indexOf(all_columns[index - 1]!) + 1, 0, column)
-  })
-  return ordered
+  return ordered_column_ids(saved_order, all_table_columns(tag_groups)) as TableColumn[]
 }
 
 // How wide a column starts, and the narrowest and widest it can be dragged to.
@@ -101,82 +102,47 @@ export function column_width(widths: Record<string, number>, column: TableColumn
   return widths[column] ?? default_column_width(column)
 }
 
-// Moves a column to just before or after another one.
-export function move_column(order: TableColumn[], column: TableColumn, target: TableColumn, is_after: boolean): TableColumn[] {
-  const rest = order.filter((each) => each !== column)
-  const index = rest.indexOf(target) + (is_after ? 1 : 0)
-  return [...rest.slice(0, index), column, ...rest.slice(index)]
-}
-
 // ============================================================================
 // Sorting
 // ============================================================================
 
-// A plain click sorts by that column alone; a Shift+click adds it to the sort or flips it; a third click takes it out.
-export function sort_after_click(sort: TableSortKey[], column: TableColumn, is_adding: boolean): TableSortKey[] {
-  const current = sort.find((key) => key.column === column)
-  const next: TableSortKey | null = !current ? { column, is_descending: false } : current.is_descending ? null : { column, is_descending: true }
-
-  if (!is_adding) {
-    if (current && sort.length === 1) return next ? [next] : []
-    return [{ column, is_descending: false }]
-  }
-
-  if (!current) return [...sort, next!]
-  return next ? sort.map((key) => (key.column === column ? next : key)) : sort.filter((key) => key.column !== column)
-}
-
-// Sorts each level of the tree on its own, so subtasks stay under their parents; an empty cell sorts last either way.
-export function sort_task_tree(
-  nodes: TaskNode[],
-  sort: TableSortKey[],
-  tags: Tag[],
-  tags_of: (task: Task) => Tag[],
-  streak_of: StreakOf,
-  date_field: TaskDateField,
+// What a column's sort value needs to know besides the task.
+export interface SortContext {
+  tags_of: (task: Task) => Tag[]
+  streak_of: StreakOf
+  date_field: TaskDateField
   last_done_of: LastDoneOf
-): TaskNode[] {
-  if (sort.length === 0) return nodes
-  const tag_rank = tag_ranks(tags, false)
-  const reversed_tag_rank = tag_ranks(tags, true)
-
-  function sort_level(level: TaskNode[]): TaskNode[] {
-    const sorted = [...level].sort((first, second) => {
-      for (const key of sort) {
-        // A descending tag column reverses each set of sibling tags but still puts a tag before the tags below it.
-        const is_tag_column = group_id_of(key.column) !== null
-        const ranks = is_tag_column && key.is_descending ? reversed_tag_rank : tag_rank
-        const flips = key.is_descending && !is_tag_column
-        const order = compare_cells(cell_value(first.task, key.column, ranks), cell_value(second.task, key.column, ranks), flips)
-        if (order !== 0) return order
-      }
-      return by_position(first.task, second.task)
-    })
-    return sorted.map((node) => ({ ...node, children: sort_level(node.children) }))
-  }
-
-  function cell_value(task: Task, column: string, ranks_by_id: Map<string, number>): CellValue {
-    if (column === 'title') return task.title
-    if (is_date_column(column)) return column_date(task, column, date_field, last_done_of)
-    if (column === 'duration') return task_duration_minutes(task)
-    if (column === 'streak') return streak_of(task)?.current ?? null
-    const group_id = group_id_of(column)
-    const ranks = tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => ranks_by_id.get(tag.id) ?? 0)
-    return ranks.length > 0 ? Math.min(...ranks) : null
-  }
-
-  return sort_level(nodes)
+  // Every tag numbered in its sidebar order, and in that order with each set of siblings reversed.
+  tag_rank: Map<string, number>
+  reversed_tag_rank: Map<string, number>
 }
 
-type CellValue = string | number | null
+// Numbers every tag in its sidebar order, so a tag column sorts the way its group reads, such as High before Low.
+export function tag_ranks(tags: Tag[], is_reversed: boolean): Map<string, number> {
+  return new Map(tags_in_sidebar_order(tags, is_reversed).map((tag, index) => [tag.id, index]))
+}
 
-function compare_cells(first: CellValue, second: CellValue, is_descending: boolean): number {
-  const is_empty = (value: CellValue) => value === null || value === ''
-  if (is_empty(first) || is_empty(second)) return Number(is_empty(first)) - Number(is_empty(second))
-  const order = typeof first === 'number' && typeof second === 'number'
-    ? first - second
-    : String(first).localeCompare(String(second), undefined, { numeric: true, sensitivity: 'base' })
-  return is_descending ? -order : order
+// The value a column sorts a task by, or null for an empty cell, which sorts last either way.
+// A descending tag column reverses each set of sibling tags but still puts a tag before the tags below it, so it hands the table a value it flips back.
+export function table_sort_value(task: Task, column: TableColumn, context: SortContext, is_descending: boolean): string | number | null {
+  if (column === 'title') return task.title
+  if (is_date_column(column)) return column_date(task, column, context.date_field, context.last_done_of)
+  if (column === 'duration') return task_duration_minutes(task)
+  if (column === 'streak') return context.streak_of(task)?.current ?? null
+  const group_id = group_id_of(column)
+  const ranks_by_id = is_descending ? context.reversed_tag_rank : context.tag_rank
+  const ranks = context.tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => ranks_by_id.get(tag.id) ?? 0)
+  if (ranks.length === 0) return null
+  return is_descending ? -Math.min(...ranks) : Math.min(...ranks)
+}
+
+// Sorts each level of the tree on its own, so subtasks stay under their parents, in the order the table shows them.
+export function sort_task_tree(nodes: TaskNode[], sort: TableSortKey[], context: SortContext): TaskNode[] {
+  if (sort.length === 0) return nodes
+  const columns = sort.map((key) => ({ id: key.column, label: key.column, sort: (node: TaskNode) => table_sort_value(node.task, key.column as TableColumn, context, key.is_descending) }))
+  const sorting = sort.map((key) => ({ key: key.column, descending: key.is_descending }))
+  const as_nodes = (rows: TreeRow<TaskNode>[]): TaskNode[] => rows.map(({ row, children }) => ({ task: row.task, children: as_nodes(children) }))
+  return as_nodes(sorted_tree(columns, nodes, sorting, (node) => node.children))
 }
 
 // Lists tags the way the sidebar shows them, each followed by the tags below it, with each set of siblings optionally reversed.
@@ -191,11 +157,6 @@ export function tags_in_sidebar_order(tags: Tag[], is_reversed: boolean = false)
   }
   visit(null)
   return ordered
-}
-
-// Numbers every tag in its sidebar order, so a tag column sorts the way its group reads, such as High before Low.
-function tag_ranks(tags: Tag[], is_reversed: boolean): Map<string, number> {
-  return new Map(tags_in_sidebar_order(tags, is_reversed).map((tag, index) => [tag.id, index]))
 }
 
 // ============================================================================

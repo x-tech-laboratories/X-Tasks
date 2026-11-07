@@ -1,6 +1,8 @@
 import 'recurrence-input'
-import { useEffect, useRef, type FormEvent } from 'react'
+import { useRef, type FormEvent } from 'react'
 import type { RecurrenceInputElement } from 'recurrence-input'
+
+import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 
 // ============================================================================
 // Recurrence picker
@@ -13,13 +15,12 @@ interface RecurrencePickerProps {
   on_close: () => void
 }
 
+const FORM_ID = 'recurrence_picker_form'
+
 // Hourly rules and set times stay available for a task without a time, which gets one when the rule is saved.
 // The picker's form refuses to submit while the rule has a field it cannot read.
 export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: RecurrencePickerProps) {
-  const dialog_ref = useRef<HTMLDialogElement>(null)
   const input_ref = useRef<RecurrenceInputElement>(null)
-
-  useEffect(() => dialog_ref.current?.showModal(), [])
 
   function save(event: FormEvent): void {
     event.preventDefault()
@@ -27,32 +28,20 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
     on_close()
   }
 
-  // Escape closes only this dialog, not the task panel behind it.
   return (
-    <dialog
-      ref={dialog_ref}
-      className="recurrence_dialog"
-      onClose={on_close}
-      onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
+    <Dialog
+      title="Repeat"
+      on_close={on_close}
+      buttons={
+        <>
+          <button type="button" onClick={on_close}>Cancel</button>
+          <button type="submit" form={FORM_ID} className="accent solid">Save</button>
+        </>
+      }
     >
-      <form onSubmit={save}>
-        <h2 className="recurrence_dialog_heading">Repeat</h2>
-        <recurrence-input
-          ref={input_ref}
-          value={recurrence}
-          features="standard"
-          time-mode="floating"
-          start={anchor ?? undefined}
-        />
-        <footer className="recurrence_dialog_footer">
-          <button type="button" onClick={on_close}>
-            Cancel
-          </button>
-          <button type="submit" className="primary_button">
-            Save
-          </button>
-        </footer>
+      <form id={FORM_ID} onSubmit={save}>
+        <recurrence-input ref={input_ref} value={recurrence} features="standard" time-mode="floating" start={anchor ?? undefined} />
       </form>
-    </dialog>
+    </Dialog>
   )
 }

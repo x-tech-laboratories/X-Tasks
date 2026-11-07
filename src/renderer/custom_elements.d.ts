@@ -1,7 +1,7 @@
 import type { HTMLAttributes, Ref } from 'react'
 import type { RecurrenceInputElement } from 'recurrence-input'
 
-// The page's own and newer HTML elements, which React's element list does not name yet.
+// The page's own HTML elements, which React's element list does not name.
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -13,7 +13,6 @@ declare module 'react' {
         'time-mode'?: 'utc' | 'floating'
         'all-day'?: boolean
       }
-      selectedcontent: HTMLAttributes<HTMLElement>
     }
   }
 }

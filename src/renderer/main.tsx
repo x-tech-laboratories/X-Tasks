@@ -2,6 +2,8 @@ import { createRoot } from 'react-dom/client'
 
 import { App } from './App'
 import { install_web_bridge } from './web_bridge'
+import '@x-tech-laboratories/halon/halon-tokens.css'
+import '@x-tech-laboratories/halon/halon.css'
 import './app.css'
 
 // The desktop app's preload has already set up the bridge; the Android build keeps its own database, and a browser talks to the web server.

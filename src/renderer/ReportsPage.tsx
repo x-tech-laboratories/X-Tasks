@@ -1,10 +1,12 @@
 import { useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { CommitInput, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
+
 import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind } from '@shared/settings'
 import { parse_task_date } from '@shared/schedule'
 import type { Completion, Tag, TagGroup, Task } from '@shared/tasks'
-import type { OpenContextMenu } from './ContextMenu'
-import { CommitInput } from './fields'
 import { StreakStrip } from './StreakStrip'
 import {
   day_offset, first_report_day, streak_rows, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of
@@ -46,10 +48,9 @@ interface ReportsPageProps {
   today: string
   on_change_widgets: (widgets: ReportWidget[]) => void
   on_select_task: (task: Task) => void
-  on_context_menu: OpenContextMenu
 }
 
-export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, today, on_change_widgets, on_select_task, on_context_menu }: ReportsPageProps) {
+export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, today, on_change_widgets, on_select_task }: ReportsPageProps) {
   const [editing_id, set_editing_id] = useState<string | null>(null)
 
   function add_widget(kind: ReportWidgetKind): void {
@@ -70,11 +71,11 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
   }
 
   function open_widget_menu(event: ReactMouseEvent, widget: ReportWidget, index: number): void {
-    on_context_menu(event, [
-      { label: 'Edit…', on_select: () => set_editing_id(widget.id) },
-      ...(index > 0 ? [{ label: 'Move up', on_select: () => move_widget(widget, -1) }] : []),
-      ...(index < widgets.length - 1 ? [{ label: 'Move down', on_select: () => move_widget(widget, 1) }] : []),
-      { label: 'Remove', is_danger: true, on_select: () => on_change_widgets(widgets.filter((each) => each.id !== widget.id)) }
+    open_context_menu(event, [
+      { label: 'Edit…', run: () => set_editing_id(widget.id) },
+      ...(index > 0 ? [{ label: 'Move up', run: () => move_widget(widget, -1) }] : []),
+      ...(index < widgets.length - 1 ? [{ label: 'Move down', run: () => move_widget(widget, 1) }] : []),
+      { label: 'Remove', danger: true, run: () => on_change_widgets(widgets.filter((each) => each.id !== widget.id)) }
     ])
   }
 
@@ -84,46 +85,50 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
         <h1>Reports</h1>
         <button
           className="report_add_button"
-          onClick={(event) => on_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, on_select: () => add_widget(kind) })))}
+          onClick={(event) => open_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, run: () => add_widget(kind) })))}
         >
           Add card
         </button>
       </header>
 
-      {widgets.length === 0 && <p className="empty_message">No cards yet. Add one to see your streaks and ticks.</p>}
+      {widgets.length === 0 && <p className="empty">No cards yet. Add one to see your streaks and ticks.</p>}
 
-      {widgets.map((widget, index) => {
-        const widget_tasks = tasks_for_widget(widget, tasks, tags)
-        const filter_names = widget.tag_ids.flatMap((tag_id) => tags.find((tag) => tag.id === tag_id)?.name ?? [])
-
-        return (
-          <section key={widget.id} className="report_card" onContextMenu={(event) => open_widget_menu(event, widget, index)}>
-            <header className="report_card_header">
-              <h2>{widget.title}</h2>
-              <span className="report_card_caption">
+      <Stack>
+        {widgets.map((widget, index) => {
+          const widget_tasks = tasks_for_widget(widget, tasks, tags)
+          const filter_names = widget.tag_ids.flatMap((tag_id) => tags.find((tag) => tag.id === tag_id)?.name ?? [])
+          const tools = (
+            <>
+              <span className="muted">
                 Last {plural(widget.days, 'day')}
                 {filter_names.length > 0 && ` · ${filter_names.join(', ')}`}
               </span>
-              <button className="remove_button" onClick={(event) => open_widget_menu(event, widget, index)} aria-label={`Options for ${widget.title}`}>
+              <button className="icon" onClick={(event) => open_widget_menu(event, widget, index)} aria-label={`Options for ${widget.title}`}>
                 ⋯
               </button>
-            </header>
+            </>
+          )
 
-            {editing_id === widget.id && (
-              <WidgetEditor widget={widget} tags={tags} tag_groups={tag_groups} on_change={update_widget} on_close={() => set_editing_id(null)} />
-            )}
+          return (
+            <div key={widget.id} onContextMenu={(event) => open_widget_menu(event, widget, index)}>
+              <Section title={widget.title} tools={tools}>
+                {editing_id === widget.id && (
+                  <WidgetEditor widget={widget} tags={tags} tag_groups={tag_groups} on_change={update_widget} on_close={() => set_editing_id(null)} />
+                )}
 
-            {widget.kind === 'streaks' && (
-              <StreakTable widget={widget} widget_tasks={widget_tasks} completions={completions} tasks={tasks} today={today} on_select_task={on_select_task} />
-            )}
-            {widget.kind === 'calendar' && <TickCalendar widget={widget} counts={ticks_per_day(widget, widget_tasks, completions, today)} today={today} />}
-            {widget.kind === 'weekly' && <WeeklyBars weeks={ticks_per_week(widget, widget_tasks, completions, today)} />}
-            {widget.kind === 'by_tag' && (
-              <TagBars rows={ticks_per_tag(widget, widget_tasks, completions, tasks, tags, today)} tags={tags} group={tag_groups.find((group) => group.id === widget.group_id)} />
-            )}
-          </section>
-        )
-      })}
+                {widget.kind === 'streaks' && (
+                  <StreakTable widget={widget} widget_tasks={widget_tasks} completions={completions} tasks={tasks} today={today} on_select_task={on_select_task} />
+                )}
+                {widget.kind === 'calendar' && <TickCalendar widget={widget} counts={ticks_per_day(widget, widget_tasks, completions, today)} today={today} />}
+                {widget.kind === 'weekly' && <WeeklyBars weeks={ticks_per_week(widget, widget_tasks, completions, today)} />}
+                {widget.kind === 'by_tag' && (
+                  <TagBars rows={ticks_per_tag(widget, widget_tasks, completions, tasks, tags, today)} tags={tags} group={tag_groups.find((group) => group.id === widget.group_id)} />
+                )}
+              </Section>
+            </div>
+          )
+        })}
+      </Stack>
     </>
   )
 }
@@ -150,34 +155,34 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
 
   return (
     <div className="report_editor">
-      <label className="task_detail_field">
-        <span className="sidebar_heading">Title</span>
+      <label className="field">
+        <span className="field-label">Title</span>
         <CommitInput value={widget.title} on_commit={(event) => on_change({ ...widget, title: event.currentTarget.value.trim() || widget.title })} />
       </label>
 
-      <label className="task_detail_field">
-        <span className="sidebar_heading">Days</span>
+      <label className="field">
+        <span className="field-label">Days</span>
         <CommitInput type="number" min={REPORT_DAYS_RANGE.min} max={REPORT_DAYS_RANGE.max} value={widget.days} on_commit={(event) => set_days(event.currentTarget.value)} />
       </label>
 
       {widget.kind === 'streaks' && (
-        <label className="report_editor_check">
-          <input type="checkbox" checked={!widget.hide_subtasks} onChange={(event) => on_change({ ...widget, hide_subtasks: !event.currentTarget.checked })} />
+        <label className="check">
+          <Switch label="Show subtasks under each routine" checked={!widget.hide_subtasks} on_change={(on) => on_change({ ...widget, hide_subtasks: !on })} />
           Show subtasks under each routine
         </label>
       )}
 
       {widget.kind === 'by_tag' && (
-        <label className="task_detail_field">
-          <span className="sidebar_heading">Split by</span>
-          <select value={widget.group_id} onChange={(event) => on_change({ ...widget, group_id: event.currentTarget.value })}>
-            {tag_groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
-          </select>
-        </label>
+        <Select
+          label="Split by"
+          options={tag_groups.map((group): [string, string] => [group.id, group.name])}
+          value={widget.group_id}
+          on_change={(group_id) => on_change({ ...widget, group_id })}
+        />
       )}
 
-      <div className="task_detail_field report_editor_tags">
-        <span className="sidebar_heading">Only tasks tagged</span>
+      <div className="field report_editor_tags">
+        <span className="field-label">Only tasks tagged</span>
         {chosen_tags.length > 0 && (
           <div className="tag_chips">
             {chosen_tags.map((tag) => (
@@ -223,7 +228,7 @@ interface StreakTableProps {
 // A subtask's streak and share count the routine's ticks it was done in, so the ones often left undone stand out.
 function StreakTable({ widget, widget_tasks, completions, tasks, today, on_select_task }: StreakTableProps) {
   const rows = streak_rows(widget, widget_tasks, completions, tasks, today)
-  if (rows.length === 0) return <p className="report_empty">No repeating tasks here.</p>
+  if (rows.length === 0) return <p className="muted">No repeating tasks here.</p>
 
   return (
     <table className="report_table">
@@ -298,7 +303,7 @@ function TickCalendar({ widget, counts, today }: TickCalendarProps) {
           })
         )}
       </div>
-      <p className="report_card_caption">{plural(total, 'tick')} in all</p>
+      <p className="muted">{plural(total, 'tick')} in all</p>
     </div>
   )
 }
@@ -339,8 +344,8 @@ interface TagBarsProps {
 }
 
 function TagBars({ rows, tags, group }: TagBarsProps) {
-  if (!group) return <p className="report_empty">Pick a tag group to split by.</p>
-  if (rows.length === 0) return <p className="report_empty">No ticks in these days.</p>
+  if (!group) return <p className="muted">Pick a tag group to split by.</p>
+  if (rows.length === 0) return <p className="muted">No ticks in these days.</p>
   const busiest = Math.max(...rows.map(({ count }) => count))
 
   return (

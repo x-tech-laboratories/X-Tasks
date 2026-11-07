@@ -1,6 +1,6 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
-  "include": ["tests/**/*", "vitest.config.ts", "src/shared/recurrence-input.d.ts"],
+  "include": ["tests/**/*", "vitest.config.ts", "src/shared/recurrence-input.d.ts", "src/preload/index.d.ts", "src/renderer/**/*.d.ts"],
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",

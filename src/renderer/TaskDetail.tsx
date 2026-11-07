@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type FormEvent, type ReactElement } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
+import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import { can_link, links_of, type SeenLink, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
+import { TagChip } from './TagChip'
 import type { TaskDateField, TaskDuration, TaskRelationship } from '@shared/settings'
 import {
   describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor,
   with_recurrence
 } from '@shared/schedule'
-import { children_of, tag_color_style, tag_path, with_icon } from './views'
+import { tag_path } from './views'
 
 // ============================================================================
 // Task detail
@@ -53,10 +56,10 @@ export function TaskDetail({
   const [is_picking_recurrence, set_is_picking_recurrence] = useState(false)
   const schedule: TaskSchedule = { start_at: task.start_at, due_at: task.due_at, recurrence: task.recurrence }
 
-  // Each field saves on blur, which happens before this closes the panel.
+  // Each field saves on blur, which happens before this closes the panel; a dialog open over it takes Escape for itself.
   useEffect(() => {
     function close_on_escape(event: KeyboardEvent): void {
-      if (event.key === 'Escape') on_close()
+      if (event.key === 'Escape' && !document.querySelector('dialog[open], [popover]:popover-open')) on_close()
     }
     window.addEventListener('keydown', close_on_escape)
     return () => window.removeEventListener('keydown', close_on_escape)
@@ -83,27 +86,15 @@ export function TaskDetail({
   }
 
   // Custom leaves the due date as it is.
-  function choose_duration(event: ChangeEvent<HTMLSelectElement>): void {
-    const chosen = durations.find((each) => each.id === (event.currentTarget as HTMLSelectElement).value)
+  function choose_duration(duration_id: string): void {
+    const chosen = durations.find((each) => each.id === duration_id)
     if (chosen && task.start_at) on_set_schedule(task, { ...schedule, due_at: due_after(task.start_at, chosen) })
   }
 
-  function add_tag(event: ChangeEvent<HTMLSelectElement>): void {
-    const select = event.currentTarget as HTMLSelectElement
-    const tag = tags.find((each) => each.id === select.value)
-    if (tag) on_tag(task, tag)
-    select.value = ''
-  }
-
   return (
-    <aside className="task_detail">
+    <aside className="task_detail" aria-label="Task details">
       <header className="task_detail_header">
-        <input
-          type="checkbox"
-          checked={task.is_done}
-          onChange={() => on_toggle(task)}
-          aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'}
-        />
+        <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
         <input
           className="task_detail_title"
           value={title_draft}
@@ -112,12 +103,12 @@ export function TaskDetail({
           onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
           aria-label="Title"
         />
-        <button className="remove_button" onClick={on_close} aria-label="Close details">
+        <button className="icon" onClick={on_close} aria-label="Close details">
           ×
         </button>
       </header>
 
-      <button className={is_in_my_day ? 'my_day_button is_selected' : 'my_day_button'} onClick={() => on_set_my_day(task, !is_in_my_day)}>
+      <button className={is_in_my_day ? 'accent solid' : undefined} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
         {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
       </button>
 
@@ -127,60 +118,61 @@ export function TaskDetail({
         if (group_tags.length === 0 && tags.some((tag) => tag.group_id === group.id)) return null
         const task_tags = group_tags.filter((tag) => task.tag_ids.includes(tag.id))
         const other_tags = group_tags.filter((tag) => !task.tag_ids.includes(tag.id))
+        const tag_by_id = (tag_id: string) => group_tags.find((tag) => tag.id === tag_id)
 
         // A one-tag-per-task group is a single choice, with None to clear it.
         if (group.is_single_choice && task_tags.length <= 1) {
           const current_tag = task_tags[0]
-
-          function choose(event: ChangeEvent<HTMLSelectElement>): void {
-            const chosen_tag = group_tags.find((tag) => tag.id === (event.currentTarget as HTMLSelectElement).value)
-            if (chosen_tag) on_tag(task, chosen_tag)
-            else if (current_tag) on_untag(task, current_tag)
-          }
-
           return (
-            <label key={group.id} className="task_detail_field">
-              <span className="sidebar_heading">{group.name}</span>
-              <TagTreeSelect value={current_tag?.id ?? ''} blank_label="None" group_tags={group_tags} tags={tags} on_change={choose} />
+            <label key={group.id} className="field">
+              <span className="field-label">{group.name}</span>
+              <TreeSelect
+                label={group.name}
+                items={group_tags}
+                name_of={(tag) => tag.name}
+                value={current_tag?.id ?? ''}
+                blank_label="None"
+                on_change={(tag_id) => {
+                  const chosen_tag = tag_by_id(tag_id)
+                  if (chosen_tag) on_tag(task, chosen_tag)
+                  else if (current_tag) on_untag(task, current_tag)
+                }}
+              />
             </label>
           )
         }
 
         return (
-          <div key={group.id} className="task_detail_field">
-            <span className="sidebar_heading">{group.name}</span>
+          <div key={group.id} className="field">
+            <span className="field-label">{group.name}</span>
             {task_tags.length > 0 && (
-              <div className="tag_chips">
-                {task_tags.map((tag) => (
-                  <span key={tag.id} className={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)}>
-                    {with_icon(tag, tag_path(tag, tags))}
-                    <button onClick={() => on_untag(task, tag)} aria-label={`Remove tag ${tag.name}`}>
-                      ×
-                    </button>
-                  </span>
-                ))}
+              <div className="chips">
+                {task_tags.map((tag) => <TagChip key={tag.id} tag={tag} label={tag_path(tag, tags)} on_remove={() => on_untag(task, tag)} />)}
               </div>
             )}
             {other_tags.length > 0 && (
-              <TagTreeSelect
+              <TreeSelect
+                label={`Add ${group.name} tag`}
+                items={group_tags}
+                name_of={(tag) => tag.name}
                 value=""
                 blank_label={`Add ${group.name.toLowerCase()} tag…`}
-                group_tags={group_tags}
-                tags={tags}
-                held_ids={task.tag_ids}
-                on_change={add_tag}
-                aria_label={`Add ${group.name} tag`}
+                disabled_ids={task.tag_ids}
+                on_change={(tag_id) => {
+                  const tag = tag_by_id(tag_id)
+                  if (tag) on_tag(task, tag)
+                }}
               />
             )}
           </div>
         )
       })}
 
-      <DateField label="Start" value={task.start_at} on_change={change_start} />
+      <DateTimeField label="Start" value={task.start_at} on_change={change_start} />
       {task.start_at && (
-        <label className="task_detail_field">
-          <span className="sidebar_heading">Duration</span>
-          <select value={duration?.id ?? ''} onChange={choose_duration}>
+        <label className="field">
+          <span className="field-label">Duration</span>
+          <select value={duration?.id ?? ''} onChange={(event) => choose_duration(event.currentTarget.value)}>
             <option value="">{task.due_at ? 'Custom' : 'None'}</option>
             {durations_for_start(durations, task.start_at).map((each) => (
               <option key={each.id} value={each.id}>
@@ -190,19 +182,19 @@ export function TaskDetail({
           </select>
         </label>
       )}
-      <DateField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
-      <DateField
+      <DateTimeField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
+      <DateTimeField
         label="Done"
         value={task.done_at && format_task_date(new Date(task.done_at), true)}
         on_change={(done_at) => on_set_done_at(task, done_at && parse_task_date(done_at).toISOString())}
       />
-      <button className="reschedule_button" onClick={() => on_reschedule(task)}>
+      <button className="start_button" onClick={() => on_reschedule(task)}>
         Reschedule…
       </button>
 
-      <div className="task_detail_field">
-        <span className="sidebar_heading">Repeat</span>
-        <button className="recurrence_button" onClick={() => set_is_picking_recurrence(true)}>
+      <div className="field">
+        <span className="field-label">Repeat</span>
+        <button className="start_button" onClick={() => set_is_picking_recurrence(true)}>
           {describe_recurrence(schedule, date_field)}
         </button>
       </div>
@@ -216,9 +208,9 @@ export function TaskDetail({
       />
 
       {streak && (
-        <div className="task_detail_field">
-          <span className="sidebar_heading">Streak</span>
-          <span className="streak_summary">
+        <div className="field">
+          <span className="field-label">Streak</span>
+          <span>
             {streak.current > 0 ? (
               <>
                 <span className="streak_badge">🔥 {streak.current}</span> in a row {task.recurrence ? 'on time' : 'done with its routine'}
@@ -241,8 +233,8 @@ export function TaskDetail({
         />
       )}
 
-      <label className="task_detail_field task_detail_notes">
-        <span className="sidebar_heading">Notes</span>
+      <label className="field task_detail_notes">
+        <span className="field-label">Notes</span>
         <textarea
           value={notes_draft}
           onChange={(event) => set_notes_draft(event.currentTarget.value)}
@@ -253,11 +245,11 @@ export function TaskDetail({
       </label>
 
       <footer className="task_detail_footer">
-        <span>
+        <span className="muted small">
           Created {new Date(task.created_at).toLocaleDateString()}
           {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
         </span>
-        <button className="danger_button" onClick={() => on_remove(task)}>
+        <button className="danger" onClick={() => on_remove(task)}>
           Delete
         </button>
       </footer>
@@ -306,18 +298,18 @@ function RelationshipsField({ task, tasks, relationships, on_link, on_unlink }: 
   const labels = [...new Set(links.map((link) => side_label(link, relationships)))]
 
   return (
-    <div className="task_detail_field">
-      <span className="sidebar_heading">Relationships</span>
+    <div className="field">
+      <span className="field-label">Relationships</span>
       {labels.map((label) => (
         <div key={label} className="relationship_group">
-          <span className="relationship_label">{label}</span>
-          <div className="tag_chips">
+          <span className="muted small">{label}</span>
+          <div className="chips">
             {links
               .filter((link) => side_label(link, relationships) === label)
               .map(({ other }) => (
-                <span key={other.id} className={other.is_done ? 'tag_chip dependency_chip is_done' : 'tag_chip dependency_chip'}>
+                <span key={other.id} className={other.is_done ? 'chip dependency_chip is_done' : 'chip dependency_chip'}>
                   {other.title}
-                  <button onClick={() => on_unlink(other)} aria-label={`Remove ${label.toLowerCase()} ${other.title}`}>
+                  <button type="button" className="icon" onClick={() => on_unlink(other)} aria-label={`Remove ${label.toLowerCase()} ${other.title}`}>
                     ×
                   </button>
                 </span>
@@ -326,13 +318,11 @@ function RelationshipsField({ task, tasks, relationships, on_link, on_unlink }: 
         </div>
       ))}
       {relationships.length > 0 && (
-        <button className="recurrence_button" onClick={() => set_is_adding(true)}>
+        <button className="start_button" onClick={() => set_is_adding(true)}>
           Add relationship…
         </button>
       )}
-      {is_adding && (
-        <RelationshipDialog task={task} tasks={tasks} relationships={relationships} on_link={on_link} on_close={() => set_is_adding(false)} />
-      )}
+      {is_adding && <RelationshipDialog task={task} tasks={tasks} relationships={relationships} on_link={on_link} on_close={() => set_is_adding(false)} />}
     </div>
   )
 }
@@ -345,14 +335,13 @@ interface RelationshipDialogProps {
   on_close: () => void
 }
 
+const RELATIONSHIP_FORM_ID = 'relationship_dialog_form'
+
 // A relationship and an open task side by side; a task already linked to this one gets the new relationship in place of its old one.
 function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: RelationshipDialogProps) {
-  const dialog_ref = useRef<HTMLDialogElement>(null)
   const sides = relationship_sides(relationships)
   const [side_key, set_side_key] = useState(sides[0]?.key ?? '')
   const [other_id, set_other_id] = useState('')
-
-  useEffect(() => dialog_ref.current?.showModal(), [])
 
   const side = sides.find((each) => each.key === side_key)
   const offered = side
@@ -369,19 +358,20 @@ function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: R
     on_close()
   }
 
-  // Escape closes only this dialog, not the task panel behind it.
   return (
-    <dialog
-      ref={dialog_ref}
-      className="recurrence_dialog relationship_dialog"
-      onClose={on_close}
-      onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
+    <Dialog
+      title="Add relationship"
+      on_close={on_close}
+      buttons={
+        <>
+          <button type="button" onClick={on_close}>Cancel</button>
+          <button type="submit" form={RELATIONSHIP_FORM_ID} className="accent solid" disabled={!other}>Add</button>
+        </>
+      }
     >
-      <form onSubmit={save}>
-        <h2 className="recurrence_dialog_heading">Add relationship</h2>
-        <p className="setting_hint">{task.title}</p>
-
-        <div className="relationship_dialog_row">
+      <form id={RELATIONSHIP_FORM_ID} className="dialog_form" onSubmit={save}>
+        <p className="setting-hint">{task.title}</p>
+        <span className="inline_fields">
           <select value={side_key} onChange={(event) => set_side_key(event.currentTarget.value)} aria-label="Relationship">
             {sides.map((each) => (
               <option key={each.key} value={each.key}>
@@ -397,104 +387,8 @@ function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: R
               </option>
             ))}
           </select>
-        </div>
-
-        <footer className="recurrence_dialog_footer">
-          <button type="button" onClick={on_close}>
-            Cancel
-          </button>
-          <button type="submit" className="primary_button" disabled={!other}>
-            Add
-          </button>
-        </footer>
+        </span>
       </form>
-    </dialog>
-  )
-}
-
-// ============================================================================
-// Tag tree select
-// ============================================================================
-
-interface TagTreeSelectProps {
-  value: string
-  blank_label: string
-  group_tags: Tag[]
-  tags: Tag[]
-  held_ids?: string[]
-  on_change: (event: ChangeEvent<HTMLSelectElement>) => void
-  aria_label?: string
-}
-
-// The open list shows the group as an indented tree, while the closed select shows the chosen tag's whole branch.
-function TagTreeSelect({ value, blank_label, group_tags, tags, held_ids = [], on_change, aria_label }: TagTreeSelectProps) {
-  const group_ids = new Set(group_tags.map((tag) => tag.id))
-
-  // Tags the task already holds stay in the tree, greyed out, so their children keep their place under them.
-  function branch(tag: Tag, depth: number): ReactElement[] {
-    return [
-      <option key={tag.id} value={tag.id} disabled={held_ids.includes(tag.id)} style={{ '--depth': depth } as CSSProperties}>
-        <span className="tree_option_name">{tag.name}</span>
-        <span className="tree_option_path">{tag_path(tag, tags)}</span>
-      </option>,
-      ...children_of(tag.id, group_tags).flatMap((child) => branch(child, depth + 1))
-    ]
-  }
-
-  return (
-    <select className="tree_select" value={value} onChange={on_change} aria-label={aria_label}>
-      <button>
-        <selectedcontent />
-      </button>
-      <option value="">{blank_label}</option>
-      {group_tags.filter((tag) => !group_ids.has(tag.parent_id ?? '')).flatMap((tag) => branch(tag, 0))}
-    </select>
-  )
-}
-
-// ============================================================================
-// Date field
-// ============================================================================
-
-interface DateFieldProps {
-  label: string
-  value: string | null
-  on_change: (value: string | null) => void
-}
-
-// The time is optional, and clearing the date clears the time with it.
-function DateField({ label, value, on_change }: DateFieldProps) {
-  const [day = '', time = ''] = value?.split('T') ?? []
-
-  function change(new_day: string, new_time: string): void {
-    if (!new_day) on_change(null)
-    else on_change(new_time ? `${new_day}T${new_time}` : new_day)
-  }
-
-  return (
-    <div className="task_detail_field">
-      <span className="sidebar_heading">{label}</span>
-      <div className="date_field">
-        <input
-          type="date"
-          value={day}
-          onChange={(event) => change(event.currentTarget.value, time)}
-          aria-label={`${label} date`}
-        />
-        {day && (
-          <input
-            type="time"
-            value={time}
-            onChange={(event) => change(day, event.currentTarget.value)}
-            aria-label={`${label} time`}
-          />
-        )}
-        {day && (
-          <button className="remove_button" onClick={() => on_change(null)} aria-label={`Clear ${label.toLowerCase()} date`}>
-            ×
-          </button>
-        )}
-      </div>
-    </div>
+    </Dialog>
   )
 }

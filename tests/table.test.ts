@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { TableSortKey } from '../src/shared/settings.ts'
+import type { Tag } from '../src/shared/tasks.ts'
 import type { RoutineStreak } from '../src/shared/streaks.ts'
 import type { Task } from '../src/shared/tasks.ts'
 import {
-  COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, column_width, default_column_width, move_column, ordered_columns, sort_after_click,
-  sort_task_tree, task_passes_filters, type TableColumn, type TableFilters
+  COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, column_width, default_column_width, ordered_columns, sort_task_tree, tag_ranks, task_passes_filters,
+  type SortContext, type TableFilters
 } from '../src/renderer/table.ts'
 import { nest_tasks, type TaskNode } from '../src/renderer/views.ts'
 import { make_group, make_tag, make_task } from './fixtures.ts'
@@ -20,42 +21,14 @@ const TODAY = '2026-03-11'
 const no_streak = (): RoutineStreak | null => null
 const never_done = (): string | null => null
 
+// What sorting needs besides the tasks: their tags, no streaks and no completions.
+function context_for(tags: Tag[], tags_of: (task: Task) => Tag[]): SortContext {
+  return { tags_of, streak_of: no_streak, date_field: 'due', last_done_of: never_done, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
+}
+
 function titles(nodes: TaskNode[]): unknown[] {
   return nodes.map((node) => (node.children.length > 0 ? [node.task.title, titles(node.children)] : node.task.title))
 }
-
-// ============================================================================
-// Sort clicks
-// ============================================================================
-
-describe('sort_after_click', () => {
-  const title_up: TableSortKey = { column: 'title', is_descending: false }
-  const title_down: TableSortKey = { column: 'title', is_descending: true }
-  const date_up: TableSortKey = { column: 'date', is_descending: false }
-
-  test('a plain click on a new column sorts by it alone, ascending', () => {
-    expect(sort_after_click([title_up], 'date', false)).toEqual([date_up])
-  })
-
-  test('plain clicks on the only sort column go ascending, descending, then off', () => {
-    expect(sort_after_click([title_up], 'title', false)).toEqual([title_down])
-    expect(sort_after_click([title_down], 'title', false)).toEqual([])
-  })
-
-  test('a plain click on one of several sort columns resets to it alone, ascending', () => {
-    expect(sort_after_click([date_up, title_down], 'title', false)).toEqual([title_up])
-  })
-
-  test('Shift+click adds a column, flips it, then takes it out, leaving the others in place', () => {
-    const added = sort_after_click([date_up], 'title', true)
-    expect(added).toEqual([date_up, title_up])
-
-    const flipped = sort_after_click(added, 'title', true)
-    expect(flipped).toEqual([date_up, title_down])
-
-    expect(sort_after_click(flipped, 'title', true)).toEqual([date_up])
-  })
-})
 
 // ============================================================================
 // Sorting the tree
@@ -73,7 +46,7 @@ describe('sort_task_tree', () => {
   const tree = nest_tasks(tasks, tasks)
 
   function sorted(sort: TableSortKey[]): unknown[] {
-    return titles(sort_task_tree(tree, sort, [], () => [], no_streak, 'due', never_done))
+    return titles(sort_task_tree(tree, sort, context_for([], () => [])))
   }
 
   test('no sort keys leaves the tree as given', () => {
@@ -107,7 +80,7 @@ describe('sort_task_tree', () => {
     ]
     const tags_of = (task: Task) => tags.filter((tag) => task.tag_ids.includes(tag.id))
     const by_group = (is_descending: boolean) =>
-      titles(sort_task_tree(nest_tasks(tagged, tagged), [{ column: `group:${group.id}`, is_descending }], tags, tags_of, no_streak, 'due', never_done))
+      titles(sort_task_tree(nest_tasks(tagged, tagged), [{ column: `group:${group.id}`, is_descending }], context_for(tags, tags_of)))
 
     expect(by_group(false)).toEqual(['three', 'two', 'one', 'four'])
     expect(by_group(true)).toEqual(['one', 'three', 'two', 'four'])
@@ -119,17 +92,6 @@ describe('sort_task_tree', () => {
 // ============================================================================
 
 describe('columns', () => {
-  test('move_column puts a column before or after its target', () => {
-    const order: TableColumn[] = ['date', 'start', 'due', 'done']
-    expect(move_column(order, 'done', 'start', false)).toEqual(['date', 'done', 'start', 'due'])
-    expect(move_column(order, 'date', 'due', true)).toEqual(['start', 'due', 'date', 'done'])
-  })
-
-  test('move_column with a missing target lands before the last column, or first when after', () => {
-    expect(move_column(['date', 'start', 'due'], 'due', 'streak', false)).toEqual(['date', 'due', 'start'])
-    expect(move_column(['date', 'start', 'due'], 'due', 'streak', true)).toEqual(['due', 'date', 'start'])
-  })
-
   test('ordered_columns drops removed groups and slots new columns in after their neighbour', () => {
     const groups = [make_group({ id: 'area' })]
     expect(ordered_columns(['streak', 'date', 'group:gone'], groups)).toEqual(['streak', 'group:area', 'date', 'start', 'due', 'done', 'duration'])

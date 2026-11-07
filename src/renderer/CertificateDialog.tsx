@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
+import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import type { ServerCertificate } from '@shared/settings'
 
 // ============================================================================
@@ -68,13 +69,12 @@ interface CertificateDialogProps {
   on_close: (is_trusted: boolean) => void
 }
 
+const FORM_ID = 'certificate_dialog_form'
+
 // Shows who the authority is and its fingerprint, so the user can check it before trusting it.
 export function CertificateDialog({ certificate, server_url, on_close }: CertificateDialogProps) {
-  const dialog_ref = useRef<HTMLDialogElement>(null)
   const [error, set_error] = useState('')
   const [is_busy, set_is_busy] = useState(false)
-
-  useEffect(() => dialog_ref.current?.showModal(), [])
 
   async function trust(event: FormEvent): Promise<void> {
     event.preventDefault()
@@ -91,35 +91,36 @@ export function CertificateDialog({ certificate, server_url, on_close }: Certifi
   }
 
   return (
-    <dialog ref={dialog_ref} className="recurrence_dialog certificate_dialog" onClose={() => on_close(false)}>
-      <form onSubmit={(event) => void trust(event)}>
-        <h2 className="recurrence_dialog_heading">Trust this server's certificate?</h2>
-        <p className="setting_hint">
+    <Dialog
+      title="Trust this server's certificate?"
+      on_close={() => on_close(false)}
+      buttons={
+        <>
+          <button type="button" onClick={() => on_close(false)}>Not now</button>
+          <button type="submit" form={FORM_ID} className="accent solid" disabled={is_busy}>Trust and sync</button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={(event) => void trust(event)}>
+        <p>
           The sync server at {new URL(server_url).host} has a certificate from an authority this device does not know. If it is the authority you set up for
           your own server, trusting it lets sync connect.
         </p>
-
-        <dl className="certificate_details">
-          <dt className="sidebar_heading">Authority</dt>
-          <dd>{certificate.subject}</dd>
-          <dt className="sidebar_heading">SHA-256 fingerprint</dt>
-          <dd className="setting_path">{certificate.fingerprint}</dd>
+        <dl className="facts facts-rows">
+          <div>
+            <dt>Authority</dt>
+            <dd>{certificate.subject}</dd>
+          </div>
+          <div>
+            <dt>SHA-256 fingerprint</dt>
+            <dd className="path">{certificate.fingerprint}</dd>
+          </div>
         </dl>
-
-        <p className="setting_hint">
+        <p className="setting-hint">
           Check the fingerprint against your authority's own copy first. A first connection is started again from Settings once the authority is trusted.
         </p>
-        {error && <p className="setting_hint group_warning">{error}</p>}
-
-        <footer className="recurrence_dialog_footer">
-          <button type="button" onClick={() => on_close(false)}>
-            Not now
-          </button>
-          <button type="submit" className="primary_button" disabled={is_busy}>
-            Trust and sync
-          </button>
-        </footer>
+        {error && <p className="tone-bad">{error}</p>}
       </form>
-    </dialog>
+    </Dialog>
   )
 }

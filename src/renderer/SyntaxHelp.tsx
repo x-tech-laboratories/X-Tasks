@@ -1,11 +1,10 @@
-import { useEffect, useRef } from 'react'
-
+import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
+import type { MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { describe_recurrence, task_date_label } from '@shared/schedule'
 import type { SyntaxId } from '@shared/settings'
 import type { Tag } from '@shared/tasks'
-import type { MenuItem } from './ContextMenu'
 import { SYNTAXES, syntax_by_id, type QuickAdd, type Syntax, type SyntaxExample } from './syntax'
-import { tag_color_style, with_icon } from './views'
+import { TagChip } from './TagChip'
 
 // ============================================================================
 // Switching
@@ -16,9 +15,11 @@ export function syntax_menu_items(
   quick_add_syntax: SyntaxId, search_syntax: SyntaxId, on_change: (key: 'quick_add_syntax' | 'search_syntax', id: SyntaxId) => void, on_open_help: () => void
 ): MenuItem[] {
   return [
-    ...SYNTAXES.map((syntax) => ({ label: `Add with ${syntax.name}`, is_chosen: syntax.id === quick_add_syntax, on_select: () => on_change('quick_add_syntax', syntax.id) })),
-    ...SYNTAXES.map((syntax) => ({ label: `Search with ${syntax.name}`, is_chosen: syntax.id === search_syntax, on_select: () => on_change('search_syntax', syntax.id) })),
-    { label: 'Syntax help…', on_select: on_open_help }
+    ...SYNTAXES.map((syntax) => ({ label: `Add with ${syntax.name}`, checked: syntax.id === quick_add_syntax, radio: true, run: () => on_change('quick_add_syntax', syntax.id) })),
+    ...SYNTAXES.map((syntax, index) => ({
+      label: `Search with ${syntax.name}`, checked: syntax.id === search_syntax, radio: true, separator_before: index === 0, run: () => on_change('search_syntax', syntax.id)
+    })),
+    { label: 'Syntax help…', separator_before: true, run: on_open_help }
   ]
 }
 
@@ -39,11 +40,7 @@ function QuickAddDetails({ quick_add, tags }: { quick_add: QuickAdd; tags: Tag[]
 
   return (
     <>
-      {added_tags.map((tag) => (
-        <span key={tag.id} className={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)}>
-          {with_icon(tag, tag.name)}
-        </span>
-      ))}
+      {added_tags.map((tag) => <TagChip key={tag.id} tag={tag} />)}
       {quick_add.start_at && <span className="due_label">Starts {task_date_label(quick_add.start_at)}</span>}
       {quick_add.due_at && <span className="due_label">Due {task_date_label(quick_add.due_at)}</span>}
       {quick_add.recurrence && <span className="due_label">↻ {describe_recurrence(quick_add)}</span>}
@@ -61,14 +58,9 @@ interface AddTaskRowProps {
 // A row that is not a task yet: pressing it adds what was typed, with the tags and dates the syntax read, and Down from the bar reaches it.
 export function AddTaskRow({ quick_add, tags, on_add, on_cancel }: AddTaskRowProps) {
   return (
-    <button
-      type="button"
-      className="add_task_row"
-      onClick={on_add}
-      onKeyDown={(event) => event.key === 'Escape' && on_cancel()}
-    >
+    <button type="button" className="add_task_row" onClick={on_add} onKeyDown={(event) => event.key === 'Escape' && on_cancel()}>
       <span className="add_task_plus" aria-hidden="true">+</span>
-      <span className="add_task_label">
+      <span>
         Add task <strong>“{quick_add.title}”</strong>
       </span>
       <QuickAddDetails quick_add={quick_add} tags={tags} />
@@ -87,9 +79,7 @@ export function SyntaxPreview({ problems }: { problems: string[] }) {
   return (
     <div className="syntax_preview" aria-live="polite">
       {problems.map((problem) => (
-        <span key={problem} className="syntax_problem">
-          {problem}
-        </span>
+        <span key={problem} className="chip tone-warn">{problem}</span>
       ))}
     </div>
   )
@@ -101,9 +91,9 @@ export function SyntaxPreview({ problems }: { problems: string[] }) {
 
 export function SyntaxExamples({ examples }: { examples: SyntaxExample[] }) {
   return (
-    <dl className="syntax_examples">
+    <dl className="facts facts-rows syntax_examples">
       {examples.map((example) => (
-        <div key={example.text} className="syntax_example">
+        <div key={example.text}>
           <dt>
             <code>{example.text}</code>
           </dt>
@@ -116,11 +106,11 @@ export function SyntaxExamples({ examples }: { examples: SyntaxExample[] }) {
 
 function SyntaxSection({ syntax, heading, examples }: { syntax: Syntax; heading: string; examples: SyntaxExample[] }) {
   return (
-    <section className="syntax_help_section">
-      <h3 className="sidebar_heading">
+    <section>
+      <h3 className="settings-heading">
         {heading}: {syntax.name}
       </h3>
-      <p className="setting_hint">{syntax.summary}</p>
+      <p className="setting-hint">{syntax.summary}</p>
       <SyntaxExamples examples={examples} />
     </section>
   )
@@ -133,22 +123,14 @@ interface SyntaxHelpDialogProps {
 }
 
 export function SyntaxHelpDialog({ quick_add_syntax, search_syntax, on_close }: SyntaxHelpDialogProps) {
-  const dialog_ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => dialog_ref.current?.showModal(), [])
   const quick_add = syntax_by_id(quick_add_syntax)
   const search = syntax_by_id(search_syntax)
 
   return (
-    <dialog ref={dialog_ref} className="recurrence_dialog syntax_help_dialog" onClose={on_close}>
-      <h2 className="recurrence_dialog_heading">Writing in the bar</h2>
-      <p className="setting_hint">Typing searches as you go, and Enter adds what you typed as a task. Pick each syntax from the button beside the bar or in Settings.</p>
+    <Dialog title="Writing in the bar" on_close={on_close} wide buttons={<button type="button" className="accent solid" onClick={on_close}>Close</button>}>
+      <p className="setting-hint">Typing searches as you go, and Enter adds what you typed as a task. Pick each syntax from the button beside the bar or in Settings.</p>
       <SyntaxSection syntax={quick_add} heading="Adding" examples={quick_add.quick_add_examples} />
       <SyntaxSection syntax={search} heading="Searching" examples={search.search_examples} />
-      <footer className="recurrence_dialog_footer">
-        <button type="button" className="primary_button" onClick={on_close}>
-          Close
-        </button>
-      </footer>
-    </dialog>
+    </Dialog>
   )
 }

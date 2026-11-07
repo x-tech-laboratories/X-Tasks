@@ -1,13 +1,28 @@
-import { useEffect, useState, type DragEvent as ReactDragEvent, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
+import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
+import { Tree, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/react/tree'
 import type { SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { TagScope, TaskDateField } from '@shared/settings'
-import type { OpenContextMenu } from './ContextMenu'
-import {
-  BUILT_IN_VIEWS, children_of, drop_placement, drop_side, is_same_view, is_tag_selected, subtree_ids, tag_color_style, task_is_in_view, with_icon, type DropPlacement,
-  type SidePlacement, type View
-} from './views'
+import { BUILT_IN_VIEWS, children_of, is_same_view, is_tag_selected, tag_color_style, task_is_in_view, with_icon, type View } from './views'
+
+// ============================================================================
+// Rows
+// ============================================================================
+
+// The tree holds each group at the top with its tags under it; a tag at the top of its group names the group as its parent.
+type SidebarRow =
+  | { id: string; parent_id: null; position: number; kind: 'group'; group: TagGroup }
+  | { id: string; parent_id: string; position: number; kind: 'tag'; tag: Tag }
+
+function group_row(group: TagGroup): SidebarRow {
+  return { id: group.id, parent_id: null, position: group.position, kind: 'group', group }
+}
+
+function tag_row(tag: Tag): SidebarRow {
+  return { id: tag.id, parent_id: tag.parent_id ?? tag.group_id, position: tag.position, kind: 'tag', tag }
+}
 
 // ============================================================================
 // Sidebar
@@ -25,55 +40,21 @@ interface SidebarProps {
   show_empty_tags: boolean
   // The task date that puts a task in Upcoming.
   date_field: TaskDateField
-  is_settings_open: boolean
   dragged_task: Task | null
   // The ids of the tag groups and tags folded shut.
   collapsed_ids: string[]
   on_set_collapsed_ids: (ids: string[]) => void
   on_select_view: (view: View) => void
   on_toggle_tag: (tag: Tag) => void
-  on_open_settings: () => void
   on_edit_tag_group: (group: TagGroup) => void
   on_remove_tag_group: (group: TagGroup) => void
-  on_move_tag_group: (dragged: TagGroup, target: TagGroup, placement: SidePlacement) => void
+  on_move_tag_group: (group: TagGroup, position: number) => void
   on_add_tag: (name: string, group_id: string, parent_id: string | null) => void
   on_add_rule_tag: (group_id: string, parent_id: string | null) => void
   on_edit_tag: (tag: Tag) => void
   on_remove_tag: (tag: Tag) => void
-  on_move_tag: (dragged: Tag, target: Tag, placement: DropPlacement) => void
+  on_move_tag: (tag: Tag, move: TreeMove) => void
   on_tag_task: (task: Task, tag: Tag) => void
-  on_context_menu: OpenContextMenu
-}
-
-// Points right when closed and turns down when open.
-function Chevron({ is_open }: { is_open: boolean }) {
-  return (
-    <svg className={is_open ? 'chevron is_open' : 'chevron'} viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M6 3.5 10.5 8 6 12.5" />
-    </svg>
-  )
-}
-
-// A cogwheel for the Settings button.
-function CogIcon() {
-  return (
-    <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
-
-// Two circling arrows for the sync button; they turn while a sync runs.
-function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
-  return (
-    <svg className={is_spinning ? 'sidebar_icon is_spinning' : 'sidebar_icon'} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
-      <path d="M3 21v-5h5" />
-      <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
-      <path d="M21 3v5h-5" />
-    </svg>
-  )
 }
 
 // Where the inline new-tag field is open: at the top of a group, or inside a tag.
@@ -83,15 +64,11 @@ interface NewTagSpot {
 }
 
 export function Sidebar({
-  tasks, tag_groups, tags, my_day_since, selected_view, tag_scope, show_empty_tags, date_field, is_settings_open, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag, on_open_settings,
-  on_edit_tag_group, on_remove_tag_group, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task, on_context_menu
+  tasks, tag_groups, tags, my_day_since, selected_view, tag_scope, show_empty_tags, date_field, dragged_task, collapsed_ids, on_set_collapsed_ids, on_select_view, on_toggle_tag,
+  on_edit_tag_group, on_remove_tag_group, on_move_tag_group, on_add_tag, on_add_rule_tag, on_edit_tag, on_remove_tag, on_move_tag, on_tag_task
 }: SidebarProps) {
   const [new_tag_spot, set_new_tag_spot] = useState<NewTagSpot | null>(null)
   const [new_tag_name, set_new_tag_name] = useState('')
-  const [dragged_tag, set_dragged_tag] = useState<Tag | null>(null)
-  const [drop_target, set_drop_target] = useState<{ tag_id: string; placement: DropPlacement } | null>(null)
-  const [dragged_group, set_dragged_group] = useState<TagGroup | null>(null)
-  const [group_drop_target, set_group_drop_target] = useState<{ group_id: string; placement: SidePlacement } | null>(null)
 
   // Completed counts its done tasks; every other view counts its open ones.
   function view_count(view: View): number {
@@ -100,31 +77,33 @@ export function Sidebar({
   }
 
   // With empty tags hidden, a tag still shows while any task has it, done or not, while it is selected, or while it holds a tag that shows.
-  function is_tag_shown(tag: Tag, group_tags: Tag[]): boolean {
+  function is_tag_shown(tag: Tag): boolean {
     if (show_empty_tags || is_tag_selected(selected_view, tag.id)) return true
     const view: View = { kind: 'tag', tag_ids: [tag.id] }
     if (tasks.some((task) => task_is_in_view(task, view, tasks, tags, my_day_since, 'all', tag_scope, date_field))) return true
-    return children_of(tag.id, group_tags).some((child) => is_tag_shown(child, group_tags))
+    return children_of(tag.id, tags).some(is_tag_shown)
   }
 
-  function shown_children(parent_id: string | null, group_tags: Tag[]): Tag[] {
-    return children_of(parent_id, group_tags).filter((tag) => is_tag_shown(tag, group_tags))
+  const rows = [...tag_groups.map(group_row), ...tags.filter(is_tag_shown).map(tag_row)]
+  const selected_ids = new Set(selected_view?.kind === 'tag' ? selected_view.tag_ids : [])
+
+  // ==========================================================================
+  // Folding
+  // ==========================================================================
+
+  // Ids of groups and tags deleted since are dropped whenever the list is saved again.
+  function save_collapsed(collapsed: Set<string>): void {
+    on_set_collapsed_ids([...collapsed].filter((id) => [...tag_groups, ...tags].some((item) => item.id === id)))
   }
 
   // ==========================================================================
   // New tags
   // ==========================================================================
 
-  // Ids of groups and tags deleted since are dropped whenever the list is saved again.
-  function set_collapsed(id: string, is_collapsed: boolean): void {
-    const other_ids = collapsed_ids.filter((each_id) => each_id !== id && [...tag_groups, ...tags].some((item) => item.id === each_id))
-    on_set_collapsed_ids(is_collapsed ? [...other_ids, id] : other_ids)
-  }
-
   // The group or tag being added to opens up so the new tag shows.
   function start_new_tag(spot: NewTagSpot): void {
     const opened_id = spot.parent_id ?? spot.group_id
-    if (collapsed_ids.includes(opened_id)) set_collapsed(opened_id, false)
+    if (collapsed_ids.includes(opened_id)) save_collapsed(new Set(collapsed_ids.filter((id) => id !== opened_id)))
     set_new_tag_spot(spot)
     set_new_tag_name('')
   }
@@ -147,17 +126,17 @@ export function Sidebar({
     stop_new_tag()
   }
 
-  function new_tag_form(spot: NewTagSpot, depth: number, placeholder: string) {
-    if (new_tag_spot?.group_id !== spot.group_id || new_tag_spot.parent_id !== spot.parent_id) return null
-
-    return (
-      <form className="new_tag_form" style={{ paddingLeft: `${depth * 16 + 24}px` }} onSubmit={submit_new_tag}>
+  const new_item = new_tag_spot && {
+    parent_id: new_tag_spot.parent_id ?? new_tag_spot.group_id,
+    form: (
+      <form onSubmit={submit_new_tag}>
         <input
           value={new_tag_name}
           onChange={(event) => set_new_tag_name(event.currentTarget.value)}
           onKeyDown={(event) => event.key === 'Escape' && stop_new_tag()}
           onBlur={stop_new_tag}
-          placeholder={placeholder}
+          placeholder="New tag"
+          aria-label="New tag"
           autoFocus
         />
       </form>
@@ -165,221 +144,204 @@ export function Sidebar({
   }
 
   // ==========================================================================
-  // Dragging
+  // Moving
   // ==========================================================================
 
-  // A dragged task drops into any tag but a rule tag; a dragged tag can land beside or inside one of its own group.
-  function placement_over(event: ReactDragEvent, tag: Tag): DropPlacement | null {
-    if (dragged_task) return tag.rule ? null : 'inside'
-    if (!dragged_tag || dragged_tag.group_id !== tag.group_id || subtree_ids(dragged_tag.id, tags).has(tag.id)) return null
-    return drop_placement(event, true)
+  // A group moves only beside another group; a tag stays in its own group, beside or inside its tags or at the top of the group.
+  function can_drop(dragged: SidebarRow, target: SidebarRow, placement: DropPlacement): boolean {
+    if (dragged.kind === 'group') return target.kind === 'group' && placement !== 'inside'
+    if (target.kind === 'group') return target.group.id === dragged.tag.group_id && placement === 'inside'
+    return target.tag.group_id === dragged.tag.group_id
   }
 
-  function tag_drag_over(event: ReactDragEvent, tag: Tag): void {
-    const placement = placement_over(event, tag)
-    if (!placement) return
-    event.preventDefault()
-    set_drop_target({ tag_id: tag.id, placement })
+  function move(row: SidebarRow, place: TreeMove): void {
+    if (row.kind === 'group') return on_move_tag_group(row.group, place.position)
+    on_move_tag(row.tag, { parent_id: place.parent_id === row.tag.group_id ? null : place.parent_id, position: place.position })
   }
 
-  function tag_drop(event: ReactDragEvent, tag: Tag): void {
-    event.preventDefault()
-    const placement = placement_over(event, tag)
-    if (dragged_task) on_tag_task(dragged_task, tag)
-    else if (dragged_tag && placement) on_move_tag(dragged_tag, tag, placement)
-    set_drop_target(null)
+  // A dragged task drops into any tag but a rule tag.
+  function accepts_task(_event: DragEvent<HTMLElement>, row: SidebarRow): boolean {
+    return dragged_task !== null && row.kind === 'tag' && !row.tag.rule
   }
 
-  function end_tag_drag(): void {
-    set_dragged_tag(null)
-    set_drop_target(null)
-  }
-
-  // A dragged group lands above or below another whole group, tags and all.
-  function group_drag_over(event: ReactDragEvent, group: TagGroup): void {
-    if (!dragged_group || dragged_group.id === group.id) return
-    event.preventDefault()
-    set_group_drop_target({ group_id: group.id, placement: drop_side(event) })
-  }
-
-  function group_drop(event: ReactDragEvent, group: TagGroup): void {
-    if (!dragged_group) return
-    event.preventDefault()
-    if (dragged_group.id !== group.id) on_move_tag_group(dragged_group, group, drop_side(event))
-    set_group_drop_target(null)
-  }
-
-  function end_group_drag(): void {
-    set_dragged_group(null)
-    set_group_drop_target(null)
+  function drop_task(_event: DragEvent<HTMLElement>, row: SidebarRow): void {
+    if (dragged_task && row.kind === 'tag') on_tag_task(dragged_task, row.tag)
   }
 
   // ==========================================================================
-  // Rows
+  // Menus
   // ==========================================================================
 
-  function view_button(view: View, label: string) {
-    const count = view_count(view)
+  function open_menu(event: MouseEvent<HTMLElement>, row: SidebarRow): void {
+    if (row.kind === 'tag') {
+      const tag = row.tag
+      return open_context_menu(event, [
+        { label: 'Edit tag…', run: () => on_edit_tag(tag) },
+        { label: 'Add tag inside', run: () => add_tag_at({ group_id: tag.group_id, parent_id: tag.id }) },
+        { label: 'Delete tag', run: () => on_remove_tag(tag), danger: true, separator_before: true }
+      ])
+    }
 
-    return (
-      <button
-        className={selected_view && is_same_view(view, selected_view) ? 'sidebar_item is_selected' : 'sidebar_item'}
-        onClick={() => on_select_view(view)}
-      >
-        <span className="sidebar_label">{label}</span>
-        {count ? <span className="sidebar_count">{count}</span> : null}
-      </button>
-    )
-  }
-
-  function tag_branch(tag: Tag, depth: number, group_tags: Tag[]) {
-    const children = shown_children(tag.id, group_tags)
-    const is_collapsed = collapsed_ids.includes(tag.id)
-    const view: View = { kind: 'tag', tag_ids: [tag.id] }
-    const count = view_count(view)
-    const row_class = [
-      'sidebar_item sidebar_tag_row',
-      is_tag_selected(selected_view, tag.id) && 'is_selected',
-      drop_target?.tag_id === tag.id && `drop_${drop_target.placement}`
-    ].filter(Boolean).join(' ')
-
-    return (
-      <div key={tag.id}>
-        <div
-          className={row_class}
-          style={{ marginLeft: `${depth * 16}px` }}
-          draggable
-          onDragStart={(event) => {
-            event.dataTransfer?.setData('text/plain', tag.id)
-            set_dragged_tag(tag)
-          }}
-          onDragEnd={end_tag_drag}
-          onDragOver={(event) => tag_drag_over(event, tag)}
-          onDragLeave={() => set_drop_target(null)}
-          onDrop={(event) => tag_drop(event, tag)}
-          onContextMenu={(event) =>
-            on_context_menu(event, [
-              { label: 'Edit tag…', on_select: () => on_edit_tag(tag) },
-              { label: 'Add tag inside', on_select: () => add_tag_at({ group_id: tag.group_id, parent_id: tag.id }) },
-              { label: 'Delete tag', on_select: () => on_remove_tag(tag), is_danger: true }
-            ])
-          }
-        >
-          {children.length > 0 ? (
-            <button
-              className="collapse_button"
-              onClick={() => set_collapsed(tag.id, !is_collapsed)}
-              aria-label={is_collapsed ? `Expand ${tag.name}` : `Collapse ${tag.name}`}
-            >
-              <Chevron is_open={!is_collapsed} />
-            </button>
-          ) : (
-            <span className="collapse_spacer" />
-          )}
-          <button className="sidebar_tag_select" onClick={() => on_toggle_tag(tag)} onDoubleClick={() => on_edit_tag(tag)}>
-            <span className="sidebar_label">
-              {tag.color && <span className="tag_color_dot" style={tag_color_style(tag)} aria-hidden="true" />}
-              {with_icon(tag, tag.name)}
-            </span>
-            {tag.rule && <span className="rule_marker" title="Rule tag: applied to every task its rule matches">ƒ</span>}
-            {count ? <span className="sidebar_count">{count}</span> : null}
-          </button>
-          <button
-            className="row_button"
-            onClick={() => add_tag_at({ group_id: tag.group_id, parent_id: tag.id })}
-            aria-label={`Add a tag inside ${tag.name}`}
-          >
-            +
-          </button>
-        </div>
-
-        {!is_collapsed && children.map((child) => tag_branch(child, depth + 1, group_tags))}
-        {new_tag_form({ group_id: tag.group_id, parent_id: tag.id }, depth + 1, `New tag in ${tag.name}`)}
-      </div>
-    )
-  }
-
-  function group_section(group: TagGroup) {
-    const group_tags = tags.filter((tag) => tag.group_id === group.id)
-    const is_collapsed = collapsed_ids.includes(group.id)
+    const group = row.group
     const index = tag_groups.findIndex((each) => each.id === group.id)
     const group_above = tag_groups[index - 1]
     const group_below = tag_groups[index + 1]
-    const section_class = [
-      'sidebar_section',
-      group_drop_target?.group_id === group.id && `drop_${group_drop_target.placement}`
-    ].filter(Boolean).join(' ')
+    const group_above_that = tag_groups[index - 2]
+    const group_below_that = tag_groups[index + 2]
+    open_context_menu(event, [
+      { label: 'Edit group…', run: () => on_edit_tag_group(group) },
+      { label: 'Add tag', run: () => add_tag_at({ group_id: group.id, parent_id: null }) },
+      ...(group_above ? [{ label: 'Move up', run: () => on_move_tag_group(group, group_above_that ? (group_above.position + group_above_that.position) / 2 : group_above.position - 1) }] : []),
+      ...(group_below ? [{ label: 'Move down', run: () => on_move_tag_group(group, group_below_that ? (group_below.position + group_below_that.position) / 2 : group_below.position + 1) }] : []),
+      { label: 'Delete group', run: () => on_remove_tag_group(group), danger: true, separator_before: true }
+    ])
+  }
 
+  // ==========================================================================
+  // Drawing
+  // ==========================================================================
+
+  function render_row(row: SidebarRow) {
+    if (row.kind === 'group') return <span className="sidebar_group_name">{row.group.name}</span>
+    const tag = row.tag
     return (
-      <section
-        key={group.id}
-        className={section_class}
-        onDragOver={(event) => group_drag_over(event, group)}
-        onDragLeave={() => set_group_drop_target(null)}
-        onDrop={(event) => group_drop(event, group)}
-      >
-        <div
-          className="sidebar_group_header"
-          draggable
-          onDragStart={(event) => {
-            event.dataTransfer?.setData('text/plain', group.id)
-            set_dragged_group(group)
-          }}
-          onDragEnd={end_group_drag}
-          onContextMenu={(event) =>
-            on_context_menu(event, [
-              { label: 'Edit group…', on_select: () => on_edit_tag_group(group) },
-              { label: 'Add tag', on_select: () => add_tag_at({ group_id: group.id, parent_id: null }) },
-              ...(group_above ? [{ label: 'Move up', on_select: () => on_move_tag_group(group, group_above, 'before') }] : []),
-              ...(group_below ? [{ label: 'Move down', on_select: () => on_move_tag_group(group, group_below, 'after') }] : []),
-              { label: 'Delete group', on_select: () => on_remove_tag_group(group), is_danger: true }
-            ])
-          }
-        >
-          <button
-            className="sidebar_heading sidebar_group_toggle"
-            onClick={() => set_collapsed(group.id, !is_collapsed)}
-            onDoubleClick={() => on_edit_tag_group(group)}
-            aria-expanded={!is_collapsed}
-          >
-            <Chevron is_open={!is_collapsed} />
-            {group.name}
-          </button>
-          <button
-            className="row_button"
-            onClick={() => add_tag_at({ group_id: group.id, parent_id: null })}
-            aria-label={`Add a tag to ${group.name}`}
-          >
-            +
-          </button>
-        </div>
-
-        {!is_collapsed && shown_children(null, group_tags).map((tag) => tag_branch(tag, 0, group_tags))}
-        {new_tag_form({ group_id: group.id, parent_id: null }, 0, `New tag in ${group.name}`)}
-      </section>
+      <span className="sidebar_tag_name">
+        {tag.color && <span className="tag_color_dot" style={tag_color_style(tag) as CSSProperties | undefined} aria-hidden="true" />}
+        {with_icon(tag, tag.name)}
+      </span>
     )
   }
 
-  return (
-    <nav className="sidebar">
-      <div className="sidebar_brand">X-Tasks</div>
-
-      <section className="sidebar_section">
-        {BUILT_IN_VIEWS.map(({ view, label }) => <div key={view.kind}>{view_button(view, label)}</div>)}
-      </section>
-
-      {tag_groups.map(group_section)}
-
-      <section className="sidebar_section sidebar_footer">
-        <SyncButton on_open_settings={on_open_settings} />
-        <button className={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>
-          <span className="sidebar_icon_label">
-            <CogIcon />
-            <span className="sidebar_label">Settings</span>
-          </span>
+  function render_extra(row: SidebarRow) {
+    const spot = row.kind === 'group' ? { group_id: row.group.id, parent_id: null } : { group_id: row.tag.group_id, parent_id: row.tag.id }
+    const count = row.kind === 'tag' ? view_count({ kind: 'tag', tag_ids: [row.tag.id] }) : 0
+    const name = row.kind === 'group' ? row.group.name : row.tag.name
+    return (
+      <>
+        {row.kind === 'tag' && row.tag.rule && <span className="muted" title="Rule tag: applied to every task its rule matches">ƒ</span>}
+        {count > 0 && <span className="sidebar_count">{count}</span>}
+        <button
+          type="button"
+          className="icon sidebar_add"
+          onClick={(event) => {
+            event.stopPropagation()
+            add_tag_at(spot)
+          }}
+          aria-label={row.kind === 'group' ? `Add a tag to ${name}` : `Add a tag inside ${name}`}
+        >
+          +
         </button>
-      </section>
-    </nav>
+      </>
+    )
+  }
+
+  // A group row folds its tags; a tag row selects it.
+  function select(row: SidebarRow): void {
+    if (row.kind === 'tag') return on_toggle_tag(row.tag)
+    const collapsed = new Set(collapsed_ids)
+    if (collapsed.has(row.id)) collapsed.delete(row.id)
+    else collapsed.add(row.id)
+    save_collapsed(collapsed)
+  }
+
+  return (
+    <>
+      <div className="sidebar_views">
+        {BUILT_IN_VIEWS.map(({ view, label }) => {
+          const is_active = selected_view !== null && is_same_view(view, selected_view)
+          const count = view_count(view)
+          return (
+            <a
+              key={view.kind}
+              href={`?view=${view.kind}`}
+              className={is_active ? 'active' : undefined}
+              aria-current={is_active ? 'page' : undefined}
+              onClick={(event) => {
+                event.preventDefault()
+                on_select_view(view)
+              }}
+            >
+              <span>{label}</span>
+              {count > 0 && <span className="sidebar_count">{count}</span>}
+            </a>
+          )
+        })}
+      </div>
+
+      <Tree
+        items={rows}
+        label="Tags"
+        render_item={render_row}
+        render_extra={render_extra}
+        name_of={(row) => (row.kind === 'group' ? row.group.name : row.tag.name)}
+        row_class={(row) => (row.kind === 'group' ? 'sidebar_group_row' : undefined)}
+        collapsed={new Set(collapsed_ids)}
+        on_collapsed_change={save_collapsed}
+        selected_ids={selected_ids}
+        on_select={select}
+        on_activate={(row) => (row.kind === 'group' ? on_edit_tag_group(row.group) : on_edit_tag(row.tag))}
+        on_move={move}
+        can_drop={can_drop}
+        new_item={new_item}
+        on_context_menu={open_menu}
+        accepts_external={accepts_task}
+        on_external_drop={drop_task}
+      />
+    </>
+  )
+}
+
+// ============================================================================
+// Sidebar foot
+// ============================================================================
+
+interface SidebarFootProps {
+  is_settings_open: boolean
+  on_open_settings: () => void
+}
+
+// The sync button and the way into Settings, at the foot of the sidebar.
+export function SidebarFoot({ is_settings_open, on_open_settings }: SidebarFootProps) {
+  return (
+    <div className="sidebar_foot">
+      <SyncButton on_open_settings={on_open_settings} />
+      <a
+        href="?settings"
+        className={is_settings_open ? 'active' : undefined}
+        aria-current={is_settings_open ? 'page' : undefined}
+        onClick={(event) => {
+          event.preventDefault()
+          on_open_settings()
+        }}
+      >
+        <span className="sidebar_icon_label">
+          <CogIcon />
+          <span>Settings</span>
+        </span>
+      </a>
+    </div>
+  )
+}
+
+// A cogwheel for the Settings link.
+function CogIcon() {
+  return (
+    <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+// Two circling arrows for the sync button; they turn while a sync runs.
+function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
+  return (
+    <svg className={is_spinning ? 'sidebar_icon is_spinning' : 'sidebar_icon'} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
+      <path d="M3 21v-5h5" />
+      <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
   )
 }
 
@@ -431,15 +393,10 @@ function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
   }
 
   return (
-    <button
-      className={needs_user ? 'sidebar_item sync_button sync_button_problem' : 'sidebar_item sync_button'}
-      title={sync_tooltip(status)}
-      disabled={status.state === 'syncing'}
-      onClick={click}
-    >
+    <button className={needs_user ? 'sync_button tone-bad' : 'sync_button'} title={sync_tooltip(status)} disabled={status.state === 'syncing'} onClick={click}>
       <span className="sidebar_icon_label">
         <SyncIcon is_spinning={status.state === 'syncing'} />
-        <span className="sidebar_label">{sync_label(status)}</span>
+        <span>{sync_label(status)}</span>
       </span>
       {status.pending_changes > 0 && <span className="sidebar_count">{status.pending_changes} pending</span>}
     </button>
