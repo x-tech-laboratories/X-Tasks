@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 // ============================================================================
 // Context menu
@@ -18,7 +18,14 @@ export interface OpenMenu {
   items: MenuItem[]
 }
 
-export type OpenContextMenu = (event: MouseEvent, items: MenuItem[]) => void
+// Anything with a pointer position, such as a right-click or a button press.
+export interface MenuPlace {
+  clientX: number
+  clientY: number
+  preventDefault: () => void
+}
+
+export type OpenContextMenu = (event: MenuPlace, items: MenuItem[]) => void
 
 interface ContextMenuProps {
   menu: OpenMenu
@@ -63,13 +70,13 @@ export function ContextMenu({ menu, on_close }: ContextMenuProps) {
   }, [on_close])
 
   return (
-    <ul ref={menu_element} class="context_menu" role="menu" style={{ left: `${position.left}px`, top: `${position.top}px` }}>
+    <ul ref={menu_element} className="context_menu" role="menu" style={{ left: `${position.left}px`, top: `${position.top}px` }}>
       {menu.items.map((item) => (
         <li key={item.label} role="none">
           <button
             role={item.is_chosen === undefined ? 'menuitem' : 'menuitemcheckbox'}
             aria-checked={item.is_chosen}
-            class={['context_menu_item', item.is_danger && 'is_danger', item.is_chosen && 'is_chosen'].filter(Boolean).join(' ')}
+            className={['context_menu_item', item.is_danger && 'is_danger', item.is_chosen && 'is_chosen'].filter(Boolean).join(' ')}
             onClick={() => {
               on_close()
               item.on_select()

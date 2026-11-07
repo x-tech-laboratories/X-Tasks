@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 
@@ -41,7 +41,7 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
   const rule_count = group_tags.filter((tag) => tag.rule).length
   const is_changing_type = group !== null && group.is_rule !== is_rule_draft
 
-  function save(event: Event): void {
+  function save(event: FormEvent): void {
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
@@ -65,28 +65,28 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
   return (
     <dialog
       ref={dialog_ref}
-      class="recurrence_dialog group_dialog"
+      className="recurrence_dialog group_dialog"
       onClose={on_close}
       onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
     >
       <form onSubmit={save}>
-        <h2 class="recurrence_dialog_heading">{heading}</h2>
+        <h2 className="recurrence_dialog_heading">{heading}</h2>
 
-        <label class="task_detail_field">
-          <span class="sidebar_heading">Name</span>
-          <input value={name_draft} onInput={(event) => set_name_draft(event.currentTarget.value)} placeholder="Context" autofocus />
+        <label className="task_detail_field">
+          <span className="sidebar_heading">Name</span>
+          <input value={name_draft} onChange={(event) => set_name_draft(event.currentTarget.value)} placeholder="Context" autoFocus />
         </label>
 
-        <div class="filter_type">
-          <span class="sidebar_heading">Type</span>
-          <div class="segmented_control" role="radiogroup" aria-label="Type">
+        <div className="filter_type">
+          <span className="sidebar_heading">Type</span>
+          <div className="segmented_control" role="radiogroup" aria-label="Type">
             {TYPE_CHOICES.map(({ value, label }) => (
               <button
                 key={label}
                 type="button"
                 role="radio"
                 aria-checked={is_rule_draft === value}
-                class={is_rule_draft === value ? 'is_selected' : ''}
+                className={is_rule_draft === value ? 'is_selected' : ''}
                 onClick={() => set_is_rule_draft(value)}
               >
                 {label}
@@ -95,33 +95,33 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
           </div>
         </div>
 
-        <p class="setting_hint">
+        <p className="setting_hint">
           {is_rule_draft
             ? 'Each tag applies itself to every task its rule matches, such as Overdue or Completed routines.'
             : 'Tags are given to tasks by hand, from their detail panel or by dragging them onto a tag.'}
         </p>
-        {warning && <p class="setting_hint group_warning">{warning}</p>}
+        {warning && <p className="setting_hint group_warning">{warning}</p>}
 
         {/* Rules can match a task several times over, so only a plain group can limit a task to one tag. */}
         {!is_rule_draft && (
-          <label class="group_option">
+          <label className="group_option">
             <input
               type="checkbox"
               checked={is_single_choice_draft}
               onChange={(event) => set_is_single_choice_draft(event.currentTarget.checked)}
             />
-            <span class="setting_text">
-              <span class="setting_label">One tag per task</span>
-              <span class="setting_hint">Giving a task another tag from this group replaces the one it had. Tasks already holding several keep them.</span>
+            <span className="setting_text">
+              <span className="setting_label">One tag per task</span>
+              <span className="setting_hint">Giving a task another tag from this group replaces the one it had. Tasks already holding several keep them.</span>
             </span>
           </label>
         )}
 
-        <footer class="recurrence_dialog_footer">
+        <footer className="recurrence_dialog_footer">
           <button type="button" onClick={on_close}>
             Cancel
           </button>
-          <button type="submit" class="primary_button" disabled={!name_draft.trim()}>
+          <button type="submit" className="primary_button" disabled={!name_draft.trim()}>
             Save
           </button>
         </footer>

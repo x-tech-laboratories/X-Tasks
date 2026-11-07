@@ -1,5 +1,5 @@
-import { Fragment } from 'preact'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import { Fragment } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
@@ -852,13 +852,13 @@ export function App() {
     )
   }
 
-  function open_tag_menu(event: MouseEvent): void {
+  function open_tag_menu(event: ReactMouseEvent): void {
     const button = (event.currentTarget as HTMLElement).getBoundingClientRect()
     set_context_menu({ x: button.left, y: button.top, items: tag_menu_items() })
   }
 
   // The same actions as the bar at the foot of the window, for a right-click on any picked row.
-  function open_bulk_menu(event: MouseEvent): void {
+  function open_bulk_menu(event: ReactMouseEvent): void {
     const has_open = picked_tasks.some((task) => !task.is_done)
     const has_done = picked_tasks.some((task) => task.is_done)
     open_context_menu(event, [
@@ -937,25 +937,25 @@ export function App() {
   const has_collapsed_parent = parent_ids.some((id) => settings.collapsed_task_ids.includes(id))
 
   return (
-    <div class="app">
-      <form class="multibar" onSubmit={(event) => event.preventDefault()}>
-        <button type="button" class="menu_button" onClick={() => set_is_sidebar_open(!is_sidebar_open)} aria-label="Menu" aria-expanded={is_sidebar_open}>
+    <div className="app">
+      <form className="multibar" onSubmit={(event) => event.preventDefault()}>
+        <button type="button" className="menu_button" onClick={() => set_is_sidebar_open(!is_sidebar_open)} aria-label="Menu" aria-expanded={is_sidebar_open}>
           ☰
         </button>
         <input
           value={multibar_text}
-          onInput={(event) => change_multibar_text(event.currentTarget.value)}
+          onChange={(event) => change_multibar_text(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape') set_multibar_text('')
             if (event.key === 'ArrowDown') document.querySelector<HTMLElement>('.add_task_row')?.focus()
           }}
           placeholder={can_add_task ? 'Search, or type a task to add' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
           aria-label="Search or add a task"
-          autofocus={!IS_TOUCH_SCREEN}
+          autoFocus={!IS_TOUCH_SCREEN}
         />
         <button
           type="button"
-          class="syntax_button"
+          className="syntax_button"
           onClick={(event) =>
             open_context_menu(
               event,
@@ -970,8 +970,8 @@ export function App() {
       <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
 
       <div
-        class={`app_body${selected_task ? ' has_detail' : ''}${is_sidebar_open ? ' is_sidebar_open' : ''}`}
-        style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` }}
+        className={`app_body${selected_task ? ' has_detail' : ''}${is_sidebar_open ? ' is_sidebar_open' : ''}`}
+        style={{ '--sidebar-width': `${settings.sidebar_width}px`, '--detail-width': `${settings.detail_width}px` } as CSSProperties}
       >
         <Sidebar
           tasks={tasks}
@@ -1003,7 +1003,7 @@ export function App() {
           on_tag_task={tag_dragged_tasks}
           on_context_menu={open_context_menu}
         />
-        {is_sidebar_open && <button class="sidebar_backdrop" onClick={() => set_is_sidebar_open(false)} aria-label="Close menu" />}
+        {is_sidebar_open && <button className="sidebar_backdrop" onClick={() => set_is_sidebar_open(false)} aria-label="Close menu" />}
         <ResizeHandle
           side="left"
           width={settings.sidebar_width}
@@ -1015,7 +1015,7 @@ export function App() {
           label="Resize sidebar"
         />
 
-        <main class={is_wide && !is_settings_open ? `task_pane is_table is_${layout}` : 'task_pane'}>
+        <main className={is_wide && !is_settings_open ? `task_pane is_table is_${layout}` : 'task_pane'}>
           {is_settings_open ? (
             <SettingsPage
               settings={settings}
@@ -1040,37 +1040,37 @@ export function App() {
             />
           ) : (
             <>
-              <header class="task_pane_header">
+              <header className="task_pane_header">
                 <h1>{view_title(selected_view, tags)}</h1>
                 {selected_view.kind === 'my_day' && (
-                  <span class="my_day_date">
+                  <span className="my_day_date">
                     {parse_task_date(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
                   </span>
                 )}
-                <span class="remaining_count">{remaining_count} left</span>
+                <span className="remaining_count">{remaining_count} left</span>
                 {selected_view.kind === 'my_day' && visible_tasks.length > 0 && (
-                  <button class="clear_my_day_button" onClick={clear_my_day}>
+                  <button className="clear_my_day_button" onClick={clear_my_day}>
                     Clear
                   </button>
                 )}
                 {clearable_tasks.length > 0 && (
-                  <button class="clear_completed_button" onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
+                  <button className="clear_completed_button" onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
                     Clear completed
                   </button>
                 )}
                 {parent_ids.length > 0 && (layout === 'list' || layout === 'table' || layout === 'gantt') && (
                   <>
-                    <button class="collapse_all_button" onClick={() => set_tasks_collapsed(parent_ids, true)} disabled={!has_expanded_parent} title="Collapse every task with subtasks">
+                    <button className="collapse_all_button" onClick={() => set_tasks_collapsed(parent_ids, true)} disabled={!has_expanded_parent} title="Collapse every task with subtasks">
                       Collapse all
                     </button>
-                    <button class="expand_all_button" onClick={() => set_tasks_collapsed(parent_ids, false)} disabled={!has_collapsed_parent} title="Expand every task with subtasks">
+                    <button className="expand_all_button" onClick={() => set_tasks_collapsed(parent_ids, false)} disabled={!has_collapsed_parent} title="Expand every task with subtasks">
                       Expand all
                     </button>
                   </>
                 )}
                 {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && (
                   <select
-                    class={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
+                    className={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
                     value={shown_grouping}
                     onChange={(event) => pick_grouping(event.currentTarget.value as TaskGrouping)}
                     aria-label="Group by"
@@ -1084,18 +1084,18 @@ export function App() {
                   </select>
                 )}
                 {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && has_unsaved_grouping && (
-                  <button class="save_grouping_button" onClick={save_grouping} title="Keep this grouping for this view">
+                  <button className="save_grouping_button" onClick={save_grouping} title="Keep this grouping for this view">
                     Save grouping
                   </button>
                 )}
                 {layout === 'gantt' && (
-                  <div class="segmented_control" role="radiogroup" aria-label="Gantt scale">
+                  <div className="segmented_control" role="radiogroup" aria-label="Gantt scale">
                     {GANTT_SCALE_CHOICES.map(({ value, label }) => (
                       <button
                         key={value}
                         role="radio"
                         aria-checked={view_layout.gantt_scale === value}
-                        class={view_layout.gantt_scale === value ? 'is_selected' : ''}
+                        className={view_layout.gantt_scale === value ? 'is_selected' : ''}
                         onClick={() => pick_layout({ gantt_scale: value })}
                       >
                         {label}
@@ -1104,17 +1104,17 @@ export function App() {
                   </div>
                 )}
                 {has_unsaved_layout && (
-                  <button class="save_grouping_button" onClick={save_layout} title="Keep this layout for this view">
+                  <button className="save_grouping_button" onClick={save_layout} title="Keep this layout for this view">
                     Save layout
                   </button>
                 )}
-                <div class="segmented_control" role="radiogroup" aria-label="Layout">
+                <div className="segmented_control" role="radiogroup" aria-label="Layout">
                   {TASK_LAYOUT_CHOICES.map(({ value, label }) => (
                     <button
                       key={value}
                       role="radio"
                       aria-checked={layout === value}
-                      class={layout === value ? 'is_selected' : ''}
+                      className={layout === value ? 'is_selected' : ''}
                       onClick={() => pick_layout({ layout: value })}
                     >
                       {label}
@@ -1161,10 +1161,10 @@ export function App() {
                 />
               )}
 
-              {(layout === 'list' || layout === 'table') && <ul class={is_table ? 'task_list is_table' : 'task_list'} style={{
+              {(layout === 'list' || layout === 'table') && <ul className={is_table ? 'task_list is_table' : 'task_list'} style={{
                 '--data-columns': table_columns.map((column) => `${column_width(settings.table_column_widths, column)}px`).join(' '),
                 '--data-width': `calc(${table_columns.reduce((total, column) => total + column_width(settings.table_column_widths, column), 0)}px + ${table_columns.length} * var(--space-4))`
-              }}>
+              } as CSSProperties}>
                 {is_table && visible_tasks.length > 0 && (
                   <TaskTableHeader
                     tag_groups={tag_groups}
@@ -1185,9 +1185,9 @@ export function App() {
                 {is_grouped
                   ? task_groups.map((group) => (
                     <Fragment key={group.key}>
-                      <li class={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
+                      <li className={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
                         {group.label}
-                        <span class="group_count">{group.nodes.length + group.repeats.length}</span>
+                        <span className="group_count">{group.nodes.length + group.repeats.length}</span>
                       </li>
                       {group.nodes.map((node) => (
                         <TaskItem key={node.task.id} node={node} actions={task_actions} />
@@ -1200,8 +1200,8 @@ export function App() {
                   : task_tree.map((node) => <TaskItem key={node.task.id} node={node} actions={task_actions} />)}
               </ul>}
 
-              {visible_tasks.length === 0 && layout !== 'calendar' && <p class="empty_message">{is_searching ? 'No tasks match the search.' : 'Nothing here yet.'}</p>}
-              {visible_tasks.length > 0 && task_tree.length === 0 && <p class="empty_message">No tasks match the filters.</p>}
+              {visible_tasks.length === 0 && layout !== 'calendar' && <p className="empty_message">{is_searching ? 'No tasks match the search.' : 'Nothing here yet.'}</p>}
+              {visible_tasks.length > 0 && task_tree.length === 0 && <p className="empty_message">No tasks match the filters.</p>}
             </>
           )}
         </main>
@@ -1302,17 +1302,17 @@ export function App() {
         <UntrustedCertificatePrompt />
 
         {is_picking && (
-          <div class="selection_bar" role="toolbar" aria-label="Selected tasks">
-            <button class="selection_close_button" onClick={() => set_picked_task_ids([])} aria-label="Clear selection" title="Clear selection (Esc)">
+          <div className="selection_bar" role="toolbar" aria-label="Selected tasks">
+            <button className="selection_close_button" onClick={() => set_picked_task_ids([])} aria-label="Clear selection" title="Clear selection (Esc)">
               ✕
             </button>
-            <span class="selection_count" title="Click rows to add or remove them, Shift+click to add a range, Ctrl+A to select all">
+            <span className="selection_count" title="Click rows to add or remove them, Shift+click to add a range, Ctrl+A to select all">
               {picked_tasks.length} selected
             </span>
             {picked_tasks.length < shown_rows.length && (
               <button onClick={() => set_picked_task_ids(shown_rows.map((task) => task.id))}>Select all</button>
             )}
-            <span class="selection_divider" />
+            <span className="selection_divider" />
             {picked_tasks.some((task) => !task.is_done) && <button onClick={complete_picked}>Mark done</button>}
             {picked_tasks.some((task) => task.is_done) && <button onClick={reopen_picked}>Mark not done</button>}
             <button onClick={() => set_rescheduling_task_ids(picked_tasks.map((task) => task.id))}>Reschedule…</button>
@@ -1320,16 +1320,16 @@ export function App() {
             <button onMouseDown={(event) => event.stopPropagation()} onClick={(event) => (context_menu ? close_context_menu() : open_tag_menu(event))}>
               Tags…
             </button>
-            <button class="selection_delete_button" onClick={remove_picked}>
+            <button className="selection_delete_button" onClick={remove_picked}>
               Delete
             </button>
           </div>
         )}
 
         {undo_message && (
-          <div class="undo_bar" role="status">
-            <span class="undo_message">{undo_message}</span>
-            <button class="undo_button" onClick={undo_removal}>
+          <div className="undo_bar" role="status">
+            <span className="undo_message">{undo_message}</span>
+            <button className="undo_button" onClick={undo_removal}>
               Undo
             </button>
           </div>

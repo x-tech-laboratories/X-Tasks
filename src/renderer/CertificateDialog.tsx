@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { ServerCertificate } from '@shared/settings'
 
@@ -76,7 +76,7 @@ export function CertificateDialog({ certificate, server_url, on_close }: Certifi
 
   useEffect(() => dialog_ref.current?.showModal(), [])
 
-  async function trust(event: Event): Promise<void> {
+  async function trust(event: FormEvent): Promise<void> {
     event.preventDefault()
     set_is_busy(true)
     set_error('')
@@ -91,31 +91,31 @@ export function CertificateDialog({ certificate, server_url, on_close }: Certifi
   }
 
   return (
-    <dialog ref={dialog_ref} class="recurrence_dialog certificate_dialog" onClose={() => on_close(false)}>
+    <dialog ref={dialog_ref} className="recurrence_dialog certificate_dialog" onClose={() => on_close(false)}>
       <form onSubmit={(event) => void trust(event)}>
-        <h2 class="recurrence_dialog_heading">Trust this server's certificate?</h2>
-        <p class="setting_hint">
+        <h2 className="recurrence_dialog_heading">Trust this server's certificate?</h2>
+        <p className="setting_hint">
           The sync server at {new URL(server_url).host} has a certificate from an authority this device does not know. If it is the authority you set up for
           your own server, trusting it lets sync connect.
         </p>
 
-        <dl class="certificate_details">
-          <dt class="sidebar_heading">Authority</dt>
+        <dl className="certificate_details">
+          <dt className="sidebar_heading">Authority</dt>
           <dd>{certificate.subject}</dd>
-          <dt class="sidebar_heading">SHA-256 fingerprint</dt>
-          <dd class="setting_path">{certificate.fingerprint}</dd>
+          <dt className="sidebar_heading">SHA-256 fingerprint</dt>
+          <dd className="setting_path">{certificate.fingerprint}</dd>
         </dl>
 
-        <p class="setting_hint">
+        <p className="setting_hint">
           Check the fingerprint against your authority's own copy first. A first connection is started again from Settings once the authority is trusted.
         </p>
-        {error && <p class="setting_hint group_warning">{error}</p>}
+        {error && <p className="setting_hint group_warning">{error}</p>}
 
-        <footer class="recurrence_dialog_footer">
+        <footer className="recurrence_dialog_footer">
           <button type="button" onClick={() => on_close(false)}>
             Not now
           </button>
-          <button type="submit" class="primary_button" disabled={is_busy}>
+          <button type="submit" className="primary_button" disabled={is_busy}>
             Trust and sync
           </button>
         </footer>

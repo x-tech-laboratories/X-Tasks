@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'react'
 
 import type { RescheduleOption, TaskDateField } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
@@ -48,49 +48,49 @@ export function ReschedulePopup({ tasks, options, date_field, on_reschedule, on_
   return (
     <dialog
       ref={dialog_ref}
-      class="recurrence_dialog reschedule_dialog"
+      className="recurrence_dialog reschedule_dialog"
       onClose={on_close}
       onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
     >
-      <h2 class="recurrence_dialog_heading">{tasks.length === 1 ? 'Reschedule' : `Reschedule ${tasks.length} tasks`}</h2>
+      <h2 className="recurrence_dialog_heading">{tasks.length === 1 ? 'Reschedule' : `Reschedule ${tasks.length} tasks`}</h2>
 
-      <div class="reschedule_choices">
+      <div className="reschedule_choices">
         {repeats && (
-          <button class="reschedule_choice" disabled={!has_next_recurrence} onClick={skip_to_next_recurrence}>
+          <button className="reschedule_choice" disabled={!has_next_recurrence} onClick={skip_to_next_recurrence}>
             <span>Next recurrence</span>
-            <span class="reschedule_day">
+            <span className="reschedule_day">
               {!has_next_recurrence ? 'No date ahead' : next_recurrence_date ? task_date_label(next_recurrence_date) : 'Each to its own'}
             </span>
           </button>
         )}
         {choices.map(({ option, day }) => (
-          <button key={option.id} class="reschedule_choice" disabled={!day} onClick={() => day && choose(day)}>
+          <button key={option.id} className="reschedule_choice" disabled={!day} onClick={() => day && choose(day)}>
             <span>{option.name}</span>
-            <span class="reschedule_day">
+            <span className="reschedule_day">
               {day ? task_date_label(format_task_date(day, false)) : option.rule ? 'No date ahead' : 'No rule set'}
             </span>
           </button>
         ))}
-        {choices.length === 0 && !repeats && <p class="empty_message">No reschedule options. Add some in Settings.</p>}
+        {choices.length === 0 && !repeats && <p className="empty_message">No reschedule options. Add some in Settings.</p>}
       </div>
 
       <form
-        class="task_detail_field"
+        className="task_detail_field"
         onSubmit={(event) => {
           event.preventDefault()
           if (picked_day) choose(parse_task_date(picked_day))
         }}
       >
-        <span class="sidebar_heading">Pick a day</span>
-        <div class="date_field">
-          <input type="date" value={picked_day} onInput={(event) => set_picked_day(event.currentTarget.value)} aria-label="Day" />
+        <span className="sidebar_heading">Pick a day</span>
+        <div className="date_field">
+          <input type="date" value={picked_day} onChange={(event) => set_picked_day(event.currentTarget.value)} aria-label="Day" />
           <button type="submit" disabled={!picked_day}>
             Move
           </button>
         </div>
       </form>
 
-      <footer class="recurrence_dialog_footer">
+      <footer className="recurrence_dialog_footer">
         <button type="button" onClick={on_close}>
           Cancel
         </button>

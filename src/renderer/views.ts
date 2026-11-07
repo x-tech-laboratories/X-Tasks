@@ -282,14 +282,20 @@ export interface TreeMove {
 
 export type SidePlacement = 'before' | 'after'
 
+// Where the pointer is over the element it is dragging across.
+export interface DropPoint {
+  currentTarget: EventTarget | null
+  clientY: number
+}
+
 // The top half of an element drops before it, the bottom half after it.
-export function drop_side(event: DragEvent): SidePlacement {
+export function drop_side(event: DropPoint): SidePlacement {
   const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
   return event.clientY - box.top < box.height / 2 ? 'before' : 'after'
 }
 
 // The top and bottom quarters of a row drop beside it, the middle drops into it.
-export function drop_placement(event: DragEvent, allow_inside: boolean): DropPlacement {
+export function drop_placement(event: DropPoint, allow_inside: boolean): DropPlacement {
   if (!allow_inside) return drop_side(event)
   const row = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const fraction = (event.clientY - row.top) / row.height

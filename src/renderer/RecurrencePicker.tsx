@@ -1,21 +1,6 @@
 import 'recurrence-input'
-import type { HTMLAttributes } from 'preact'
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef, type FormEvent } from 'react'
 import type { RecurrenceInputElement } from 'recurrence-input'
-
-declare module 'preact' {
-  namespace JSX {
-    interface IntrinsicElements {
-      'recurrence-input': HTMLAttributes<RecurrenceInputElement> & {
-        value?: string
-        features?: string
-        start?: string
-        'time-mode'?: 'utc' | 'floating'
-        'all-day'?: boolean
-      }
-    }
-  }
-}
 
 // ============================================================================
 // Recurrence picker
@@ -36,7 +21,7 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
 
   useEffect(() => dialog_ref.current?.showModal(), [])
 
-  function save(event: Event): void {
+  function save(event: FormEvent): void {
     event.preventDefault()
     on_save(input_ref.current?.value ?? recurrence)
     on_close()
@@ -46,12 +31,12 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
   return (
     <dialog
       ref={dialog_ref}
-      class="recurrence_dialog"
+      className="recurrence_dialog"
       onClose={on_close}
       onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
     >
       <form onSubmit={save}>
-        <h2 class="recurrence_dialog_heading">Repeat</h2>
+        <h2 className="recurrence_dialog_heading">Repeat</h2>
         <recurrence-input
           ref={input_ref}
           value={recurrence}
@@ -59,11 +44,11 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
           time-mode="floating"
           start={anchor ?? undefined}
         />
-        <footer class="recurrence_dialog_footer">
+        <footer className="recurrence_dialog_footer">
           <button type="button" onClick={on_close}>
             Cancel
           </button>
-          <button type="submit" class="primary_button">
+          <button type="submit" className="primary_button">
             Save
           </button>
         </footer>

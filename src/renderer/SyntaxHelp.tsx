@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef } from 'react'
 
 import { describe_recurrence, task_date_label } from '@shared/schedule'
 import type { SyntaxId } from '@shared/settings'
@@ -40,13 +40,13 @@ function QuickAddDetails({ quick_add, tags }: { quick_add: QuickAdd; tags: Tag[]
   return (
     <>
       {added_tags.map((tag) => (
-        <span key={tag.id} class={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)}>
+        <span key={tag.id} className={tag.color ? 'tag_chip is_rule has_color' : 'tag_chip is_rule'} style={tag_color_style(tag)}>
           {with_icon(tag, tag.name)}
         </span>
       ))}
-      {quick_add.start_at && <span class="due_label">Starts {task_date_label(quick_add.start_at)}</span>}
-      {quick_add.due_at && <span class="due_label">Due {task_date_label(quick_add.due_at)}</span>}
-      {quick_add.recurrence && <span class="due_label">↻ {describe_recurrence(quick_add)}</span>}
+      {quick_add.start_at && <span className="due_label">Starts {task_date_label(quick_add.start_at)}</span>}
+      {quick_add.due_at && <span className="due_label">Due {task_date_label(quick_add.due_at)}</span>}
+      {quick_add.recurrence && <span className="due_label">↻ {describe_recurrence(quick_add)}</span>}
     </>
   )
 }
@@ -63,12 +63,12 @@ export function AddTaskRow({ quick_add, tags, on_add, on_cancel }: AddTaskRowPro
   return (
     <button
       type="button"
-      class="add_task_row"
+      className="add_task_row"
       onClick={on_add}
       onKeyDown={(event) => event.key === 'Escape' && on_cancel()}
     >
-      <span class="add_task_plus" aria-hidden="true">+</span>
-      <span class="add_task_label">
+      <span className="add_task_plus" aria-hidden="true">+</span>
+      <span className="add_task_label">
         Add task <strong>“{quick_add.title}”</strong>
       </span>
       <QuickAddDetails quick_add={quick_add} tags={tags} />
@@ -85,9 +85,9 @@ export function SyntaxPreview({ problems }: { problems: string[] }) {
   if (problems.length === 0) return null
 
   return (
-    <div class="syntax_preview" aria-live="polite">
+    <div className="syntax_preview" aria-live="polite">
       {problems.map((problem) => (
-        <span key={problem} class="syntax_problem">
+        <span key={problem} className="syntax_problem">
           {problem}
         </span>
       ))}
@@ -101,9 +101,9 @@ export function SyntaxPreview({ problems }: { problems: string[] }) {
 
 export function SyntaxExamples({ examples }: { examples: SyntaxExample[] }) {
   return (
-    <dl class="syntax_examples">
+    <dl className="syntax_examples">
       {examples.map((example) => (
-        <div key={example.text} class="syntax_example">
+        <div key={example.text} className="syntax_example">
           <dt>
             <code>{example.text}</code>
           </dt>
@@ -116,11 +116,11 @@ export function SyntaxExamples({ examples }: { examples: SyntaxExample[] }) {
 
 function SyntaxSection({ syntax, heading, examples }: { syntax: Syntax; heading: string; examples: SyntaxExample[] }) {
   return (
-    <section class="syntax_help_section">
-      <h3 class="sidebar_heading">
+    <section className="syntax_help_section">
+      <h3 className="sidebar_heading">
         {heading}: {syntax.name}
       </h3>
-      <p class="setting_hint">{syntax.summary}</p>
+      <p className="setting_hint">{syntax.summary}</p>
       <SyntaxExamples examples={examples} />
     </section>
   )
@@ -139,13 +139,13 @@ export function SyntaxHelpDialog({ quick_add_syntax, search_syntax, on_close }: 
   const search = syntax_by_id(search_syntax)
 
   return (
-    <dialog ref={dialog_ref} class="recurrence_dialog syntax_help_dialog" onClose={on_close}>
-      <h2 class="recurrence_dialog_heading">Writing in the bar</h2>
-      <p class="setting_hint">Typing searches as you go, and Enter adds what you typed as a task. Pick each syntax from the button beside the bar or in Settings.</p>
+    <dialog ref={dialog_ref} className="recurrence_dialog syntax_help_dialog" onClose={on_close}>
+      <h2 className="recurrence_dialog_heading">Writing in the bar</h2>
+      <p className="setting_hint">Typing searches as you go, and Enter adds what you typed as a task. Pick each syntax from the button beside the bar or in Settings.</p>
       <SyntaxSection syntax={quick_add} heading="Adding" examples={quick_add.quick_add_examples} />
       <SyntaxSection syntax={search} heading="Searching" examples={search.search_examples} />
-      <footer class="recurrence_dialog_footer">
-        <button type="button" class="primary_button" onClick={on_close}>
+      <footer className="recurrence_dialog_footer">
+        <button type="button" className="primary_button" onClick={on_close}>
           Close
         </button>
       </footer>

@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
-import preact from '@preact/preset-vite'
+import react from '@vitejs/plugin-react'
 
 // The Android app runs SQLite as WebAssembly and syncs with a server elsewhere, which the desktop page's policy forbids.
 const ANDROID_CONTENT_POLICY =
@@ -18,7 +18,7 @@ export default defineConfig({
   root: resolve('src/renderer'),
   base: './',
   mode: 'android',
-  plugins: [preact(), android_content_policy()],
+  plugins: [react(), android_content_policy()],
   resolve: { alias: { '@shared': resolve('src/shared'), '@renderer': resolve('src/renderer') } },
   optimizeDeps: { exclude: ['@sqlite.org/sqlite-wasm'] },
   build: { outDir: resolve('out/android'), emptyOutDir: true }

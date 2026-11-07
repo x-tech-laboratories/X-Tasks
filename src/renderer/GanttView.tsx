@@ -1,6 +1,6 @@
 import Gantt, { type GanttTask } from 'frappe-gantt'
 import './gantt.css'
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef } from 'react'
 
 import type { GanttScale } from '@shared/settings'
 import { days_between, parse_task_date } from '@shared/schedule'
@@ -90,8 +90,8 @@ export function GanttView(props: GanttViewProps) {
     gantt.current.change_view_mode(mode_of(props.scale), true)
   }, [props.scale])
 
-  if (bars.length === 0) return <p class="empty_message">No tasks here have a start or due date to chart.</p>
-  return <div class="gantt_view" ref={element} />
+  if (bars.length === 0) return <p className="empty_message">No tasks here have a start or due date to chart.</p>
+  return <div className="gantt_view" ref={element} />
 }
 
 // A dated task becomes a bar, and only the tasks it waits on that are also charted get arrows.

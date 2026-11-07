@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState, type DragEvent as ReactDragEvent, type FormEvent } from 'react'
 
 import type { SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
@@ -48,7 +48,7 @@ interface SidebarProps {
 // Points right when closed and turns down when open.
 function Chevron({ is_open }: { is_open: boolean }) {
   return (
-    <svg class={is_open ? 'chevron is_open' : 'chevron'} viewBox="0 0 16 16" aria-hidden="true">
+    <svg className={is_open ? 'chevron is_open' : 'chevron'} viewBox="0 0 16 16" aria-hidden="true">
       <path d="M6 3.5 10.5 8 6 12.5" />
     </svg>
   )
@@ -57,7 +57,7 @@ function Chevron({ is_open }: { is_open: boolean }) {
 // A cogwheel for the Settings button.
 function CogIcon() {
   return (
-    <svg class="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -67,7 +67,7 @@ function CogIcon() {
 // Two circling arrows for the sync button; they turn while a sync runs.
 function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
   return (
-    <svg class={is_spinning ? 'sidebar_icon is_spinning' : 'sidebar_icon'} viewBox="0 0 24 24" aria-hidden="true">
+    <svg className={is_spinning ? 'sidebar_icon is_spinning' : 'sidebar_icon'} viewBox="0 0 24 24" aria-hidden="true">
       <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
       <path d="M3 21v-5h5" />
       <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
@@ -140,7 +140,7 @@ export function Sidebar({
     set_new_tag_name('')
   }
 
-  function submit_new_tag(event: Event): void {
+  function submit_new_tag(event: FormEvent): void {
     event.preventDefault()
     const name = new_tag_name.trim()
     if (name && new_tag_spot) on_add_tag(name, new_tag_spot.group_id, new_tag_spot.parent_id)
@@ -151,14 +151,14 @@ export function Sidebar({
     if (new_tag_spot?.group_id !== spot.group_id || new_tag_spot.parent_id !== spot.parent_id) return null
 
     return (
-      <form class="new_tag_form" style={{ paddingLeft: `${depth * 16 + 24}px` }} onSubmit={submit_new_tag}>
+      <form className="new_tag_form" style={{ paddingLeft: `${depth * 16 + 24}px` }} onSubmit={submit_new_tag}>
         <input
           value={new_tag_name}
-          onInput={(event) => set_new_tag_name(event.currentTarget.value)}
+          onChange={(event) => set_new_tag_name(event.currentTarget.value)}
           onKeyDown={(event) => event.key === 'Escape' && stop_new_tag()}
           onBlur={stop_new_tag}
           placeholder={placeholder}
-          autofocus
+          autoFocus
         />
       </form>
     )
@@ -169,20 +169,20 @@ export function Sidebar({
   // ==========================================================================
 
   // A dragged task drops into any tag but a rule tag; a dragged tag can land beside or inside one of its own group.
-  function placement_over(event: DragEvent, tag: Tag): DropPlacement | null {
+  function placement_over(event: ReactDragEvent, tag: Tag): DropPlacement | null {
     if (dragged_task) return tag.rule ? null : 'inside'
     if (!dragged_tag || dragged_tag.group_id !== tag.group_id || subtree_ids(dragged_tag.id, tags).has(tag.id)) return null
     return drop_placement(event, true)
   }
 
-  function tag_drag_over(event: DragEvent, tag: Tag): void {
+  function tag_drag_over(event: ReactDragEvent, tag: Tag): void {
     const placement = placement_over(event, tag)
     if (!placement) return
     event.preventDefault()
     set_drop_target({ tag_id: tag.id, placement })
   }
 
-  function tag_drop(event: DragEvent, tag: Tag): void {
+  function tag_drop(event: ReactDragEvent, tag: Tag): void {
     event.preventDefault()
     const placement = placement_over(event, tag)
     if (dragged_task) on_tag_task(dragged_task, tag)
@@ -196,13 +196,13 @@ export function Sidebar({
   }
 
   // A dragged group lands above or below another whole group, tags and all.
-  function group_drag_over(event: DragEvent, group: TagGroup): void {
+  function group_drag_over(event: ReactDragEvent, group: TagGroup): void {
     if (!dragged_group || dragged_group.id === group.id) return
     event.preventDefault()
     set_group_drop_target({ group_id: group.id, placement: drop_side(event) })
   }
 
-  function group_drop(event: DragEvent, group: TagGroup): void {
+  function group_drop(event: ReactDragEvent, group: TagGroup): void {
     if (!dragged_group) return
     event.preventDefault()
     if (dragged_group.id !== group.id) on_move_tag_group(dragged_group, group, drop_side(event))
@@ -223,11 +223,11 @@ export function Sidebar({
 
     return (
       <button
-        class={selected_view && is_same_view(view, selected_view) ? 'sidebar_item is_selected' : 'sidebar_item'}
+        className={selected_view && is_same_view(view, selected_view) ? 'sidebar_item is_selected' : 'sidebar_item'}
         onClick={() => on_select_view(view)}
       >
-        <span class="sidebar_label">{label}</span>
-        {count ? <span class="sidebar_count">{count}</span> : null}
+        <span className="sidebar_label">{label}</span>
+        {count ? <span className="sidebar_count">{count}</span> : null}
       </button>
     )
   }
@@ -246,7 +246,7 @@ export function Sidebar({
     return (
       <div key={tag.id}>
         <div
-          class={row_class}
+          className={row_class}
           style={{ marginLeft: `${depth * 16}px` }}
           draggable
           onDragStart={(event) => {
@@ -267,25 +267,25 @@ export function Sidebar({
         >
           {children.length > 0 ? (
             <button
-              class="collapse_button"
+              className="collapse_button"
               onClick={() => set_collapsed(tag.id, !is_collapsed)}
               aria-label={is_collapsed ? `Expand ${tag.name}` : `Collapse ${tag.name}`}
             >
               <Chevron is_open={!is_collapsed} />
             </button>
           ) : (
-            <span class="collapse_spacer" />
+            <span className="collapse_spacer" />
           )}
-          <button class="sidebar_tag_select" onClick={() => on_toggle_tag(tag)} onDblClick={() => on_edit_tag(tag)}>
-            <span class="sidebar_label">
-              {tag.color && <span class="tag_color_dot" style={tag_color_style(tag)} aria-hidden="true" />}
+          <button className="sidebar_tag_select" onClick={() => on_toggle_tag(tag)} onDoubleClick={() => on_edit_tag(tag)}>
+            <span className="sidebar_label">
+              {tag.color && <span className="tag_color_dot" style={tag_color_style(tag)} aria-hidden="true" />}
               {with_icon(tag, tag.name)}
             </span>
-            {tag.rule && <span class="rule_marker" title="Rule tag: applied to every task its rule matches">ƒ</span>}
-            {count ? <span class="sidebar_count">{count}</span> : null}
+            {tag.rule && <span className="rule_marker" title="Rule tag: applied to every task its rule matches">ƒ</span>}
+            {count ? <span className="sidebar_count">{count}</span> : null}
           </button>
           <button
-            class="row_button"
+            className="row_button"
             onClick={() => add_tag_at({ group_id: tag.group_id, parent_id: tag.id })}
             aria-label={`Add a tag inside ${tag.name}`}
           >
@@ -313,13 +313,13 @@ export function Sidebar({
     return (
       <section
         key={group.id}
-        class={section_class}
+        className={section_class}
         onDragOver={(event) => group_drag_over(event, group)}
         onDragLeave={() => set_group_drop_target(null)}
         onDrop={(event) => group_drop(event, group)}
       >
         <div
-          class="sidebar_group_header"
+          className="sidebar_group_header"
           draggable
           onDragStart={(event) => {
             event.dataTransfer?.setData('text/plain', group.id)
@@ -337,16 +337,16 @@ export function Sidebar({
           }
         >
           <button
-            class="sidebar_heading sidebar_group_toggle"
+            className="sidebar_heading sidebar_group_toggle"
             onClick={() => set_collapsed(group.id, !is_collapsed)}
-            onDblClick={() => on_edit_tag_group(group)}
+            onDoubleClick={() => on_edit_tag_group(group)}
             aria-expanded={!is_collapsed}
           >
             <Chevron is_open={!is_collapsed} />
             {group.name}
           </button>
           <button
-            class="row_button"
+            className="row_button"
             onClick={() => add_tag_at({ group_id: group.id, parent_id: null })}
             aria-label={`Add a tag to ${group.name}`}
           >
@@ -361,21 +361,21 @@ export function Sidebar({
   }
 
   return (
-    <nav class="sidebar">
-      <div class="sidebar_brand">X-Tasks</div>
+    <nav className="sidebar">
+      <div className="sidebar_brand">X-Tasks</div>
 
-      <section class="sidebar_section">
+      <section className="sidebar_section">
         {BUILT_IN_VIEWS.map(({ view, label }) => <div key={view.kind}>{view_button(view, label)}</div>)}
       </section>
 
       {tag_groups.map(group_section)}
 
-      <section class="sidebar_section sidebar_footer">
+      <section className="sidebar_section sidebar_footer">
         <SyncButton on_open_settings={on_open_settings} />
-        <button class={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>
-          <span class="sidebar_icon_label">
+        <button className={is_settings_open ? 'sidebar_item is_selected' : 'sidebar_item'} onClick={on_open_settings}>
+          <span className="sidebar_icon_label">
             <CogIcon />
-            <span class="sidebar_label">Settings</span>
+            <span className="sidebar_label">Settings</span>
           </span>
         </button>
       </section>
@@ -432,16 +432,16 @@ function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
 
   return (
     <button
-      class={needs_user ? 'sidebar_item sync_button sync_button_problem' : 'sidebar_item sync_button'}
+      className={needs_user ? 'sidebar_item sync_button sync_button_problem' : 'sidebar_item sync_button'}
       title={sync_tooltip(status)}
       disabled={status.state === 'syncing'}
       onClick={click}
     >
-      <span class="sidebar_icon_label">
+      <span className="sidebar_icon_label">
         <SyncIcon is_spinning={status.state === 'syncing'} />
-        <span class="sidebar_label">{sync_label(status)}</span>
+        <span className="sidebar_label">{sync_label(status)}</span>
       </span>
-      {status.pending_changes > 0 && <span class="sidebar_count">{status.pending_changes} pending</span>}
+      {status.pending_changes > 0 && <span className="sidebar_count">{status.pending_changes} pending</span>}
     </button>
   )
 }

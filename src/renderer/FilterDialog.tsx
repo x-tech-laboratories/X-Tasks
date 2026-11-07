@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 
 import { EMPTY_RULE, type DueCondition, type LinkDirection, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import type { TaskRelationship } from '@shared/settings'
@@ -52,14 +52,14 @@ function DaysInput({ days, on_change }: { days: number; on_change: (days: number
   return (
     <>
       <input
-        class="rule_days"
+        className="rule_days"
         type="number"
         min="1"
         value={days}
-        onInput={(event) => on_change(Math.max(1, Number(event.currentTarget.value) || 1))}
+        onChange={(event) => on_change(Math.max(1, Number(event.currentTarget.value) || 1))}
         aria-label="Days"
       />
-      <span class="rule_unit">days</span>
+      <span className="rule_unit">days</span>
     </>
   )
 }
@@ -183,9 +183,9 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
       case 'title':
         return (
           <input
-            class="rule_text"
+            className="rule_text"
             value={condition.text}
-            onInput={(event) => on_change({ ...condition, text: event.currentTarget.value })}
+            onChange={(event) => on_change({ ...condition, text: event.currentTarget.value })}
             placeholder="Text"
             aria-label="Title text"
           />
@@ -194,7 +194,7 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
   }
 
   return (
-    <li class="rule_condition">
+    <li className="rule_condition">
       <select
         value={condition.kind}
         onChange={(event) => on_change(default_condition(event.currentTarget.value as ConditionKind, tags, groups))}
@@ -203,7 +203,7 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
         {CONDITION_CHOICES.map(({ kind, label }) => <option key={kind} value={kind}>{label}</option>)}
       </select>
       {controls()}
-      <button type="button" class="remove_button" onClick={on_remove} aria-label="Remove condition">
+      <button type="button" className="remove_button" onClick={on_remove} aria-label="Remove condition">
         ×
       </button>
     </li>
@@ -217,10 +217,10 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
 // A row of swatches, a None choice, and the system colour chooser for any other colour.
 function ColorPicker({ color, swatches, on_change }: { color: string | null; swatches: string[]; on_change: (color: string | null) => void }) {
   return (
-    <div class="tag_color_picker" role="radiogroup" aria-label="Colour">
+    <div className="tag_color_picker" role="radiogroup" aria-label="Colour">
       <button
         type="button"
-        class={color === null ? 'tag_color_swatch is_none is_chosen' : 'tag_color_swatch is_none'}
+        className={color === null ? 'tag_color_swatch is_none is_chosen' : 'tag_color_swatch is_none'}
         onClick={() => on_change(null)}
         role="radio"
         aria-checked={color === null}
@@ -231,8 +231,8 @@ function ColorPicker({ color, swatches, on_change }: { color: string | null; swa
         <button
           key={swatch}
           type="button"
-          class={color === swatch ? 'tag_color_swatch is_chosen' : 'tag_color_swatch'}
-          style={{ '--tag-color': swatch }}
+          className={color === swatch ? 'tag_color_swatch is_chosen' : 'tag_color_swatch'}
+          style={{ '--tag-color': swatch } as CSSProperties}
           onClick={() => on_change(swatch)}
           role="radio"
           aria-checked={color === swatch}
@@ -242,9 +242,9 @@ function ColorPicker({ color, swatches, on_change }: { color: string | null; swa
       ))}
       <input
         type="color"
-        class={color !== null && !swatches.includes(color) ? 'tag_color_custom is_chosen' : 'tag_color_custom'}
+        className={color !== null && !swatches.includes(color) ? 'tag_color_custom is_chosen' : 'tag_color_custom'}
         value={color ?? '#888888'}
-        onInput={(event) => on_change(event.currentTarget.value)}
+        onChange={(event) => on_change(event.currentTarget.value)}
         aria-label="Other colour"
         title="Other colour"
       />
@@ -309,7 +309,7 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
     input.value = character ?? ''
   }
 
-  function save(event: Event): void {
+  function save(event: FormEvent): void {
     event.preventDefault()
     const trimmed_name = name_draft.trim()
     if (!trimmed_name) return
@@ -327,41 +327,41 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
   return (
     <dialog
       ref={dialog_ref}
-      class="recurrence_dialog rule_dialog"
+      className="recurrence_dialog rule_dialog"
       onClose={on_close}
       onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
     >
       <form onSubmit={save}>
-        <h2 class="recurrence_dialog_heading">{heading}</h2>
+        <h2 className="recurrence_dialog_heading">{heading}</h2>
 
-        <label class="task_detail_field">
-          <span class="sidebar_heading">Name</span>
-          <input value={name_draft} onInput={(event) => set_name_draft(event.currentTarget.value)} placeholder="Completed routines" autofocus />
+        <label className="task_detail_field">
+          <span className="sidebar_heading">Name</span>
+          <input value={name_draft} onChange={(event) => set_name_draft(event.currentTarget.value)} placeholder="Completed routines" autoFocus />
         </label>
 
-        <div class="task_detail_field">
-          <span class="sidebar_heading">Colour</span>
+        <div className="task_detail_field">
+          <span className="sidebar_heading">Colour</span>
           <ColorPicker color={color_draft} swatches={swatches} on_change={set_color_draft} />
         </div>
 
-        <label class="task_detail_field">
-          <span class="sidebar_heading">Icon</span>
+        <label className="task_detail_field">
+          <span className="sidebar_heading">Icon</span>
           <input
-            class="tag_icon_input"
+            className="tag_icon_input"
             value={icon_draft ?? ''}
-            onInput={(event) => change_icon(event.currentTarget)}
+            onChange={(event) => change_icon(event.currentTarget)}
             placeholder="Emoji"
           />
         </label>
 
-        <label class="rule_row_toggle">
+        <label className="rule_row_toggle">
           <input type="checkbox" checked={shows_on_rows_draft} onChange={(event) => set_shows_on_rows_draft(event.currentTarget.checked)} />
           Show on task rows
         </label>
 
         {is_rule && (
           <>
-            <div class="rule_match">
+            <div className="rule_match">
               Tasks matching
               <select
                 value={rule_draft.match}
@@ -374,7 +374,7 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
               of these conditions
             </div>
 
-            <ul class="rule_conditions">
+            <ul className="rule_conditions">
               {rule_draft.conditions.map((condition, index) => (
                 <ConditionRow
                   key={index}
@@ -388,11 +388,11 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
                 />
               ))}
             </ul>
-            {rule_draft.conditions.length === 0 && <p class="setting_hint">With no conditions, every task matches.</p>}
+            {rule_draft.conditions.length === 0 && <p className="setting_hint">With no conditions, every task matches.</p>}
 
             <button
               type="button"
-              class="rule_add"
+              className="rule_add"
               onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags, groups)] })}
             >
               Add condition
@@ -400,12 +400,12 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
           </>
         )}
 
-        <footer class="recurrence_dialog_footer">
-          <span class="rule_count">{count_text()}</span>
+        <footer className="recurrence_dialog_footer">
+          <span className="rule_count">{count_text()}</span>
           <button type="button" onClick={on_close}>
             Cancel
           </button>
-          <button type="submit" class="primary_button" disabled={!name_draft.trim()}>
+          <button type="submit" className="primary_button" disabled={!name_draft.trim()}>
             Save
           </button>
         </footer>

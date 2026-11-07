@@ -1,3 +1,5 @@
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
+
 // ============================================================================
 // Resize handle
 // ============================================================================
@@ -20,7 +22,7 @@ interface ResizeHandleProps {
 export function ResizeHandle({ side, width, min_width, max_width, default_width, on_resize, on_resize_end, label, class_name }: ResizeHandleProps) {
   const clamp = (value: number): number => Math.round(Math.min(max_width, Math.max(min_width, value)))
 
-  function start_drag(event: PointerEvent): void {
+  function start_drag(event: ReactPointerEvent): void {
     if (event.button !== 0) return
     event.preventDefault()
     const handle = event.currentTarget as HTMLElement
@@ -51,7 +53,7 @@ export function ResizeHandle({ side, width, min_width, max_width, default_width,
   }
 
   // Arrow keys nudge the width, so the handle works without a mouse.
-  function nudge(event: KeyboardEvent): void {
+  function nudge(event: ReactKeyboardEvent): void {
     const step = event.shiftKey ? 48 : 16
     const growth = { ArrowRight: step, ArrowLeft: -step }[event.key]
     if (growth === undefined) return
@@ -61,7 +63,7 @@ export function ResizeHandle({ side, width, min_width, max_width, default_width,
 
   return (
     <div
-      class={class_name ?? `resize_handle is_${side}`}
+      className={class_name ?? `resize_handle is_${side}`}
       role="separator"
       aria-orientation="vertical"
       aria-label={label}
@@ -70,7 +72,7 @@ export function ResizeHandle({ side, width, min_width, max_width, default_width,
       aria-valuemax={max_width}
       tabIndex={0}
       onPointerDown={start_drag}
-      onDblClick={() => on_resize_end(default_width)}
+      onDoubleClick={() => on_resize_end(default_width)}
       onKeyDown={nudge}
     />
   )

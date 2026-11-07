@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import { describe_rule } from 'recurrence-input'
 
@@ -6,6 +6,7 @@ import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type G
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
+import { CommitInput } from './fields'
 import { grouping_choices, view_of_key } from './grouping'
 import { TASK_LAYOUT_CHOICES } from './layouts'
 import { RecurrencePicker } from './RecurrencePicker'
@@ -103,11 +104,11 @@ interface SyntaxSettingProps {
 // A syntax picker with what the chosen syntax looks like below it.
 function SyntaxSetting({ label, hint, value, on_change, examples_of }: SyntaxSettingProps) {
   return (
-    <div class="syntax_setting">
-      <label class="setting_row">
-        <div class="setting_text">
-          <span class="setting_label">{label}</span>
-          <span class="setting_hint">{hint}</span>
+    <div className="syntax_setting">
+      <label className="setting_row">
+        <div className="setting_text">
+          <span className="setting_label">{label}</span>
+          <span className="setting_hint">{hint}</span>
         </div>
         <select value={value} onChange={(event) => on_change(event.currentTarget.value as SyntaxId)}>
           {SYNTAXES.map((syntax) => (
@@ -117,7 +118,7 @@ function SyntaxSetting({ label, hint, value, on_change, examples_of }: SyntaxSet
           ))}
         </select>
       </label>
-      <p class="setting_hint">{syntax_by_id(value).summary}</p>
+      <p className="setting_hint">{syntax_by_id(value).summary}</p>
       <SyntaxExamples examples={examples_of(value)} />
     </div>
   )
@@ -147,7 +148,7 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
     void window.x_settings.get_database_path().then(set_database_path)
   }, [])
 
-  function submit_new_group(event: Event): void {
+  function submit_new_group(event: FormEvent): void {
     event.preventDefault()
     const name = new_group_name.trim()
     if (!name) return
@@ -158,25 +159,25 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
 
   return (
     <>
-      <header class="task_pane_header">
+      <header className="task_pane_header">
         <h1>Settings</h1>
       </header>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Appearance</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Appearance</h2>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Theme</span>
-            <span class="setting_hint">System follows the light or dark choice of your desktop.</span>
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Theme</span>
+            <span className="setting_hint">System follows the light or dark choice of your desktop.</span>
           </div>
-          <div class="segmented_control" role="radiogroup" aria-label="Theme">
+          <div className="segmented_control" role="radiogroup" aria-label="Theme">
             {THEME_CHOICES.map(({ value, label }) => (
               <button
                 key={value}
                 role="radio"
                 aria-checked={settings.theme === value}
-                class={settings.theme === value ? 'is_selected' : ''}
+                className={settings.theme === value ? 'is_selected' : ''}
                 onClick={() => on_change('theme', value)}
               >
                 {label}
@@ -185,10 +186,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           </div>
         </div>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Streak dots on task rows</span>
-            <span class="setting_hint">Routines and their subtasks show their last week of done and missed occurrences beside the title.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Streak dots on task rows</span>
+            <span className="setting_hint">Routines and their subtasks show their last week of done and missed occurrences beside the title.</span>
           </div>
           <input
             type="checkbox"
@@ -197,10 +198,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Tint task rows by tag</span>
-            <span class="setting_hint">Each task row takes a light shade of its first coloured tag, its own tags before rule tags.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Tint task rows by tag</span>
+            <span className="setting_hint">Each task row takes a light shade of its first coloured tag, its own tags before rule tags.</span>
           </div>
           <input
             type="checkbox"
@@ -210,21 +211,21 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
         </label>
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Behaviour</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Behaviour</h2>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Subtasks start with their parent's tags</span>
-            <span class="setting_hint">A new subtask is given its parent's tags when added. Either way it already shows wherever its parent does.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Subtasks start with their parent's tags</span>
+            <span className="setting_hint">A new subtask is given its parent's tags when added. Either way it already shows wherever its parent does.</span>
           </div>
           <input type="checkbox" checked={settings.subtasks_inherit_tags} onChange={(event) => on_change('subtasks_inherit_tags', event.currentTarget.checked)} />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Open on launch</span>
-            <span class="setting_hint">The view shown when the app starts.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Open on launch</span>
+            <span className="setting_hint">The view shown when the app starts.</span>
           </div>
           <select
             value={settings.launch_view}
@@ -234,10 +235,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           </select>
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Task date</span>
-            <span class="setting_hint">The date shown beside each task, and used to sort, filter, reschedule and fill My Day.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Task date</span>
+            <span className="setting_hint">The date shown beside each task, and used to sort, filter, reschedule and fill My Day.</span>
           </div>
           <select
             value={settings.task_date_field}
@@ -247,10 +248,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           </select>
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Collapse completed branches</span>
-            <span class="setting_hint">Completing a task folds its subtasks away once they are all done too. Other tasks stay as they are.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Collapse completed branches</span>
+            <span className="setting_hint">Completing a task folds its subtasks away once they are all done too. Other tasks stay as they are.</span>
           </div>
           <input
             type="checkbox"
@@ -259,10 +260,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Clear My Day each day</span>
-            <span class="setting_hint">My Day starts empty every morning. When off, tasks stay until you take them out.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Clear My Day each day</span>
+            <span className="setting_hint">My Day starts empty every morning. When off, tasks stay until you take them out.</span>
           </div>
           <input
             type="checkbox"
@@ -271,10 +272,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Remove completed tasks from My Day</span>
-            <span class="setting_hint">Completing a top-level task takes it out of My Day. Subtasks stay with their parent.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Remove completed tasks from My Day</span>
+            <span className="setting_hint">Completing a top-level task takes it out of My Day. Subtasks stay with their parent.</span>
           </div>
           <input
             type="checkbox"
@@ -283,10 +284,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Remove rescheduled tasks from My Day</span>
-            <span class="setting_hint">Moving a task's task date past today takes it out of My Day.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Remove rescheduled tasks from My Day</span>
+            <span className="setting_hint">Moving a task's task date past today takes it out of My Day.</span>
           </div>
           <input
             type="checkbox"
@@ -295,10 +296,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Add due tasks to My Day</span>
-            <span class="setting_hint">Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Add due tasks to My Day</span>
+            <span className="setting_hint">Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date.</span>
           </div>
           <input
             type="checkbox"
@@ -307,10 +308,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Overdue repeating tasks</span>
-            <span class="setting_hint">Each day, open repeating tasks whose task date has passed move to today, or skip ahead to their first repeat date from today on.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Overdue repeating tasks</span>
+            <span className="setting_hint">Each day, open repeating tasks whose task date has passed move to today, or skip ahead to their first repeat date from today on.</span>
           </div>
           <select
             value={settings.reschedule_overdue_repeats}
@@ -320,29 +321,29 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           </select>
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Repeats in Upcoming</span>
-            <span class="setting_hint">How many days ahead Upcoming lists the later dates of repeating tasks. Zero lists none.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Repeats in Upcoming</span>
+            <span className="setting_hint">How many days ahead Upcoming lists the later dates of repeating tasks. Zero lists none.</span>
           </div>
-          <input
+          <CommitInput
             type="number"
             min={UPCOMING_REPEAT_DAYS_RANGE.min}
             max={UPCOMING_REPEAT_DAYS_RANGE.max}
             step="1"
-            class="reschedule_days"
+            className="reschedule_days"
             value={settings.upcoming_repeat_days}
-            onChange={(event) =>
+            on_commit={(event) =>
               on_change('upcoming_repeat_days', Math.min(UPCOMING_REPEAT_DAYS_RANGE.max, Math.max(UPCOMING_REPEAT_DAYS_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
             }
             aria-label="Days ahead"
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Ask before deleting a tag</span>
-            <span class="setting_hint">Deleting a tag also deletes its sub-tags. Tasks are kept.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Ask before deleting a tag</span>
+            <span className="setting_hint">Deleting a tag also deletes its sub-tags. Tasks are kept.</span>
           </div>
           <input
             type="checkbox"
@@ -351,10 +352,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           />
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Ask before clearing completed tasks</span>
-            <span class="setting_hint">Undo can still bring them back for a few seconds either way.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Ask before clearing completed tasks</span>
+            <span className="setting_hint">Undo can still bring them back for a few seconds either way.</span>
           </div>
           <input
             type="checkbox"
@@ -364,43 +365,43 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
         </label>
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Layout</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Layout</h2>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Default layout</span>
-            <span class="setting_hint">How a view shows its tasks when no layout is saved for it: a list, a table, a board, a calendar or a Gantt chart.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Default layout</span>
+            <span className="setting_hint">How a view shows its tasks when no layout is saved for it: a list, a table, a board, a calendar or a Gantt chart.</span>
           </div>
           <select value={settings.task_layout} onChange={(event) => on_change('task_layout', event.currentTarget.value as TaskLayout)}>
             {TASK_LAYOUT_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Calendar time slots</span>
-            <span class="setting_hint">How much time each row covers in the calendar's week and day views, which is also the step a dragged task snaps to.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Calendar time slots</span>
+            <span className="setting_hint">How much time each row covers in the calendar's week and day views, which is also the step a dragged task snaps to.</span>
           </div>
           <select value={settings.calendar_slot_minutes} onChange={(event) => on_change('calendar_slot_minutes', Number(event.currentTarget.value))}>
             {CALENDAR_SLOT_CHOICES.map((minutes) => <option key={minutes} value={minutes}>{minutes_label(minutes)}</option>)}
           </select>
         </label>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Calendar time labels</span>
-            <span class="setting_hint">How often a time is printed down the side of the calendar's week and day views.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Calendar time labels</span>
+            <span className="setting_hint">How often a time is printed down the side of the calendar's week and day views.</span>
           </div>
           <select value={settings.calendar_slot_label_minutes} onChange={(event) => on_change('calendar_slot_label_minutes', Number(event.currentTarget.value))}>
             {CALENDAR_SLOT_LABEL_CHOICES.map((minutes) => <option key={minutes} value={minutes}>{minutes_label(minutes)}</option>)}
           </select>
         </label>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Layout per view</span>
-            <span class="setting_hint">
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Layout per view</span>
+            <span className="setting_hint">
               Remembered: each view or tag selection keeps the layout, calendar span and Gantt scale last picked in it. Saved by
               hand: each keeps its own once Save layout is pressed. Same everywhere: a layout picked in one view applies to every view.
             </span>
@@ -413,23 +414,23 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
         )}
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Grouping</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Grouping</h2>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Default grouping</span>
-            <span class="setting_hint">The headings a view puts its tasks under when no grouping is saved for it. Upcoming always goes by date.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Default grouping</span>
+            <span className="setting_hint">The headings a view puts its tasks under when no grouping is saved for it. Upcoming always goes by date.</span>
           </div>
           <select value={settings.task_grouping} onChange={(event) => on_change('task_grouping', event.currentTarget.value as TaskGrouping)}>
             {grouping_choices(tag_groups).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Grouping per view</span>
-            <span class="setting_hint">
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Grouping per view</span>
+            <span className="setting_hint">
               Remembered: each view or tag selection keeps the grouping last picked in it. Saved by hand: each keeps its own
               once Save grouping is pressed. Same everywhere: a grouping picked at the top of a view applies to every view.
             </span>
@@ -442,17 +443,17 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
         )}
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Filters</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Filters</h2>
 
-        <form class="setting_row" onSubmit={submit_new_group}>
-          <div class="setting_text">
-            <span class="setting_label">New filter group</span>
-            <span class="setting_hint">Adds a section to the sidebar with its own tags: plain tags given by hand, such as Context, or rule tags that apply themselves, such as Overdue.</span>
+        <form className="setting_row" onSubmit={submit_new_group}>
+          <div className="setting_text">
+            <span className="setting_label">New filter group</span>
+            <span className="setting_hint">Adds a section to the sidebar with its own tags: plain tags given by hand, such as Context, or rule tags that apply themselves, such as Overdue.</span>
           </div>
           <input
             value={new_group_name}
-            onInput={(event) => set_new_group_name(event.currentTarget.value)}
+            onChange={(event) => set_new_group_name(event.currentTarget.value)}
             placeholder="Group name"
             aria-label="New filter group"
           />
@@ -467,10 +468,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           <button type="submit">Add</button>
         </form>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Tag selection</span>
-            <span class="setting_hint">
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Tag selection</span>
+            <span className="setting_hint">
               How many sidebar tags can be selected at once: one in all, one from each group, or any number. Clicking a selected
               tag clears it.
             </span>
@@ -478,42 +479,42 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           <SegmentedChoice label="Tag selection" choices={TAG_SELECTION_CHOICES} value={settings.tag_selection} on_change={(value) => on_change('tag_selection', value)} />
         </div>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Match tasks with</span>
-            <span class="setting_hint">Whether a task must have every selected tag, or just one of them, to show.</span>
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Match tasks with</span>
+            <span className="setting_hint">Whether a task must have every selected tag, or just one of them, to show.</span>
           </div>
           <SegmentedChoice label="Match tasks with" choices={TAG_MATCH_CHOICES} value={settings.tag_match} on_change={(value) => on_change('tag_match', value)} />
         </div>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Parent tags show</span>
-            <span class="setting_hint">Whether selecting a tag with tags inside it shows their tasks too, or only the tasks with that tag itself.</span>
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Parent tags show</span>
+            <span className="setting_hint">Whether selecting a tag with tags inside it shows their tasks too, or only the tasks with that tag itself.</span>
           </div>
           <SegmentedChoice label="Parent tags show" choices={TAG_SCOPE_CHOICES} value={settings.tag_scope} on_change={(value) => on_change('tag_scope', value)} />
         </div>
 
-        <label class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Show empty tags</span>
-            <span class="setting_hint">When off, the sidebar hides tags no task has, done or not. A selected tag, and one holding a tag that shows, still shows.</span>
+        <label className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Show empty tags</span>
+            <span className="setting_hint">When off, the sidebar hides tags no task has, done or not. A selected tag, and one holding a tag that shows, still shows.</span>
           </div>
           <input type="checkbox" checked={settings.show_empty_tags} onChange={(event) => on_change('show_empty_tags', event.currentTarget.checked)} />
         </label>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Search</span>
-            <span class="setting_hint">Whether typing in the bar at the top searches only the view on screen, or every task. Enter still adds the task to the view on screen.</span>
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Search</span>
+            <span className="setting_hint">Whether typing in the bar at the top searches only the view on screen, or every task. Enter still adds the task to the view on screen.</span>
           </div>
           <SegmentedChoice label="Search" choices={SEARCH_SCOPE_CHOICES} value={settings.search_scope} on_change={(value) => on_change('search_scope', value)} />
         </div>
 
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Syntax</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Syntax</h2>
 
         <SyntaxSetting
           label="Adding tasks"
@@ -531,56 +532,56 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
         />
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Reschedule</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Reschedule</h2>
         <RescheduleOptionsEditor
           options={settings.reschedule_options}
           on_change={(options) => on_change('reschedule_options', options)}
         />
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Relationships</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Relationships</h2>
         <RelationshipsEditor relationships={settings.task_relationships} tasks={tasks} on_change={on_change_relationships} />
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Durations</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Durations</h2>
         <DurationsEditor durations={settings.task_durations} on_change={(durations) => on_change('task_durations', durations)} />
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Tag colours</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Tag colours</h2>
         <TagColorsEditor colors={settings.tag_colors} on_change={(colors) => on_change('tag_colors', colors)} />
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Storage</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Storage</h2>
 
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Database</span>
-            <span class="setting_hint setting_path">{database_path}</span>
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Database</span>
+            <span className="setting_hint setting_path">{database_path}</span>
           </div>
           {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>}
         </div>
       </section>
 
-      <section class="settings_group">
-        <h2 class="settings_heading">Backups</h2>
+      <section className="settings_group">
+        <h2 className="settings_heading">Backups</h2>
         <BackupsEditor settings={settings} on_change={on_change} />
       </section>
 
       {window.x_settings.host !== 'android' && (
-        <section class="settings_group">
-          <h2 class="settings_heading">MCP server</h2>
+        <section className="settings_group">
+          <h2 className="settings_heading">MCP server</h2>
           <McpEditor settings={settings} on_change={on_change} />
         </section>
       )}
 
       {window.x_settings.host !== 'web' && (
-        <section class="settings_group">
-          <h2 class="settings_heading">Sync</h2>
+        <section className="settings_group">
+          <h2 className="settings_heading">Sync</h2>
           <SyncEditor />
         </section>
       )}
@@ -619,16 +620,16 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
 
   return (
     <>
-      <p class="setting_hint">
+      <p className="setting_hint">
         The quick days offered by Reschedule in a task's menu and details. Each is a number of days from today, or the next
         date of a repeat rule counted from now. The task keeps its time of day.
       </p>
 
       {options.map((option, index) => (
-        <div key={option.id} class="setting_row reschedule_option">
-          <input
+        <div key={option.id} className="setting_row reschedule_option">
+          <CommitInput
             value={option.name}
-            onChange={(event) => update(option.id, { name: event.currentTarget.value.trim() || option.name })}
+            on_commit={(event) => update(option.id, { name: event.currentTarget.value.trim() || option.name })}
             aria-label="Option name"
           />
           <select
@@ -640,28 +641,28 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
             <option value="rule">Repeat rule</option>
           </select>
           {option.mode === 'days' ? (
-            <input
+            <CommitInput
               type="number"
               min="0"
               step="1"
-              class="reschedule_days"
+              className="reschedule_days"
               value={option.days}
-              onChange={(event) => update(option.id, { days: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
+              on_commit={(event) => update(option.id, { days: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
               aria-label="Days from today"
             />
           ) : (
-            <button class="recurrence_button reschedule_rule" onClick={() => set_picking_rule_id(option.id)}>
+            <button className="recurrence_button reschedule_rule" onClick={() => set_picking_rule_id(option.id)}>
               {(option.rule && describe_rule(option.rule, rule_format(null))) || 'Choose a rule'}
             </button>
           )}
-          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+          <button className="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
             ↑
           </button>
-          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === options.length - 1} aria-label="Move down">
+          <button className="remove_button" onClick={() => move(index, 1)} disabled={index === options.length - 1} aria-label="Move down">
             ↓
           </button>
           <button
-            class="remove_button"
+            className="remove_button"
             onClick={() => on_change(options.filter((each) => each.id !== option.id))}
             aria-label={`Remove ${option.name}`}
           >
@@ -670,7 +671,7 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
         </div>
       ))}
 
-      <button class="reschedule_add" onClick={add}>
+      <button className="reschedule_add" onClick={add}>
         Add option
       </button>
 
@@ -722,25 +723,25 @@ function RelationshipsEditor({ relationships, tasks, on_change }: RelationshipsE
 
   return (
     <>
-      <p class="setting_hint">
+      <p className="setting_hint">
         The ways one task can relate to another, named from both ends. Setting one on a task gives the other task its inverse, so
         "A waits on B" shows on B as "B blocks A". Use the same name twice for a relationship that reads the same both ways. A
         waiting task shows how many open tasks it waits on, and the Gantt chart draws an arrow to it.
       </p>
 
       {relationships.map((relationship, index) => (
-        <div key={relationship.id} class="setting_row reschedule_option">
-          <div class="relationship_names">
+        <div key={relationship.id} className="setting_row reschedule_option">
+          <div className="relationship_names">
             A
-            <input
+            <CommitInput
               value={relationship.name}
-              onChange={(event) => update(relationship.id, { name: event.currentTarget.value.trim() || relationship.name })}
+              on_commit={(event) => update(relationship.id, { name: event.currentTarget.value.trim() || relationship.name })}
               aria-label="Name"
             />
             B, and B
-            <input
+            <CommitInput
               value={relationship.inverse_name}
-              onChange={(event) => update(relationship.id, { inverse_name: event.currentTarget.value.trim() || relationship.inverse_name })}
+              on_commit={(event) => update(relationship.id, { inverse_name: event.currentTarget.value.trim() || relationship.inverse_name })}
               aria-label="Inverse name"
             />
             A
@@ -754,19 +755,19 @@ function RelationshipsEditor({ relationships, tasks, on_change }: RelationshipsE
             <option value="first">A waits on B</option>
             <option value="second">B waits on A</option>
           </select>
-          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+          <button className="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
             ↑
           </button>
-          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === relationships.length - 1} aria-label="Move down">
+          <button className="remove_button" onClick={() => move(index, 1)} disabled={index === relationships.length - 1} aria-label="Move down">
             ↓
           </button>
-          <button class="remove_button" onClick={() => remove(relationship)} aria-label={`Remove ${relationship.name}`}>
+          <button className="remove_button" onClick={() => remove(relationship)} aria-label={`Remove ${relationship.name}`}>
             ×
           </button>
         </div>
       ))}
 
-      <button class="reschedule_add" onClick={add}>
+      <button className="reschedule_add" onClick={add}>
         Add relationship
       </button>
     </>
@@ -802,33 +803,33 @@ function TagColorsEditor({ colors, on_change }: TagColorsEditorProps) {
 
   return (
     <>
-      <p class="setting_hint">
+      <p className="setting_hint">
         The colours offered as swatches when editing a tag. Any other colour can still be picked there. Changing a swatch
         leaves tags already given that colour as they are.
       </p>
 
       {colors.map((color, index) => (
-        <div key={`${index}-${color}`} class="setting_row reschedule_option">
-          <input type="color" class="tag_color_custom" value={color} onChange={(event) => update(index, event.currentTarget)} aria-label="Colour" />
-          <input
-            class="tag_color_hex"
+        <div key={`${index}-${color}`} className="setting_row reschedule_option">
+          <input type="color" className="tag_color_custom" value={color} onChange={(event) => update(index, event.currentTarget)} aria-label="Colour" />
+          <CommitInput
+            className="tag_color_hex"
             value={color}
-            onChange={(event) => update(index, event.currentTarget)}
+            on_commit={(event) => update(index, event.currentTarget)}
             aria-label="Colour code"
           />
-          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+          <button className="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
             ↑
           </button>
-          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === colors.length - 1} aria-label="Move down">
+          <button className="remove_button" onClick={() => move(index, 1)} disabled={index === colors.length - 1} aria-label="Move down">
             ↓
           </button>
-          <button class="remove_button" onClick={() => on_change(colors.filter((_each, at) => at !== index))} aria-label={`Remove ${color}`}>
+          <button className="remove_button" onClick={() => on_change(colors.filter((_each, at) => at !== index))} aria-label={`Remove ${color}`}>
             ×
           </button>
         </div>
       ))}
 
-      <button class="reschedule_add" onClick={() => on_change([...colors, '#64748b'])}>
+      <button className="reschedule_add" onClick={() => on_change([...colors, '#64748b'])}>
         Add colour
       </button>
     </>
@@ -871,36 +872,36 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
 
   return (
     <>
-      <p class="setting_hint">
+      <p className="setting_hint">
         The gaps offered by Duration in a task's details, which set the due date that long after the start. Units can be mixed,
         such as 1 hour 30 minutes. A gap with minutes or hours shows only when the start has a time, and Same day only when it
         has none.
       </p>
 
       {durations.map((duration, index) => (
-        <div key={duration.id} class="setting_row reschedule_option">
+        <div key={duration.id} className="setting_row reschedule_option">
           {DURATION_UNITS.map((unit) => (
-            <label key={unit} class="duration_amount">
-              <input
+            <label key={unit} className="duration_amount">
+              <CommitInput
                 type="number"
                 min="0"
                 step="1"
                 value={duration[unit]}
-                onChange={(event) => update(duration.id, { [unit]: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
+                on_commit={(event) => update(duration.id, { [unit]: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
                 aria-label={unit}
               />
               <span>{DURATION_UNIT_SHORT_NAMES[unit]}</span>
             </label>
           ))}
-          <span class="duration_preview">{duration_label(duration)}</span>
-          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+          <span className="duration_preview">{duration_label(duration)}</span>
+          <button className="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
             ↑
           </button>
-          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === durations.length - 1} aria-label="Move down">
+          <button className="remove_button" onClick={() => move(index, 1)} disabled={index === durations.length - 1} aria-label="Move down">
             ↓
           </button>
           <button
-            class="remove_button"
+            className="remove_button"
             onClick={() => on_change(durations.filter((each) => each.id !== duration.id))}
             aria-label={`Remove ${duration_label(duration)}`}
           >
@@ -909,7 +910,7 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
         </div>
       ))}
 
-      <button class="reschedule_add" onClick={add}>
+      <button className="reschedule_add" onClick={add}>
         Add duration
       </button>
     </>
@@ -940,10 +941,10 @@ function McpEditor({ settings, on_change }: McpEditorProps) {
 
   return (
     <>
-      <label class="setting_row">
-        <div class="setting_text">
-          <span class="setting_label">Enable MCP server</span>
-          <span class="setting_hint">
+      <label className="setting_row">
+        <div className="setting_text">
+          <span className="setting_label">Enable MCP server</span>
+          <span className="setting_hint">
             Lets AI assistants on this computer list, add, change and complete tasks. Only programs on this computer can reach it.
           </span>
         </div>
@@ -954,29 +955,29 @@ function McpEditor({ settings, on_change }: McpEditorProps) {
         />
       </label>
 
-      <label class="setting_row">
-        <div class="setting_text">
-          <span class="setting_label">Port</span>
-          <span class="setting_hint">Change it if another program already uses this one.</span>
+      <label className="setting_row">
+        <div className="setting_text">
+          <span className="setting_label">Port</span>
+          <span className="setting_hint">Change it if another program already uses this one.</span>
         </div>
-        <input
+        <CommitInput
           type="number"
           min={MCP_PORT_RANGE.min}
           max={MCP_PORT_RANGE.max}
           step="1"
-          class="mcp_port"
+          className="mcp_port"
           value={settings.mcp_port}
-          onChange={(event) => change_port(event.currentTarget.value)}
+          on_commit={(event) => change_port(event.currentTarget.value)}
           aria-label="MCP server port"
         />
       </label>
 
       {status?.state === 'running' && (
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Address</span>
-            <span class="setting_hint setting_path">{status.url}</span>
-            <span class="setting_hint">
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Address</span>
+            <span className="setting_hint setting_path">{status.url}</span>
+            <span className="setting_hint">
               Add it to a client as a Streamable HTTP server, such as with <code>claude mcp add --transport http x-tasks {status.url}</code>
             </span>
           </div>
@@ -984,7 +985,7 @@ function McpEditor({ settings, on_change }: McpEditorProps) {
         </div>
       )}
 
-      {status?.state === 'failed' && <p class="setting_hint mcp_error">Could not start: {status.error}</p>}
+      {status?.state === 'failed' && <p className="setting_hint mcp_error">Could not start: {status.error}</p>}
     </>
   )
 }
@@ -1061,32 +1062,32 @@ function SyncEditor() {
 
   return (
     <>
-      <p class="setting_hint">
+      <p className="setting_hint">
         Keeps this device's tasks in step with an X-Tasks server and every device connected to it. Changes made offline are sent when the server can be reached.
       </p>
 
       {!is_connected && (
         <>
-          <label class="setting_row">
-            <div class="setting_text">
-              <span class="setting_label">Server address</span>
-              <span class="setting_hint">Where x-tasks-server is reached, such as https://tasks.example.org/</span>
+          <label className="setting_row">
+            <div className="setting_text">
+              <span className="setting_label">Server address</span>
+              <span className="setting_hint">Where x-tasks-server is reached, such as https://tasks.example.org/</span>
             </div>
-            <input type="url" class="sync_input" value={server_url} onInput={(event) => set_server_url(event.currentTarget.value)} aria-label="Server address" />
+            <input type="url" className="sync_input" value={server_url} onChange={(event) => set_server_url(event.currentTarget.value)} aria-label="Server address" />
           </label>
 
-          <label class="setting_row">
-            <div class="setting_text">
-              <span class="setting_label">Access token</span>
-              <span class="setting_hint">The token the server was set up with{has_saved_token ? '; leave it empty to keep the saved one' : ''}.</span>
+          <label className="setting_row">
+            <div className="setting_text">
+              <span className="setting_label">Access token</span>
+              <span className="setting_hint">The token the server was set up with{has_saved_token ? '; leave it empty to keep the saved one' : ''}.</span>
             </div>
-            <input type="password" class="sync_input" value={token} onInput={(event) => set_token(event.currentTarget.value)} aria-label="Access token" />
+            <input type="password" className="sync_input" value={token} onChange={(event) => set_token(event.currentTarget.value)} aria-label="Access token" />
           </label>
 
-          <div class="setting_row">
-            <div class="setting_text">
-              <span class="setting_label">Start syncing</span>
-              <span class="setting_hint">Choose once whose tasks to keep: a new device usually takes the server's, and the first device sends its own.</span>
+          <div className="setting_row">
+            <div className="setting_text">
+              <span className="setting_label">Start syncing</span>
+              <span className="setting_hint">Choose once whose tasks to keep: a new device usually takes the server's, and the first device sends its own.</span>
             </div>
             <button disabled={is_busy || server_url.trim() === ''} onClick={() => connect('download')}>Use the server's tasks</button>
             <button disabled={is_busy || server_url.trim() === ''} onClick={() => connect('upload')}>Send this device's tasks</button>
@@ -1095,10 +1096,10 @@ function SyncEditor() {
       )}
 
       {is_connected && (
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Server</span>
-            <span class="setting_hint setting_path">{status.server_url}</span>
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Server</span>
+            <span className="setting_hint setting_path">{status.server_url}</span>
           </div>
           <button disabled={is_busy} onClick={() => void run(() => window.x_settings.sync_now())}>Sync now</button>
           <button disabled={is_busy} onClick={() => void run(() => window.x_settings.disconnect_sync())}>Stop syncing</button>
@@ -1106,9 +1107,9 @@ function SyncEditor() {
       )}
 
       {status.state !== 'off' && (
-        <p class={`setting_hint sync_status ${status.state === 'failed' || status.state === 'needs_setup' ? 'sync_status_problem' : ''}`}>{describe_sync_status(status)}</p>
+        <p className={`setting_hint sync_status ${status.state === 'failed' || status.state === 'needs_setup' ? 'sync_status_problem' : ''}`}>{describe_sync_status(status)}</p>
       )}
-      {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
+      {error && <p className="setting_hint sync_status sync_status_problem">{error}</p>}
 
       {window.x_settings.host !== 'web' && <TrustedCertificateEditor server_url={status.server_url || server_url} />}
     </>
@@ -1156,16 +1157,16 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
 
   return (
     <>
-      <div class="setting_row trusted_certificate">
-        <div class="setting_text">
-          <span class="setting_label">Trusted certificate authority</span>
-          <span class="setting_hint">
+      <div className="setting_row trusted_certificate">
+        <div className="setting_text">
+          <span className="setting_label">Trusted certificate authority</span>
+          <span className="setting_hint">
             {saved.subject ? `Trusting ${saved.subject} for the server.` : 'For a server with a self-signed or private certificate: get its authority from the server, or paste the PEM certificate.'}
           </span>
           <textarea
-            class="trusted_certificate_pem"
+            className="trusted_certificate_pem"
             value={pem}
-            onInput={(event) => set_pem(event.currentTarget.value)}
+            onChange={(event) => set_pem(event.currentTarget.value)}
             placeholder="-----BEGIN CERTIFICATE-----"
             aria-label="Certificate authority in PEM form"
             rows={4}
@@ -1175,7 +1176,7 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
         <button disabled={pem.trim() === ''} onClick={() => void save(pem)}>Trust</button>
         {saved.subject && <button onClick={() => void save('')}>Forget</button>}
       </div>
-      {error && <p class="setting_hint sync_status sync_status_problem">{error}</p>}
+      {error && <p className="setting_hint sync_status sync_status_problem">{error}</p>}
       {offered && (
         <CertificateDialog
           certificate={offered}
@@ -1262,10 +1263,10 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
   return (
     <>
       {needs_folder && (
-        <div class="setting_row">
-          <div class="setting_text">
-            <span class="setting_label">Backup folder</span>
-            <span class="setting_hint">
+        <div className="setting_row">
+          <div className="setting_text">
+            <span className="setting_label">Backup folder</span>
+            <span className="setting_hint">
               {folder_name || "Pick a folder in the phone's storage, such as Documents, where file managers and sync apps can reach the backups."}
             </span>
           </div>
@@ -1273,10 +1274,10 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
         </div>
       )}
 
-      <div class="setting_row">
-        <div class="setting_text">
-          <span class="setting_label">Back up now</span>
-          <span class="setting_hint">Saves a copy of every task, tag and setting, named by the time it was taken.</span>
+      <div className="setting_row">
+        <div className="setting_text">
+          <span className="setting_label">Back up now</span>
+          <span className="setting_hint">Saves a copy of every task, tag and setting, named by the time it was taken.</span>
         </div>
         {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>}
         <button onClick={() => void create()} disabled={needs_folder && !folder_name}>
@@ -1284,10 +1285,10 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
         </button>
       </div>
 
-      <label class="setting_row">
-        <div class="setting_text">
-          <span class="setting_label">Back up daily</span>
-          <span class="setting_hint">Takes a backup once a day while the app is running. Backups made by hand are always kept.</span>
+      <label className="setting_row">
+        <div className="setting_text">
+          <span className="setting_label">Back up daily</span>
+          <span className="setting_hint">Takes a backup once a day while the app is running. Backups made by hand are always kept.</span>
         </div>
         <input
           type="checkbox"
@@ -1296,36 +1297,36 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
         />
       </label>
 
-      <label class="setting_row">
-        <div class="setting_text">
-          <span class="setting_label">Daily backups to keep</span>
-          <span class="setting_hint">Older daily backups are deleted once there are more than this.</span>
+      <label className="setting_row">
+        <div className="setting_text">
+          <span className="setting_label">Daily backups to keep</span>
+          <span className="setting_hint">Older daily backups are deleted once there are more than this.</span>
         </div>
-        <input
+        <CommitInput
           type="number"
           min="1"
           step="1"
-          class="backup_keep"
+          className="backup_keep"
           value={settings.auto_backups_to_keep}
           disabled={!settings.auto_backup}
-          onChange={(event) =>
+          on_commit={(event) =>
             void change_automatic('auto_backups_to_keep', Math.max(1, Math.round(Number(event.currentTarget.value) || 1)))
           }
         />
       </label>
 
-      {backups.length === 0 && <p class="setting_hint backup_empty">No backups yet.</p>}
+      {backups.length === 0 && <p className="setting_hint backup_empty">No backups yet.</p>}
 
       {backups.map((backup) => (
-        <div key={backup.name} class="setting_row backup_row">
-          <div class="setting_text">
-            <span class="setting_label">{format_taken_at(backup.taken_at)}</span>
-            <span class="setting_hint">
+        <div key={backup.name} className="setting_row backup_row">
+          <div className="setting_text">
+            <span className="setting_label">{format_taken_at(backup.taken_at)}</span>
+            <span className="setting_hint">
               {backup.is_automatic ? 'Daily' : 'By hand'} · {format_size(backup.size_bytes)}
             </span>
           </div>
           <button onClick={() => void restore(backup)}>Restore</button>
-          <button class="remove_button" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>
+          <button className="remove_button" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>
             ×
           </button>
         </div>
@@ -1348,20 +1349,20 @@ interface SavedGroupingsProps {
 // The views and tag selections with a grouping of their own, each of which can be changed or sent back to the default.
 function SavedGroupings({ groupings, tags, tag_groups, on_change }: SavedGroupingsProps) {
   const entries = Object.entries(groupings)
-  if (entries.length === 0) return <p class="setting_hint">No view has a grouping of its own yet.</p>
+  if (entries.length === 0) return <p className="setting_hint">No view has a grouping of its own yet.</p>
 
   return (
     <>
       {entries.map(([key, grouping]) => {
         const title = view_title(view_of_key(key), tags)
         return (
-          <div key={key} class="setting_row reschedule_option">
-            <span class="setting_label saved_grouping_view">{title}</span>
+          <div key={key} className="setting_row reschedule_option">
+            <span className="setting_label saved_grouping_view">{title}</span>
             <select value={grouping} onChange={(event) => on_change({ ...groupings, [key]: event.currentTarget.value as TaskGrouping })} aria-label={`Grouping for ${title}`}>
               {grouping_choices(tag_groups).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
             <button
-              class="remove_button"
+              className="remove_button"
               onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
               aria-label={`Use the default grouping for ${title}`}
               title="Use the default grouping"
@@ -1388,15 +1389,15 @@ interface SavedLayoutsProps {
 // The views and tag selections with a layout of their own, each of which can be changed or sent back to the default.
 function SavedLayouts({ layouts, tags, on_change }: SavedLayoutsProps) {
   const entries = Object.entries(layouts)
-  if (entries.length === 0) return <p class="setting_hint">No view has a layout of its own yet.</p>
+  if (entries.length === 0) return <p className="setting_hint">No view has a layout of its own yet.</p>
 
   return (
     <>
       {entries.map(([key, layout]) => {
         const title = view_title(view_of_key(key), tags)
         return (
-          <div key={key} class="setting_row reschedule_option">
-            <span class="setting_label saved_grouping_view">{title}</span>
+          <div key={key} className="setting_row reschedule_option">
+            <span className="setting_label saved_grouping_view">{title}</span>
             <select
               value={layout.layout}
               onChange={(event) => on_change({ ...layouts, [key]: { ...layout, layout: event.currentTarget.value as TaskLayout } })}
@@ -1405,7 +1406,7 @@ function SavedLayouts({ layouts, tags, on_change }: SavedLayoutsProps) {
               {TASK_LAYOUT_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
             <button
-              class="remove_button"
+              className="remove_button"
               onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
               aria-label={`Use the default layout for ${title}`}
               title="Use the default layout"
@@ -1432,13 +1433,13 @@ interface SegmentedChoiceProps<Value extends string> {
 
 function SegmentedChoice<Value extends string>({ label, choices, value, on_change }: SegmentedChoiceProps<Value>) {
   return (
-    <div class="segmented_control" role="radiogroup" aria-label={label}>
+    <div className="segmented_control" role="radiogroup" aria-label={label}>
       {choices.map((choice) => (
         <button
           key={choice.value}
           role="radio"
           aria-checked={value === choice.value}
-          class={value === choice.value ? 'is_selected' : ''}
+          className={value === choice.value ? 'is_selected' : ''}
           onClick={() => on_change(choice.value)}
         >
           {choice.label}

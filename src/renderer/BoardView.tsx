@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, type MouseEvent as ReactMouseEvent } from 'react'
 
 import type { TaskDateField } from '@shared/settings'
 import { is_overdue, task_date_label, task_date_of } from '@shared/schedule'
@@ -76,11 +76,11 @@ export function BoardView({ columns, actions, column_group_id, open_dependency_c
   }
 
   return (
-    <div class="board_view">
+    <div className="board_view">
       {columns.map((column) => (
         <section
           key={column.key}
-          class={['board_column', drop_key === column.key && 'is_drop_target'].filter(Boolean).join(' ')}
+          className={['board_column', drop_key === column.key && 'is_drop_target'].filter(Boolean).join(' ')}
           onDragOver={(event) => {
             if (!dragged || !column.accepts_drop || column.key === dragged.from_key) return
             event.preventDefault()
@@ -91,11 +91,11 @@ export function BoardView({ columns, actions, column_group_id, open_dependency_c
           }}
           onDrop={() => drop(column)}
         >
-          <h2 class={column.key === 'overdue' ? 'board_column_heading is_overdue' : 'board_column_heading'}>
+          <h2 className={column.key === 'overdue' ? 'board_column_heading is_overdue' : 'board_column_heading'}>
             {column.label}
-            <span class="group_count">{column.nodes.length}</span>
+            <span className="group_count">{column.nodes.length}</span>
           </h2>
-          <ul class="board_cards">
+          <ul className="board_cards">
             {column.nodes.map((node) => (
               <BoardCard
                 key={node.task.id}
@@ -138,7 +138,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
   const date = task_date_of(task, actions.date_field)
   const done_children = children.filter((child) => child.task.is_done).length
 
-  function click_card(event: MouseEvent): void {
+  function click_card(event: ReactMouseEvent): void {
     if ((event.target as HTMLElement).closest('input, button')) return
     if (event.shiftKey) actions.on_pick_range(task)
     else if (event.ctrlKey || event.metaKey) actions.on_pick(task, true)
@@ -146,7 +146,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
     else actions.on_select(task)
   }
 
-  function open_menu(event: MouseEvent): void {
+  function open_menu(event: ReactMouseEvent): void {
     if (actions.is_picked(task)) return actions.on_bulk_menu(event)
     actions.on_context_menu(event, [
       { label: 'Open details', on_select: () => actions.on_select(task) },
@@ -167,7 +167,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
 
   return (
     <li
-      class={card_class}
+      className={card_class}
       style={tint_tag && tag_color_style(tint_tag)}
       draggable
       onMouseDown={(event) => event.shiftKey && event.preventDefault()}
@@ -183,18 +183,18 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
         on_drag_end()
       }}
     >
-      <div class="board_card_title">
+      <div className="board_card_title">
         <input type="checkbox" checked={task.is_done} onChange={() => actions.on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
-        <span class="task_title">{task.title}</span>
+        <span className="task_title">{task.title}</span>
       </div>
-      <div class="board_card_details">
-        {date && <span class={!task.is_done && is_overdue(date) ? 'due_label is_overdue' : 'due_label'}>{task_date_label(date)}</span>}
-        {task.recurrence && <span class="notes_marker" title="Repeats">↻</span>}
-        {task.notes && <span class="notes_marker" title="Has notes">≡</span>}
-        {children.length > 0 && <span class="subtask_count" title="Subtasks done">{done_children}/{children.length}</span>}
-        {waiting_count > 0 && <span class="notes_marker" title={`Waits on ${waiting_count} ${waiting_count === 1 ? 'task' : 'tasks'}`}>⧗ {waiting_count}</span>}
+      <div className="board_card_details">
+        {date && <span className={!task.is_done && is_overdue(date) ? 'due_label is_overdue' : 'due_label'}>{task_date_label(date)}</span>}
+        {task.recurrence && <span className="notes_marker" title="Repeats">↻</span>}
+        {task.notes && <span className="notes_marker" title="Has notes">≡</span>}
+        {children.length > 0 && <span className="subtask_count" title="Subtasks done">{done_children}/{children.length}</span>}
+        {waiting_count > 0 && <span className="notes_marker" title={`Waits on ${waiting_count} ${waiting_count === 1 ? 'task' : 'tasks'}`}>⧗ {waiting_count}</span>}
         {task_tags.map((tag) => (
-          <span key={tag.id} class={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)} title={tag_path(tag, actions.tags)}>
+          <span key={tag.id} className={tag.color ? 'tag_chip has_color' : 'tag_chip'} style={tag_color_style(tag)} title={tag_path(tag, actions.tags)}>
             {with_icon(tag, tag.name)}
           </span>
         ))}

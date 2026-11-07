@@ -6,7 +6,7 @@ import time_grid_plugin from 'fullcalendar/timegrid'
 import 'fullcalendar/skeleton.css'
 import 'fullcalendar/themes/classic/theme.css'
 import 'fullcalendar/themes/classic/palette.css'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'react'
 
 import type { CalendarSpan, TaskDateField } from '@shared/settings'
 import { days_between, format_task_date, has_time } from '@shared/schedule'
@@ -116,8 +116,8 @@ export function CalendarView(props: CalendarViewProps) {
   }, [props.tasks, props.selected_task_id, props.now, last_shown_day])
 
   return (
-    <div class="calendar_view">
-      <div class="calendar_toolbar">
+    <div className="calendar_view">
+      <div className="calendar_toolbar">
         <button onClick={() => calendar.current?.prev()} aria-label="Previous" title="Previous">
           ‹
         </button>
@@ -125,16 +125,16 @@ export function CalendarView(props: CalendarViewProps) {
         <button onClick={() => calendar.current?.next()} aria-label="Next" title="Next">
           ›
         </button>
-        <h2 class="calendar_title">{title}</h2>
-        <div class="segmented_control" role="radiogroup" aria-label="Calendar span">
+        <h2 className="calendar_title">{title}</h2>
+        <div className="segmented_control" role="radiogroup" aria-label="Calendar span">
           {SPAN_CHOICES.map(({ value, label }) => (
-            <button key={value} role="radio" aria-checked={props.span === value} class={props.span === value ? 'is_selected' : ''} onClick={() => props.on_change_span(value)}>
+            <button key={value} role="radio" aria-checked={props.span === value} className={props.span === value ? 'is_selected' : ''} onClick={() => props.on_change_span(value)}>
               {label}
             </button>
           ))}
         </div>
       </div>
-      <div class="calendar_grid" ref={element} />
+      <div className="calendar_grid" ref={element} />
     </div>
   )
 }

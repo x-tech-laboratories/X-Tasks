@@ -24,10 +24,10 @@ export function StreakStrip({ history, limit }: StreakStripProps) {
     .join(', ')
 
   return (
-    <span class="streak_strip" role="img" aria-label={`Last ${marks.length}: ${summary}`}>
+    <span className="streak_strip" role="img" aria-label={`Last ${marks.length}: ${summary}`}>
       {marks.map((mark) => {
         const day = new Date(mark.time).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-        return <span key={mark.time} class={`streak_dot is_${mark.state}`} title={`${STATE_LABELS[mark.state]} · ${day}`} />
+        return <span key={mark.time} className={`streak_dot is_${mark.state}`} title={`${STATE_LABELS[mark.state]} · ${day}`} />
       })}
     </span>
   )

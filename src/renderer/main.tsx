@@ -1,4 +1,4 @@
-import { render } from 'preact'
+import { createRoot } from 'react-dom/client'
 
 import { App } from './App'
 import { install_web_bridge } from './web_bridge'
@@ -14,4 +14,4 @@ async function install_bridge(): Promise<void> {
 // The Linux sidebar's web plugin hands the page its colours as --sidebar-* variables, and the page follows them when they are there.
 if (getComputedStyle(document.documentElement).getPropertyValue('--sidebar-bg').trim() !== '') document.documentElement.classList.add('follows_host_theme')
 
-void install_bridge().then(() => render(<App />, document.getElementById('app')!))
+void install_bridge().then(() => createRoot(document.getElementById('app')!).render(<App />))
