@@ -11,4 +11,7 @@ async function install_bridge(): Promise<void> {
   install_web_bridge()
 }
 
+// The Linux sidebar's web plugin hands the page its colours as --sidebar-* variables, and the page follows them when they are there.
+if (getComputedStyle(document.documentElement).getPropertyValue('--sidebar-bg').trim() !== '') document.documentElement.classList.add('follows_host_theme')
+
 void install_bridge().then(() => render(<App />, document.getElementById('app')!))

@@ -89,6 +89,18 @@ services.x-tasks-server = {
 It keeps its database and backups in `/var/lib/x-tasks-server`. The theme setting has no effect in a
 browser, which follows the system theme.
 
+A `view` in the address opens that view instead of the launch view, without changing the saved
+one: a built-in view such as `?view=my_day`, `upcoming`, `all`, `active`, `completed` or `reports`,
+or tags by name such as `?view=Work,Home`. Signing in leads to the plain address, so the view takes
+effect from the next load.
+
+### In the Linux sidebar
+
+The [linux-sidebar](https://github.com/BeatLink/linux-sidebar) `web` plugin shows the whole app in a
+docked strip: set its address to the server with `?view=my_day`. The page then takes the sidebar's
+colours and font from the `--sidebar-*` CSS variables the plugin hands it, and below 700 pixels it
+uses the phone layout, where each task's date and tags wrap onto the lines below its title.
+
 ## Sync
 
 The desktop app keeps its own database and syncs it with a server, so it works offline and sends

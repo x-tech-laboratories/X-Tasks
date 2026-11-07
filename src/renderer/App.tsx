@@ -30,7 +30,7 @@ import {
 } from './table'
 import {
   by_position, children_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, move_for_drop, moves_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
-  tag_ids_for_new_task, tag_path, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
+  tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
 } from './views'
 
 // ============================================================================
@@ -103,7 +103,7 @@ export function App() {
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
-      set_selected_view(launch_view(loaded_settings, loaded_tags))
+      set_selected_view(view_from_address(window.location.search, loaded_tags) ?? launch_view(loaded_settings, loaded_tags))
       // A main process older than this screen leaves out newer settings, so their defaults fill the gaps.
       set_settings({ ...DEFAULT_SETTINGS, ...loaded_settings })
     })

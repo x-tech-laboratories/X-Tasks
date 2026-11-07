@@ -144,6 +144,17 @@ export function launch_view(settings: Settings, tags: Tag[]): View {
   return BUILT_IN_VIEWS.some((entry) => entry.view.kind === saved.kind) ? saved : { kind: 'all' }
 }
 
+// A view named in the page address opens instead of the launch view: a built-in one such as ?view=my_day, or tags by name such as ?view=Work,Home.
+export function view_from_address(search: string, tags: Tag[]): View | null {
+  const named = new URLSearchParams(search).get('view')?.trim()
+  if (!named) return null
+  const built_in = BUILT_IN_VIEWS.find(({ view }) => view.kind === named)
+  if (built_in) return built_in.view
+
+  const tag_ids = named.split(',').flatMap((name) => tags.filter((tag) => tag.name.toLowerCase() === name.trim().toLowerCase()).slice(0, 1).map((tag) => tag.id))
+  return tag_ids.length > 0 ? { kind: 'tag', tag_ids } : null
+}
+
 function view_without_missing_tags(tag_ids: string[], tags: Tag[]): View {
   const kept_ids = tag_ids.filter((tag_id) => tags.some((tag) => tag.id === tag_id))
   return kept_ids.length > 0 ? { kind: 'tag', tag_ids: kept_ids } : { kind: 'all' }

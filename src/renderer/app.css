@@ -46,6 +46,26 @@
   }
 }
 
+/* Inside the Linux sidebar the page takes the sidebar's own colours, handed to it as --sidebar-* variables. */
+html.follows_host_theme {
+  color-scheme: var(--sidebar-color-scheme, light dark);
+  --surface-root: var(--sidebar-bg);
+  --surface-default: var(--sidebar-base);
+  --surface-secondary: var(--sidebar-bg);
+  --surface-navigation-hover: var(--sidebar-hover);
+  --text-heading: var(--sidebar-fg);
+  --text-body: var(--sidebar-fg);
+  --text-secondary: color-mix(in srgb, var(--sidebar-fg) 80%, var(--sidebar-bg));
+  --text-tertiary: color-mix(in srgb, var(--sidebar-fg) 65%, var(--sidebar-bg));
+  --text-on-fill: var(--sidebar-accent-fg);
+  --border-default: var(--sidebar-border);
+  --border-hover: color-mix(in srgb, var(--sidebar-fg) 40%, var(--sidebar-bg));
+  --border-control: color-mix(in srgb, var(--sidebar-fg) 55%, var(--sidebar-bg));
+  --accent: var(--sidebar-accent);
+  --focus-ring: color-mix(in srgb, var(--sidebar-accent) 25%, transparent);
+  --font-family-interface: var(--sidebar-font-family);
+}
+
 /* ========================================================================== */
 /* Halon metric tokens                                                        */
 /* ========================================================================== */
@@ -288,6 +308,10 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
     border-left: 0;
     border-radius: 0;
   }
+
+  /* A row's date and tags wrap onto the lines below its title, so a task with many tags still shows its title. */
+  .task_list:not(.is_table) .task { flex-wrap: wrap; justify-content: flex-start; row-gap: var(--space-2); }
+  .task_list:not(.is_table) .task_title { flex: 1 0 60%; }
 
   form.multibar { padding: var(--space-4); }
 
@@ -899,6 +923,14 @@ select:hover { border-color: var(--border-focus); }
   background: var(--surface-default);
   color: var(--text-heading);
   box-shadow: var(--shadow-item);
+}
+
+/* On a phone the search box and the layout picker shrink to the screen rather than pushing the page sideways. */
+@media (max-width: 700px) {
+  .multibar input { min-width: 0; }
+  .segmented_control { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .segmented_control::-webkit-scrollbar { display: none; }
+  .segmented_control button { padding: 0 var(--space-3); }
 }
 
 /* ========================================================================== */
