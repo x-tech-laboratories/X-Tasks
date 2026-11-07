@@ -24,6 +24,8 @@ function mode_of(scale: GanttScale): string {
 interface GanttViewProps {
   // The rows on screen from top to bottom; those without dates are left off the chart.
   rows: Task[]
+  // The ids of the tasks each task waits on, by task id.
+  waits_on: Map<string, string[]>
   scale: GanttScale
   selected_task_id: string | null
   on_change_scale: (scale: GanttScale) => void
@@ -41,7 +43,7 @@ export function GanttView(props: GanttViewProps) {
   const latest = useRef(props)
   latest.current = props
 
-  const bars = gantt_tasks(props.rows, props.selected_task_id)
+  const bars = gantt_tasks(props.rows, props.waits_on, props.selected_task_id)
   const bars_key = JSON.stringify(bars)
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function GanttView(props: GanttViewProps) {
 }
 
 // A dated task becomes a bar, and only the tasks it waits on that are also charted get arrows.
-function gantt_tasks(rows: Task[], selected_task_id: string | null): GanttTask[] {
+function gantt_tasks(rows: Task[], waits_on: Map<string, string[]>, selected_task_id: string | null): GanttTask[] {
   const charted = rows.filter((task) => task_span(task) !== null)
   const charted_ids = new Set(charted.map((task) => task.id))
 
@@ -105,7 +107,7 @@ function gantt_tasks(rows: Task[], selected_task_id: string | null): GanttTask[]
       start: span.start.replace('T', ' '),
       end: span.end.replace('T', ' '),
       progress: task.is_done ? 100 : 0,
-      dependencies: task.depends_on_ids.filter((id) => charted_ids.has(id)).join(','),
+      dependencies: (waits_on.get(task.id) ?? []).filter((id) => charted_ids.has(id)).join(','),
       custom_class: task.id === selected_task_id ? 'is_selected' : task.is_done ? 'is_done' : ''
     }
   })

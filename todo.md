@@ -18,6 +18,7 @@
 - [x] Select several tasks and complete, reschedule, tag, drag or delete them all at once
 - [x] Board, calendar and Gantt layouts, kept per view or shared, as a setting
 - [x] Tasks that wait on other tasks, set in a task's details and drawn as arrows in the Gantt chart
+- [x] Relationships named from both ends in Settings, set from a dialog in a task's details and tested by filters
 
 ## Tags
 

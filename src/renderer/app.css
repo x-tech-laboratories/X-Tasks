@@ -1593,6 +1593,14 @@ select:hover { border-color: var(--border-focus); }
 .board_card_details:empty { display: none; }
 
 .dependency_chip.is_done { color: var(--text-tertiary); text-decoration: line-through; }
+.relationship_group { display: flex; flex-direction: column; gap: var(--space-2); }
+.relationship_label { color: var(--text-secondary); font-size: var(--text-caption); }
+.relationship_dialog { width: min(560px, calc(100vw - 2 * var(--space-7))); }
+.relationship_dialog_row { display: flex; gap: var(--space-4); }
+.relationship_dialog_row select { flex: 1; min-width: 0; }
+.relationship_dialog_row select:first-child { flex: 0 1 auto; }
+.relationship_names { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); flex: 1; min-width: 0; }
+.relationship_names input { flex: 1; min-width: 100px; }
 
 /* The calendar and chart take the app's colours, so they follow the light and dark themes with it. */
 .calendar_view { display: flex; flex-direction: column; gap: var(--space-5); }

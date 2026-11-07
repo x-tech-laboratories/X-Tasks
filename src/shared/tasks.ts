@@ -1,3 +1,5 @@
+import type { TaskRelationship } from './settings'
+
 // ============================================================================
 // Task, tag and tag group
 // ============================================================================
@@ -18,8 +20,14 @@ export interface Task {
   parent_id: string | null
   position: number
   tag_ids: string[]
-  // The tasks this one waits on.
-  depends_on_ids: string[]
+  // The links this task makes to others; each other task sees the same link by the relationship's inverse name.
+  links: TaskLink[]
+}
+
+// This task has the relationship to the other task, as in "this task waits on the other".
+export interface TaskLink {
+  other_id: string
+  relationship_id: string
 }
 
 // Dates are local clock times, as YYYY-MM-DD or YYYY-MM-DDTHH:MM; recurrence is an RFC 5545 rule without the RRULE: prefix.
@@ -96,6 +104,13 @@ export type RuleCondition =
   | { kind: 'open_subtasks'; has_open: boolean }
   | { kind: 'tagged'; is_tagged: boolean }
   | { kind: 'title'; text: string }
+  | { kind: 'link'; relationship_id: string; direction: LinkDirection; target: LinkTarget; task_id: string; has_link: boolean }
+
+// Which way a link condition reads a relationship: by its name, by its inverse name, or either way; an empty relationship means any.
+export type LinkDirection = 'forward' | 'inverse' | 'either'
+
+// What a link condition counts the links to: any task, open tasks only, or the one task it names.
+export type LinkTarget = 'any' | 'open' | 'task'
 
 // ============================================================================
 // View
@@ -111,20 +126,72 @@ export type View =
   | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================
-// Dependencies
+// Relationships
 // ============================================================================
 
-// A task cannot wait on itself, nor on any task that already waits on it, directly or through others.
-export function can_depend_on(task_id: string, depends_on_id: string, tasks: Task[]): boolean {
-  const depends_on_by_id = new Map(tasks.map((task) => [task.id, task.depends_on_ids]))
-  const waiting = [depends_on_id]
+// A link between two tasks a relationship makes, seen from one of them, named as that task sees it.
+export interface SeenLink {
+  other: Task
+  relationship_id: string
+  is_inverse: boolean
+}
+
+// Every link touching the task, whichever of the two tasks made it.
+export function links_of(task: Task, tasks: Task[]): SeenLink[] {
+  const by_id = new Map(tasks.map((each) => [each.id, each]))
+  const made = task.links.flatMap((link) => {
+    const other = by_id.get(link.other_id)
+    return other ? [{ other, relationship_id: link.relationship_id, is_inverse: false }] : []
+  })
+  const received = tasks.flatMap((other) =>
+    other.links.filter((link) => link.other_id === task.id).map((link) => ({ other, relationship_id: link.relationship_id, is_inverse: true }))
+  )
+  return [...made, ...received]
+}
+
+// Whether a link of this relationship, read this way, makes the task wait on the other.
+export function link_waits(relationship: TaskRelationship | undefined, is_inverse: boolean): boolean {
+  if (!relationship || relationship.waiter === 'none') return false
+  return (relationship.waiter === 'first') !== is_inverse
+}
+
+// For each task, the ids of the tasks it waits on through relationships that make one task wait.
+export function waits_on_by_task(tasks: Task[], relationships: TaskRelationship[]): Map<string, string[]> {
+  const by_id = new Map(relationships.map((relationship) => [relationship.id, relationship]))
+  const waits_on = new Map<string, string[]>()
+  const add = (waiter_id: string, waited_id: string) => waits_on.set(waiter_id, [...(waits_on.get(waiter_id) ?? []), waited_id])
+
+  for (const task of tasks) {
+    for (const link of task.links) {
+      const relationship = by_id.get(link.relationship_id)
+      if (link_waits(relationship, false)) add(task.id, link.other_id)
+      else if (link_waits(relationship, true)) add(link.other_id, task.id)
+    }
+  }
+  return waits_on
+}
+
+// A task cannot be linked to itself, nor wait on any task that already waits on it, directly or through others.
+export function can_link(task_id: string, other_id: string, relationship: TaskRelationship | undefined, is_inverse: boolean, tasks: Task[], relationships: TaskRelationship[]): boolean {
+  if (task_id === other_id) return false
+  if (!relationship || relationship.waiter === 'none') return true
+  const [waiter_id, waited_id] = link_waits(relationship, is_inverse) ? [task_id, other_id] : [other_id, task_id]
+
+  // The two tasks' current link is replaced, so it cannot count towards a loop.
+  const others = tasks.map((each) =>
+    each.id === task_id || each.id === other_id
+      ? { ...each, links: each.links.filter((link) => link.other_id !== task_id && link.other_id !== other_id) }
+      : each
+  )
+  const waits_on = waits_on_by_task(others, relationships)
+  const waiting = [waited_id]
   const seen = new Set<string>()
   while (waiting.length > 0) {
     const current_id = waiting.pop()!
-    if (current_id === task_id) return false
+    if (current_id === waiter_id) return false
     if (seen.has(current_id)) continue
     seen.add(current_id)
-    waiting.push(...(depends_on_by_id.get(current_id) ?? []))
+    waiting.push(...(waits_on.get(current_id) ?? []))
   }
   return true
 }
@@ -163,8 +230,9 @@ export interface TasksApi {
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>
   untag_task: (task_id: string, tag_id: string) => Promise<void>
-  add_task_dependency: (task_id: string, depends_on_id: string) => Promise<void>
-  remove_task_dependency: (task_id: string, depends_on_id: string) => Promise<void>
+  // Replaces whatever link the two tasks already had, in either direction.
+  link_tasks: (task_id: string, other_id: string, relationship_id: string) => Promise<void>
+  unlink_tasks: (task_id: string, other_id: string) => Promise<void>
   list_completions: () => Promise<Completion[]>
 
   list_tag_groups: () => Promise<TagGroup[]>
@@ -196,8 +264,8 @@ export const REMOVE_TASK_CHANNEL = 'tasks:remove'
 export const MOVE_TASK_CHANNEL = 'tasks:move'
 export const TAG_TASK_CHANNEL = 'tasks:tag'
 export const UNTAG_TASK_CHANNEL = 'tasks:untag'
-export const ADD_TASK_DEPENDENCY_CHANNEL = 'tasks:add-dependency'
-export const REMOVE_TASK_DEPENDENCY_CHANNEL = 'tasks:remove-dependency'
+export const LINK_TASKS_CHANNEL = 'tasks:link'
+export const UNLINK_TASKS_CHANNEL = 'tasks:unlink'
 export const LIST_COMPLETIONS_CHANNEL = 'tasks:list-completions'
 
 export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'

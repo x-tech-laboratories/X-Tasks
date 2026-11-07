@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
-import { can_depend_on, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
+import { can_link, links_of, type SeenLink, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
-import type { TaskDateField, TaskDuration } from '@shared/settings'
+import type { TaskDateField, TaskDuration, TaskRelationship } from '@shared/settings'
 import {
   describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor,
   with_recurrence
@@ -21,10 +21,12 @@ interface TaskDetailProps {
   tags: Tag[]
   date_field: TaskDateField
   subtask_count: number
-  // Every task, for picking the ones this task waits on or holds up.
+  // Every task, for picking the ones this task is linked to.
   tasks: Task[]
-  on_add_dependency: (task: Task, depends_on: Task) => void
-  on_remove_dependency: (task: Task, depends_on_id: string) => void
+  relationships: TaskRelationship[]
+  // The task gets the relationship to the other, by its inverse name when is_inverse is set.
+  on_link: (task: Task, other: Task, relationship_id: string, is_inverse: boolean) => void
+  on_unlink: (task: Task, other: Task) => void
   durations: TaskDuration[]
   on_toggle: (task: Task) => void
   on_rename: (task: Task, title: string) => void
@@ -43,7 +45,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, date_field, subtask_count, tasks, on_add_dependency, on_remove_dependency, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, date_field, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -205,21 +207,12 @@ export function TaskDetail({
         </button>
       </div>
 
-      <DependencyField
-        label="Waits on"
-        add_label="Add a task this waits on…"
-        linked={tasks.filter((each) => task.depends_on_ids.includes(each.id))}
-        offered={tasks.filter((each) => !each.is_done && !task.depends_on_ids.includes(each.id) && can_depend_on(task.id, each.id, tasks))}
-        on_add={(other) => on_add_dependency(task, other)}
-        on_remove={(other) => on_remove_dependency(task, other.id)}
-      />
-      <DependencyField
-        label="Blocks"
-        add_label="Add a task waiting on this…"
-        linked={tasks.filter((each) => each.depends_on_ids.includes(task.id))}
-        offered={tasks.filter((each) => !each.is_done && !each.depends_on_ids.includes(task.id) && can_depend_on(each.id, task.id, tasks))}
-        on_add={(other) => on_add_dependency(other, task)}
-        on_remove={(other) => on_remove_dependency(other, task.id)}
+      <RelationshipsField
+        task={task}
+        tasks={tasks}
+        relationships={relationships}
+        on_link={(other, relationship_id, is_inverse) => on_link(task, other, relationship_id, is_inverse)}
+        on_unlink={(other) => on_unlink(task, other)}
       />
 
       {streak && (
@@ -273,53 +266,149 @@ export function TaskDetail({
 }
 
 // ============================================================================
-// Dependencies
+// Relationships
 // ============================================================================
 
-interface DependencyFieldProps {
+// One way of reading a relationship, as offered in the dialog: its name, or its inverse name when that differs.
+interface RelationshipSide {
+  key: string
   label: string
-  add_label: string
-  linked: Task[]
-  offered: Task[]
-  on_add: (task: Task) => void
-  on_remove: (task: Task) => void
+  relationship: TaskRelationship
+  is_inverse: boolean
 }
 
-// The tasks on one side of a task's dependencies as chips, with a list of the open tasks that can join without making a loop.
-function DependencyField({ label, add_label, linked, offered, on_add, on_remove }: DependencyFieldProps) {
-  function add(event: Event): void {
-    const select = event.currentTarget as HTMLSelectElement
-    const chosen = offered.find((each) => each.id === select.value)
-    if (chosen) on_add(chosen)
-    select.value = ''
-  }
+function relationship_sides(relationships: TaskRelationship[]): RelationshipSide[] {
+  return relationships.flatMap((relationship) => [
+    { key: `${relationship.id}:forward`, label: relationship.name, relationship, is_inverse: false },
+    ...(relationship.inverse_name === relationship.name ? [] : [{ key: `${relationship.id}:inverse`, label: relationship.inverse_name, relationship, is_inverse: true }])
+  ])
+}
+
+// The name a link reads by from this task's side; a symmetric relationship reads the same both ways.
+function side_label(link: SeenLink, relationships: TaskRelationship[]): string {
+  const relationship = relationships.find((each) => each.id === link.relationship_id)
+  if (!relationship) return 'Removed relationship'
+  return link.is_inverse ? relationship.inverse_name : relationship.name
+}
+
+interface RelationshipsFieldProps {
+  task: Task
+  tasks: Task[]
+  relationships: TaskRelationship[]
+  on_link: (other: Task, relationship_id: string, is_inverse: boolean) => void
+  on_unlink: (other: Task) => void
+}
+
+// The task's links as chips under the name each reads by, and a button that opens the dialog for a new one.
+function RelationshipsField({ task, tasks, relationships, on_link, on_unlink }: RelationshipsFieldProps) {
+  const [is_adding, set_is_adding] = useState(false)
+  const links = links_of(task, tasks)
+  const labels = [...new Set(links.map((link) => side_label(link, relationships)))]
 
   return (
     <div class="task_detail_field">
-      <span class="sidebar_heading">{label}</span>
-      {linked.length > 0 && (
-        <div class="tag_chips">
-          {linked.map((each) => (
-            <span key={each.id} class={each.is_done ? 'tag_chip dependency_chip is_done' : 'tag_chip dependency_chip'}>
-              {each.title}
-              <button onClick={() => on_remove(each)} aria-label={`Remove ${each.title}`}>
-                ×
-              </button>
-            </span>
-          ))}
+      <span class="sidebar_heading">Relationships</span>
+      {labels.map((label) => (
+        <div key={label} class="relationship_group">
+          <span class="relationship_label">{label}</span>
+          <div class="tag_chips">
+            {links
+              .filter((link) => side_label(link, relationships) === label)
+              .map(({ other }) => (
+                <span key={other.id} class={other.is_done ? 'tag_chip dependency_chip is_done' : 'tag_chip dependency_chip'}>
+                  {other.title}
+                  <button onClick={() => on_unlink(other)} aria-label={`Remove ${label.toLowerCase()} ${other.title}`}>
+                    ×
+                  </button>
+                </span>
+              ))}
+          </div>
         </div>
+      ))}
+      {relationships.length > 0 && (
+        <button class="recurrence_button" onClick={() => set_is_adding(true)}>
+          Add relationship…
+        </button>
       )}
-      {offered.length > 0 && (
-        <select value="" onChange={add} aria-label={add_label}>
-          <option value="">{add_label}</option>
-          {[...offered].sort((first, second) => first.title.localeCompare(second.title)).map((each) => (
-            <option key={each.id} value={each.id}>
-              {each.title}
-            </option>
-          ))}
-        </select>
+      {is_adding && (
+        <RelationshipDialog task={task} tasks={tasks} relationships={relationships} on_link={on_link} on_close={() => set_is_adding(false)} />
       )}
     </div>
+  )
+}
+
+interface RelationshipDialogProps {
+  task: Task
+  tasks: Task[]
+  relationships: TaskRelationship[]
+  on_link: (other: Task, relationship_id: string, is_inverse: boolean) => void
+  on_close: () => void
+}
+
+// A relationship and an open task side by side; a task already linked to this one gets the new relationship in place of its old one.
+function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: RelationshipDialogProps) {
+  const dialog_ref = useRef<HTMLDialogElement>(null)
+  const sides = relationship_sides(relationships)
+  const [side_key, set_side_key] = useState(sides[0]?.key ?? '')
+  const [other_id, set_other_id] = useState('')
+
+  useEffect(() => dialog_ref.current?.showModal(), [])
+
+  const side = sides.find((each) => each.key === side_key)
+  const offered = side
+    ? tasks
+        .filter((each) => !each.is_done && can_link(task.id, each.id, side.relationship, side.is_inverse, tasks, relationships))
+        .sort((first, second) => first.title.localeCompare(second.title))
+    : []
+  const other = offered.find((each) => each.id === other_id)
+
+  function save(event: Event): void {
+    event.preventDefault()
+    if (!side || !other) return
+    on_link(other, side.relationship.id, side.is_inverse)
+    on_close()
+  }
+
+  // Escape closes only this dialog, not the task panel behind it.
+  return (
+    <dialog
+      ref={dialog_ref}
+      class="recurrence_dialog relationship_dialog"
+      onClose={on_close}
+      onKeyDown={(event) => event.key === 'Escape' && event.stopPropagation()}
+    >
+      <form onSubmit={save}>
+        <h2 class="recurrence_dialog_heading">Add relationship</h2>
+        <p class="setting_hint">{task.title}</p>
+
+        <div class="relationship_dialog_row">
+          <select value={side_key} onChange={(event) => set_side_key(event.currentTarget.value)} aria-label="Relationship">
+            {sides.map((each) => (
+              <option key={each.key} value={each.key}>
+                {each.label}
+              </option>
+            ))}
+          </select>
+          <select value={other ? other_id : ''} onChange={(event) => set_other_id(event.currentTarget.value)} aria-label="Task" autofocus>
+            <option value="">Choose a task…</option>
+            {offered.map((each) => (
+              <option key={each.id} value={each.id}>
+                {each.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <footer class="recurrence_dialog_footer">
+          <button type="button" onClick={on_close}>
+            Cancel
+          </button>
+          <button type="submit" class="primary_button" disabled={!other}>
+            Add
+          </button>
+        </footer>
+      </form>
+    </dialog>
   )
 }
 

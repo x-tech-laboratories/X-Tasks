@@ -6,10 +6,10 @@ import { z } from 'zod'
 
 import { format_task_date, next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
-import { can_depend_on, type Task } from '@shared/tasks'
+import { can_link, links_of, type Task } from '@shared/tasks'
 import {
-  add_task, add_task_dependency, list_tag_groups, list_tags, list_tasks, remove_task, remove_task_dependency, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
-  set_task_title, tag_task, untag_task
+  add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
+  set_task_title, tag_task, unlink_tasks, untag_task
 } from './task_database'
 
 // ============================================================================
@@ -37,17 +37,36 @@ function check_plain_tag(tag_id: string): void {
   if (tag.rule) throw new Error(`tag ${tag.name} is a rule tag, which applies itself`)
 }
 
-// Each task with its tags named, so a client need not look the ids up.
+// Each task with its tags and links named, so a client need not look the ids up.
 function describe_tasks(tasks: Task[]): object[] {
   const tags = list_tags()
   const groups = list_tag_groups()
-  return tasks.map(({ tag_ids, ...task }) => ({
+  const all_tasks = list_tasks()
+  const relationships = get_settings().task_relationships
+  return tasks.map((task) => ({
     ...task,
-    tags: tag_ids.map((tag_id) => {
+    tag_ids: undefined,
+    tags: task.tag_ids.map((tag_id) => {
       const tag = tags.find((each) => each.id === tag_id)
       return { id: tag_id, name: tag?.name, group: groups.find((group) => group.id === tag?.group_id)?.name }
+    }),
+    links: links_of(task, all_tasks).map((link) => {
+      const relationship = relationships.find((each) => each.id === link.relationship_id)
+      return { relationship: link.is_inverse ? relationship?.inverse_name : relationship?.name, task_id: link.other.id, title: link.other.title }
     })
   }))
+}
+
+// The relationship and the way it reads for a name such as "Waits on" or its inverse "Blocks".
+function find_relationship(name: string) {
+  const relationships = get_settings().task_relationships
+  const wanted = name.trim().toLowerCase()
+  const forward = relationships.find((each) => each.name.toLowerCase() === wanted)
+  if (forward) return { relationship: forward, is_inverse: false }
+  const inverse = relationships.find((each) => each.inverse_name.toLowerCase() === wanted)
+  if (inverse) return { relationship: inverse, is_inverse: true }
+  const names = relationships.flatMap((each) => (each.name === each.inverse_name ? [each.name] : [each.name, each.inverse_name]))
+  throw new Error(`no relationship named ${name}; the relationships are ${names.join(', ')}`)
 }
 
 function subtask_ids_of(task_id: string, tasks: Task[]): Set<string> {
@@ -219,26 +238,30 @@ function create_mcp_server(on_change: () => void): McpServer {
   )
 
   server.registerTool(
-    'add_task_dependency',
+    'link_tasks',
     {
-      description: 'Makes a task wait on another task, shown as an arrow in the Gantt chart. Refused when it would make a loop.',
-      inputSchema: { task_id: z.string(), depends_on_id: z.string() }
+      description:
+        'Links a task to another by a relationship from the Relationships setting, by its name or inverse name, as in "Waits on" or "Blocks". ' +
+        'The other task gets the inverse; any link the two already had is replaced. Refused when it would make a task wait on itself through others.',
+      inputSchema: { task_id: z.string(), relationship: z.string(), other_id: z.string() }
     },
-    changing(({ task_id, depends_on_id }) => {
+    changing(({ task_id, relationship: name, other_id }) => {
       find_task(task_id)
-      find_task(depends_on_id)
-      if (!can_depend_on(task_id, depends_on_id, list_tasks())) throw new Error('that dependency would make a loop')
-      add_task_dependency(task_id, depends_on_id)
+      find_task(other_id)
+      const { relationship, is_inverse } = find_relationship(name)
+      if (!can_link(task_id, other_id, relationship, is_inverse, list_tasks(), get_settings().task_relationships)) throw new Error('that link would make a loop')
+      if (is_inverse) link_tasks(other_id, task_id, relationship.id)
+      else link_tasks(task_id, other_id, relationship.id)
       return describe_tasks([find_task(task_id)])[0]
     })
   )
 
   server.registerTool(
-    'remove_task_dependency',
-    { description: 'Stops a task waiting on another task.', inputSchema: { task_id: z.string(), depends_on_id: z.string() } },
-    changing(({ task_id, depends_on_id }) => {
+    'unlink_tasks',
+    { description: 'Removes the link between two tasks, whichever way it was made.', inputSchema: { task_id: z.string(), other_id: z.string() } },
+    changing(({ task_id, other_id }) => {
       find_task(task_id)
-      remove_task_dependency(task_id, depends_on_id)
+      unlink_tasks(task_id, other_id)
       return describe_tasks([find_task(task_id)])[0]
     })
   )

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type McpStatus, type OverdueRepeatReschedule, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type McpStatus, type OverdueRepeatReschedule, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
-import type { Tag, TagGroup } from '@shared/tasks'
+import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
 import { grouping_choices, view_of_key } from './grouping'
 import { TASK_LAYOUT_CHOICES } from './layouts'
@@ -131,11 +131,14 @@ interface SettingsPageProps {
   settings: Settings
   tags: Tag[]
   tag_groups: TagGroup[]
+  tasks: Task[]
   on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void | Promise<void>
+  // Saves the relationships and removes the links of any taken out.
+  on_change_relationships: (relationships: TaskRelationship[]) => void
   on_add_tag_group: (name: string, is_rule: boolean) => void
 }
 
-export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag_group }: SettingsPageProps) {
+export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_change_relationships, on_add_tag_group }: SettingsPageProps) {
   const [database_path, set_database_path] = useState('')
   const [new_group_name, set_new_group_name] = useState('')
   const [is_new_group_rule, set_is_new_group_rule] = useState(false)
@@ -537,6 +540,11 @@ export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag
       </section>
 
       <section class="settings_group">
+        <h2 class="settings_heading">Relationships</h2>
+        <RelationshipsEditor relationships={settings.task_relationships} tasks={tasks} on_change={on_change_relationships} />
+      </section>
+
+      <section class="settings_group">
         <h2 class="settings_heading">Durations</h2>
         <DurationsEditor durations={settings.task_durations} on_change={(durations) => on_change('task_durations', durations)} />
       </section>
@@ -674,6 +682,93 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
           on_close={() => set_picking_rule_id(null)}
         />
       )}
+    </>
+  )
+}
+
+// ============================================================================
+// Relationships
+// ============================================================================
+
+interface RelationshipsEditorProps {
+  relationships: TaskRelationship[]
+  tasks: Task[]
+  on_change: (relationships: TaskRelationship[]) => void
+}
+
+// The kinds of links tasks can have, each named from both ends, in the order a task's details offer them.
+function RelationshipsEditor({ relationships, tasks, on_change }: RelationshipsEditorProps) {
+  function update(id: string, change: Partial<TaskRelationship>): void {
+    on_change(relationships.map((relationship) => (relationship.id === id ? { ...relationship, ...change } : relationship)))
+  }
+
+  function move(index: number, step: number): void {
+    const reordered = [...relationships]
+    const [relationship] = reordered.splice(index, 1)
+    reordered.splice(index + step, 0, relationship!)
+    on_change(reordered)
+  }
+
+  function add(): void {
+    on_change([...relationships, { id: crypto.randomUUID(), name: 'Depends on', inverse_name: 'Needed by', waiter: 'first' }])
+  }
+
+  // Taking out a relationship in use takes its links off every task, so that asks first.
+  function remove(relationship: TaskRelationship): void {
+    const count = tasks.reduce((total, task) => total + task.links.filter((link) => link.relationship_id === relationship.id).length, 0)
+    if (count > 0 && !window.confirm(`Remove "${relationship.name}" and its ${count} ${count === 1 ? 'link' : 'links'} between tasks?`)) return
+    on_change(relationships.filter((each) => each.id !== relationship.id))
+  }
+
+  return (
+    <>
+      <p class="setting_hint">
+        The ways one task can relate to another, named from both ends. Setting one on a task gives the other task its inverse, so
+        "A waits on B" shows on B as "B blocks A". Use the same name twice for a relationship that reads the same both ways. A
+        waiting task shows how many open tasks it waits on, and the Gantt chart draws an arrow to it.
+      </p>
+
+      {relationships.map((relationship, index) => (
+        <div key={relationship.id} class="setting_row reschedule_option">
+          <div class="relationship_names">
+            A
+            <input
+              value={relationship.name}
+              onChange={(event) => update(relationship.id, { name: event.currentTarget.value.trim() || relationship.name })}
+              aria-label="Name"
+            />
+            B, and B
+            <input
+              value={relationship.inverse_name}
+              onChange={(event) => update(relationship.id, { inverse_name: event.currentTarget.value.trim() || relationship.inverse_name })}
+              aria-label="Inverse name"
+            />
+            A
+          </div>
+          <select
+            value={relationship.waiter}
+            onChange={(event) => update(relationship.id, { waiter: event.currentTarget.value as TaskRelationship['waiter'] })}
+            aria-label="Which task waits"
+          >
+            <option value="none">Neither waits</option>
+            <option value="first">A waits on B</option>
+            <option value="second">B waits on A</option>
+          </select>
+          <button class="remove_button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+            ↑
+          </button>
+          <button class="remove_button" onClick={() => move(index, 1)} disabled={index === relationships.length - 1} aria-label="Move down">
+            ↓
+          </button>
+          <button class="remove_button" onClick={() => remove(relationship)} aria-label={`Remove ${relationship.name}`}>
+            ×
+          </button>
+        </div>
+      ))}
+
+      <button class="reschedule_add" onClick={add}>
+        Add relationship
+      </button>
     </>
   )
 }

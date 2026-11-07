@@ -1,4 +1,4 @@
-import type { RuleCondition, Tag, TagGroup, TagRule, Task } from '@shared/tasks'
+import { links_of, type RuleCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import { days_between, is_overdue, parse_task_date } from '@shared/schedule'
 import { subtree_ids } from './views'
 
@@ -19,7 +19,8 @@ export const CONDITION_CHOICES: { kind: ConditionKind; label: string }[] = [
   { kind: 'subtask', label: 'Nesting' },
   { kind: 'open_subtasks', label: 'Open subtasks' },
   { kind: 'tagged', label: 'Tags' },
-  { kind: 'title', label: 'Title contains' }
+  { kind: 'title', label: 'Title contains' },
+  { kind: 'link', label: 'Relationship' }
 ]
 
 // The condition a row starts as when its kind is picked; a tag or group condition starts on the first plain one.
@@ -36,6 +37,7 @@ export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagG
     case 'open_subtasks': return { kind, has_open: false }
     case 'tagged': return { kind, is_tagged: false }
     case 'title': return { kind, text: '' }
+    case 'link': return { kind, relationship_id: '', direction: 'either', target: 'any', task_id: '', has_link: true }
   }
 }
 
@@ -78,6 +80,15 @@ export function condition_holds(condition: RuleCondition, task: Task, all_tasks:
     case 'open_subtasks': return all_tasks.some((each) => each.parent_id === task.id && !each.is_done) === condition.has_open
     case 'tagged': return (chain_tag_ids.size > 0) === condition.is_tagged
     case 'title': return task.title.toLowerCase().includes(condition.text.trim().toLowerCase())
+    case 'link': {
+      const has_link = links_of(task, all_tasks).some(
+        (link) =>
+          (condition.relationship_id === '' || link.relationship_id === condition.relationship_id) &&
+          (condition.direction === 'either' || link.is_inverse === (condition.direction === 'inverse')) &&
+          (condition.target === 'any' || (condition.target === 'open' ? !link.other.is_done : link.other.id === condition.task_id))
+      )
+      return has_link === condition.has_link
+    }
   }
 }
 

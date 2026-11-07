@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 
-import { EMPTY_RULE, type DueCondition, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import { EMPTY_RULE, type DueCondition, type LinkDirection, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import type { TaskRelationship } from '@shared/settings'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
 import { chain_tag_ids_of, last_character, subtree_ids, tag_path } from './views'
 
@@ -31,6 +32,8 @@ interface ConditionRowProps {
   condition: RuleCondition
   tags: Tag[]
   groups: TagGroup[]
+  tasks: Task[]
+  relationships: TaskRelationship[]
   on_change: (condition: RuleCondition) => void
   on_remove: () => void
 }
@@ -61,7 +64,19 @@ function DaysInput({ days, on_change }: { days: number; on_change: (days: number
   )
 }
 
-function ConditionRow({ condition, tags, groups, on_change, on_remove }: ConditionRowProps) {
+// Each relationship read either way, or once when both its names are the same.
+function link_side_choices(relationships: TaskRelationship[]): { value: string; label: string }[] {
+  return relationships.flatMap((relationship) =>
+    relationship.name === relationship.inverse_name
+      ? [{ value: `${relationship.id}:either`, label: relationship.name }]
+      : [
+          { value: `${relationship.id}:forward`, label: relationship.name },
+          { value: `${relationship.id}:inverse`, label: relationship.inverse_name }
+        ]
+  )
+}
+
+function ConditionRow({ condition, tags, groups, tasks, relationships, on_change, on_remove }: ConditionRowProps) {
   const plain_tags = tags.filter((tag) => !tag.rule)
   const plain_groups = groups.filter((group) => !group.is_rule)
 
@@ -128,6 +143,43 @@ function ConditionRow({ condition, tags, groups, on_change, on_remove }: Conditi
         return (
           <TwoWaySelect value={condition.is_tagged} labels={['has a tag', 'has no tags']} on_change={(is_tagged) => on_change({ ...condition, is_tagged })} />
         )
+      case 'link': {
+        const link_condition = condition
+        const side = condition.relationship_id === '' ? '' : `${condition.relationship_id}:${condition.direction}`
+        const side_choices = link_side_choices(relationships)
+        const target = condition.target === 'task' ? `task:${condition.task_id}` : condition.target
+
+        function choose_side(value: string): void {
+          const [relationship_id = '', direction = 'either'] = value.split(':')
+          on_change({ ...link_condition, relationship_id, direction: direction as LinkDirection })
+        }
+
+        function choose_target(value: string): void {
+          if (value.startsWith('task:')) on_change({ ...link_condition, target: 'task', task_id: value.slice('task:'.length) })
+          else on_change({ ...link_condition, target: value as 'any' | 'open', task_id: '' })
+        }
+
+        return (
+          <>
+            <TwoWaySelect value={condition.has_link} labels={['has', 'has no']} on_change={(has_link) => on_change({ ...condition, has_link })} />
+            <select value={side} onChange={(event) => choose_side(event.currentTarget.value)} aria-label="Relationship">
+              <option value="">any relationship</option>
+              {side !== '' && !side_choices.some((choice) => choice.value === side) && <option value={side}>Deleted relationship</option>}
+              {side_choices.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <select value={target} onChange={(event) => choose_target(event.currentTarget.value)} aria-label="Linked task">
+              <option value="any">any task</option>
+              <option value="open">an open task</option>
+              {condition.target === 'task' && !tasks.some((task) => task.id === condition.task_id) && <option value={target}>Deleted task</option>}
+              {[...tasks].sort((first, second) => first.title.localeCompare(second.title)).map((task) => (
+                <option key={task.id} value={`task:${task.id}`}>
+                  {task.title}
+                </option>
+              ))}
+            </select>
+          </>
+        )
+      }
       case 'title':
         return (
           <input
@@ -219,12 +271,13 @@ interface FilterDialogProps {
   tags: Tag[]
   groups: TagGroup[]
   tasks: Task[]
+  relationships: TaskRelationship[]
   on_save: (name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean) => void
   on_close: () => void
 }
 
 // Names a tag, gives it a colour and an icon and, for a rule tag, lists the conditions a task must meet to carry it, with a live count of the tasks it covers.
-export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, swatches, tag_id, tags, groups, tasks, on_save, on_close }: FilterDialogProps) {
+export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, swatches, tag_id, tags, groups, tasks, relationships, on_save, on_close }: FilterDialogProps) {
   const dialog_ref = useRef<HTMLDialogElement>(null)
   const [name_draft, set_name_draft] = useState(name)
   const [color_draft, set_color_draft] = useState(color)
@@ -328,6 +381,8 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
                   condition={condition}
                   tags={condition_tags}
                   groups={groups}
+                  tasks={tasks}
+                  relationships={relationships}
                   on_change={(changed) => change_condition(index, changed)}
                   on_remove={() => remove_condition(index)}
                 />

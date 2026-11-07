@@ -1,8 +1,8 @@
 import { Fragment } from 'preact'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 
-import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type ViewLayout } from '@shared/settings'
-import { EMPTY_RULE, can_depend_on, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
+import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
+import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { BACK_EVENT } from './back_navigation'
 import { BoardView, DONE_COLUMN, NO_TAG_COLUMN, OPEN_COLUMN, date_columns, status_columns, tag_columns } from './BoardView'
@@ -400,7 +400,7 @@ export function App() {
       timer: window.setTimeout(finish_removal, UNDO_DELAY_MS)
     }
     set_tasks((current_tasks) =>
-      current_tasks.filter((each) => !removed_ids.has(each.id)).map((each) => ({ ...each, depends_on_ids: each.depends_on_ids.filter((id) => !removed_ids.has(id)) }))
+      current_tasks.filter((each) => !removed_ids.has(each.id)).map((each) => ({ ...each, links: each.links.filter((link) => !removed_ids.has(link.other_id)) }))
     )
     set_undo_message(removed_tasks.length === 1 ? `Deleted "${removed_tasks[0]!.title}"` : `Deleted ${removed_tasks.length} tasks`)
   }
@@ -488,18 +488,38 @@ export function App() {
     void window.x_tasks.untag_task(task.id, tag.id)
   }
 
-  // A task never waits on itself or on anything already waiting on it.
-  function add_task_dependency(task: Task, depends_on: Task): void {
-    if (task.depends_on_ids.includes(depends_on.id) || !can_depend_on(task.id, depends_on.id, tasks)) return
-    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, depends_on_ids: [...each.depends_on_ids, depends_on.id] } : each)))
-    void window.x_tasks.add_task_dependency(task.id, depends_on.id)
+  // Two tasks share one link, kept by the task the relationship's name reads from; a task never waits on itself through others.
+  function link_tasks(task: Task, other: Task, relationship_id: string, is_inverse: boolean): void {
+    const relationship = settings!.task_relationships.find((each) => each.id === relationship_id)
+    if (!can_link(task.id, other.id, relationship, is_inverse, tasks, settings!.task_relationships)) return
+    const [from, to] = is_inverse ? [other, task] : [task, other]
+    set_tasks((current_tasks) =>
+      current_tasks.map((each) => {
+        if (each.id !== from.id && each.id !== to.id) return each
+        const links = each.links.filter((link) => link.other_id !== from.id && link.other_id !== to.id)
+        return { ...each, links: each.id === from.id ? [...links, { other_id: to.id, relationship_id }] : links }
+      })
+    )
+    void window.x_tasks.link_tasks(from.id, to.id, relationship_id)
   }
 
-  function remove_task_dependency(task: Task, depends_on_id: string): void {
+  function unlink_tasks(task: Task, other: Task): void {
     set_tasks((current_tasks) =>
-      current_tasks.map((each) => (each.id === task.id ? { ...each, depends_on_ids: each.depends_on_ids.filter((id) => id !== depends_on_id) } : each))
+      current_tasks.map((each) =>
+        each.id === task.id || each.id === other.id
+          ? { ...each, links: each.links.filter((link) => link.other_id !== task.id && link.other_id !== other.id) }
+          : each
+      )
     )
-    void window.x_tasks.remove_task_dependency(task.id, depends_on_id)
+    void window.x_tasks.unlink_tasks(task.id, other.id)
+  }
+
+  // A relationship taken out of Settings takes its links with it.
+  function change_relationships(relationships: TaskRelationship[]): void {
+    const kept_ids = new Set(relationships.map((relationship) => relationship.id))
+    for (const task of tasks) for (const link of task.links) if (!kept_ids.has(link.relationship_id)) void window.x_tasks.unlink_tasks(task.id, link.other_id)
+    set_tasks((current_tasks) => current_tasks.map((each) => ({ ...each, links: each.links.filter((link) => kept_ids.has(link.relationship_id)) })))
+    void change_setting('task_relationships', relationships)
   }
 
   // ==========================================================================
@@ -653,6 +673,7 @@ export function App() {
   const is_sorted = is_table && settings.table_sort.length > 0
   const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of)) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
+  const waits_on = waits_on_by_task(tasks, settings.task_relationships)
   // A completed task with an open subtask stays, and one whose parent is cleared goes with that parent.
   const open_task_ids = new Set(tasks.filter((task) => !task.is_done).map((task) => task.id))
   const fully_done_ids = new Set(
@@ -996,7 +1017,15 @@ export function App() {
 
         <main class={is_wide && !is_settings_open ? `task_pane is_table is_${layout}` : 'task_pane'}>
           {is_settings_open ? (
-            <SettingsPage settings={settings} tags={tags} tag_groups={tag_groups} on_change={change_setting} on_add_tag_group={add_tag_group} />
+            <SettingsPage
+              settings={settings}
+              tags={tags}
+              tag_groups={tag_groups}
+              tasks={tasks}
+              on_change={change_setting}
+              on_change_relationships={change_relationships}
+              on_add_tag_group={add_tag_group}
+            />
           ) : is_reports ? (
             <ReportsPage
               widgets={settings.report_widgets}
@@ -1101,7 +1130,7 @@ export function App() {
                   columns={board_columns}
                   actions={task_actions}
                   column_group_id={grouped_tag_group?.id ?? null}
-                  open_dependency_count={(task) => task.depends_on_ids.filter((id) => open_task_ids.has(id)).length}
+                  open_dependency_count={(task) => (waits_on.get(task.id) ?? []).filter((id) => open_task_ids.has(id)).length}
                   on_move={move_on_board}
                 />
               )}
@@ -1123,6 +1152,7 @@ export function App() {
               {layout === 'gantt' && visible_tasks.length > 0 && (
                 <GanttView
                   rows={shown_rows}
+                  waits_on={waits_on}
                   scale={view_layout.gantt_scale}
                   selected_task_id={selected_task_id}
                   on_change_scale={(gantt_scale) => pick_layout({ gantt_scale })}
@@ -1198,8 +1228,9 @@ export function App() {
             date_field={settings.task_date_field}
             subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
             tasks={tasks}
-            on_add_dependency={add_task_dependency}
-            on_remove_dependency={remove_task_dependency}
+            relationships={settings.task_relationships}
+            on_link={link_tasks}
+            on_unlink={unlink_tasks}
             durations={settings.task_durations}
             on_toggle={tick_task}
             on_rename={rename_task}
@@ -1241,6 +1272,7 @@ export function App() {
             tags={tags}
             groups={tag_groups}
             tasks={tasks}
+            relationships={settings.task_relationships}
             on_save={save_filter}
             on_close={() => set_filter_editing(null)}
           />

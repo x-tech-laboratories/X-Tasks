@@ -115,6 +115,15 @@ export interface ReportWidget {
   hide_subtasks?: boolean
 }
 
+// A kind of link between two tasks, named both ways, as in "A waits on B" and "B blocks A".
+export interface TaskRelationship {
+  id: string
+  name: string
+  inverse_name: string
+  // Which task waits on the other: neither, the first (A), or the second (B); a waiting task shows it on its row and the Gantt chart draws an arrow.
+  waiter: 'none' | 'first' | 'second'
+}
+
 export const UPCOMING_REPEAT_DAYS_RANGE = { min: 0, max: 90 }
 
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
@@ -181,6 +190,8 @@ export interface Settings {
   reschedule_options: RescheduleOption[]
   // The gaps offered by the Duration list in a task's details, in the order shown.
   task_durations: TaskDuration[]
+  // The kinds of links tasks can have to one another, in the order offered.
+  task_relationships: TaskRelationship[]
   // The swatches, as #rrggbb, offered when picking a tag colour; any other colour can still be picked.
   tag_colors: string[]
   last_view: View
@@ -261,6 +272,10 @@ export const DEFAULT_SETTINGS: Settings = {
     task_duration('2w', { weeks: 2 }),
     task_duration('1mo', { months: 1 }),
     task_duration('3mo', { months: 3 })
+  ],
+  task_relationships: [
+    { id: 'waits_on', name: 'Waits on', inverse_name: 'Blocks', waiter: 'first' },
+    { id: 'related_to', name: 'Related to', inverse_name: 'Related to', waiter: 'none' }
   ],
   tag_colors: ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#db2777', '#64748b'],
   last_view: { kind: 'all' },

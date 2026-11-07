@@ -185,8 +185,15 @@ The switch at the top of a view shows its tasks as a list, a table, a board, a c
 puts its columns by the view's grouping, or To do and Done without one, and dragging a card between columns changes
 its tag, date or done state. The calendar uses [FullCalendar](https://fullcalendar.io) and the Gantt chart
 [Frappe Gantt](https://github.com/frappe/gantt); in both, dragging a task moves its dates and pulling an edge changes
-how long it runs. A task's details list the tasks it waits on and the ones waiting on it, which the Gantt chart draws
-as arrows. Each view keeps its own layout, or every view shares one, as Settings › Layout chooses.
+how long it runs. Each view keeps its own layout, or every view shares one, as Settings › Layout chooses.
+
+## Relationships
+
+Add relationship… in a task's details picks a relationship and another task side by side, and the other task shows
+the inverse, so "A waits on B" reads "B blocks A" from B. Settings › Relationships names each relationship from both
+ends, such as Depends on and Needed by, and says which task waits on the other; a waiting task shows how many open
+tasks it waits on and the Gantt chart draws an arrow to it. Filters can test a task's relationships, such as waiting
+on an open task, having none, or being linked to one task in particular.
 
 ## Task links
 

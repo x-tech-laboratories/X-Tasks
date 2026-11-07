@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, saved_task_duration, type Settings } from '@shared/settings'
-import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
+import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
 import type { SqlDatabase } from './sql_database'
 import { drop_sync_triggers, install_sync_triggers } from './sync_engine'
 
@@ -177,7 +177,9 @@ const SCHEMA_MIGRATIONS = [
      depends_on_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
      PRIMARY KEY (task_id, depends_on_id)
    );
-   CREATE INDEX task_dependencies_by_dependency ON task_dependencies (depends_on_id)`
+   CREATE INDEX task_dependencies_by_dependency ON task_dependencies (depends_on_id)`,
+  // Each link names its relationship from the Relationships setting; links made before then are the preset Waits on.
+  `ALTER TABLE task_dependencies ADD COLUMN relationship_id TEXT NOT NULL DEFAULT 'waits_on'`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -290,7 +292,7 @@ function next_position(table: 'tasks' | 'tag_groups' | 'tags'): number {
   return (last ?? 0) + 1
 }
 
-function row_to_task(row: TaskRow, tag_ids: string[], depends_on_ids: string[]): Task {
+function row_to_task(row: TaskRow, tag_ids: string[], links: TaskLink[]): Task {
   return {
     id: row.id,
     title: row.title,
@@ -305,7 +307,7 @@ function row_to_task(row: TaskRow, tag_ids: string[], depends_on_ids: string[]):
     parent_id: row.parent_id,
     position: row.position,
     tag_ids,
-    depends_on_ids
+    links
   }
 }
 
@@ -318,14 +320,20 @@ export function list_tasks(): Task[] {
   const rows = database.prepare('SELECT * FROM tasks ORDER BY position').all() as unknown as TaskRow[]
   const links = database.prepare('SELECT task_id, tag_id FROM task_tags').all() as { task_id: string; tag_id: string }[]
 
-  const dependencies = database.prepare('SELECT task_id, depends_on_id FROM task_dependencies').all() as { task_id: string; depends_on_id: string }[]
+  const task_links = database.prepare('SELECT task_id, depends_on_id, relationship_id FROM task_dependencies').all() as {
+    task_id: string
+    depends_on_id: string
+    relationship_id: string
+  }[]
 
   const tag_ids_by_task = new Map<string, string[]>()
   for (const link of links) tag_ids_by_task.set(link.task_id, [...(tag_ids_by_task.get(link.task_id) ?? []), link.tag_id])
-  const depends_on_by_task = new Map<string, string[]>()
-  for (const link of dependencies) depends_on_by_task.set(link.task_id, [...(depends_on_by_task.get(link.task_id) ?? []), link.depends_on_id])
+  const links_by_task = new Map<string, TaskLink[]>()
+  for (const link of task_links) {
+    links_by_task.set(link.task_id, [...(links_by_task.get(link.task_id) ?? []), { other_id: link.depends_on_id, relationship_id: link.relationship_id }])
+  }
 
-  return rows.map((row) => row_to_task(row, tag_ids_by_task.get(row.id) ?? [], depends_on_by_task.get(row.id) ?? []))
+  return rows.map((row) => row_to_task(row, tag_ids_by_task.get(row.id) ?? [], links_by_task.get(row.id) ?? []))
 }
 
 export function add_task(title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null): Task {
@@ -344,7 +352,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     parent_id,
     position: next_position('tasks'),
     tag_ids,
-    depends_on_ids: []
+    links: []
   }
 
   in_transaction(database, () => {
@@ -433,12 +441,26 @@ export function untag_task(task_id: string, tag_id: string): void {
   open_database().prepare('DELETE FROM task_tags WHERE task_id = ? AND tag_id = ?').run(task_id, tag_id)
 }
 
-export function add_task_dependency(task_id: string, depends_on_id: string): void {
-  open_database().prepare('INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_id) VALUES (?, ?)').run(task_id, depends_on_id)
+// Two tasks share at most one link, so a link made the other way round goes first.
+export function link_tasks(task_id: string, other_id: string, relationship_id: string): void {
+  const database = open_database()
+
+  in_transaction(database, () => {
+    database.prepare('DELETE FROM task_dependencies WHERE task_id = ? AND depends_on_id = ?').run(other_id, task_id)
+    database
+      .prepare(
+        `INSERT INTO task_dependencies (task_id, depends_on_id, relationship_id) VALUES (?, ?, ?)
+         ON CONFLICT (task_id, depends_on_id) DO UPDATE SET relationship_id = excluded.relationship_id`
+      )
+      .run(task_id, other_id, relationship_id)
+  })
 }
 
-export function remove_task_dependency(task_id: string, depends_on_id: string): void {
-  open_database().prepare('DELETE FROM task_dependencies WHERE task_id = ? AND depends_on_id = ?').run(task_id, depends_on_id)
+// Removes the two tasks' link whichever of them made it.
+export function unlink_tasks(task_id: string, other_id: string): void {
+  open_database()
+    .prepare('DELETE FROM task_dependencies WHERE (task_id = ? AND depends_on_id = ?) OR (task_id = ? AND depends_on_id = ?)')
+    .run(task_id, other_id, other_id, task_id)
 }
 
 // ============================================================================
