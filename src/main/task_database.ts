@@ -170,7 +170,14 @@ const SCHEMA_MIGRATIONS = [
      WHERE NOT EXISTS (SELECT 1 FROM tags WHERE id = column1)`,
   // Tags can be left off task rows; the preset Actionable and Untagged filters start off them, since nearly every task matches one.
   `ALTER TABLE tags ADD COLUMN shows_on_rows INTEGER NOT NULL DEFAULT 1;
-   UPDATE tags SET shows_on_rows = 0 WHERE id IN ('filter_actionable', 'filter_untagged')`
+   UPDATE tags SET shows_on_rows = 0 WHERE id IN ('filter_actionable', 'filter_untagged')`,
+  // A task can wait on other tasks, as the Gantt chart's arrows show.
+  `CREATE TABLE task_dependencies (
+     task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+     depends_on_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+     PRIMARY KEY (task_id, depends_on_id)
+   );
+   CREATE INDEX task_dependencies_by_dependency ON task_dependencies (depends_on_id)`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -283,7 +290,7 @@ function next_position(table: 'tasks' | 'tag_groups' | 'tags'): number {
   return (last ?? 0) + 1
 }
 
-function row_to_task(row: TaskRow, tag_ids: string[]): Task {
+function row_to_task(row: TaskRow, tag_ids: string[], depends_on_ids: string[]): Task {
   return {
     id: row.id,
     title: row.title,
@@ -297,7 +304,8 @@ function row_to_task(row: TaskRow, tag_ids: string[]): Task {
     created_at: row.created_at,
     parent_id: row.parent_id,
     position: row.position,
-    tag_ids
+    tag_ids,
+    depends_on_ids
   }
 }
 
@@ -310,10 +318,14 @@ export function list_tasks(): Task[] {
   const rows = database.prepare('SELECT * FROM tasks ORDER BY position').all() as unknown as TaskRow[]
   const links = database.prepare('SELECT task_id, tag_id FROM task_tags').all() as { task_id: string; tag_id: string }[]
 
+  const dependencies = database.prepare('SELECT task_id, depends_on_id FROM task_dependencies').all() as { task_id: string; depends_on_id: string }[]
+
   const tag_ids_by_task = new Map<string, string[]>()
   for (const link of links) tag_ids_by_task.set(link.task_id, [...(tag_ids_by_task.get(link.task_id) ?? []), link.tag_id])
+  const depends_on_by_task = new Map<string, string[]>()
+  for (const link of dependencies) depends_on_by_task.set(link.task_id, [...(depends_on_by_task.get(link.task_id) ?? []), link.depends_on_id])
 
-  return rows.map((row) => row_to_task(row, tag_ids_by_task.get(row.id) ?? []))
+  return rows.map((row) => row_to_task(row, tag_ids_by_task.get(row.id) ?? [], depends_on_by_task.get(row.id) ?? []))
 }
 
 export function add_task(title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null): Task {
@@ -331,7 +343,8 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     created_at: new Date().toISOString(),
     parent_id,
     position: next_position('tasks'),
-    tag_ids
+    tag_ids,
+    depends_on_ids: []
   }
 
   in_transaction(database, () => {
@@ -418,6 +431,14 @@ export function tag_task(task_id: string, tag_id: string): void {
 
 export function untag_task(task_id: string, tag_id: string): void {
   open_database().prepare('DELETE FROM task_tags WHERE task_id = ? AND tag_id = ?').run(task_id, tag_id)
+}
+
+export function add_task_dependency(task_id: string, depends_on_id: string): void {
+  open_database().prepare('INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_id) VALUES (?, ?)').run(task_id, depends_on_id)
+}
+
+export function remove_task_dependency(task_id: string, depends_on_id: string): void {
+  open_database().prepare('DELETE FROM task_dependencies WHERE task_id = ? AND depends_on_id = ?').run(task_id, depends_on_id)
 }
 
 // ============================================================================

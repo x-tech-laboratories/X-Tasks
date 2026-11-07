@@ -18,6 +18,8 @@ export interface Task {
   parent_id: string | null
   position: number
   tag_ids: string[]
+  // The tasks this one waits on.
+  depends_on_ids: string[]
 }
 
 // Dates are local clock times, as YYYY-MM-DD or YYYY-MM-DDTHH:MM; recurrence is an RFC 5545 rule without the RRULE: prefix.
@@ -109,6 +111,25 @@ export type View =
   | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================
+// Dependencies
+// ============================================================================
+
+// A task cannot wait on itself, nor on any task that already waits on it, directly or through others.
+export function can_depend_on(task_id: string, depends_on_id: string, tasks: Task[]): boolean {
+  const depends_on_by_id = new Map(tasks.map((task) => [task.id, task.depends_on_ids]))
+  const waiting = [depends_on_id]
+  const seen = new Set<string>()
+  while (waiting.length > 0) {
+    const current_id = waiting.pop()!
+    if (current_id === task_id) return false
+    if (seen.has(current_id)) continue
+    seen.add(current_id)
+    waiting.push(...(depends_on_by_id.get(current_id) ?? []))
+  }
+  return true
+}
+
+// ============================================================================
 // Task links
 // ============================================================================
 
@@ -142,6 +163,8 @@ export interface TasksApi {
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>
   untag_task: (task_id: string, tag_id: string) => Promise<void>
+  add_task_dependency: (task_id: string, depends_on_id: string) => Promise<void>
+  remove_task_dependency: (task_id: string, depends_on_id: string) => Promise<void>
   list_completions: () => Promise<Completion[]>
 
   list_tag_groups: () => Promise<TagGroup[]>
@@ -173,6 +196,8 @@ export const REMOVE_TASK_CHANNEL = 'tasks:remove'
 export const MOVE_TASK_CHANNEL = 'tasks:move'
 export const TAG_TASK_CHANNEL = 'tasks:tag'
 export const UNTAG_TASK_CHANNEL = 'tasks:untag'
+export const ADD_TASK_DEPENDENCY_CHANNEL = 'tasks:add-dependency'
+export const REMOVE_TASK_DEPENDENCY_CHANNEL = 'tasks:remove-dependency'
 export const LIST_COMPLETIONS_CHANNEL = 'tasks:list-completions'
 
 export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'

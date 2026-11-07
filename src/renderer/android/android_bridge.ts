@@ -5,8 +5,8 @@ import type { McpStatus, ServerCertificate, Settings, SettingsApi, TrustedCertif
 import type { TasksApi } from '@shared/tasks'
 import { connect_sync, disconnect_sync, get_sync_status, start_sync, sync_now, type SyncConfig, type SyncStorage } from '../../main/sync_client'
 import {
-  add_tag, add_tag_group, add_task, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
-  move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, set_setting, set_task_done, set_task_my_day, set_task_notes,
+  add_tag, add_tag_group, add_task, add_task_dependency, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
+  move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, remove_task_dependency, set_setting, set_task_done, set_task_my_day, set_task_notes,
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group
 } from '../../main/task_database'
 import { request_back } from '../back_navigation'
@@ -75,6 +75,8 @@ export async function install_android_bridge(): Promise<void> {
     move_task: answer(move_task),
     tag_task: answer(tag_task),
     untag_task: answer(untag_task),
+    add_task_dependency: answer(add_task_dependency),
+    remove_task_dependency: answer(remove_task_dependency),
     list_completions: answer(list_completions),
     list_tag_groups: answer(list_tag_groups),
     add_tag_group: answer(add_tag_group),

@@ -16,6 +16,8 @@
 - [x] Clear all completed tasks in a view
 - [x] Undo after removing a task
 - [x] Select several tasks and complete, reschedule, tag, drag or delete them all at once
+- [x] Board, calendar and Gantt layouts, kept per view or shared, as a setting
+- [x] Tasks that wait on other tasks, set in a task's details and drawn as arrows in the Gantt chart
 
 ## Tags
 

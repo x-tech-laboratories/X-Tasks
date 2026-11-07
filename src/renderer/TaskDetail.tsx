@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
-import type { Tag, TagGroup, Task, TaskSchedule } from '@shared/tasks'
+import { can_depend_on, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
 import type { TaskDateField, TaskDuration } from '@shared/settings'
@@ -21,6 +21,10 @@ interface TaskDetailProps {
   tags: Tag[]
   date_field: TaskDateField
   subtask_count: number
+  // Every task, for picking the ones this task waits on or holds up.
+  tasks: Task[]
+  on_add_dependency: (task: Task, depends_on: Task) => void
+  on_remove_dependency: (task: Task, depends_on_id: string) => void
   durations: TaskDuration[]
   on_toggle: (task: Task) => void
   on_rename: (task: Task, title: string) => void
@@ -39,7 +43,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, date_field, subtask_count, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, date_field, subtask_count, tasks, on_add_dependency, on_remove_dependency, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -201,6 +205,23 @@ export function TaskDetail({
         </button>
       </div>
 
+      <DependencyField
+        label="Waits on"
+        add_label="Add a task this waits on…"
+        linked={tasks.filter((each) => task.depends_on_ids.includes(each.id))}
+        offered={tasks.filter((each) => !each.is_done && !task.depends_on_ids.includes(each.id) && can_depend_on(task.id, each.id, tasks))}
+        on_add={(other) => on_add_dependency(task, other)}
+        on_remove={(other) => on_remove_dependency(task, other.id)}
+      />
+      <DependencyField
+        label="Blocks"
+        add_label="Add a task waiting on this…"
+        linked={tasks.filter((each) => each.depends_on_ids.includes(task.id))}
+        offered={tasks.filter((each) => !each.is_done && !each.depends_on_ids.includes(task.id) && can_depend_on(each.id, task.id, tasks))}
+        on_add={(other) => on_add_dependency(other, task)}
+        on_remove={(other) => on_remove_dependency(other, task.id)}
+      />
+
       {streak && (
         <div class="task_detail_field">
           <span class="sidebar_heading">Streak</span>
@@ -248,6 +269,57 @@ export function TaskDetail({
         </button>
       </footer>
     </aside>
+  )
+}
+
+// ============================================================================
+// Dependencies
+// ============================================================================
+
+interface DependencyFieldProps {
+  label: string
+  add_label: string
+  linked: Task[]
+  offered: Task[]
+  on_add: (task: Task) => void
+  on_remove: (task: Task) => void
+}
+
+// The tasks on one side of a task's dependencies as chips, with a list of the open tasks that can join without making a loop.
+function DependencyField({ label, add_label, linked, offered, on_add, on_remove }: DependencyFieldProps) {
+  function add(event: Event): void {
+    const select = event.currentTarget as HTMLSelectElement
+    const chosen = offered.find((each) => each.id === select.value)
+    if (chosen) on_add(chosen)
+    select.value = ''
+  }
+
+  return (
+    <div class="task_detail_field">
+      <span class="sidebar_heading">{label}</span>
+      {linked.length > 0 && (
+        <div class="tag_chips">
+          {linked.map((each) => (
+            <span key={each.id} class={each.is_done ? 'tag_chip dependency_chip is_done' : 'tag_chip dependency_chip'}>
+              {each.title}
+              <button onClick={() => on_remove(each)} aria-label={`Remove ${each.title}`}>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {offered.length > 0 && (
+        <select value="" onChange={add} aria-label={add_label}>
+          <option value="">{add_label}</option>
+          {[...offered].sort((first, second) => first.title.localeCompare(second.title)).map((each) => (
+            <option key={each.id} value={each.id}>
+              {each.title}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
   )
 }
 

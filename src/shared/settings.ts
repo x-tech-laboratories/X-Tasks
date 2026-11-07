@@ -10,8 +10,21 @@ export type ThemeChoice = 'system' | 'light' | 'dark'
 // The view the app opens on, where 'last' means the one shown when it was closed.
 export type LaunchView = 'last' | 'my_day' | 'upcoming' | 'all' | 'active' | 'completed' | 'reports'
 
-// How the center pane shows tasks: a plain list, or a table with aligned columns.
-export type TaskLayout = 'list' | 'table'
+// How the center pane shows tasks: a plain list, a table with aligned columns, a board of columns, a calendar, or a Gantt chart.
+export type TaskLayout = 'list' | 'table' | 'board' | 'calendar' | 'gantt'
+
+// How much time the calendar shows at once.
+export type CalendarSpan = 'month' | 'week' | 'day'
+
+// How much time each column of the Gantt chart covers.
+export type GanttScale = 'day' | 'week' | 'month'
+
+// The layout a view shows its tasks in, and the span its calendar and Gantt chart were left at.
+export interface ViewLayout {
+  layout: TaskLayout
+  calendar_span: CalendarSpan
+  gantt_scale: GanttScale
+}
 
 // Which of a task's dates it is shown, sorted, filtered, rescheduled and put in My Day by.
 export type TaskDateField = 'due' | 'start'
@@ -45,6 +58,9 @@ export type OverdueRepeatReschedule = 'off' | 'today' | 'next'
 
 // Whether one grouping serves every view, each view keeps the grouping picked in it, or a picked grouping stays until saved for that view.
 export type GroupingMemory = 'shared' | 'automatic' | 'on_demand'
+
+// The same choice for the layout: one for every view, each view's last pick, or a pick kept until saved for that view.
+export type LayoutMemory = 'shared' | 'automatic' | 'on_demand'
 
 // The narrowest and widest each side panel can be dragged to.
 export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
@@ -132,7 +148,13 @@ export interface Settings {
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
+  // The layout, calendar span and Gantt scale of views with none saved, or of every view when they share one.
   task_layout: TaskLayout
+  calendar_span: CalendarSpan
+  gantt_scale: GanttScale
+  layout_memory: LayoutMemory
+  // The layouts saved for single views and tag selections, keyed as view_key names them, which take the place of the default.
+  view_layouts: Record<string, ViewLayout>
   // The headings every view but Reports and Upcoming shows its tasks under; Upcoming always goes by date.
   task_grouping: TaskGrouping
   grouping_memory: GroupingMemory
@@ -200,6 +222,10 @@ export const DEFAULT_SETTINGS: Settings = {
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',
+  calendar_span: 'month',
+  gantt_scale: 'day',
+  layout_memory: 'automatic',
+  view_layouts: {},
   task_grouping: 'none',
   grouping_memory: 'automatic',
   view_groupings: {},

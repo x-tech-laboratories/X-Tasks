@@ -318,9 +318,10 @@ body.is_resizing { cursor: col-resize; user-select: none; }
 /* The vertical scrollbar starts below the sticky header instead of running up beside it. */
 .task_pane.is_table > .task_list::-webkit-scrollbar-track:vertical { margin-top: var(--table-header-height); }
 
-.task_pane_header { display: flex; align-items: baseline; gap: var(--space-5); }
+.task_pane_header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-5); }
 
 .task_pane_header h1 {
+  white-space: nowrap;
   margin: 0 0 var(--space-6);
   color: var(--text-heading);
   font-size: var(--text-h1);
@@ -1496,3 +1497,122 @@ select:hover { border-color: var(--border-focus); }
 .add_task_row:focus-visible { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); }
 .add_task_plus { color: var(--accent); font-weight: 700; }
 .add_task_label strong { color: var(--text-heading); }
+
+/* ========================================================================== */
+/* Board, calendar and Gantt layouts                                          */
+/* ========================================================================== */
+
+/* These layouts fill the rest of the pane below its header and scroll inside it. */
+.task_pane.is_board > .board_view,
+.task_pane.is_calendar > .calendar_view,
+.task_pane.is_gantt > .gantt_view { flex: 1 1 auto; min-height: 0; }
+
+.board_view { display: flex; align-items: flex-start; gap: var(--space-5); overflow: auto; padding-bottom: var(--space-4); }
+
+.board_column {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 272px;
+  max-height: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-secondary);
+}
+
+.board_column.is_drop_target { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring); }
+
+.board_column_heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  color: var(--text-heading);
+  font-size: var(--text-control);
+  font-weight: 600;
+}
+
+.board_column_heading.is_overdue { color: var(--status-danger); }
+
+.board_cards { display: flex; flex-direction: column; gap: var(--space-4); min-height: var(--row-height); margin: 0; padding: 0 var(--space-4) var(--space-4); overflow-y: auto; list-style: none; }
+
+.board_card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-small);
+  background: var(--surface-default);
+  box-shadow: var(--shadow-item);
+  cursor: pointer;
+}
+
+.board_card:hover { border-color: var(--border-hover); }
+.board_card.is_selected { background: var(--surface-navigation-hover); }
+.board_card.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
+.board_card.is_picked { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); box-shadow: inset 3px 0 0 var(--accent); }
+.board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
+
+.board_card_title { display: flex; align-items: flex-start; gap: var(--space-4); font-size: var(--text-control); line-height: var(--line-height-ui); }
+.board_card_title input { flex: none; margin: 0; }
+.board_card_details { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.board_card_details:empty { display: none; }
+
+.dependency_chip.is_done { color: var(--text-tertiary); text-decoration: line-through; }
+
+/* The calendar and chart take the app's colours, so they follow the light and dark themes with it. */
+.calendar_view {
+  min-height: 480px;
+  color: var(--text-body);
+  font-size: var(--text-control);
+  --fc-classic-button: var(--surface-default);
+  --fc-classic-button-border: var(--border-control);
+  --fc-classic-button-strong: var(--surface-navigation-hover);
+  --fc-classic-button-strong-border: var(--border-control);
+  --fc-classic-button-outline: var(--focus-ring);
+  --fc-classic-button-foreground: var(--text-body);
+  --fc-classic-primary: var(--accent);
+  --fc-classic-primary-foreground: var(--text-on-fill);
+  --fc-classic-background: var(--surface-default);
+  --fc-classic-foreground: var(--text-body);
+  --fc-classic-muted-foreground: var(--text-secondary);
+  --fc-classic-faint-foreground: var(--text-tertiary);
+  --fc-classic-border: var(--border-default);
+  --fc-classic-strong-border: var(--border-hover);
+  --fc-classic-today: color-mix(in srgb, var(--accent) 8%, transparent);
+  --fc-classic-highlight: var(--focus-ring);
+  --fc-classic-now: var(--status-danger);
+}
+
+.calendar_view .is_done { opacity: 0.55; text-decoration: line-through; }
+.calendar_view .is_selected { outline: 2px solid var(--text-heading); outline-offset: 1px; }
+.calendar_view .calendar_repeat { opacity: 0.5; border-style: dashed; }
+
+.gantt_view {
+  overflow: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-default);
+  --g-arrow-color: var(--text-secondary);
+  --g-bar-color: color-mix(in srgb, var(--accent) 30%, var(--surface-default));
+  --g-bar-border: var(--accent);
+  --g-progress-color: color-mix(in srgb, var(--text-tertiary) 40%, var(--surface-default));
+  --g-text-dark: var(--text-body);
+  --g-text-light: var(--text-on-fill);
+  --g-text-muted: var(--text-tertiary);
+  --g-tick-color: var(--border-default);
+  --g-tick-color-thick: var(--border-hover);
+  --g-border-color: var(--border-default);
+  --g-header-background: var(--surface-default);
+  --g-row-color: var(--surface-default);
+  --g-row-border-color: var(--border-default);
+  --g-actions-background: var(--surface-secondary);
+  --g-today-highlight: var(--accent);
+  --g-weekend-highlight-color: var(--surface-secondary);
+  --g-weekend-label-color: var(--border-hover);
+  --g-handle-color: var(--text-secondary);
+}
+
+.gantt_view .bar-wrapper.is_done { opacity: 0.55; }
+.gantt_view .bar-wrapper.is_selected .bar { stroke: var(--text-heading); stroke-width: 2; }

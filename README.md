@@ -167,6 +167,15 @@ what you typed as a task. The button beside it picks how it reads each, apart:
 in `src/renderer/syntax/`, sharing one reader for dates and repeats, and turns a search into one query that every syntax
 matches the same way. **Syntax help** in that menu, and the Syntax section of Settings, show examples of each.
 
+## Board, calendar and Gantt
+
+The switch at the top of a view shows its tasks as a list, a table, a board, a calendar or a Gantt chart. The board
+puts its columns by the view's grouping, or To do and Done without one, and dragging a card between columns changes
+its tag, date or done state. The calendar uses [FullCalendar](https://fullcalendar.io) and the Gantt chart
+[Frappe Gantt](https://github.com/frappe/gantt); in both, dragging a task moves its dates and pulling an edge changes
+how long it runs. A task's details list the tasks it waits on and the ones waiting on it, which the Gantt chart draws
+as arrows. Each view keeps its own layout, or every view shares one, as Settings › Layout chooses.
+
 ## Task links
 
 **Copy link** in a task's right-click menu copies a link such as `x-tasks://task/<id>`. Opening it from another

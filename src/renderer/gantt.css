@@ -1,0 +1,2 @@
+/* Frappe Gantt's package exports leave out its stylesheet, so it is reached by path. */
+@import '../../node_modules/frappe-gantt/dist/frappe-gantt.css';

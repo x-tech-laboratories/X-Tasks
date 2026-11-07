@@ -6,9 +6,9 @@ import { z } from 'zod'
 
 import { format_task_date, next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
-import type { Task } from '@shared/tasks'
+import { can_depend_on, type Task } from '@shared/tasks'
 import {
-  add_task, list_tag_groups, list_tags, list_tasks, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
+  add_task, add_task_dependency, list_tag_groups, list_tags, list_tasks, remove_task, remove_task_dependency, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
   set_task_title, tag_task, untag_task
 } from './task_database'
 
@@ -214,6 +214,31 @@ function create_mcp_server(on_change: () => void): McpServer {
     changing(({ task_id, tag_id }) => {
       find_task(task_id)
       untag_task(task_id, tag_id)
+      return describe_tasks([find_task(task_id)])[0]
+    })
+  )
+
+  server.registerTool(
+    'add_task_dependency',
+    {
+      description: 'Makes a task wait on another task, shown as an arrow in the Gantt chart. Refused when it would make a loop.',
+      inputSchema: { task_id: z.string(), depends_on_id: z.string() }
+    },
+    changing(({ task_id, depends_on_id }) => {
+      find_task(task_id)
+      find_task(depends_on_id)
+      if (!can_depend_on(task_id, depends_on_id, list_tasks())) throw new Error('that dependency would make a loop')
+      add_task_dependency(task_id, depends_on_id)
+      return describe_tasks([find_task(task_id)])[0]
+    })
+  )
+
+  server.registerTool(
+    'remove_task_dependency',
+    { description: 'Stops a task waiting on another task.', inputSchema: { task_id: z.string(), depends_on_id: z.string() } },
+    changing(({ task_id, depends_on_id }) => {
+      find_task(task_id)
+      remove_task_dependency(task_id, depends_on_id)
       return describe_tasks([find_task(task_id)])[0]
     })
   )

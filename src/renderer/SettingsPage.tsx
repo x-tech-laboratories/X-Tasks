@@ -2,11 +2,12 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type McpStatus, type OverdueRepeatReschedule, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type McpStatus, type OverdueRepeatReschedule, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
 import { grouping_choices, view_of_key } from './grouping'
+import { TASK_LAYOUT_CHOICES } from './layouts'
 import { RecurrencePicker } from './RecurrencePicker'
 import { SyntaxExamples } from './SyntaxHelp'
 import { SYNTAXES, syntax_by_id, type SyntaxExample } from './syntax'
@@ -61,6 +62,12 @@ const TAG_SCOPE_CHOICES: { value: TagScope; label: string }[] = [
 ]
 
 const GROUPING_MEMORY_CHOICES: { value: GroupingMemory; label: string }[] = [
+  { value: 'automatic', label: 'Remembered' },
+  { value: 'on_demand', label: 'Saved by hand' },
+  { value: 'shared', label: 'Same everywhere' }
+]
+
+const LAYOUT_MEMORY_CHOICES: { value: LayoutMemory; label: string }[] = [
   { value: 'automatic', label: 'Remembered' },
   { value: 'on_demand', label: 'Saved by hand' },
   { value: 'shared', label: 'Same everywhere' }
@@ -342,6 +349,35 @@ export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag
             onChange={(event) => on_change('confirm_clear_completed', event.currentTarget.checked)}
           />
         </label>
+      </section>
+
+      <section class="settings_group">
+        <h2 class="settings_heading">Layout</h2>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Default layout</span>
+            <span class="setting_hint">How a view shows its tasks when no layout is saved for it: a list, a table, a board, a calendar or a Gantt chart.</span>
+          </div>
+          <select value={settings.task_layout} onChange={(event) => on_change('task_layout', event.currentTarget.value as TaskLayout)}>
+            {TASK_LAYOUT_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Layout per view</span>
+            <span class="setting_hint">
+              Remembered: each view or tag selection keeps the layout, calendar span and Gantt scale last picked in it. Saved by
+              hand: each keeps its own once Save layout is pressed. Same everywhere: a layout picked in one view applies to every view.
+            </span>
+          </div>
+          <SegmentedChoice label="Layout per view" choices={LAYOUT_MEMORY_CHOICES} value={settings.layout_memory} on_change={(value) => on_change('layout_memory', value)} />
+        </div>
+
+        {settings.layout_memory !== 'shared' && (
+          <SavedLayouts layouts={settings.view_layouts} tags={tags} on_change={(layouts) => on_change('view_layouts', layouts)} />
+        )}
       </section>
 
       <section class="settings_group">
@@ -1204,6 +1240,50 @@ function SavedGroupings({ groupings, tags, tag_groups, on_change }: SavedGroupin
               onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
               aria-label={`Use the default grouping for ${title}`}
               title="Use the default grouping"
+            >
+              ×
+            </button>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+// ============================================================================
+// Saved layouts
+// ============================================================================
+
+interface SavedLayoutsProps {
+  layouts: Record<string, ViewLayout>
+  tags: Tag[]
+  on_change: (layouts: Record<string, ViewLayout>) => void
+}
+
+// The views and tag selections with a layout of their own, each of which can be changed or sent back to the default.
+function SavedLayouts({ layouts, tags, on_change }: SavedLayoutsProps) {
+  const entries = Object.entries(layouts)
+  if (entries.length === 0) return <p class="setting_hint">No view has a layout of its own yet.</p>
+
+  return (
+    <>
+      {entries.map(([key, layout]) => {
+        const title = view_title(view_of_key(key), tags)
+        return (
+          <div key={key} class="setting_row reschedule_option">
+            <span class="setting_label saved_grouping_view">{title}</span>
+            <select
+              value={layout.layout}
+              onChange={(event) => on_change({ ...layouts, [key]: { ...layout, layout: event.currentTarget.value as TaskLayout } })}
+              aria-label={`Layout for ${title}`}
+            >
+              {TASK_LAYOUT_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <button
+              class="remove_button"
+              onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
+              aria-label={`Use the default layout for ${title}`}
+              title="Use the default layout"
             >
               ×
             </button>

@@ -27,6 +27,7 @@ const SYNCED_TABLES: SyncedTable[] = [
   { name: 'tags', key_columns: ['id'], local_columns: [], local_keys: [] },
   { name: 'tasks', key_columns: ['id'], local_columns: [], local_keys: [] },
   { name: 'task_tags', key_columns: ['task_id', 'tag_id'], local_columns: [], local_keys: [] },
+  { name: 'task_dependencies', key_columns: ['task_id', 'depends_on_id'], local_columns: [], local_keys: [] },
   { name: 'task_completions', key_columns: ['uid'], local_columns: ['id'], local_keys: [] },
   { name: 'settings', key_columns: ['key'], local_columns: [], local_keys: DEVICE_ONLY_SETTINGS }
 ]

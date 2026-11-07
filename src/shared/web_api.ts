@@ -8,7 +8,7 @@ import type { TasksApi } from './tasks'
 // The bridge calls the web server answers, each posted to API_PATH and its name with the arguments as a JSON array.
 export const WEB_TASKS_METHODS = [
   'list_tasks', 'add_task', 'set_task_done', 'set_task_title', 'set_task_notes', 'set_task_schedule', 'set_task_my_day', 'remove_task', 'move_task',
-  'tag_task', 'untag_task', 'list_completions', 'list_tag_groups', 'add_tag_group', 'update_tag_group', 'remove_tag_group', 'move_tag_group',
+  'tag_task', 'untag_task', 'add_task_dependency', 'remove_task_dependency', 'list_completions', 'list_tag_groups', 'add_tag_group', 'update_tag_group', 'remove_tag_group', 'move_tag_group',
   'list_tags', 'add_tag', 'update_tag', 'remove_tag', 'move_tag'
 ] as const satisfies readonly Exclude<keyof TasksApi, 'on_database_changed'>[]
 

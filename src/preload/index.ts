@@ -9,7 +9,7 @@ import {
 import {
   ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
   MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
-  UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, type TasksApi
+  UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, ADD_TASK_DEPENDENCY_CHANNEL, REMOVE_TASK_DEPENDENCY_CHANNEL, type TasksApi
 } from '@shared/tasks'
 
 const tasks_api: TasksApi = {
@@ -24,6 +24,8 @@ const tasks_api: TasksApi = {
   move_task: (task_id, parent_id, position) => ipcRenderer.invoke(MOVE_TASK_CHANNEL, task_id, parent_id, position),
   tag_task: (task_id, tag_id) => ipcRenderer.invoke(TAG_TASK_CHANNEL, task_id, tag_id),
   untag_task: (task_id, tag_id) => ipcRenderer.invoke(UNTAG_TASK_CHANNEL, task_id, tag_id),
+  add_task_dependency: (task_id, depends_on_id) => ipcRenderer.invoke(ADD_TASK_DEPENDENCY_CHANNEL, task_id, depends_on_id),
+  remove_task_dependency: (task_id, depends_on_id) => ipcRenderer.invoke(REMOVE_TASK_DEPENDENCY_CHANNEL, task_id, depends_on_id),
   list_completions: () => ipcRenderer.invoke(LIST_COMPLETIONS_CHANNEL),
 
   list_tag_groups: () => ipcRenderer.invoke(LIST_TAG_GROUPS_CHANNEL),
