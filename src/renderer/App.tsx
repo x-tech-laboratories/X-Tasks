@@ -19,7 +19,7 @@ import { Sidebar } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { coming_repeats, group_by_date } from './dates'
-import { group_by_tag, grouping_choices, grouping_tag_group } from './grouping'
+import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
 import { format_task_date, next_schedule, parse_task_date, recurrence_anchor, with_recurrence } from '@shared/schedule'
 import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
@@ -82,6 +82,8 @@ export function App() {
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
   const [editing_group, set_editing_group] = useState<TagGroup | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
+  // Groupings picked in a view but not yet saved for it, kept until the app closes.
+  const [unsaved_groupings, set_unsaved_groupings] = useState<Record<string, TaskGrouping>>({})
   const [undo_message, set_undo_message] = useState<string | null>(null)
   const pending_removal = useRef<PendingRemoval | null>(null)
 
@@ -626,14 +628,17 @@ export function App() {
 
   // Upcoming always groups by date and lists the later dates of repeating tasks; other views group as picked.
   const is_upcoming = selected_view.kind === 'upcoming'
-  const grouped_tag_group = is_upcoming ? null : grouping_tag_group(settings.task_grouping, tag_groups)
-  const is_grouped_by_date = is_upcoming || settings.task_grouping === 'date'
+  const stored_grouping = saved_grouping(settings, selected_view)
+  const picked_grouping = (settings.grouping_memory === 'on_demand' ? unsaved_groupings[view_key(selected_view)] : undefined) ?? stored_grouping
+  const has_unsaved_grouping = picked_grouping !== stored_grouping
+  const grouped_tag_group = is_upcoming ? null : grouping_tag_group(picked_grouping, tag_groups)
+  const is_grouped_by_date = is_upcoming || picked_grouping === 'date'
   const is_grouped = is_grouped_by_date || grouped_tag_group !== null
   const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, now, settings.upcoming_repeat_days) : []
   const task_groups = grouped_tag_group
     ? group_by_tag(task_tree, grouped_tag_group, tags, task_tags_of)
     : is_grouped_by_date ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted) : []
-  const shown_grouping = is_grouped ? settings.task_grouping : 'none'
+  const shown_grouping = is_grouped ? picked_grouping : 'none'
 
   // Every row on screen from top to bottom, leaving out those inside collapsed tasks; only these can be picked.
   const shown_rows = is_settings_open || is_reports ? [] : rows_of(is_grouped ? task_groups.flatMap((group) => group.nodes) : task_tree, settings.collapsed_task_ids)
@@ -641,6 +646,18 @@ export function App() {
   // Picked tasks that leave the screen, through a search or a filter, are left out of every bulk action.
   const picked_tasks = shown_rows.filter((task) => picked_task_ids.includes(task.id))
   const is_picking = picked_tasks.length > 0
+
+  // A grouping picked in the header changes the shared one, this view's saved one, or only what is shown until saved.
+  function pick_grouping(grouping: TaskGrouping): void {
+    if (settings!.grouping_memory === 'shared') void change_setting('task_grouping', grouping)
+    else if (settings!.grouping_memory === 'automatic') void change_setting('view_groupings', with_view_grouping(settings!, selected_view, grouping))
+    else set_unsaved_groupings((current) => ({ ...current, [view_key(selected_view)]: grouping }))
+  }
+
+  function save_grouping(): void {
+    void change_setting('view_groupings', with_view_grouping(settings!, selected_view, picked_grouping))
+    set_unsaved_groupings(({ [view_key(selected_view)]: _, ...others }) => others)
+  }
 
   // A hidden column stops sorting and filtering the table, so no rows go missing for a reason that cannot be seen.
   function show_table_column(column: TableColumn, is_shown: boolean): void {
@@ -900,7 +917,7 @@ export function App() {
 
         <main class={is_table && !is_settings_open ? 'task_pane is_table' : 'task_pane'}>
           {is_settings_open ? (
-            <SettingsPage settings={settings} on_change={change_setting} on_add_tag_group={add_tag_group} />
+            <SettingsPage settings={settings} tags={tags} tag_groups={tag_groups} on_change={change_setting} on_add_tag_group={add_tag_group} />
           ) : is_reports ? (
             <ReportsPage
               widgets={settings.report_widgets}
@@ -947,7 +964,7 @@ export function App() {
                   <select
                     class={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
                     value={shown_grouping}
-                    onChange={(event) => void change_setting('task_grouping', event.currentTarget.value as TaskGrouping)}
+                    onChange={(event) => pick_grouping(event.currentTarget.value as TaskGrouping)}
                     aria-label="Group by"
                     title="Show tasks under headings by date or by the tags of a group"
                   >
@@ -957,6 +974,11 @@ export function App() {
                       </option>
                     ))}
                   </select>
+                )}
+                {!is_upcoming && has_unsaved_grouping && (
+                  <button class="save_grouping_button" onClick={save_grouping} title="Keep this grouping for this view">
+                    Save grouping
+                  </button>
                 )}
                 <div class="segmented_control" role="radiogroup" aria-label="Layout">
                   {TASK_LAYOUT_CHOICES.map(({ value, label }) => (

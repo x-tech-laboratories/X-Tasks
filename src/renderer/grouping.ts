@@ -1,5 +1,5 @@
-import type { TaskGrouping } from '@shared/settings'
-import type { Tag, TagGroup, Task } from '@shared/tasks'
+import type { Settings, TaskGrouping } from '@shared/settings'
+import type { Tag, TagGroup, Task, View } from '@shared/tasks'
 import type { TaskGroup } from './dates'
 import { tags_in_sidebar_order } from './table'
 import { tag_path, with_icon, type TaskNode } from './views'
@@ -20,6 +20,32 @@ export function grouping_choices(tag_groups: TagGroup[]): { value: TaskGrouping;
 // The filter group the list is grouped by, or null when it goes by date, by nothing, or by a group since removed.
 export function grouping_tag_group(grouping: TaskGrouping, tag_groups: TagGroup[]): TagGroup | null {
   return tag_groups.find((group) => grouping === `group:${group.id}`) ?? null
+}
+
+// ============================================================================
+// Groupings per view
+// ============================================================================
+
+// Names a view for its saved grouping, with a tag selection named by its tags in any order.
+export function view_key(view: View): string {
+  return view.kind === 'tag' ? `tag:${[...view.tag_ids].sort().join(',')}` : view.kind
+}
+
+// The view a saved grouping belongs to.
+export function view_of_key(key: string): View {
+  return key.startsWith('tag:') ? { kind: 'tag', tag_ids: key.slice(4).split(',') } : ({ kind: key } as View)
+}
+
+// The grouping saved for a view, or the default when it has none or every view shares one.
+export function saved_grouping(settings: Settings, view: View): TaskGrouping {
+  if (settings.grouping_memory === 'shared') return settings.task_grouping
+  return settings.view_groupings[view_key(view)] ?? settings.task_grouping
+}
+
+// The saved groupings with this view's set to the one given, leaving it out when that matches the default.
+export function with_view_grouping(settings: Settings, view: View, grouping: TaskGrouping): Record<string, TaskGrouping> {
+  const { [view_key(view)]: _, ...others } = settings.view_groupings
+  return grouping === settings.task_grouping ? others : { ...others, [view_key(view)]: grouping }
 }
 
 // ============================================================================

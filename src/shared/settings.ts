@@ -40,6 +40,9 @@ export type SyntaxId = 'plain' | 'todoist' | 'gtg' | 'trilium'
 // What the task list puts its headings by: nothing, the date, or the tags of one filter group, named by "group:" and the group's id.
 export type TaskGrouping = 'none' | 'date' | `group:${string}`
 
+// Whether one grouping serves every view, each view keeps the grouping picked in it, or a picked grouping stays until saved for that view.
+export type GroupingMemory = 'shared' | 'automatic' | 'on_demand'
+
 // The narrowest and widest each side panel can be dragged to.
 export const SIDEBAR_WIDTH_RANGE = { min: 180, max: 480 }
 export const DETAIL_WIDTH_RANGE = { min: 260, max: 720 }
@@ -125,6 +128,9 @@ export interface Settings {
   task_layout: TaskLayout
   // The headings every view but Reports and Upcoming shows its tasks under; Upcoming always goes by date.
   task_grouping: TaskGrouping
+  grouping_memory: GroupingMemory
+  // The groupings saved for single views and tag selections, keyed as view_key names them, which take the place of the default.
+  view_groupings: Record<string, TaskGrouping>
   // How many days ahead Upcoming shows the later dates of repeating tasks; zero shows none.
   upcoming_repeat_days: number
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
@@ -186,6 +192,8 @@ export const DEFAULT_SETTINGS: Settings = {
   search_syntax: 'todoist',
   task_layout: 'list',
   task_grouping: 'none',
+  grouping_memory: 'on_demand',
+  view_groupings: {},
   upcoming_repeat_days: 7,
   table_sort: [],
   table_column_order: [],

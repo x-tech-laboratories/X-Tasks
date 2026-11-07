@@ -2,12 +2,15 @@ import { useEffect, useState } from 'preact/hooks'
 
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type McpStatus, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
+import type { Tag, TagGroup } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
+import { grouping_choices, view_of_key } from './grouping'
 import { RecurrencePicker } from './RecurrencePicker'
 import { SyntaxExamples } from './SyntaxHelp'
 import { SYNTAXES, syntax_by_id, type SyntaxExample } from './syntax'
+import { view_title } from './views'
 import { duration_label, rule_format } from '@shared/schedule'
 
 // ============================================================================
@@ -49,6 +52,12 @@ const TAG_MATCH_CHOICES: { value: TagMatch; label: string }[] = [
 const TAG_SCOPE_CHOICES: { value: TagScope; label: string }[] = [
   { value: 'subtags', label: 'With subtags' },
   { value: 'own', label: 'Own only' }
+]
+
+const GROUPING_MEMORY_CHOICES: { value: GroupingMemory; label: string }[] = [
+  { value: 'shared', label: 'Same everywhere' },
+  { value: 'on_demand', label: 'Saved by hand' },
+  { value: 'automatic', label: 'Remembered' }
 ]
 
 const SEARCH_SCOPE_CHOICES: { value: SearchScope; label: string }[] = [
@@ -97,11 +106,13 @@ function SyntaxSetting({ label, hint, value, on_change, examples_of }: SyntaxSet
 
 interface SettingsPageProps {
   settings: Settings
+  tags: Tag[]
+  tag_groups: TagGroup[]
   on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void | Promise<void>
   on_add_tag_group: (name: string, is_rule: boolean) => void
 }
 
-export function SettingsPage({ settings, on_change, on_add_tag_group }: SettingsPageProps) {
+export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag_group }: SettingsPageProps) {
   const [database_path, set_database_path] = useState('')
   const [new_group_name, set_new_group_name] = useState('')
   const [is_new_group_rule, set_is_new_group_rule] = useState(false)
@@ -300,6 +311,35 @@ export function SettingsPage({ settings, on_change, on_add_tag_group }: Settings
             onChange={(event) => on_change('confirm_clear_completed', event.currentTarget.checked)}
           />
         </label>
+      </section>
+
+      <section class="settings_group">
+        <h2 class="settings_heading">Grouping</h2>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Default grouping</span>
+            <span class="setting_hint">The headings a view puts its tasks under when no grouping is saved for it. Upcoming always goes by date.</span>
+          </div>
+          <select value={settings.task_grouping} onChange={(event) => on_change('task_grouping', event.currentTarget.value as TaskGrouping)}>
+            {grouping_choices(tag_groups).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+
+        <div class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Grouping per view</span>
+            <span class="setting_hint">
+              Same everywhere: a grouping picked at the top of a view applies to every view. Saved by hand: each view or tag
+              selection can keep its own once Save grouping is pressed. Remembered: each keeps the grouping last picked in it.
+            </span>
+          </div>
+          <SegmentedChoice label="Grouping per view" choices={GROUPING_MEMORY_CHOICES} value={settings.grouping_memory} on_change={(value) => on_change('grouping_memory', value)} />
+        </div>
+
+        {settings.grouping_memory !== 'shared' && (
+          <SavedGroupings groupings={settings.view_groupings} tags={tags} tag_groups={tag_groups} on_change={(groupings) => on_change('view_groupings', groupings)} />
+        )}
       </section>
 
       <section class="settings_group">
@@ -1098,6 +1138,47 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
           </button>
         </div>
       ))}
+    </>
+  )
+}
+
+// ============================================================================
+// Saved groupings
+// ============================================================================
+
+interface SavedGroupingsProps {
+  groupings: Record<string, TaskGrouping>
+  tags: Tag[]
+  tag_groups: TagGroup[]
+  on_change: (groupings: Record<string, TaskGrouping>) => void
+}
+
+// The views and tag selections with a grouping of their own, each of which can be changed or sent back to the default.
+function SavedGroupings({ groupings, tags, tag_groups, on_change }: SavedGroupingsProps) {
+  const entries = Object.entries(groupings)
+  if (entries.length === 0) return <p class="setting_hint">No view has a grouping of its own yet.</p>
+
+  return (
+    <>
+      {entries.map(([key, grouping]) => {
+        const title = view_title(view_of_key(key), tags)
+        return (
+          <div key={key} class="setting_row reschedule_option">
+            <span class="setting_label saved_grouping_view">{title}</span>
+            <select value={grouping} onChange={(event) => on_change({ ...groupings, [key]: event.currentTarget.value as TaskGrouping })} aria-label={`Grouping for ${title}`}>
+              {grouping_choices(tag_groups).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <button
+              class="remove_button"
+              onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
+              aria-label={`Use the default grouping for ${title}`}
+              title="Use the default grouping"
+            >
+              ×
+            </button>
+          </div>
+        )
+      })}
     </>
   )
 }
