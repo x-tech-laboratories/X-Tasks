@@ -67,6 +67,16 @@ const GROUPING_MEMORY_CHOICES: { value: GroupingMemory; label: string }[] = [
   { value: 'shared', label: 'Same everywhere' }
 ]
 
+const CALENDAR_SLOT_CHOICES = [5, 10, 15, 20, 30, 60]
+
+const CALENDAR_SLOT_LABEL_CHOICES = [15, 30, 60, 120, 180]
+
+// Writes a number of minutes the way a person says it, such as "30 minutes" or "2 hours".
+function minutes_label(minutes: number): string {
+  if (minutes % 60 !== 0) return `${minutes} minutes`
+  return minutes === 60 ? '1 hour' : `${minutes / 60} hours`
+}
+
 const LAYOUT_MEMORY_CHOICES: { value: LayoutMemory; label: string }[] = [
   { value: 'automatic', label: 'Remembered' },
   { value: 'on_demand', label: 'Saved by hand' },
@@ -361,6 +371,26 @@ export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag
           </div>
           <select value={settings.task_layout} onChange={(event) => on_change('task_layout', event.currentTarget.value as TaskLayout)}>
             {TASK_LAYOUT_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Calendar time slots</span>
+            <span class="setting_hint">How much time each row covers in the calendar's week and day views, which is also the step a dragged task snaps to.</span>
+          </div>
+          <select value={settings.calendar_slot_minutes} onChange={(event) => on_change('calendar_slot_minutes', Number(event.currentTarget.value))}>
+            {CALENDAR_SLOT_CHOICES.map((minutes) => <option key={minutes} value={minutes}>{minutes_label(minutes)}</option>)}
+          </select>
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
+            <span class="setting_label">Calendar time labels</span>
+            <span class="setting_hint">How often a time is printed down the side of the calendar's week and day views.</span>
+          </div>
+          <select value={settings.calendar_slot_label_minutes} onChange={(event) => on_change('calendar_slot_label_minutes', Number(event.currentTarget.value))}>
+            {CALENDAR_SLOT_LABEL_CHOICES.map((minutes) => <option key={minutes} value={minutes}>{minutes_label(minutes)}</option>)}
           </select>
         </label>
 

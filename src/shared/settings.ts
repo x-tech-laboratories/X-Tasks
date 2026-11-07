@@ -153,6 +153,9 @@ export interface Settings {
   calendar_span: CalendarSpan
   gantt_scale: GanttScale
   layout_memory: LayoutMemory
+  // How many minutes each row of the calendar's week and day views covers, and how often a time is printed beside them.
+  calendar_slot_minutes: number
+  calendar_slot_label_minutes: number
   // The layouts saved for single views and tag selections, keyed as view_key names them, which take the place of the default.
   view_layouts: Record<string, ViewLayout>
   // The headings every view but Reports and Upcoming shows its tasks under; Upcoming always goes by date.
@@ -225,6 +228,8 @@ export const DEFAULT_SETTINGS: Settings = {
   calendar_span: 'month',
   gantt_scale: 'day',
   layout_memory: 'automatic',
+  calendar_slot_minutes: 30,
+  calendar_slot_label_minutes: 60,
   view_layouts: {},
   task_grouping: 'none',
   grouping_memory: 'automatic',

@@ -1112,6 +1112,8 @@ export function App() {
                   date_field={settings.task_date_field}
                   now={now}
                   span={view_layout.calendar_span}
+                  slot_minutes={settings.calendar_slot_minutes}
+                  slot_label_minutes={settings.calendar_slot_label_minutes}
                   selected_task_id={selected_task_id}
                   on_change_span={(calendar_span) => pick_layout({ calendar_span })}
                   on_select={task_actions.on_select}

@@ -20,6 +20,12 @@ import { day_after, day_span_schedule, shifted_schedule, task_span, timed_schedu
 
 const VIEW_BY_SPAN: Record<CalendarSpan, string> = { month: 'dayGridMonth', week: 'timeGridWeek', day: 'timeGridDay' }
 
+const SPAN_CHOICES: { value: CalendarSpan; label: string }[] = [
+  { value: 'month', label: 'Month' },
+  { value: 'week', label: 'Week' },
+  { value: 'day', label: 'Day' }
+]
+
 // Later dates of repeating tasks are drawn this far ahead at most, however far the calendar is paged.
 const MOST_REPEAT_DAYS = 400
 
@@ -29,6 +35,8 @@ interface CalendarViewProps {
   date_field: TaskDateField
   now: string
   span: CalendarSpan
+  slot_minutes: number
+  slot_label_minutes: number
   selected_task_id: string | null
   on_change_span: (span: CalendarSpan) => void
   on_select: (task: Task) => void
@@ -43,13 +51,17 @@ export function CalendarView(props: CalendarViewProps) {
   const latest = useRef(props)
   latest.current = props
   const [last_shown_day, set_last_shown_day] = useState(props.now.slice(0, 10))
+  const [title, set_title] = useState('')
 
   useEffect(() => {
     const created = new Calendar(element.current!, {
       plugins: [day_grid_plugin, time_grid_plugin, interaction_plugin, classic_theme_plugin],
       initialView: VIEW_BY_SPAN[props.span],
-      headerToolbar: { start: 'prev,next today', center: 'title', end: 'dayGridMonth,timeGridWeek,timeGridDay' },
+      // The calendar's own toolbar is left off for one built from the app's buttons below.
+      headerToolbar: false,
       height: '100%',
+      slotDuration: { minutes: props.slot_minutes },
+      slotHeaderInterval: { minutes: props.slot_label_minutes },
       editable: true,
       nowIndicator: true,
       dayMaxEvents: true,
@@ -63,6 +75,7 @@ export function CalendarView(props: CalendarViewProps) {
         const span = (Object.keys(VIEW_BY_SPAN) as CalendarSpan[]).find((each) => VIEW_BY_SPAN[each] === info.view.type)
         if (span && span !== latest.current.span) latest.current.on_change_span(span)
         set_last_shown_day(format_task_date(info.end, false))
+        set_title(info.view.title)
       }
     })
     created.render()
@@ -84,6 +97,11 @@ export function CalendarView(props: CalendarViewProps) {
   }
 
   useEffect(() => {
+    calendar.current?.setOption('slotDuration', { minutes: props.slot_minutes })
+    calendar.current?.setOption('slotHeaderInterval', { minutes: props.slot_label_minutes })
+  }, [props.slot_minutes, props.slot_label_minutes])
+
+  useEffect(() => {
     if (calendar.current && calendar.current.view.type !== VIEW_BY_SPAN[props.span]) calendar.current.changeView(VIEW_BY_SPAN[props.span])
   }, [props.span])
 
@@ -97,7 +115,28 @@ export function CalendarView(props: CalendarViewProps) {
     calendar.current?.setOption('events', events)
   }, [props.tasks, props.selected_task_id, props.now, last_shown_day])
 
-  return <div class="calendar_view" ref={element} />
+  return (
+    <div class="calendar_view">
+      <div class="calendar_toolbar">
+        <button onClick={() => calendar.current?.prev()} aria-label="Previous" title="Previous">
+          ‹
+        </button>
+        <button onClick={() => calendar.current?.today()}>Today</button>
+        <button onClick={() => calendar.current?.next()} aria-label="Next" title="Next">
+          ›
+        </button>
+        <h2 class="calendar_title">{title}</h2>
+        <div class="segmented_control" role="radiogroup" aria-label="Calendar span">
+          {SPAN_CHOICES.map(({ value, label }) => (
+            <button key={value} role="radio" aria-checked={props.span === value} class={props.span === value ? 'is_selected' : ''} onClick={() => props.on_change_span(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div class="calendar_grid" ref={element} />
+    </div>
+  )
 }
 
 // A task covering whole days fills them; one with a clock time sits at that time.

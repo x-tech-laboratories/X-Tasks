@@ -1563,7 +1563,13 @@ select:hover { border-color: var(--border-focus); }
 .dependency_chip.is_done { color: var(--text-tertiary); text-decoration: line-through; }
 
 /* The calendar and chart take the app's colours, so they follow the light and dark themes with it. */
-.calendar_view {
+.calendar_view { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.calendar_toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.calendar_title { flex: 1; margin: 0 0 0 var(--space-4); color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; white-space: nowrap; }
+
+.calendar_grid {
+  flex: 1 1 auto;
   min-height: 480px;
   color: var(--text-body);
   font-size: var(--text-control);
@@ -1586,9 +1592,9 @@ select:hover { border-color: var(--border-focus); }
   --fc-classic-now: var(--status-danger);
 }
 
-.calendar_view .is_done { opacity: 0.55; text-decoration: line-through; }
-.calendar_view .is_selected { outline: 2px solid var(--text-heading); outline-offset: 1px; }
-.calendar_view .calendar_repeat { opacity: 0.5; border-style: dashed; }
+.calendar_grid .is_done { opacity: 0.55; text-decoration: line-through; }
+.calendar_grid .is_selected { outline: 2px solid var(--text-heading); outline-offset: 1px; }
+.calendar_grid .calendar_repeat { opacity: 0.5; border-style: dashed; }
 
 .gantt_view {
   overflow: auto;
