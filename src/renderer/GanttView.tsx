@@ -3,7 +3,7 @@ import './gantt.css'
 import { useEffect, useRef } from 'react'
 
 import type { GanttScale } from '@shared/settings'
-import { days_between, parse_task_date } from '@shared/schedule'
+import { days_between, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import type { Task, TaskSchedule } from '@shared/tasks'
 import { day_span_schedule, shifted_schedule, task_span } from './timeline'
 
@@ -116,8 +116,8 @@ function gantt_tasks(rows: Task[], waits_on: Map<string, string[]>, selected_tas
 // A bar dragged whole keeps its length and moves every date by the same days; pulling one end changes how long it runs.
 function moved_schedule(task: Task, start: Date, end: Date): TaskSchedule {
   const span = task_span(task)!
-  const old_start = parse_task_date(span.start)
-  const is_same_length = days_between(old_start, parse_task_date(span.end)) === days_between(start, end)
+  const old_start = parse_local(span.start)
+  const is_same_length = days_between(old_start, parse_local(span.end)) === days_between(start, end)
   return is_same_length ? shifted_schedule(task, days_between(old_start, start)) : day_span_schedule(task, start, end)
 }
 

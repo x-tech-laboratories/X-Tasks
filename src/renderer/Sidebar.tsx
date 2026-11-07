@@ -5,7 +5,8 @@ import { Tree, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-
 import type { SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { TagScope, TaskDateField } from '@shared/settings'
-import { BUILT_IN_VIEWS, children_of, is_same_view, is_tag_selected, tag_color_style, task_is_in_view, with_icon, type View } from './views'
+import { children_of } from '@x-tech-laboratories/x-libs/web/tree'
+import { BUILT_IN_VIEWS, is_same_view, is_tag_selected, tag_color_style, task_is_in_view, with_icon, type View } from './views'
 
 // ============================================================================
 // Rows

@@ -2,8 +2,11 @@ import type { TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { ordered_columns as ordered_column_ids, sorted_tree, type TreeRow } from '@x-tech-laboratories/x-libs/web/tables'
-import { days_between, duration_label, format_task_date, has_time, is_overdue, parse_task_date, task_date_of } from '@shared/schedule'
-import { by_position, children_of, task_is_in_view, type TaskNode } from './views'
+import { days_between, format_local, has_time, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
+import { format_duration } from '@x-tech-laboratories/x-libs/durations'
+import { task_date_of } from '@shared/schedule'
+import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
+import { task_is_in_view, type TaskNode } from './views'
 
 // ============================================================================
 // Columns
@@ -32,7 +35,7 @@ export type LastDoneOf = (task: Task) => string | null
 // The date a date column shows for a task, or empty when it has none; a repeating task is never left done, so its done date is its last tick.
 export function column_date(task: Task, column: DateColumn, date_field: TaskDateField, last_done_of: LastDoneOf): string | null {
   const done_at = task.recurrence ? last_done_of(task) : task.is_done ? task.done_at : null
-  const done_date = done_at ? format_task_date(new Date(done_at), false) : null
+  const done_date = done_at ? format_local(new Date(done_at), false) : null
   switch (column) {
     case 'date': return (task.is_done ? done_date : null) ?? task_date_of(task, date_field)
     case 'start': return task.start_at
@@ -44,8 +47,8 @@ export function column_date(task: Task, column: DateColumn, date_field: TaskDate
 // How many minutes lie between a task's start and due dates, counting whole days when either has no time; empty when one is missing or due comes first.
 export function task_duration_minutes(task: Task): number | null {
   if (task.start_at === null || task.due_at === null) return null
-  const start = parse_task_date(task.start_at)
-  const due = parse_task_date(task.due_at)
+  const start = parse_local(task.start_at)
+  const due = parse_local(task.due_at)
   const minutes = has_time(task.start_at) && has_time(task.due_at)
     ? Math.round((due.getTime() - start.getTime()) / 60_000)
     : days_between(start, due) * MINUTES_IN_DAY
@@ -54,17 +57,9 @@ export function task_duration_minutes(task: Task): number | null {
 
 const MINUTES_IN_DAY = 24 * 60
 
-// A duration in minutes named the way the task details name one, such as 1 week 2 days.
+// A duration in minutes in its two largest units, such as 1 week 2 days.
 export function task_duration_label(minutes: number): string {
-  const days = Math.floor(minutes / MINUTES_IN_DAY)
-  return duration_label({
-    id: '',
-    months: 0,
-    weeks: Math.floor(days / 7),
-    days: days % 7,
-    hours: Math.floor((minutes % MINUTES_IN_DAY) / 60),
-    minutes: minutes % 60
-  })
+  return minutes === 0 ? 'Same day' : format_duration(minutes * 60, { separator: ' ', largest_unit: 'weeks' })
 }
 
 // The streak a task's row shows, or empty for a task that neither repeats nor sits under one that does.
@@ -119,7 +114,7 @@ export interface SortContext {
 
 // Numbers every tag in its sidebar order, so a tag column sorts the way its group reads, such as High before Low.
 export function tag_ranks(tags: Tag[], is_reversed: boolean): Map<string, number> {
-  return new Map(tags_in_sidebar_order(tags, is_reversed).map((tag, index) => [tag.id, index]))
+  return new Map(in_tree_order(tags, is_reversed).map((tag, index) => [tag.id, index]))
 }
 
 // The value a column sorts a task by, or null for an empty cell, which sorts last either way.
@@ -145,19 +140,6 @@ export function sort_task_tree(nodes: TaskNode[], sort: TableSortKey[], context:
   return as_nodes(sorted_tree(columns, nodes, sorting, (node) => node.children))
 }
 
-// Lists tags the way the sidebar shows them, each followed by the tags below it, with each set of siblings optionally reversed.
-export function tags_in_sidebar_order(tags: Tag[], is_reversed: boolean = false): Tag[] {
-  const ordered: Tag[] = []
-  const visit = (parent_id: string | null) => {
-    const siblings = children_of(parent_id, tags).sort(by_position)
-    for (const tag of is_reversed ? siblings.reverse() : siblings) {
-      ordered.push(tag)
-      visit(tag.id)
-    }
-  }
-  visit(null)
-  return ordered
-}
 
 // ============================================================================
 // Filtering

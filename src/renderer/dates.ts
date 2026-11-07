@@ -1,6 +1,7 @@
 import type { TaskDateField } from '@shared/settings'
 import type { Task } from '@shared/tasks'
-import { days_between, format_task_date, is_overdue, next_schedule, parse_task_date, task_date_of } from '@shared/schedule'
+import { days_between, format_local, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
+import { next_schedule, task_date_of } from '@shared/schedule'
 import type { TaskNode } from './views'
 
 // ============================================================================
@@ -32,9 +33,9 @@ function group_key(task_date: string | null, is_done: boolean, now: string): str
   if (task_date === null) return 'none'
   const day = task_date.slice(0, 10)
   const today = now.slice(0, 10)
-  if (!is_done && is_overdue(task_date, parse_task_date(now))) return 'overdue'
+  if (!is_done && is_overdue(task_date, parse_local(now))) return 'overdue'
   if (day < today) return 'earlier'
-  const day_offset = days_between(parse_task_date(today), parse_task_date(day))
+  const day_offset = days_between(parse_local(today), parse_local(day))
   return day_offset < DAYS_SHOWN_ONE_BY_ONE ? day : day.slice(0, 7)
 }
 
@@ -42,14 +43,14 @@ function group_label(key: string, today: string): string {
   const fixed_labels: Record<string, string> = { none: 'No date', earlier: 'Earlier', overdue: 'Overdue' }
   if (key in fixed_labels) return fixed_labels[key]!
 
-  const today_date = parse_task_date(today)
+  const today_date = parse_local(today)
   if (key.length === 7) {
-    const month = parse_task_date(`${key}-01`)
+    const month = parse_local(`${key}-01`)
     const month_name = month.toLocaleDateString(undefined, { month: 'long', year: month.getFullYear() === today_date.getFullYear() ? undefined : 'numeric' })
     return key === today.slice(0, 7) ? `Rest of ${month_name}` : month_name
   }
 
-  const date = parse_task_date(key)
+  const date = parse_local(key)
   const day_offset = days_between(today_date, date)
   const day_name = day_offset === 0 ? 'Today' : day_offset === 1 ? 'Tomorrow' : date.toLocaleDateString(undefined, { weekday: 'long' })
   return `${day_name} · ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
@@ -101,9 +102,9 @@ function group_rank(key: string): number {
 // The dates each open repeating task moves to after its current one, up to the given number of days from today.
 export function coming_repeats(tasks: Task[], date_field: TaskDateField, now: string, days_ahead: number): RepeatOccurrence[] {
   if (days_ahead <= 0) return []
-  const now_date = parse_task_date(now)
-  const today_date = parse_task_date(now.slice(0, 10))
-  const last_day = format_task_date(new Date(today_date.getFullYear(), today_date.getMonth(), today_date.getDate() + days_ahead), false)
+  const now_date = parse_local(now)
+  const today_date = parse_local(now.slice(0, 10))
+  const last_day = format_local(new Date(today_date.getFullYear(), today_date.getMonth(), today_date.getDate() + days_ahead), false)
   const repeats: RepeatOccurrence[] = []
 
   for (const task of tasks) {

@@ -1,6 +1,7 @@
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import type { MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
-import { describe_recurrence, task_date_label } from '@shared/schedule'
+import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
+import { describe_recurrence } from '@shared/schedule'
 import type { SyntaxId } from '@shared/settings'
 import type { Tag } from '@shared/tasks'
 import { SYNTAXES, syntax_by_id, type QuickAdd, type Syntax, type SyntaxExample } from './syntax'
@@ -41,8 +42,8 @@ function QuickAddDetails({ quick_add, tags }: { quick_add: QuickAdd; tags: Tag[]
   return (
     <>
       {added_tags.map((tag) => <TagChip key={tag.id} tag={tag} />)}
-      {quick_add.start_at && <span className="due_label">Starts {task_date_label(quick_add.start_at)}</span>}
-      {quick_add.due_at && <span className="due_label">Due {task_date_label(quick_add.due_at)}</span>}
+      {quick_add.start_at && <span className="due_label">Starts {relative_day_label(quick_add.start_at)}</span>}
+      {quick_add.due_at && <span className="due_label">Due {relative_day_label(quick_add.due_at)}</span>}
       {quick_add.recurrence && <span className="due_label">↻ {describe_recurrence(quick_add)}</span>}
     </>
   )

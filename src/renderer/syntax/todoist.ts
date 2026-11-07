@@ -1,4 +1,4 @@
-import { format_task_date, parse_task_date } from '@shared/schedule'
+import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { all_of, any_of, empty_quick_add, finished_quick_add, none_of, priority_tag, tag_query, text_query, with_date, with_problem, with_tag, with_tag_named } from './building'
 import { add_days, day_of, find_task_date, read_day, read_time, today_of, TITLE_DATE_OPTIONS, type DateOptions } from './dates'
 import { find_repeat } from './repeats'
@@ -71,9 +71,9 @@ function parse_quick_add(text: string, context: SyntaxContext): QuickAdd {
       index += repeat.length
       const time = time_after(lowers, index)
       if (time && !has_date) {
-        const day = parse_task_date(repeat.first_day)
+        const day = parse_local(repeat.first_day)
         day.setHours(time.hours, time.minutes)
-        result = with_date(result, 'date', format_task_date(day, true), context)
+        result = with_date(result, 'date', format_local(day, true), context)
         has_date = true
         index += time.length
       }

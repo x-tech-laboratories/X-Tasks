@@ -253,6 +253,5 @@ export interface TasksApi {
   on_open_task?: (listener: (task_id: string) => void) => () => void
 }
 
-export const DATABASE_CHANGED_CHANNEL = 'database:changed'
-export const OPEN_TASK_CHANNEL = 'links:open-task'
+// The page asks for the task a link launched the app with once it is ready to show it.
 export const TAKE_LAUNCH_TASK_CHANNEL = 'links:take-launch-task'

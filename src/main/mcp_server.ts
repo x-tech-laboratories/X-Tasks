@@ -4,7 +4,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { z } from 'zod'
 
-import { format_task_date, next_schedule, recurrence_anchor } from '@shared/schedule'
+import { format_local } from '@x-tech-laboratories/x-libs/dates'
+import { next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
 import { can_link, links_of, type Task } from '@shared/tasks'
 import {
@@ -156,7 +157,7 @@ function create_mcp_server(on_change: () => void): McpServer {
       if (parent_id) find_task(parent_id)
       tag_ids.forEach(check_plain_tag)
 
-      const task = add_task(title, parent_id ?? null, tag_ids, in_my_day ? format_task_date(new Date(), false) : null)
+      const task = add_task(title, parent_id ?? null, tag_ids, in_my_day ? format_local(new Date(), false) : null)
       if (notes) set_task_notes(task.id, notes)
       if (start_at || due_at || recurrence) {
         set_task_schedule(task.id, { start_at: start_at ?? null, due_at: due_at ?? null, recurrence: recurrence ?? '' })
@@ -190,7 +191,7 @@ function create_mcp_server(on_change: () => void): McpServer {
           recurrence: recurrence ?? task.recurrence
         })
       }
-      if (in_my_day !== undefined) set_task_my_day(task_id, in_my_day ? format_task_date(new Date(), false) : null)
+      if (in_my_day !== undefined) set_task_my_day(task_id, in_my_day ? format_local(new Date(), false) : null)
       return describe_tasks([find_task(task_id)])[0]
     })
   )

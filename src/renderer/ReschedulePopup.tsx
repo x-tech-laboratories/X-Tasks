@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import type { RescheduleOption, TaskDateField } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
-import { format_task_date, next_schedule, parse_task_date, reschedule_day, rescheduled, task_date_label } from '@shared/schedule'
+import { format_local, parse_local, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
+import { next_schedule, reschedule_day, rescheduled } from '@shared/schedule'
 
 // ============================================================================
 // Reschedule popup
@@ -51,13 +52,13 @@ export function ReschedulePopup({ tasks, options, date_field, on_reschedule, on_
         {repeats && (
           <button className="reschedule_choice" disabled={!has_next_recurrence} onClick={skip_to_next_recurrence}>
             <span>Next recurrence</span>
-            <span className="muted">{!has_next_recurrence ? 'No date ahead' : next_recurrence_date ? task_date_label(next_recurrence_date) : 'Each to its own'}</span>
+            <span className="muted">{!has_next_recurrence ? 'No date ahead' : next_recurrence_date ? relative_day_label(next_recurrence_date) : 'Each to its own'}</span>
           </button>
         )}
         {choices.map(({ option, day }) => (
           <button key={option.id} className="reschedule_choice" disabled={!day} onClick={() => day && choose(day)}>
             <span>{option.name}</span>
-            <span className="muted">{day ? task_date_label(format_task_date(day, false)) : option.rule ? 'No date ahead' : 'No rule set'}</span>
+            <span className="muted">{day ? relative_day_label(format_local(day, false)) : option.rule ? 'No date ahead' : 'No rule set'}</span>
           </button>
         ))}
         {choices.length === 0 && !repeats && <p className="muted">No reschedule options. Add some in Settings.</p>}
@@ -67,7 +68,7 @@ export function ReschedulePopup({ tasks, options, date_field, on_reschedule, on_
         className="field"
         onSubmit={(event) => {
           event.preventDefault()
-          if (picked_day) choose(parse_task_date(picked_day))
+          if (picked_day) choose(parse_local(picked_day))
         }}
       >
         <span className="field-label">Pick a day</span>

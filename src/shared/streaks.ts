@@ -1,6 +1,7 @@
 import { next_occurrence } from 'recurrence-input'
 
-import { format_task_date, has_time, parse_task_date, recurrence_anchor, rule_format } from '@shared/schedule'
+import { format_local, has_time, parse_local } from '@x-tech-laboratories/x-libs/dates'
+import { recurrence_anchor, rule_format } from '@shared/schedule'
 import type { Completion, CompletionLogChange, Task } from '@shared/tasks'
 
 // ============================================================================
@@ -32,7 +33,7 @@ const MAX_OCCURRENCES_WALKED = 2000
 // The occurrence after this one under the rule, or null once the rule has ended.
 function next_after(rule: string, occurrence_on: string): Date | null {
   try {
-    return next_occurrence(rule, parse_task_date(occurrence_on), rule_format(occurrence_on))?.next_date ?? null
+    return next_occurrence(rule, parse_local(occurrence_on), rule_format(occurrence_on))?.next_date ?? null
   } catch {
     return null
   }
@@ -48,7 +49,7 @@ interface LoggedOccurrence {
 function logged_occurrences(task: Task, completions: Completion[]): LoggedOccurrence[] {
   const entries = completions
     .filter((entry) => entry.task_id === task.id && entry.occurrence_on !== null)
-    .map((entry) => ({ entry, occurrence: parse_task_date(entry.occurrence_on!) }))
+    .map((entry) => ({ entry, occurrence: parse_local(entry.occurrence_on!) }))
     .sort((first, second) => first.occurrence.getTime() - second.occurrence.getTime())
 
   const logged: LoggedOccurrence[] = []
@@ -86,7 +87,7 @@ export function routine_streak(task: Task, completions: Completion[], now = new 
 
   // The streak lives on while the pending occurrence is the one right after the last done, and its time has not run out.
   const pending = recurrence_anchor(task)
-  if (pending === null || parse_task_date(pending).getTime() !== expected_time) return { current: 0, best }
+  if (pending === null || parse_local(pending).getTime() !== expected_time) return { current: 0, best }
   const pending_next = next_after(task.recurrence, pending)
   return { current: pending_next && now >= pending_next ? 0 : run, best }
 }
@@ -106,7 +107,7 @@ export function routine_history(task: Task, completions: Completion[], now = new
   if (!task.recurrence) return []
   const logged = logged_occurrences(task, completions)
   const pending = recurrence_anchor(task)
-  const start_times = [...(logged[0] ? [logged[0].time] : []), ...(pending ? [parse_task_date(pending).getTime()] : [])]
+  const start_times = [...(logged[0] ? [logged[0].time] : []), ...(pending ? [parse_local(pending).getTime()] : [])]
   if (start_times.length === 0) return []
 
   // Logged ticks count wherever they fall, as a rule changed since may no longer produce their dates.
@@ -119,7 +120,7 @@ export function routine_history(task: Task, completions: Completion[], now = new
   // Walks the rule, marking each unticked occurrence as missed once its time ran out, or pending while it is still under way.
   let occurrence: Date | null = new Date(Math.min(...start_times))
   for (let step = 0; occurrence && occurrence <= now && step < MAX_OCCURRENCES_WALKED; step += 1) {
-    const next = next_after(task.recurrence, format_task_date(occurrence, with_time))
+    const next = next_after(task.recurrence, format_local(occurrence, with_time))
     if (!logged_times.has(occurrence.getTime())) marks.push({ time: occurrence.getTime(), state: next && next <= now ? 'missed' : 'pending' })
     occurrence = next
   }

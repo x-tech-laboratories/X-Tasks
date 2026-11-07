@@ -1,14 +1,15 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
 import { MenuList } from '@x-tech-laboratories/x-libs/web/react/menus'
+import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
 import { DataTable, type RowGroup, type Sorting, type TableColumn as DataColumn } from '@x-tech-laboratories/x-libs/web/react/table'
 import type { TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
-import { task_date_label } from '@shared/schedule'
+import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import type { RepeatOccurrence, TaskGroup } from './dates'
 import {
   COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_column_shown, is_date_column, table_sort_value, tag_ranks, tags_in_sidebar_order, type SortContext, type TableColumn,
+  has_table_filters, is_column_filtered, is_column_shown, is_date_column, table_sort_value, tag_ranks, type SortContext, type TableColumn,
   type TableFilters
 } from './table'
 import {
@@ -133,7 +134,7 @@ export function TaskTable(props: TaskTableProps) {
     const tag_choices = [
       { value: '', label: 'Any' },
       { value: NO_TAG_FILTER, label: 'None' },
-      ...tags_in_sidebar_order(tags.filter((tag) => tag.group_id === group_id)).map((tag) => ({ value: tag.id, label: tag_path(tag, tags) }))
+      ...in_tree_order(tags.filter((tag) => tag.group_id === group_id)).map((tag) => ({ value: tag.id, label: tag_path(tag, tags) }))
     ]
     return choices(tag_choices, filters.group_tag_ids[group_id] ?? '', (tag_id) => set({ group_tag_ids: { ...filters.group_tag_ids, [group_id]: tag_id } }))
   }
@@ -169,7 +170,7 @@ export function TaskTable(props: TaskTableProps) {
   function cell(row: TableRow, column: TableColumn): ReactNode {
     if (row.kind === 'repeat') {
       const shows_date = column === 'date' || column === actions.date_field
-      return shows_date ? <span className="due_label">{task_date_label(row.repeat.task_date)}</span> : null
+      return shows_date ? <span className="due_label">{relative_day_label(row.repeat.task_date)}</span> : null
     }
     const task = row.node.task
     if (is_date_column(column)) return <DateLabel task={task} column={column} actions={actions} />

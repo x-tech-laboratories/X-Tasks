@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest'
 
 import { task_duration } from '../src/shared/settings.ts'
 import {
-  days_between, describe_recurrence, due_after, duration_between, duration_label, format_task_date, has_time, is_overdue, next_schedule,
-  overdue_repeat_schedule, parse_task_date, recurrence_anchor, reschedule_day, rescheduled, rule_format, task_date_label, with_recurrence
+  describe_recurrence, due_after, duration_between, duration_label, next_schedule, overdue_repeat_schedule, recurrence_anchor, reschedule_day, rescheduled, rule_format,
+  with_recurrence
 } from '../src/shared/schedule.ts'
 import { make_task } from './fixtures.ts'
 
@@ -12,54 +12,6 @@ import { make_task } from './fixtures.ts'
 // ============================================================================
 
 const NOW = new Date(2026, 2, 11, 10, 0)
-
-// ============================================================================
-// Task dates
-// ============================================================================
-
-describe('task dates', () => {
-  test('parse_task_date reads local dates, with midnight for a plain day', () => {
-    expect(parse_task_date('2026-03-11')).toEqual(new Date(2026, 2, 11, 0, 0))
-    expect(parse_task_date('2026-03-11T17:45')).toEqual(new Date(2026, 2, 11, 17, 45))
-  })
-
-  test('parse_task_date rolls an impossible day over into the next month', () => {
-    expect(parse_task_date('2026-02-30')).toEqual(new Date(2026, 2, 2))
-  })
-
-  test('format_task_date pads and adds the time only when asked', () => {
-    const date = new Date(2026, 0, 5, 7, 3)
-    expect(format_task_date(date, false)).toBe('2026-01-05')
-    expect(format_task_date(date, true)).toBe('2026-01-05T07:03')
-  })
-
-  test('has_time looks for the T', () => {
-    expect(has_time('2026-03-11')).toBe(false)
-    expect(has_time('2026-03-11T09:00')).toBe(true)
-  })
-
-  test('days_between counts calendar days and ignores the time of day', () => {
-    expect(days_between(new Date(2026, 2, 11, 23, 59), new Date(2026, 2, 12, 0, 1))).toBe(1)
-    expect(days_between(new Date(2026, 2, 11), new Date(2026, 2, 1))).toBe(-10)
-    expect(days_between(new Date(2026, 1, 1), new Date(2027, 1, 1))).toBe(365)
-  })
-
-  test('is_overdue counts the time for timed dates and the whole day otherwise', () => {
-    expect(is_overdue('2026-03-11T09:59', NOW)).toBe(true)
-    expect(is_overdue('2026-03-11T10:00', NOW)).toBe(false)
-    expect(is_overdue('2026-03-11', NOW)).toBe(false)
-    expect(is_overdue('2026-03-10', NOW)).toBe(true)
-  })
-
-  test('task_date_label names nearby days and spells out the rest', () => {
-    expect(task_date_label('2026-03-10', NOW)).toBe('Yesterday')
-    expect(task_date_label('2026-03-11', NOW)).toBe('Today')
-    expect(task_date_label('2026-03-12', NOW)).toBe('Tomorrow')
-    expect(task_date_label('2026-03-12T09:30', NOW)).toMatch(/^Tomorrow 9:30/)
-    expect(task_date_label('2026-04-02', NOW)).not.toMatch(/2026/)
-    expect(task_date_label('2027-04-02', NOW)).toMatch(/2027/)
-  })
-})
 
 // ============================================================================
 // Durations

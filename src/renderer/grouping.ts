@@ -1,7 +1,7 @@
 import type { Settings, TaskGrouping } from '@shared/settings'
 import type { Tag, TagGroup, Task, View } from '@shared/tasks'
 import type { TaskGroup } from './dates'
-import { tags_in_sidebar_order } from './table'
+import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
 import { tag_path, with_icon, type TaskNode } from './views'
 
 // ============================================================================
@@ -54,7 +54,7 @@ export function with_view_grouping(settings: Settings, view: View, grouping: Tas
 
 // Puts each top task under every tag it has from the group, in sidebar order, with tasks holding none of them last.
 export function group_by_tag(nodes: TaskNode[], tag_group: TagGroup, tags: Tag[], tags_of: (task: Task) => Tag[]): TaskGroup[] {
-  const group_tags = tags_in_sidebar_order(tags.filter((tag) => tag.group_id === tag_group.id))
+  const group_tags = in_tree_order(tags.filter((tag) => tag.group_id === tag_group.id))
   const groups = group_tags.map((tag): TaskGroup => ({ key: tag.id, label: with_icon(tag, tag_path(tag, tags)), nodes: [], repeats: [] }))
   const untagged: TaskGroup = { key: 'none', label: `No ${tag_group.name}`, nodes: [], repeats: [] }
 

@@ -1,24 +1,25 @@
 import type { ReportWidget } from '@shared/settings'
-import { format_task_date, parse_task_date } from '@shared/schedule'
+import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import {
   record_since, repeating_ancestor_of, routine_history, routine_streak, subtask_history, subtask_streak, type HistoryMark, type RoutineRecord,
   type RoutineStreak
 } from '@shared/streaks'
 import type { Completion, Tag, Task } from '@shared/tasks'
-import { children_of, task_is_in_view } from './views'
+import { children_of } from '@x-tech-laboratories/x-libs/web/tree'
+import { task_is_in_view } from './views'
 
 // ============================================================================
 // Days
 // ============================================================================
 
 export function day_offset(day: string, offset: number): string {
-  const date = parse_task_date(day)
-  return format_task_date(new Date(date.getFullYear(), date.getMonth(), date.getDate() + offset), false)
+  const date = parse_local(day)
+  return format_local(new Date(date.getFullYear(), date.getMonth(), date.getDate() + offset), false)
 }
 
 // The Monday on or before a day.
 export function week_start_of(day: string): string {
-  return day_offset(day, -((parse_task_date(day).getDay() + 6) % 7))
+  return day_offset(day, -((parse_local(day).getDay() + 6) % 7))
 }
 
 // The first day a card looks at, counting today as its last.
@@ -43,7 +44,7 @@ function tick_days(widget: ReportWidget, widget_tasks: Task[], completions: Comp
   const first_day = first_report_day(widget, today)
   return completions
     .filter((entry) => task_ids.has(entry.task_id))
-    .map((entry) => ({ task_id: entry.task_id, day: format_task_date(new Date(entry.done_at), false) }))
+    .map((entry) => ({ task_id: entry.task_id, day: format_local(new Date(entry.done_at), false) }))
     .filter(({ day }) => day >= first_day && day <= today)
 }
 
@@ -62,7 +63,7 @@ export interface StreakRow {
 
 // Each open routine, longest current streak first, with the subtasks it measures listed under it in their own order.
 export function streak_rows(widget: ReportWidget, widget_tasks: Task[], completions: Completion[], tasks: Task[], today: string): StreakRow[] {
-  const since = parse_task_date(first_report_day(widget, today))
+  const since = parse_local(first_report_day(widget, today))
   const routine_rows = widget_tasks
     .filter((task) => task.recurrence && !task.is_done)
     .map((task) => {

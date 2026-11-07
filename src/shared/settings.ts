@@ -1,3 +1,4 @@
+import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
 import type { SyncDirection, SyncStatus } from './sync'
 import type { View } from './tasks'
 
@@ -317,28 +318,10 @@ export interface McpStatus {
 // ============================================================================
 
 // A saved copy of the database, named by the file it lives in.
-export interface DatabaseBackup {
-  name: string
-  taken_at: string
-  size_bytes: number
-  is_automatic: boolean
-}
+export type DatabaseBackup = Backup
 
-// A backup is named after the UTC time it was taken, with dashes for the colons a file name cannot always hold.
-export const BACKUP_NAME_PATTERN = /^tasks-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z(-auto)?\.db$/
-
-export const AUTOMATIC_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000
-
-export function backup_name(taken_at: Date, is_automatic: boolean): string {
-  const timestamp = taken_at.toISOString().slice(0, 19).replaceAll(':', '-')
-  return `tasks-${timestamp}Z${is_automatic ? '-auto' : ''}.db`
-}
-
-// Reads the time and kind back out of a backup's name.
-export function describe_backup_name(name: string, size_bytes: number): DatabaseBackup {
-  const [, date, hours, minutes, seconds, automatic_suffix] = BACKUP_NAME_PATTERN.exec(name)!
-  return { name, taken_at: `${date}T${hours}:${minutes}:${seconds}Z`, size_bytes, is_automatic: automatic_suffix !== undefined }
-}
+// A backup is named after the UTC time it was taken, such as tasks-2026-06-10T09-30-00Z-auto.db.
+export const task_backup_naming = backup_naming('tasks', '.db')
 
 // ============================================================================
 // Bridge contract

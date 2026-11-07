@@ -1,10 +1,11 @@
 import { useState, type CSSProperties } from 'react'
 
 import type { TaskDateField } from '@shared/settings'
-import { is_overdue, task_date_label, task_date_of } from '@shared/schedule'
+import { is_overdue, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
+import { task_date_of } from '@shared/schedule'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { group_by_date } from './dates'
-import { tags_in_sidebar_order } from './table'
+import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
 import { TagChip } from './TagChip'
 import { click_task, open_task_menu, type TaskActions } from './TaskItem'
 import { tag_color_style, tag_path, with_icon, type TaskNode } from './views'
@@ -27,7 +28,7 @@ export const NO_TAG_COLUMN = 'none'
 
 // Every tag of the group gets a column, even an empty one to drop into, with tasks holding none of them last.
 export function tag_columns(nodes: TaskNode[], tag_group: TagGroup, tags: Tag[], tags_of: (task: Task) => Tag[]): BoardColumn[] {
-  const group_tags = tags_in_sidebar_order(tags.filter((tag) => tag.group_id === tag_group.id))
+  const group_tags = in_tree_order(tags.filter((tag) => tag.group_id === tag_group.id))
   const columns = group_tags.map((tag): BoardColumn => ({ key: tag.id, label: with_icon(tag, tag_path(tag, tags)), nodes: [], accepts_drop: !tag_group.is_rule }))
   const untagged: BoardColumn = { key: NO_TAG_COLUMN, label: `No ${tag_group.name}`, nodes: [], accepts_drop: !tag_group.is_rule }
 
@@ -166,7 +167,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
         <span className="task_title">{task.title}</span>
       </div>
       <div className="board_card_details">
-        {date && <span className={!task.is_done && is_overdue(date) ? 'due_label is_overdue' : 'due_label'}>{task_date_label(date)}</span>}
+        {date && <span className={!task.is_done && is_overdue(date) ? 'due_label is_overdue' : 'due_label'}>{relative_day_label(date)}</span>}
         {task.recurrence && <span className="task_mark" title="Repeats">↻</span>}
         {task.notes && <span className="task_mark" title="Has notes">≡</span>}
         {children.length > 0 && <span className="subtask_count" title="Subtasks done">{done_children}/{children.length}</span>}

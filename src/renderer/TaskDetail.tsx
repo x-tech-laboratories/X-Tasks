@@ -1,16 +1,17 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
+import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import { can_link, links_of, type SeenLink, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
 import { TagChip } from './TagChip'
 import type { TaskDateField, TaskDuration, TaskRelationship } from '@shared/settings'
+import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import {
-  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, format_task_date, parse_task_date, recurrence_anchor,
-  with_recurrence
+  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, recurrence_anchor, with_recurrence
 } from '@shared/schedule'
 import { tag_path } from './views'
 
@@ -56,14 +57,8 @@ export function TaskDetail({
   const [is_picking_recurrence, set_is_picking_recurrence] = useState(false)
   const schedule: TaskSchedule = { start_at: task.start_at, due_at: task.due_at, recurrence: task.recurrence }
 
-  // Each field saves on blur, which happens before this closes the panel; a dialog open over it takes Escape for itself.
-  useEffect(() => {
-    function close_on_escape(event: KeyboardEvent): void {
-      if (event.key === 'Escape' && !document.querySelector('dialog[open], [popover]:popover-open')) on_close()
-    }
-    window.addEventListener('keydown', close_on_escape)
-    return () => window.removeEventListener('keydown', close_on_escape)
-  }, [on_close])
+  // Escape closes the panel even from its fields, each of which saves on blur first; a dialog open over it keeps Escape for itself.
+  use_shortcuts([{ keys: 'escape', when: 'always', run: on_close }])
 
   // An emptied title puts the old one back rather than saving a blank task.
   function commit_title(): void {
@@ -185,8 +180,8 @@ export function TaskDetail({
       <DateTimeField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
       <DateTimeField
         label="Done"
-        value={task.done_at && format_task_date(new Date(task.done_at), true)}
-        on_change={(done_at) => on_set_done_at(task, done_at && parse_task_date(done_at).toISOString())}
+        value={task.done_at && format_local(new Date(task.done_at), true)}
+        on_change={(done_at) => on_set_done_at(task, done_at && parse_local(done_at).toISOString())}
       />
       <button className="start_button" onClick={() => on_reschedule(task)}>
         Reschedule…

@@ -1,6 +1,7 @@
 import { registerPlugin } from '@capacitor/core'
 
-import { AUTOMATIC_BACKUP_INTERVAL_MS, BACKUP_NAME_PATTERN, backup_name, describe_backup_name, type DatabaseBackup } from '@shared/settings'
+import { backups } from '@x-tech-laboratories/x-libs/backups'
+import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
 import { forget_sync_history } from '../../main/sync_engine'
 import { attach_task_database, get_settings, open_database } from '../../main/task_database'
 import type { WasmTaskDatabase } from './wasm_database'
@@ -55,22 +56,20 @@ export interface AndroidBackups {
 export function android_backups(database: WasmTaskDatabase): AndroidBackups {
   const get_folder = async (): Promise<string> => (await backup_folder.get_folder()).name
 
-  // Newest first.
-  const list_backups = async (): Promise<DatabaseBackup[]> => {
-    if (!(await get_folder())) return []
-    const { files } = await backup_folder.list()
-    return files
-      .filter((file) => BACKUP_NAME_PATTERN.test(file.name))
-      .map((file) => describe_backup_name(file.name, file.size_bytes))
-      .sort((first, second) => second.taken_at.localeCompare(first.taken_at))
-  }
+  // The phone keeps the files on its side; each crosses the bridge as base64.
+  const task_backups = backups(task_backup_naming, {
+    list: async () => ((await get_folder()) ? (await backup_folder.list()).files : []),
+    take: async (name) => {
+      const bytes = database.export_bytes()
+      await backup_folder.write({ name, data: to_base64(bytes) })
+      return bytes.byteLength
+    },
+    remove: (name) => backup_folder.remove({ name })
+  })
 
-  const create_backup = async (is_automatic = false): Promise<DatabaseBackup> => {
-    const name = backup_name(new Date(), is_automatic)
-    const bytes = database.export_bytes()
-    await backup_folder.write({ name, data: to_base64(bytes) })
-    return describe_backup_name(name, bytes.byteLength)
-  }
+  // Newest first.
+  const list_backups = (): Promise<DatabaseBackup[]> => task_backups.list()
+  const create_backup = (is_automatic = false): Promise<DatabaseBackup> => task_backups.create(is_automatic)
 
   // The current data is backed up first, so a restore can itself be undone; the restored data no longer matches what other devices have, so sync starts over.
   const restore_backup = async (name: string): Promise<void> => {
@@ -83,7 +82,7 @@ export function android_backups(database: WasmTaskDatabase): AndroidBackups {
     await database.save_now()
   }
 
-  const remove_backup = (name: string): Promise<void> => backup_folder.remove({ name })
+  const remove_backup = (name: string): Promise<void> => task_backups.remove(name)
 
   // Takes a daily backup once a day has passed since the last one, and deletes the oldest beyond the number to keep; a failure is logged so it never stops the app.
   const keep_automatic_backups = async (): Promise<void> => {
@@ -91,13 +90,7 @@ export function android_backups(database: WasmTaskDatabase): AndroidBackups {
     if (!settings.auto_backup || !(await get_folder())) return
 
     try {
-      const newest_automatic = (await list_backups()).find((backup) => backup.is_automatic)
-      if (!newest_automatic || Date.now() - Date.parse(newest_automatic.taken_at) >= AUTOMATIC_BACKUP_INTERVAL_MS) {
-        await create_backup(true)
-      }
-
-      const automatic_backups = (await list_backups()).filter((backup) => backup.is_automatic)
-      for (const backup of automatic_backups.slice(settings.auto_backups_to_keep)) await remove_backup(backup.name)
+      await task_backups.keep_automatic(settings.auto_backups_to_keep)
     } catch (error) {
       console.error('automatic backup failed:', error)
     }

@@ -1,4 +1,5 @@
 import { define_bridge } from '@x-tech-laboratories/x-libs/electron/bridge'
+import { define_events } from '@x-tech-laboratories/x-libs/electron/events'
 
 import type { SettingsApi } from './settings'
 import type { TasksApi } from './tasks'
@@ -26,6 +27,11 @@ export const TASKS_METHODS = [
 ] as const satisfies readonly (keyof TasksMethods)[]
 
 export const tasks_bridge = define_bridge<TasksMethods>('x_tasks', TASKS_METHODS)
+
+// What the main process tells the page on its own: the database changed elsewhere, or a task link asks to open a task.
+export type TasksEvents = { database_changed: null; open_task: string }
+
+export const tasks_events = define_events<TasksEvents>('x_tasks')
 
 // ============================================================================
 // Settings

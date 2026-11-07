@@ -6,7 +6,8 @@ import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { EMPTY_RULE, type DueCondition, type LinkDirection, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import type { TaskRelationship } from '@shared/settings'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
-import { chain_tag_ids_of, last_character, subtree_ids, tag_path } from './views'
+import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
+import { chain_tag_ids_of, last_character, tag_path } from './views'
 
 // ============================================================================
 // Choices

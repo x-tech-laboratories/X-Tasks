@@ -1,6 +1,6 @@
 import { links_of, type RuleCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
-import { days_between, is_overdue, parse_task_date } from '@shared/schedule'
-import { subtree_ids } from './views'
+import { days_between, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
+import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
 
 // ============================================================================
 // Conditions
@@ -62,15 +62,15 @@ export function condition_holds(condition: RuleCondition, task: Task, all_tasks:
       if (condition.when === 'none') return task.due_at === null
       if (task.due_at === null) return false
       if (condition.when === 'overdue') return is_overdue(task.due_at, now)
-      const day_offset = days_between(now, parse_task_date(task.due_at))
+      const day_offset = days_between(now, parse_local(task.due_at))
       if (condition.when === 'today') return day_offset === 0
       if (condition.when === 'within_days') return day_offset >= 0 && day_offset <= condition.days
       return true
     }
     case 'start': {
       if (condition.when === 'none') return task.start_at === null
-      if (condition.when === 'passed_or_none') return task.start_at === null || parse_task_date(task.start_at) <= now
-      const has_started = task.start_at !== null && parse_task_date(task.start_at) <= now
+      if (condition.when === 'passed_or_none') return task.start_at === null || parse_local(task.start_at) <= now
+      const has_started = task.start_at !== null && parse_local(task.start_at) <= now
       return condition.when === 'started' ? has_started : !has_started
     }
     case 'completed_within':

@@ -3,7 +3,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { format_task_date } from '@shared/schedule'
+import { format_local } from '@x-tech-laboratories/x-libs/dates'
 import { PRESET_FILTERS_GROUP_ID, type RuleCondition, type TagRule } from '@shared/tasks'
 import { open_task_database } from '../main/node_task_database'
 import {
@@ -52,12 +52,12 @@ const now = new Date()
 
 // A local day this many days from today, as the app stores it.
 function day(offset: number): string {
-  return format_task_date(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset), false)
+  return format_local(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset), false)
 }
 
 // A local time on a day this many days from today.
 function time(offset: number, hours: number, minutes = 0): string {
-  return format_task_date(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, hours, minutes), true)
+  return format_local(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, hours, minutes), true)
 }
 
 // The moment a task was ticked, this many days ago at the given hour.

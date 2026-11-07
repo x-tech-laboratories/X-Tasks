@@ -1,4 +1,4 @@
-import { format_task_date } from '@shared/schedule'
+import { format_local } from '@x-tech-laboratories/x-libs/dates'
 
 // ============================================================================
 // Words
@@ -234,13 +234,13 @@ export function find_task_date(words: string[], start: number, options: DateOpti
     if (!day) continue
 
     const time = read_time_at(words.slice(start + length))
-    if (!time) return { date: format_task_date(day, false), length }
-    return { date: format_task_date(with_time(day, time.time), true), length: length + time.length }
+    if (!time) return { date: format_local(day, false), length }
+    return { date: format_local(with_time(day, time.time), true), length: length + time.length }
   }
 
   const time = read_time_at(words.slice(start))
   if (!time) return null
-  return { date: format_task_date(with_time(today_of(now), time.time), true), length: time.length }
+  return { date: format_local(with_time(today_of(now), time.time), true), length: time.length }
 }
 
 export function split_words(text: string): string[] {
@@ -248,5 +248,5 @@ export function split_words(text: string): string[] {
 }
 
 export function day_of(date: Date): string {
-  return format_task_date(date, false)
+  return format_local(date, false)
 }

@@ -5,7 +5,7 @@ import { Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
 
 import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind } from '@shared/settings'
-import { parse_task_date } from '@shared/schedule'
+import { parse_local } from '@x-tech-laboratories/x-libs/dates'
 import type { Completion, Tag, TagGroup, Task } from '@shared/tasks'
 import { StreakStrip } from './StreakStrip'
 import {
@@ -28,7 +28,7 @@ const WIDGET_KINDS: { kind: ReportWidgetKind; label: string; days: number }[] = 
 const CALENDAR_LEVELS = 4
 
 function short_day(day: string): string {
-  return parse_task_date(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return parse_local(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 function plural(count: number, word: string): string {
@@ -286,10 +286,10 @@ function TickCalendar({ widget, counts, today }: TickCalendarProps) {
     <div className="report_calendar_scroll">
       <div className="report_calendar" style={{ '--week-count': weeks.length } as CSSProperties}>
         {weeks.map((week) => {
-          const month_starts = week === weeks[0] || parse_task_date(day_offset(week, -7)).getMonth() !== parse_task_date(week).getMonth()
+          const month_starts = week === weeks[0] || parse_local(day_offset(week, -7)).getMonth() !== parse_local(week).getMonth()
           return (
             <span key={`month-${week}`} className="report_calendar_month">
-              {month_starts ? parse_task_date(week).toLocaleDateString(undefined, { month: 'short' }) : ''}
+              {month_starts ? parse_local(week).toLocaleDateString(undefined, { month: 'short' }) : ''}
             </span>
           )
         })}

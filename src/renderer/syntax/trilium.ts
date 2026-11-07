@@ -1,4 +1,4 @@
-import { format_task_date } from '@shared/schedule'
+import { format_local } from '@x-tech-laboratories/x-libs/dates'
 import { all_of, any_of, empty_quick_add, finished_quick_add, group_named, name_key, none_of, tag_query, tags_named, text_query, with_date, with_problem, with_tag, with_tag_named } from './building'
 import { add_days, day_of, read_task_date, today_of, VALUE_DATE_OPTIONS } from './dates'
 import type { DateField, DayRelation, QuickAdd, SearchQuery, Syntax, SyntaxContext, TextMatch } from './types'
@@ -17,7 +17,7 @@ function read_value_date(value: string, keeps_time: boolean, context: SyntaxCont
   const smart = /^(TODAY|NOW)([+-]\d+)?$/i.exec(value)
   if (smart) {
     const offset = Number(smart[2] ?? 0)
-    if (smart[1]!.toUpperCase() === 'NOW') return format_task_date(new Date(context.now.getTime() + offset * 1000), true)
+    if (smart[1]!.toUpperCase() === 'NOW') return format_local(new Date(context.now.getTime() + offset * 1000), true)
     return day_of(add_days(today_of(context.now), offset))
   }
   const date = read_task_date(value.replace(/(?<=\p{L})[-_](?=\p{L})/gu, ' '), VALUE_DATE_OPTIONS, context.now)

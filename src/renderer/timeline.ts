@@ -1,4 +1,4 @@
-import { format_task_date, has_time, parse_task_date } from '@shared/schedule'
+import { format_local, has_time, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import type { Task, TaskSchedule } from '@shared/tasks'
 
 // ============================================================================
@@ -20,8 +20,8 @@ export function task_span(task: Task): TaskSpan | null {
 
 // The day after a date, as YYYY-MM-DD, for calendars that end a span the moment the next day begins.
 export function day_after(task_date: string): string {
-  const date = parse_task_date(task_date.slice(0, 10))
-  return format_task_date(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1), false)
+  const date = parse_local(task_date.slice(0, 10))
+  return format_local(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1), false)
 }
 
 // ============================================================================
@@ -35,14 +35,14 @@ function schedule_of(task: Task): TaskSchedule {
 // Moves a date by whole days, keeping its clock time if it has one.
 function shifted_date(task_date: string | null, days: number): string | null {
   if (task_date === null) return null
-  const date = parse_task_date(task_date)
+  const date = parse_local(task_date)
   date.setDate(date.getDate() + days)
-  return format_task_date(date, has_time(task_date))
+  return format_local(date, has_time(task_date))
 }
 
 // Puts a date on another day, keeping its clock time if it has one.
 function on_day(task_date: string, day: Date): string {
-  return `${format_task_date(day, false)}${has_time(task_date) ? task_date.slice(10) : ''}`
+  return `${format_local(day, false)}${has_time(task_date) ? task_date.slice(10) : ''}`
 }
 
 export function shifted_schedule(task: Task, days: number): TaskSchedule {
@@ -53,7 +53,7 @@ export function shifted_schedule(task: Task, days: number): TaskSchedule {
 export function day_span_schedule(task: Task, first_day: Date, last_day: Date): TaskSchedule {
   const span = task_span(task)
   if (!span) return schedule_of(task)
-  const is_one_day = format_task_date(first_day, false) === format_task_date(last_day, false)
+  const is_one_day = format_local(first_day, false) === format_local(last_day, false)
 
   if (is_one_day && task.start_at === null) return { ...schedule_of(task), due_at: on_day(span.end, last_day) }
   if (is_one_day && task.due_at === null) return { ...schedule_of(task), start_at: on_day(span.start, first_day) }
@@ -62,7 +62,7 @@ export function day_span_schedule(task: Task, first_day: Date, last_day: Date): 
 
 // Puts a task at new clock times: both dates when there is an end, or else just the one date it has.
 export function timed_schedule(task: Task, start: Date, end: Date | null): TaskSchedule {
-  if (end !== null) return { ...schedule_of(task), start_at: format_task_date(start, true), due_at: format_task_date(end, true) }
-  if (task.due_at === null) return { ...schedule_of(task), start_at: format_task_date(start, true) }
-  return { ...schedule_of(task), due_at: format_task_date(start, true) }
+  if (end !== null) return { ...schedule_of(task), start_at: format_local(start, true), due_at: format_local(end, true) }
+  if (task.due_at === null) return { ...schedule_of(task), start_at: format_local(start, true) }
+  return { ...schedule_of(task), due_at: format_local(start, true) }
 }

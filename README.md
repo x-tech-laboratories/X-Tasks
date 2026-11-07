@@ -1,6 +1,6 @@
 # X-Tasks
 
-A todo manager built with Electron, Preact and TypeScript.
+A todo manager built with Electron, React and TypeScript, on the shared X-Libs widgets and Halon styles.
 
 ## Development
 
@@ -209,7 +209,7 @@ later launches, so a run with `X_TASKS_DB` set never hands its link to another w
 - `src/main/sync_engine.ts` — change tracking and merging; `src/main/sync_client.ts` syncs a device with the server
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
   `src/renderer/web_bridge.ts` sets up the same bridge over HTTP
-- `src/renderer` — the Preact interface; `src/renderer/android` holds the Android app's database and bridge
+- `src/renderer` — the React interface; `src/renderer/android` holds the Android app's database and bridge
 - `android` — the Capacitor Android project
 - `src/shared` — types and channel names used by both sides
 

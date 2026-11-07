@@ -1,3 +1,5 @@
+import { add_days, add_months, days_between, format_local, has_time, parse_local, start_of_day } from '@x-tech-laboratories/x-libs/dates'
+import { format_duration } from '@x-tech-laboratories/x-libs/durations'
 import { describe_rule, next_from_now, next_occurrence, parse_rule, type RuleFormat } from 'recurrence-input'
 
 import { DURATION_UNITS, type OverdueRepeatReschedule, type RescheduleOption, type TaskDateField, type TaskDuration } from '@shared/settings'
@@ -7,63 +9,17 @@ import type { Task, TaskSchedule } from '@shared/tasks'
 // Task dates
 // ============================================================================
 
-const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000
-
-export function has_time(task_date: string): boolean {
-  return task_date.includes('T')
-}
-
 // The task's due date or start date, whichever the settings make its date.
 export function task_date_of(schedule: TaskSchedule, field: TaskDateField): string | null {
   return field === 'start' ? schedule.start_at : schedule.due_at
 }
 
-export function parse_task_date(task_date: string): Date {
-  const [day = '', time = '00:00'] = task_date.split('T')
-  const [year = 0, month = 1, day_of_month = 1] = day.split('-').map(Number)
-  const [hours = 0, minutes = 0] = time.split(':').map(Number)
-  return new Date(year, month - 1, day_of_month, hours, minutes)
-}
-
-export function format_task_date(date: Date, with_time: boolean): string {
-  const pad = (number: number) => String(number).padStart(2, '0')
-  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-  return with_time ? `${day}T${pad(date.getHours())}:${pad(date.getMinutes())}` : day
-}
-
-function start_of_day(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
-export function days_between(first: Date, second: Date): number {
-  return Math.round((start_of_day(second).getTime() - start_of_day(first).getTime()) / DAY_IN_MILLISECONDS)
-}
-
-// A date without a time is overdue only once its day has passed.
-export function is_overdue(task_date: string, now = new Date()): boolean {
-  const date = parse_task_date(task_date)
-  return has_time(task_date) ? date < now : date < start_of_day(now)
-}
-
-export function task_date_label(task_date: string, now = new Date()): string {
-  const date = parse_task_date(task_date)
-  const day_offset = days_between(now, date)
-  const nearby_days: Record<number, string> = { [-1]: 'Yesterday', 0: 'Today', 1: 'Tomorrow' }
-  const day_label =
-    nearby_days[day_offset] ??
-    date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric'
-    })
-
-  if (!has_time(task_date)) return day_label
-  return `${day_label} ${date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
-}
-
 // ============================================================================
 // Durations
 // ============================================================================
+
+// How many seconds one of each unit is, a month counting as 30 days as format_duration counts it.
+const SECONDS_IN = { months: 2592000, weeks: 604800, days: 86400, hours: 3600, minutes: 60 } as const
 
 function needs_time(duration: TaskDuration): boolean {
   return duration.hours > 0 || duration.minutes > 0
@@ -71,9 +27,7 @@ function needs_time(duration: TaskDuration): boolean {
 
 // A duration's name, such as 1 hour 30 minutes, with Same day when every unit is zero.
 export function duration_label(duration: TaskDuration): string {
-  const parts = DURATION_UNITS.filter((unit) => duration[unit] > 0).map(
-    (unit) => `${duration[unit]} ${duration[unit] === 1 ? unit.slice(0, -1) : unit}`
-  )
+  const parts = DURATION_UNITS.filter((unit) => duration[unit] > 0).map((unit) => format_duration(duration[unit] * SECONDS_IN[unit], { largest_unit: unit }))
   return parts.length > 0 ? parts.join(' ') : 'Same day'
 }
 
@@ -85,13 +39,9 @@ export function durations_for_start(durations: TaskDuration[], start_at: string)
 
 // The due date that lies the given duration after the start, with a time only when the start has one.
 export function due_after(start_at: string, duration: TaskDuration): string {
-  const start = parse_task_date(start_at)
-  // A day past the end of the target month falls back to its last day, so Jan 31 plus a month is Feb 28.
-  const last_day = new Date(start.getFullYear(), start.getMonth() + duration.months + 1, 0).getDate()
-  const due = new Date(start.getFullYear(), start.getMonth() + duration.months, Math.min(start.getDate(), last_day), start.getHours(), start.getMinutes())
-  due.setDate(due.getDate() + duration.weeks * 7 + duration.days)
+  const due = add_days(add_months(parse_local(start_at), duration.months), duration.weeks * 7 + duration.days)
   due.setHours(due.getHours() + duration.hours, due.getMinutes() + duration.minutes)
-  return format_task_date(due, has_time(start_at))
+  return format_local(due, has_time(start_at))
 }
 
 // The listed duration that leads from start to due, or null when the gap matches none of them.
@@ -143,8 +93,8 @@ export function with_recurrence(schedule: TaskSchedule, recurrence: string, now 
   const time = recurrence ? rule_time(recurrence, now) : null
   if (time === null || (anchor !== null && has_time(anchor))) return { ...schedule, recurrence }
 
-  const day = anchor === null ? now : parse_task_date(anchor)
-  const timed_anchor = format_task_date(new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.hours, time.minutes), true)
+  const day = anchor === null ? now : parse_local(anchor)
+  const timed_anchor = format_local(new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.hours, time.minutes), true)
   if (anchor === schedule.start_at) return { ...schedule, start_at: timed_anchor, recurrence }
   if (anchor === schedule.due_at) return { ...schedule, due_at: timed_anchor, recurrence }
   if (schedule.start_at === null) return { ...schedule, due_at: timed_anchor, recurrence }
@@ -161,18 +111,18 @@ function moved_dates(schedule: TaskSchedule, new_anchor: Date, field: TaskDateFi
   const anchor = moved_anchor(schedule, field)
   // A task with no dates gets the chosen date.
   if (anchor === null) {
-    const day = format_task_date(new_anchor, false)
+    const day = format_local(new_anchor, false)
     return field === 'start' ? { start_at: day, due_at: null } : { start_at: null, due_at: day }
   }
 
-  const anchor_date = parse_task_date(anchor)
+  const anchor_date = parse_local(anchor)
   function moved(task_date: string | null): string | null {
     if (task_date === null) return null
-    if (task_date === anchor) return format_task_date(new_anchor, has_time(task_date))
-    const date = parse_task_date(task_date)
+    if (task_date === anchor) return format_local(new_anchor, has_time(task_date))
+    const date = parse_local(task_date)
     const moved_date = new Date(new_anchor.getFullYear(), new_anchor.getMonth(), new_anchor.getDate() + days_between(anchor_date, date))
     moved_date.setHours(date.getHours(), date.getMinutes())
-    return format_task_date(moved_date, has_time(task_date))
+    return format_local(moved_date, has_time(task_date))
   }
 
   return { start_at: moved(schedule.start_at), due_at: moved(schedule.due_at) }
@@ -183,7 +133,7 @@ export function next_schedule(task: Task, field: TaskDateField = 'due'): TaskSch
   if (!task.recurrence) return null
 
   const anchor = recurrence_anchor(task, field)
-  const anchor_date = anchor ? parse_task_date(anchor) : start_of_day(new Date())
+  const anchor_date = anchor ? parse_local(anchor) : start_of_day(new Date())
   let next: ReturnType<typeof next_occurrence>
   try {
     next = next_occurrence(task.recurrence, anchor_date, rule_format(anchor))
@@ -216,7 +166,7 @@ export function rescheduled(task: Task, day: Date, field: TaskDateField): TaskSc
   const anchor = moved_anchor(task, field)
   const new_anchor = new Date(day)
   if (anchor && has_time(anchor)) {
-    const anchor_date = parse_task_date(anchor)
+    const anchor_date = parse_local(anchor)
     new_anchor.setHours(anchor_date.getHours(), anchor_date.getMinutes())
   }
   return { ...moved_dates(task, new_anchor, field), recurrence: task.recurrence }
@@ -230,7 +180,7 @@ export function rescheduled(task: Task, day: Date, field: TaskDateField): TaskSc
 const MOST_SKIPPED_REPEATS = 1000
 
 function is_before_today(task_date: string, now: Date): boolean {
-  return days_between(now, parse_task_date(task_date)) < 0
+  return days_between(now, parse_local(task_date)) < 0
 }
 
 // Where an open repeating task whose date lies before today moves, or null when it stays put.

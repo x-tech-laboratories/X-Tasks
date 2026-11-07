@@ -7,10 +7,11 @@ import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import { task_link, type Tag, type TagGroup, type Task } from '@shared/tasks'
 import { StreakStrip } from './StreakStrip'
 import { TagChip } from './TagChip'
-import { is_overdue, task_date_label } from '@shared/schedule'
+import { is_overdue, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import { column_date, task_duration_label, task_duration_minutes, type DateColumn, type LastDoneOf } from './table'
 import type { RepeatOccurrence } from './dates'
-import { drop_placement, tag_color_style, tag_path, type DropPlacement, type TaskNode } from './views'
+import { placement_at, type DropPlacement } from '@x-tech-laboratories/x-libs/web/tree'
+import { tag_color_style, tag_path, type TaskNode } from './views'
 
 // A row's strip shows about a week of a daily routine.
 const ROW_STRIP_LENGTH = 7
@@ -149,7 +150,7 @@ export function DateLabel({ task, column, actions }: { task: Task; column: DateC
   return (
     <span className={is_late ? 'due_label is_overdue' : 'due_label'}>
       {column === 'date' && task.is_done && task.done_at ? 'Done ' : ''}
-      {task_date_label(date)}
+      {relative_day_label(date)}
     </span>
   )
 }
@@ -211,20 +212,22 @@ export function TaskItem({ node, actions }: TaskItemProps) {
     if (is_collapsed) actions.on_set_collapsed(task, false)
   }
 
-  function placement_at(event: DragEvent): DropPlacement {
-    return actions.can_drop_beside ? drop_placement(event, true) : 'inside'
+  function placement_of(event: DragEvent): DropPlacement {
+    if (!actions.can_drop_beside) return 'inside'
+    const box = event.currentTarget.getBoundingClientRect()
+    return placement_at(box.height > 0 ? (event.clientY - box.top) / box.height : 0.5, true)
   }
 
   function drag_over(event: DragEvent): void {
     if (!actions.can_drop_on(task)) return
     event.preventDefault()
-    set_shown_placement(placement_at(event))
+    set_shown_placement(placement_of(event))
   }
 
   function drop(event: DragEvent): void {
     event.preventDefault()
     set_shown_placement(null)
-    actions.on_drop(task, placement_at(event))
+    actions.on_drop(task, placement_of(event))
   }
 
   const is_picked = actions.is_picked(task)
@@ -309,7 +312,7 @@ export function RepeatItem({ repeat, actions }: RepeatItemProps) {
         <span className="task_title_cell">
           <span className="task_title">{task.title}</span>
         </span>
-        <span className="due_label">{task_date_label(task_date)}</span>
+        <span className="due_label">{relative_day_label(task_date)}</span>
       </div>
     </li>
   )

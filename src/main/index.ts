@@ -1,10 +1,11 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, screen, shell } from 'electron'
 import { join } from 'node:path'
+import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
 
-import { settings_bridge, tasks_bridge } from '@shared/bridges'
+import { settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
 import type { Settings } from '@shared/settings'
-import { DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
+import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { open_task_database } from './node_task_database'
 import { node_sync_storage } from './node_sync_storage'
@@ -55,7 +56,7 @@ function create_main_window(): BrowserWindow {
 
 // The MCP endpoint and sync write through the app's own connection, which the outside-change check never sees, so they tell the windows themselves.
 function announce_mcp_change(): void {
-  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(DATABASE_CHANGED_CHANNEL)
+  tasks_events.emit(BrowserWindow.getAllWindows(), 'database_changed', null)
 }
 
 // Changes from other devices can include the theme, which the window's colours follow.
@@ -75,18 +76,13 @@ function restart_mcp_server(): Promise<void> {
 // The task a link at launch asked for, kept until the page is ready to take it.
 let launch_task_id: string | null = null
 
-function task_id_in(argv: string[]): string | null {
-  return argv.map(task_id_from_link).find((task_id) => task_id !== null) ?? null
-}
-
 // A second launch, such as a clicked task link, brings this window forward and opens the task it names.
 function open_from_second_launch(argv: string[]): void {
   const main_window = BrowserWindow.getAllWindows()[0]
   if (!main_window) return
-  if (main_window.isMinimized()) main_window.restore()
-  main_window.focus()
-  const task_id = task_id_in(argv)
-  if (task_id) main_window.webContents.send(OPEN_TASK_CHANNEL, task_id)
+  bring_to_front(main_window)
+  const task_id = first_argument(argv, task_id_from_link)
+  if (task_id) tasks_events.emit([main_window], 'open_task', task_id)
 }
 
 // ============================================================================
@@ -145,7 +141,7 @@ function register_bridge_handlers(): void {
 function watch_for_outside_changes(): void {
   setInterval(() => {
     if (!has_changed_elsewhere()) return
-    for (const window of BrowserWindow.getAllWindows()) window.webContents.send(DATABASE_CHANGED_CHANNEL)
+    tasks_events.emit(BrowserWindow.getAllWindows(), 'database_changed', null)
   }, 1000)
 }
 
@@ -154,8 +150,7 @@ function watch_for_outside_changes(): void {
 // ============================================================================
 
 function start_app(): void {
-  launch_task_id = task_id_in(process.argv)
-  app.on('second-instance', (_event, argv) => open_from_second_launch(argv))
+  launch_task_id = first_argument(process.argv, task_id_from_link)
 
   app.whenReady().then(() => {
     open_task_database(process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db'))
@@ -188,5 +183,4 @@ function start_app(): void {
 // Only the app on the default database takes task links from later launches, so a run on a test database never hands off to it.
 const takes_task_links = process.env.X_TASKS_DB === undefined
 
-if (takes_task_links && !app.requestSingleInstanceLock()) app.quit()
-else start_app()
+if (!takes_task_links || hold_single_instance(app, open_from_second_launch)) start_app()

@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Segmented } from '@x-tech-laboratories/x-libs/web/react/controls'
 import type { CalendarSpan, TaskDateField } from '@shared/settings'
-import { days_between, format_task_date, has_time } from '@shared/schedule'
+import { days_between, format_local, has_time } from '@x-tech-laboratories/x-libs/dates'
 import type { Tag, Task, TaskSchedule } from '@shared/tasks'
 import { coming_repeats } from './dates'
 import { day_after, day_span_schedule, shifted_schedule, task_span, timed_schedule } from './timeline'
@@ -75,7 +75,7 @@ export function CalendarView(props: CalendarViewProps) {
       datesSet: (info) => {
         const span = (Object.keys(VIEW_BY_SPAN) as CalendarSpan[]).find((each) => VIEW_BY_SPAN[each] === info.view.type)
         if (span && span !== latest.current.span) latest.current.on_change_span(span)
-        set_last_shown_day(format_task_date(info.end, false))
+        set_last_shown_day(format_local(info.end, false))
         set_title(info.view.title)
       }
     })

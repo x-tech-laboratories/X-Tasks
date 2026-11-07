@@ -1,7 +1,9 @@
-import { format_task_date, is_overdue, task_date_of } from '@shared/schedule'
+import { format_local, is_overdue } from '@x-tech-laboratories/x-libs/dates'
+import { task_date_of } from '@shared/schedule'
 import type { Task } from '@shared/tasks'
 import { condition_holds } from '../rules'
-import { chain_tag_ids_of, subtree_ids, task_has_tag } from '../views'
+import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
+import { chain_tag_ids_of, task_has_tag } from '../views'
 import type { DateField, DayRelation, SearchContext, SearchQuery, TextField, TextMatch } from './types'
 
 // ============================================================================
@@ -12,7 +14,7 @@ import type { DateField, DayRelation, SearchContext, SearchQuery, TextField, Tex
 function date_in(task: Task, field: DateField, context: SearchContext): string | null {
   if (field === 'start') return task.start_at
   if (field === 'due') return task.due_at
-  if (field === 'done') return task.done_at === null ? null : format_task_date(new Date(task.done_at), true)
+  if (field === 'done') return task.done_at === null ? null : format_local(new Date(task.done_at), true)
   return task_date_of(task, context.date_field)
 }
 

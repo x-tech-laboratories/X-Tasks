@@ -133,3 +133,30 @@ describe('removing a task', () => {
     await act(async () => undefined)
   })
 })
+
+// ============================================================================
+// Shortcuts
+// ============================================================================
+
+describe('shortcuts', () => {
+  test('Ctrl+A picks every row on screen and Escape lets them go', async () => {
+    await show_app()
+
+    fireEvent.keyDown(document.body, { key: 'a', code: 'KeyA', ctrlKey: true })
+    expect(await screen.findByText('3 selected')).toBeTruthy()
+
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByText('3 selected')).toBeNull())
+  })
+
+  test('Ctrl+Z brings back the task just removed', async () => {
+    const { tasks_api } = await show_app()
+
+    fireEvent.click(screen.getByText('Buy milk'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+    fireEvent.keyDown(document.body, { key: 'z', code: 'KeyZ', ctrlKey: true })
+
+    await screen.findByText('Buy milk')
+    expect(tasks_api.remove_task).not.toHaveBeenCalled()
+  })
+})

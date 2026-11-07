@@ -1,7 +1,9 @@
 import type { Settings, TagMatch, TagScope, TagSelection, TaskDateField } from '@shared/settings'
 import { type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
-import { has_time, task_date_of } from '@shared/schedule'
+import { has_time } from '@x-tech-laboratories/x-libs/dates'
+import { task_date_of } from '@shared/schedule'
 import { rule_matches } from './rules'
+import { nest, path_names, subtree_ids, type TreeNode } from '@x-tech-laboratories/x-libs/web/tree'
 
 export type { View }
 
@@ -187,27 +189,6 @@ export function view_without_tags(view: View, removed_ids: Set<string>): View {
 // Trees
 // ============================================================================
 
-interface TreeItem {
-  id: string
-  parent_id: string | null
-  position: number
-}
-
-export function children_of<Item extends TreeItem>(parent_id: string | null, items: Item[]): Item[] {
-  return items.filter((item) => item.parent_id === parent_id)
-}
-
-// The item itself plus everything below it, at any depth.
-export function subtree_ids(item_id: string, items: TreeItem[]): Set<string> {
-  const ids = new Set([item_id])
-
-  for (const id of ids) {
-    for (const child of children_of(id, items)) ids.add(child.id)
-  }
-
-  return ids
-}
-
 function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
   const chain = [task]
   let parent = all_tasks.find((each) => each.id === task.parent_id)
@@ -223,8 +204,7 @@ function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
 
 // Names a tag by its whole branch, such as "Work › Clients".
 export function tag_path(tag: Tag, tags: Tag[]): string {
-  const parent = tags.find((each) => each.id === tag.parent_id)
-  return parent ? `${tag_path(parent, tags)} › ${tag.name}` : tag.name
+  return path_names(tag, tags, (each) => each.name).join(' › ')
 }
 
 // Hands the tag's colour to its styles as --tag-color, or nothing when it has none.
@@ -254,107 +234,6 @@ export interface TaskNode {
 
 // Each task sits under its nearest ancestor that is also shown, or at the top when none is.
 export function nest_tasks(visible_tasks: Task[], all_tasks: Task[]): TaskNode[] {
-  const task_by_id = new Map(all_tasks.map((task) => [task.id, task]))
-  const node_by_id = new Map(visible_tasks.map((task) => [task.id, { task, children: [] as TaskNode[] }]))
-  const top_nodes: TaskNode[] = []
-
-  for (const node of node_by_id.values()) {
-    let ancestor_id = node.task.parent_id
-    while (ancestor_id && !node_by_id.has(ancestor_id)) ancestor_id = task_by_id.get(ancestor_id)?.parent_id ?? null
-
-    if (ancestor_id) node_by_id.get(ancestor_id)!.children.push(node)
-    else top_nodes.push(node)
-  }
-
-  return top_nodes
-}
-
-// ============================================================================
-// Dragging
-// ============================================================================
-
-export type DropPlacement = 'before' | 'after' | 'inside'
-
-export interface TreeMove {
-  parent_id: string | null
-  position: number
-}
-
-export type SidePlacement = 'before' | 'after'
-
-// Where the pointer is over the element it is dragging across.
-export interface DropPoint {
-  currentTarget: EventTarget | null
-  clientY: number
-}
-
-// The top half of an element drops before it, the bottom half after it.
-export function drop_side(event: DropPoint): SidePlacement {
-  const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  return event.clientY - box.top < box.height / 2 ? 'before' : 'after'
-}
-
-// The top and bottom quarters of a row drop beside it, the middle drops into it.
-export function drop_placement(event: DropPoint, allow_inside: boolean): DropPlacement {
-  if (!allow_inside) return drop_side(event)
-  const row = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const fraction = (event.clientY - row.top) / row.height
-  if (fraction < 0.25) return 'before'
-  if (fraction > 0.75) return 'after'
-  return 'inside'
-}
-
-// Picks a position between the neighbours at the drop point, so only the moved item changes.
-function position_beside<Item extends { id: string; position: number }>(
-  siblings: Item[],
-  target: Item,
-  placement: 'before' | 'after'
-): number {
-  const index = siblings.findIndex((sibling) => sibling.id === target.id)
-  const neighbour = siblings[placement === 'before' ? index - 1 : index + 1]
-  if (!neighbour) return placement === 'before' ? target.position - 1 : target.position + 1
-  return (target.position + neighbour.position) / 2
-}
-
-export function move_for_drop<Item extends TreeItem>(dragged: Item, target: Item, placement: DropPlacement, items: Item[]): TreeMove {
-  const others = items.filter((item) => item.id !== dragged.id)
-
-  if (placement === 'inside') {
-    const last_child_position = Math.max(target.position, ...children_of(target.id, others).map((item) => item.position))
-    return { parent_id: target.id, position: last_child_position + 1 }
-  }
-
-  return { parent_id: target.parent_id, position: position_beside(children_of(target.parent_id, others), target, placement) }
-}
-
-// Moves several items together, keeping their order: inside the target after its last child, or in a run between it and its neighbour.
-export function moves_for_drop<Item extends TreeItem>(dragged: Item[], target: Item, placement: DropPlacement, items: Item[]): TreeMove[] {
-  const dragged_ids = new Set(dragged.map((item) => item.id))
-  const others = items.filter((item) => !dragged_ids.has(item.id))
-
-  if (placement === 'inside') {
-    const last_child_position = Math.max(target.position, ...children_of(target.id, others).map((item) => item.position))
-    return dragged.map((_, index) => ({ parent_id: target.id, position: last_child_position + index + 1 }))
-  }
-
-  const siblings = children_of(target.parent_id, others).sort(by_position)
-  const index = siblings.findIndex((sibling) => sibling.id === target.id)
-  const neighbour = siblings[placement === 'before' ? index - 1 : index + 1]
-  const low = placement === 'before' ? (neighbour?.position ?? target.position - 1) : target.position
-  const high = placement === 'before' ? target.position : (neighbour?.position ?? target.position + 1)
-  return dragged.map((_, index) => ({ parent_id: target.parent_id, position: low + ((high - low) * (index + 1)) / (dragged.length + 1) }))
-}
-
-// For a flat list such as the tag groups, where items only move before or after each other.
-export function position_for_drop<Item extends { id: string; position: number }>(
-  dragged: Item,
-  target: Item,
-  placement: SidePlacement,
-  items: Item[]
-): number {
-  return position_beside(items.filter((item) => item.id !== dragged.id), target, placement)
-}
-
-export function by_position<Item extends { position: number }>(first: Item, second: Item): number {
-  return first.position - second.position
+  const as_task_nodes = (nodes: TreeNode<Task>[]): TaskNode[] => nodes.map((node) => ({ task: node.item, children: as_task_nodes(node.children) }))
+  return as_task_nodes(nest(visible_tasks, all_tasks))
 }
