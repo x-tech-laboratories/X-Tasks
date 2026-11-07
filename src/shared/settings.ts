@@ -192,7 +192,7 @@ export const DEFAULT_SETTINGS: Settings = {
   search_syntax: 'todoist',
   task_layout: 'list',
   task_grouping: 'none',
-  grouping_memory: 'on_demand',
+  grouping_memory: 'automatic',
   view_groupings: {},
   upcoming_repeat_days: 7,
   table_sort: [],

@@ -55,9 +55,9 @@ const TAG_SCOPE_CHOICES: { value: TagScope; label: string }[] = [
 ]
 
 const GROUPING_MEMORY_CHOICES: { value: GroupingMemory; label: string }[] = [
-  { value: 'shared', label: 'Same everywhere' },
+  { value: 'automatic', label: 'Remembered' },
   { value: 'on_demand', label: 'Saved by hand' },
-  { value: 'automatic', label: 'Remembered' }
+  { value: 'shared', label: 'Same everywhere' }
 ]
 
 const SEARCH_SCOPE_CHOICES: { value: SearchScope; label: string }[] = [
@@ -330,8 +330,8 @@ export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag
           <div class="setting_text">
             <span class="setting_label">Grouping per view</span>
             <span class="setting_hint">
-              Same everywhere: a grouping picked at the top of a view applies to every view. Saved by hand: each view or tag
-              selection can keep its own once Save grouping is pressed. Remembered: each keeps the grouping last picked in it.
+              Remembered: each view or tag selection keeps the grouping last picked in it. Saved by hand: each keeps its own
+              once Save grouping is pressed. Same everywhere: a grouping picked at the top of a view applies to every view.
             </span>
           </div>
           <SegmentedChoice label="Grouping per view" choices={GROUPING_MEMORY_CHOICES} value={settings.grouping_memory} on_change={(value) => on_change('grouping_memory', value)} />
