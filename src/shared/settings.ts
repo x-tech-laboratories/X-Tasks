@@ -110,6 +110,8 @@ export interface Settings {
   auto_clear_my_day: boolean
   // When set, completing a top-level task takes it out of My Day.
   remove_done_from_my_day: boolean
+  // When set, moving a task's date past today takes it out of My Day.
+  remove_future_from_my_day: boolean
   // When set, tasks due today or earlier go into My Day by themselves.
   add_due_to_my_day: boolean
   // The minute up to which due tasks have been put in My Day, so ones taken out by hand stay out.
@@ -180,6 +182,7 @@ export const DEFAULT_SETTINGS: Settings = {
   task_date_field: 'due',
   auto_clear_my_day: true,
   remove_done_from_my_day: true,
+  remove_future_from_my_day: true,
   add_due_to_my_day: false,
   due_added_to_my_day_until: '',
   tag_selection: 'one_per_group',

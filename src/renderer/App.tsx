@@ -20,12 +20,12 @@ import { TaskDetail } from './TaskDetail'
 import { RepeatItem, TaskItem, TaskTableHeader, type TaskActions } from './TaskItem'
 import { coming_repeats, group_by_date } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
-import { format_task_date, next_schedule, parse_task_date, recurrence_anchor, with_recurrence } from '@shared/schedule'
+import { format_task_date, next_schedule, parse_task_date, recurrence_anchor, task_date_of, with_recurrence } from '@shared/schedule'
 import {
   EMPTY_TABLE_FILTERS, column_width, has_table_filters, is_column_shown, move_column, ordered_columns, sort_after_click, sort_task_tree, tags_in_sidebar_order, task_passes_filters, without_column_filter, type LastDoneOf, type StreakOf, type TableColumn, type TableFilters
 } from './table'
 import {
-  by_position, children_of, comes_due_between, is_due_by, is_in_my_day, launch_view, move_for_drop, moves_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
+  by_position, children_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, move_for_drop, moves_for_drop, my_day_for_new_task, my_day_since, nest_tasks, position_for_drop, rule_tags_of, subtree_ids,
   tag_ids_for_new_task, tag_path, task_is_in_view, view_title, view_with_tag_toggled, view_without_tags, type DropPlacement, type SidePlacement, type TaskNode, type View
 } from './views'
 
@@ -284,13 +284,17 @@ export function App() {
     set_tasks((current_tasks) => [...current_tasks, added_task])
   }
 
-  // A task given a due date that has already come goes straight into My Day when that setting is on.
+  // A task given a date that has already come goes into My Day, and one moved past today leaves it, as the settings choose.
   function set_task_schedule(task: Task, schedule: TaskSchedule): void {
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, ...schedule } : each)))
     void window.x_tasks.set_task_schedule(task.id, schedule)
+    if (!settings) return
 
-    if (!settings?.add_due_to_my_day || is_in_my_day(task, my_day_since(settings, today))) return
-    if (is_due_by({ ...task, ...schedule }, now, settings.task_date_field)) set_task_my_day(task, today)
+    const scheduled_task = { ...task, ...schedule }
+    const is_in_today = is_in_my_day(task, my_day_since(settings, today))
+    const date_moved = task_date_of(scheduled_task, settings.task_date_field) !== task_date_of(task, settings.task_date_field)
+    if (is_in_today && settings.remove_future_from_my_day && date_moved && falls_after_today(scheduled_task, today, settings.task_date_field)) return set_task_my_day(task, null)
+    if (!is_in_today && settings.add_due_to_my_day && is_due_by(scheduled_task, now, settings.task_date_field)) set_task_my_day(task, today)
   }
 
   // Completing a task completes its subtasks; a recurring one moves to its next occurrence and resets its subtasks instead.

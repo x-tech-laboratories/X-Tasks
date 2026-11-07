@@ -109,6 +109,12 @@ export function is_due_by(task: Task, now: string, date_field: TaskDateField): b
   return !task.is_done && moment !== null && moment <= now
 }
 
+// A task whose chosen date falls on a later day than today.
+export function falls_after_today(task: Task, today: string, date_field: TaskDateField): boolean {
+  const task_date = task_date_of(task, date_field)
+  return task_date !== null && task_date.slice(0, 10) > today
+}
+
 // An open task whose date and time fell after one minute and no later than another.
 export function comes_due_between(task: Task, after: string, now: string, date_field: TaskDateField): boolean {
   const moment = due_moment(task, date_field)

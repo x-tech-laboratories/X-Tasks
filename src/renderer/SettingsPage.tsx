@@ -259,6 +259,18 @@ export function SettingsPage({ settings, tags, tag_groups, on_change, on_add_tag
 
         <label class="setting_row">
           <div class="setting_text">
+            <span class="setting_label">Remove rescheduled tasks from My Day</span>
+            <span class="setting_hint">Moving a task's task date past today takes it out of My Day.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.remove_future_from_my_day}
+            onChange={(event) => on_change('remove_future_from_my_day', event.currentTarget.checked)}
+          />
+        </label>
+
+        <label class="setting_row">
+          <div class="setting_text">
             <span class="setting_label">Add due tasks to My Day</span>
             <span class="setting_hint">Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date.</span>
           </div>
