@@ -386,21 +386,3 @@ export interface ServerCertificate {
   // The SHA-256 fingerprint as colon-separated hex, for checking against the authority's own copy.
   fingerprint: string
 }
-
-export const GET_SETTINGS_CHANNEL = 'settings:get'
-export const SET_SETTING_CHANNEL = 'settings:set'
-export const GET_DATABASE_PATH_CHANNEL = 'settings:database-path'
-export const SHOW_DATABASE_FOLDER_CHANNEL = 'settings:show-database-folder'
-export const LIST_BACKUPS_CHANNEL = 'backups:list'
-export const CREATE_BACKUP_CHANNEL = 'backups:create'
-export const RESTORE_BACKUP_CHANNEL = 'backups:restore'
-export const REMOVE_BACKUP_CHANNEL = 'backups:remove'
-export const SHOW_BACKUP_FOLDER_CHANNEL = 'backups:show-folder'
-export const GET_MCP_STATUS_CHANNEL = 'mcp:status'
-export const GET_SYNC_STATUS_CHANNEL = 'sync:status'
-export const CONNECT_SYNC_CHANNEL = 'sync:connect'
-export const DISCONNECT_SYNC_CHANNEL = 'sync:disconnect'
-export const SYNC_NOW_CHANNEL = 'sync:now'
-export const GET_TRUSTED_CERTIFICATE_CHANNEL = 'certificate:get'
-export const SET_TRUSTED_CERTIFICATE_CHANNEL = 'certificate:set'
-export const INSPECT_SERVER_CERTIFICATE_CHANNEL = 'certificate:inspect'

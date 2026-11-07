@@ -1,9 +1,8 @@
+import { settings_bridge, tasks_bridge } from '@shared/bridges'
 import type { SettingsApi } from '@shared/settings'
 import type { SyncStatus } from '@shared/sync'
 import type { TasksApi } from '@shared/tasks'
-import {
-  API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT, LOGIN_PATH, WEB_SETTINGS_METHODS, WEB_TASKS_METHODS, type WebMethod
-} from '@shared/web_api'
+import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT, LOGIN_PATH } from '@shared/web_api'
 
 // ============================================================================
 // Server calls
@@ -13,7 +12,7 @@ import {
 let client_id = ''
 
 // A signed-out page is sent to the login page rather than left showing stale tasks.
-async function call_server(method: WebMethod, args: unknown[]): Promise<unknown> {
+async function call_server(method: string, args: unknown[]): Promise<unknown> {
   const response = await fetch(API_PATH + method, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', [CLIENT_ID_HEADER]: client_id },
@@ -27,10 +26,6 @@ async function call_server(method: WebMethod, args: unknown[]): Promise<unknown>
 
   const text = await response.text()
   return text === '' ? undefined : JSON.parse(text)
-}
-
-function forward_methods(methods: readonly WebMethod[]): Record<string, (...args: unknown[]) => Promise<unknown>> {
-  return Object.fromEntries(methods.map((method) => [method, (...args: unknown[]) => call_server(method, args)]))
 }
 
 // ============================================================================
@@ -71,16 +66,17 @@ const NO_SYNC: SyncStatus = { state: 'off', server_url: '', last_synced_at: '', 
 
 // Gives the page the same window.x_tasks and window.x_settings the desktop app's preload does, backed by the web server.
 export function install_web_bridge(): void {
-  const tasks_api = {
-    ...forward_methods(WEB_TASKS_METHODS),
-    on_database_changed: (listener: () => void) => {
+  const tasks_api: TasksApi = {
+    ...tasks_bridge.web_rpc(call_server),
+    on_database_changed: (listener) => {
       change_listeners.add(listener)
       return () => change_listeners.delete(listener)
     }
-  } as unknown as TasksApi
+  }
 
-  const settings_api = {
-    ...forward_methods(WEB_SETTINGS_METHODS),
+  // The calls only the desktop app answers are replaced here, so they never reach the server.
+  const settings_api: SettingsApi = {
+    ...settings_bridge.web_rpc(call_server),
     host: 'web',
     show_database_folder: () => Promise.resolve(),
     show_backup_folder: () => Promise.resolve(),
@@ -92,7 +88,7 @@ export function install_web_bridge(): void {
     get_trusted_certificate: () => Promise.resolve({ pem: '', subject: '' }),
     set_trusted_certificate: () => Promise.reject(new Error('a browser page uses the browser certificates')),
     inspect_server_certificate: () => Promise.resolve(null)
-  } as unknown as SettingsApi
+  }
 
   window.x_tasks = tasks_api
   window.x_settings = settings_api

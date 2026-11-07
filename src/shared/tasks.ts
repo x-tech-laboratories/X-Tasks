@@ -253,33 +253,6 @@ export interface TasksApi {
   on_open_task?: (listener: (task_id: string) => void) => () => void
 }
 
-export const LIST_TASKS_CHANNEL = 'tasks:list'
-export const ADD_TASK_CHANNEL = 'tasks:add'
-export const SET_TASK_DONE_CHANNEL = 'tasks:set-done'
-export const SET_TASK_TITLE_CHANNEL = 'tasks:set-title'
-export const SET_TASK_NOTES_CHANNEL = 'tasks:set-notes'
-export const SET_TASK_SCHEDULE_CHANNEL = 'tasks:set-schedule'
-export const SET_TASK_MY_DAY_CHANNEL = 'tasks:set-my-day'
-export const REMOVE_TASK_CHANNEL = 'tasks:remove'
-export const MOVE_TASK_CHANNEL = 'tasks:move'
-export const TAG_TASK_CHANNEL = 'tasks:tag'
-export const UNTAG_TASK_CHANNEL = 'tasks:untag'
-export const LINK_TASKS_CHANNEL = 'tasks:link'
-export const UNLINK_TASKS_CHANNEL = 'tasks:unlink'
-export const LIST_COMPLETIONS_CHANNEL = 'tasks:list-completions'
-
-export const LIST_TAG_GROUPS_CHANNEL = 'tag-groups:list'
-export const ADD_TAG_GROUP_CHANNEL = 'tag-groups:add'
-export const REMOVE_TAG_GROUP_CHANNEL = 'tag-groups:remove'
-export const UPDATE_TAG_GROUP_CHANNEL = 'tag-groups:update'
-export const MOVE_TAG_GROUP_CHANNEL = 'tag-groups:move'
-
-export const LIST_TAGS_CHANNEL = 'tags:list'
-export const ADD_TAG_CHANNEL = 'tags:add'
-export const UPDATE_TAG_CHANNEL = 'tags:update'
-export const REMOVE_TAG_CHANNEL = 'tags:remove'
-export const MOVE_TAG_CHANNEL = 'tags:move'
-
 export const DATABASE_CHANGED_CHANNEL = 'database:changed'
 export const OPEN_TASK_CHANNEL = 'links:open-task'
 export const TAKE_LAUNCH_TASK_CHANNEL = 'links:take-launch-task'

@@ -1,18 +1,10 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, screen, shell } from 'electron'
 import { join } from 'node:path'
+import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
 
-import {
-  CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
-  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, GET_SYNC_STATUS_CHANNEL,
-  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, GET_TRUSTED_CERTIFICATE_CHANNEL, SET_TRUSTED_CERTIFICATE_CHANNEL,
-  INSPECT_SERVER_CERTIFICATE_CHANNEL, type Settings
-} from '@shared/settings'
-import type { SyncDirection } from '@shared/sync'
-import {
-  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
-  MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
-  UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, LINK_TASKS_CHANNEL, UNLINK_TASKS_CHANNEL, task_id_from_link, type CompletionLogChange, type TagRule, type TaskSchedule
-} from '@shared/tasks'
+import { settings_bridge, tasks_bridge } from '@shared/bridges'
+import type { Settings } from '@shared/settings'
+import { DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { open_task_database } from './node_task_database'
 import { node_sync_storage } from './node_sync_storage'
@@ -37,40 +29,24 @@ if (process.env.X_TASKS_USER_DATA) app.setPath('userData', process.env.X_TASKS_U
 // Window
 // ============================================================================
 
+// Opens the page with the size and place it had last time.
 function create_main_window(): BrowserWindow {
-  const main_window = new BrowserWindow({
-    width: 1100,
-    height: 700,
-    minWidth: 640,
-    minHeight: 400,
-    show: false,
+  return create_window(BrowserWindow, {
     title: 'X-Tasks',
     // The built app sits in out/main, and resources/ beside out/ both in the source tree and in the package.
     icon: join(__dirname, '../../resources/icon.png'),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1115' : '#f5f6f8',
-    webPreferences: {
-      // electron-vite emits an ESM preload as .mjs; loading .js here silently yields no bridge.
-      preload: join(__dirname, '../preload/index.mjs'),
-      sandbox: false,
-      contextIsolation: true,
-      nodeIntegration: false
-    }
+    // electron-vite emits an ESM preload as .mjs; loading .js here silently yields no bridge.
+    preload: join(__dirname, '../preload/index.mjs'),
+    dev_url: !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined,
+    file: join(__dirname, '../renderer/index.html'),
+    default_size: { width: 1100, height: 700 },
+    min_size: { width: 640, height: 400 },
+    background: { light: '#f5f6f8', dark: '#0f1115' },
+    native_theme: nativeTheme,
+    shell,
+    screen,
+    state_file: join(app.getPath('userData'), 'window.json')
   })
-
-  main_window.once('ready-to-show', () => main_window.show())
-
-  main_window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
-    return { action: 'deny' }
-  })
-
-  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-    void main_window.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    void main_window.loadFile(join(__dirname, '../renderer/index.html'))
-  }
-
-  return main_window
 }
 
 // ============================================================================
@@ -118,80 +94,41 @@ function open_from_second_launch(argv: string[]): void {
 // ============================================================================
 
 function register_bridge_handlers(): void {
-  ipcMain.handle(LIST_TASKS_CHANNEL, () => list_tasks())
-  ipcMain.handle(ADD_TASK_CHANNEL, (_event, title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null) =>
-    add_task(title, parent_id, tag_ids, my_day_on)
-  )
-  ipcMain.handle(SET_TASK_DONE_CHANNEL, (_event, task_id: string, is_done: boolean, done_at: string | null, log_change: CompletionLogChange) =>
-    set_task_done(task_id, is_done, done_at, log_change)
-  )
-  ipcMain.handle(SET_TASK_TITLE_CHANNEL, (_event, task_id: string, title: string) => set_task_title(task_id, title))
-  ipcMain.handle(SET_TASK_NOTES_CHANNEL, (_event, task_id: string, notes: string) => set_task_notes(task_id, notes))
-  ipcMain.handle(SET_TASK_SCHEDULE_CHANNEL, (_event, task_id: string, schedule: TaskSchedule) =>
-    set_task_schedule(task_id, schedule)
-  )
-  ipcMain.handle(SET_TASK_MY_DAY_CHANNEL, (_event, task_id: string, my_day_on: string | null) => set_task_my_day(task_id, my_day_on))
-  ipcMain.handle(REMOVE_TASK_CHANNEL, (_event, task_id: string) => remove_task(task_id))
-  ipcMain.handle(MOVE_TASK_CHANNEL, (_event, task_id: string, parent_id: string | null, position: number) =>
-    move_task(task_id, parent_id, position)
-  )
-  ipcMain.handle(TAG_TASK_CHANNEL, (_event, task_id: string, tag_id: string) => tag_task(task_id, tag_id))
-  ipcMain.handle(UNTAG_TASK_CHANNEL, (_event, task_id: string, tag_id: string) => untag_task(task_id, tag_id))
-  ipcMain.handle(LINK_TASKS_CHANNEL, (_event, task_id: string, other_id: string, relationship_id: string) => link_tasks(task_id, other_id, relationship_id))
-  ipcMain.handle(UNLINK_TASKS_CHANNEL, (_event, task_id: string, other_id: string) => unlink_tasks(task_id, other_id))
-  ipcMain.handle(LIST_COMPLETIONS_CHANNEL, () => list_completions())
-
-  ipcMain.handle(LIST_TAG_GROUPS_CHANNEL, () => list_tag_groups())
-  ipcMain.handle(ADD_TAG_GROUP_CHANNEL, (_event, name: string, is_rule: boolean) => add_tag_group(name, is_rule))
-  ipcMain.handle(UPDATE_TAG_GROUP_CHANNEL, (_event, group_id: string, name: string, is_rule: boolean, is_single_choice: boolean) =>
-    update_tag_group(group_id, name, is_rule, is_single_choice)
-  )
-  ipcMain.handle(REMOVE_TAG_GROUP_CHANNEL, (_event, group_id: string) => remove_tag_group(group_id))
-  ipcMain.handle(MOVE_TAG_GROUP_CHANNEL, (_event, group_id: string, position: number) => move_tag_group(group_id, position))
-
-  ipcMain.handle(LIST_TAGS_CHANNEL, () => list_tags())
-  ipcMain.handle(ADD_TAG_CHANNEL, (_event, name: string, group_id: string, parent_id: string | null, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean) =>
-    add_tag(name, group_id, parent_id, rule, color, icon, shows_on_rows)
-  )
-  ipcMain.handle(UPDATE_TAG_CHANNEL, (_event, tag_id: string, name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean) =>
-    update_tag(tag_id, name, rule, color, icon, shows_on_rows)
-  )
-  ipcMain.handle(REMOVE_TAG_CHANNEL, (_event, tag_id: string) => remove_tag(tag_id))
-  ipcMain.handle(MOVE_TAG_CHANNEL, (_event, tag_id: string, parent_id: string | null, position: number) =>
-    move_tag(tag_id, parent_id, position)
-  )
-
-  ipcMain.handle(GET_SETTINGS_CHANNEL, () => get_settings())
-  ipcMain.handle(SET_SETTING_CHANNEL, <Key extends keyof Settings>(_event: unknown, key: Key, value: Settings[Key]) => {
-    set_setting(key, value)
-    if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
-    if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server()
-    if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
+  tasks_bridge.handle(ipcMain, {
+    list_tasks, add_task, set_task_done, set_task_title, set_task_notes, set_task_schedule, set_task_my_day, remove_task, move_task, tag_task, untag_task,
+    link_tasks, unlink_tasks, list_completions,
+    list_tag_groups, add_tag_group, update_tag_group, remove_tag_group, move_tag_group,
+    list_tags, add_tag, update_tag, remove_tag, move_tag
   })
-  ipcMain.handle(GET_DATABASE_PATH_CHANNEL, () => task_database_path())
-  ipcMain.handle(SHOW_DATABASE_FOLDER_CHANNEL, () => shell.showItemInFolder(task_database_path()))
 
-  ipcMain.handle(LIST_BACKUPS_CHANNEL, () => list_backups())
-  ipcMain.handle(CREATE_BACKUP_CHANNEL, () => create_backup())
-  // The restored data brings its own settings, so its theme and MCP endpoint are applied straight away, and sync asks which copy to keep.
-  ipcMain.handle(RESTORE_BACKUP_CHANNEL, (_event, name: string) => {
-    restore_backup(name)
-    nativeTheme.themeSource = get_settings().theme
-    void restart_mcp_server()
-    void sync_now()
+  settings_bridge.handle(ipcMain, {
+    get_settings,
+    set_setting: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
+      set_setting(key, value)
+      if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
+      if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server()
+      if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
+    },
+    get_database_path: task_database_path,
+    show_database_folder: () => shell.showItemInFolder(task_database_path()),
+
+    list_backups,
+    create_backup: () => create_backup(),
+    // The restored data brings its own settings, so its theme and MCP endpoint are applied straight away, and sync asks which copy to keep.
+    restore_backup: (name) => {
+      restore_backup(name)
+      nativeTheme.themeSource = get_settings().theme
+      void restart_mcp_server()
+      void sync_now()
+    },
+    remove_backup,
+    show_backup_folder: () => shell.openPath(backup_folder()).then(() => undefined),
+
+    get_mcp_status,
+
+    get_sync_status, connect_sync, disconnect_sync, sync_now,
+    get_trusted_certificate, set_trusted_certificate, inspect_server_certificate
   })
-  ipcMain.handle(REMOVE_BACKUP_CHANNEL, (_event, name: string) => remove_backup(name))
-  ipcMain.handle(SHOW_BACKUP_FOLDER_CHANNEL, () => shell.openPath(backup_folder()).then(() => undefined))
-
-  ipcMain.handle(GET_MCP_STATUS_CHANNEL, () => get_mcp_status())
-
-  ipcMain.handle(GET_SYNC_STATUS_CHANNEL, () => get_sync_status())
-  ipcMain.handle(CONNECT_SYNC_CHANNEL, (_event, server_url: string, token: string, direction: SyncDirection) => connect_sync(server_url, token, direction))
-  ipcMain.handle(DISCONNECT_SYNC_CHANNEL, () => disconnect_sync())
-  ipcMain.handle(SYNC_NOW_CHANNEL, () => sync_now())
-  ipcMain.handle(GET_TRUSTED_CERTIFICATE_CHANNEL, () => get_trusted_certificate())
-  ipcMain.handle(SET_TRUSTED_CERTIFICATE_CHANNEL, (_event, pem: string) => set_trusted_certificate(pem))
-  ipcMain.handle(INSPECT_SERVER_CERTIFICATE_CHANNEL, (_event, server_url: string) => inspect_server_certificate(server_url))
 
   ipcMain.handle(TAKE_LAUNCH_TASK_CHANNEL, () => {
     const task_id = launch_task_id

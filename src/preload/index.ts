@@ -1,48 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import {
-  CREATE_BACKUP_CHANNEL, GET_DATABASE_PATH_CHANNEL, GET_SETTINGS_CHANNEL, LIST_BACKUPS_CHANNEL, REMOVE_BACKUP_CHANNEL,
-  RESTORE_BACKUP_CHANNEL, SET_SETTING_CHANNEL, SHOW_BACKUP_FOLDER_CHANNEL, SHOW_DATABASE_FOLDER_CHANNEL, GET_MCP_STATUS_CHANNEL, GET_SYNC_STATUS_CHANNEL,
-  CONNECT_SYNC_CHANNEL, DISCONNECT_SYNC_CHANNEL, SYNC_NOW_CHANNEL, GET_TRUSTED_CERTIFICATE_CHANNEL, SET_TRUSTED_CERTIFICATE_CHANNEL,
-  INSPECT_SERVER_CERTIFICATE_CHANNEL, type SettingsApi
-} from '@shared/settings'
-import {
-  ADD_TAG_CHANNEL, ADD_TAG_GROUP_CHANNEL, ADD_TASK_CHANNEL, DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, LIST_COMPLETIONS_CHANNEL, LIST_TAG_GROUPS_CHANNEL, LIST_TAGS_CHANNEL, LIST_TASKS_CHANNEL,
-  MOVE_TAG_CHANNEL, MOVE_TAG_GROUP_CHANNEL, MOVE_TASK_CHANNEL, REMOVE_TAG_CHANNEL, REMOVE_TAG_GROUP_CHANNEL, REMOVE_TASK_CHANNEL, SET_TASK_DONE_CHANNEL, SET_TASK_MY_DAY_CHANNEL, SET_TASK_NOTES_CHANNEL, SET_TASK_SCHEDULE_CHANNEL,
-  UPDATE_TAG_CHANNEL, UPDATE_TAG_GROUP_CHANNEL, SET_TASK_TITLE_CHANNEL, TAG_TASK_CHANNEL, UNTAG_TASK_CHANNEL, LINK_TASKS_CHANNEL, UNLINK_TASKS_CHANNEL, type TasksApi
-} from '@shared/tasks'
+import { settings_bridge, tasks_bridge } from '@shared/bridges'
+import type { SettingsApi } from '@shared/settings'
+import { DATABASE_CHANGED_CHANNEL, OPEN_TASK_CHANNEL, TAKE_LAUNCH_TASK_CHANNEL, type TasksApi } from '@shared/tasks'
 
+// ============================================================================
+// Tasks
+// ============================================================================
+
+// The bridge's calls, plus the change and task link events the main process sends on its own.
 const tasks_api: TasksApi = {
-  list_tasks: () => ipcRenderer.invoke(LIST_TASKS_CHANNEL),
-  add_task: (title, parent_id, tag_ids, my_day_on) => ipcRenderer.invoke(ADD_TASK_CHANNEL, title, parent_id, tag_ids, my_day_on),
-  set_task_done: (task_id, is_done, done_at, log_change) => ipcRenderer.invoke(SET_TASK_DONE_CHANNEL, task_id, is_done, done_at, log_change),
-  set_task_title: (task_id, title) => ipcRenderer.invoke(SET_TASK_TITLE_CHANNEL, task_id, title),
-  set_task_notes: (task_id, notes) => ipcRenderer.invoke(SET_TASK_NOTES_CHANNEL, task_id, notes),
-  set_task_schedule: (task_id, schedule) => ipcRenderer.invoke(SET_TASK_SCHEDULE_CHANNEL, task_id, schedule),
-  set_task_my_day: (task_id, my_day_on) => ipcRenderer.invoke(SET_TASK_MY_DAY_CHANNEL, task_id, my_day_on),
-  remove_task: (task_id) => ipcRenderer.invoke(REMOVE_TASK_CHANNEL, task_id),
-  move_task: (task_id, parent_id, position) => ipcRenderer.invoke(MOVE_TASK_CHANNEL, task_id, parent_id, position),
-  tag_task: (task_id, tag_id) => ipcRenderer.invoke(TAG_TASK_CHANNEL, task_id, tag_id),
-  untag_task: (task_id, tag_id) => ipcRenderer.invoke(UNTAG_TASK_CHANNEL, task_id, tag_id),
-  link_tasks: (task_id, other_id, relationship_id) => ipcRenderer.invoke(LINK_TASKS_CHANNEL, task_id, other_id, relationship_id),
-  unlink_tasks: (task_id, other_id) => ipcRenderer.invoke(UNLINK_TASKS_CHANNEL, task_id, other_id),
-  list_completions: () => ipcRenderer.invoke(LIST_COMPLETIONS_CHANNEL),
-
-  list_tag_groups: () => ipcRenderer.invoke(LIST_TAG_GROUPS_CHANNEL),
-  add_tag_group: (name, is_rule) => ipcRenderer.invoke(ADD_TAG_GROUP_CHANNEL, name, is_rule),
-  update_tag_group: (group_id, name, is_rule, is_single_choice) =>
-    ipcRenderer.invoke(UPDATE_TAG_GROUP_CHANNEL, group_id, name, is_rule, is_single_choice),
-  remove_tag_group: (group_id) => ipcRenderer.invoke(REMOVE_TAG_GROUP_CHANNEL, group_id),
-  move_tag_group: (group_id, position) => ipcRenderer.invoke(MOVE_TAG_GROUP_CHANNEL, group_id, position),
-
-  list_tags: () => ipcRenderer.invoke(LIST_TAGS_CHANNEL),
-  add_tag: (name, group_id, parent_id, rule, color, icon, shows_on_rows) =>
-    ipcRenderer.invoke(ADD_TAG_CHANNEL, name, group_id, parent_id, rule, color, icon, shows_on_rows),
-  update_tag: (tag_id, name, rule, color, icon, shows_on_rows) =>
-    ipcRenderer.invoke(UPDATE_TAG_CHANNEL, tag_id, name, rule, color, icon, shows_on_rows),
-  remove_tag: (tag_id) => ipcRenderer.invoke(REMOVE_TAG_CHANNEL, tag_id),
-  move_tag: (tag_id, parent_id, position) => ipcRenderer.invoke(MOVE_TAG_CHANNEL, tag_id, parent_id, position),
-
+  ...tasks_bridge.ipc_client(ipcRenderer),
   on_database_changed: (listener) => {
     const handle_change = (): void => listener()
     ipcRenderer.on(DATABASE_CHANGED_CHANNEL, handle_change)
@@ -56,26 +24,14 @@ const tasks_api: TasksApi = {
   }
 }
 
+// ============================================================================
+// Settings
+// ============================================================================
+
 const settings_api: SettingsApi = {
-  host: 'desktop',
-  get_settings: () => ipcRenderer.invoke(GET_SETTINGS_CHANNEL),
-  set_setting: (key, value) => ipcRenderer.invoke(SET_SETTING_CHANNEL, key, value),
-  get_database_path: () => ipcRenderer.invoke(GET_DATABASE_PATH_CHANNEL),
-  show_database_folder: () => ipcRenderer.invoke(SHOW_DATABASE_FOLDER_CHANNEL),
-  list_backups: () => ipcRenderer.invoke(LIST_BACKUPS_CHANNEL),
-  create_backup: () => ipcRenderer.invoke(CREATE_BACKUP_CHANNEL),
-  restore_backup: (name) => ipcRenderer.invoke(RESTORE_BACKUP_CHANNEL, name),
-  remove_backup: (name) => ipcRenderer.invoke(REMOVE_BACKUP_CHANNEL, name),
-  show_backup_folder: () => ipcRenderer.invoke(SHOW_BACKUP_FOLDER_CHANNEL),
-  get_mcp_status: () => ipcRenderer.invoke(GET_MCP_STATUS_CHANNEL),
-  get_sync_status: () => ipcRenderer.invoke(GET_SYNC_STATUS_CHANNEL),
-  connect_sync: (server_url, token, direction) => ipcRenderer.invoke(CONNECT_SYNC_CHANNEL, server_url, token, direction),
-  disconnect_sync: () => ipcRenderer.invoke(DISCONNECT_SYNC_CHANNEL),
-  sync_now: () => ipcRenderer.invoke(SYNC_NOW_CHANNEL),
-  get_trusted_certificate: () => ipcRenderer.invoke(GET_TRUSTED_CERTIFICATE_CHANNEL),
-  set_trusted_certificate: (pem) => ipcRenderer.invoke(SET_TRUSTED_CERTIFICATE_CHANNEL, pem),
-  inspect_server_certificate: (server_url) => ipcRenderer.invoke(INSPECT_SERVER_CERTIFICATE_CHANNEL, server_url)
+  ...settings_bridge.ipc_client(ipcRenderer),
+  host: 'desktop'
 }
 
-contextBridge.exposeInMainWorld('x_tasks', tasks_api)
-contextBridge.exposeInMainWorld('x_settings', settings_api)
+contextBridge.exposeInMainWorld(tasks_bridge.api_name, tasks_api)
+contextBridge.exposeInMainWorld(settings_bridge.api_name, settings_api)

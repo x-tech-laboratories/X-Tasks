@@ -1,20 +1,12 @@
-import type { SettingsApi } from './settings'
-import type { TasksApi } from './tasks'
+import { SERVED_SETTINGS_METHODS, tasks_bridge } from './bridges'
 
 // ============================================================================
 // Web bridge contract
 // ============================================================================
 
 // The bridge calls the web server answers, each posted to API_PATH and its name with the arguments as a JSON array.
-export const WEB_TASKS_METHODS = [
-  'list_tasks', 'add_task', 'set_task_done', 'set_task_title', 'set_task_notes', 'set_task_schedule', 'set_task_my_day', 'remove_task', 'move_task',
-  'tag_task', 'untag_task', 'link_tasks', 'unlink_tasks', 'list_completions', 'list_tag_groups', 'add_tag_group', 'update_tag_group', 'remove_tag_group', 'move_tag_group',
-  'list_tags', 'add_tag', 'update_tag', 'remove_tag', 'move_tag'
-] as const satisfies readonly Exclude<keyof TasksApi, 'on_database_changed'>[]
-
-export const WEB_SETTINGS_METHODS = [
-  'get_settings', 'set_setting', 'get_database_path', 'list_backups', 'create_backup', 'restore_backup', 'remove_backup', 'get_mcp_status'
-] as const satisfies readonly Exclude<keyof SettingsApi, 'host' | 'show_database_folder' | 'show_backup_folder'>[]
+export const WEB_TASKS_METHODS = tasks_bridge.method_names
+export const WEB_SETTINGS_METHODS = SERVED_SETTINGS_METHODS
 
 export type WebMethod = (typeof WEB_TASKS_METHODS)[number] | (typeof WEB_SETTINGS_METHODS)[number]
 
