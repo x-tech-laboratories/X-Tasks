@@ -23,7 +23,7 @@ const never_done = (): string | null => null
 
 // What sorting needs besides the tasks: their tags, no streaks and no completions.
 function context_for(tags: Tag[], tags_of: (task: Task) => Tag[]): SortContext {
-  return { tags_of, streak_of: no_streak, date_field: 'due', last_done_of: never_done, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
+  return { tags_of, streak_of: no_streak, is_in_my_day: () => false, date_field: 'due', last_done_of: never_done, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
 }
 
 function titles(nodes: TaskNode[]): unknown[] {
@@ -94,7 +94,7 @@ describe('sort_task_tree', () => {
 describe('columns', () => {
   test('ordered_columns drops removed groups and slots new columns in after their neighbour', () => {
     const groups = [make_group({ id: 'area' })]
-    expect(ordered_columns(['streak', 'date', 'group:gone'], groups)).toEqual(['streak', 'group:area', 'date', 'start', 'due', 'done', 'duration'])
+    expect(ordered_columns(['streak', 'date', 'group:gone'], groups)).toEqual(['streak', 'history', 'group:area', 'date', 'start', 'due', 'done', 'duration', 'my_day', 'notes', 'repeats'])
   })
 
   test('widths fall back to a default per kind and saved widths are not clamped here', () => {

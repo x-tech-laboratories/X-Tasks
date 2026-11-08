@@ -11,12 +11,13 @@ import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import type { RepeatOccurrence, TaskGroup } from './dates'
 import {
   COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_column_shown, is_date_column, table_sort_value, tag_ranks, type SortContext, type TableColumn,
+  has_table_filters, is_column_filtered, is_column_shown, is_date_column, is_mark_column, table_sort_value, tag_ranks, type SortContext, type TableColumn,
   type TableFilters
 } from './table'
 import {
-  DateLabel, DurationLabel, StreakBadge, SubtaskForm, TitleMarks, click_task, open_task_menu, row_tags_of, row_tint_style, start_task_drag, type TaskActions
+  DateLabel, DurationLabel, ROW_STRIP_LENGTH, StreakBadge, SubtaskForm, click_task, open_task_menu, row_tags_of, row_tint_style, start_task_drag, type TaskActions
 } from './TaskItem'
+import { StreakStrip } from './StreakStrip'
 import { TagChip } from './TagChip'
 import { tag_path, type TaskNode } from './views'
 
@@ -88,7 +89,7 @@ export function TaskTable(props: TaskTableProps) {
 
   const sort_context: SortContext = useMemo(
     () => ({
-      tags_of: props.tags_of, streak_of: actions.streak_of, date_field: actions.date_field, last_done_of: actions.last_done_of,
+      tags_of: props.tags_of, streak_of: actions.streak_of, is_in_my_day: actions.is_in_my_day, date_field: actions.date_field, last_done_of: actions.last_done_of,
       tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true)
     }),
     [tags, props.tags_of, actions]
@@ -101,7 +102,11 @@ export function TaskTable(props: TaskTableProps) {
     if (column === 'due') return 'Due'
     if (column === 'done') return 'Done'
     if (column === 'duration') return 'Duration'
+    if (column === 'my_day') return 'My Day'
+    if (column === 'notes') return 'Notes'
+    if (column === 'repeats') return 'Repeats'
     if (column === 'streak') return 'Streak'
+    if (column === 'history') return 'History'
     return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
   }
 
@@ -116,8 +121,8 @@ export function TaskTable(props: TaskTableProps) {
     )
   }
 
-  // The title filters by typed text; the dates, duration, streak and each group pick one choice from a list.
-  function filter_of(column: TableColumn): ((close: () => void) => ReactNode) {
+  // The title filters by typed text; the dates, duration, streak and each group pick one choice from a list; the marks and history do not filter.
+  function filter_of(column: TableColumn): ((close: () => void) => ReactNode) | undefined {
     const set = (change: Partial<TableFilters>) => props.on_filters_change({ ...filters, ...change })
     if (column === 'title') {
       return (close) => (
@@ -127,6 +132,7 @@ export function TaskTable(props: TaskTableProps) {
     if (is_date_column(column)) return choices(date_filter_choices(column), filters.dates[column] ?? 'any', (value) => set({ dates: { ...filters.dates, [column]: value } }))
     if (column === 'duration') return choices(DURATION_FILTER_CHOICES, filters.duration, (duration) => set({ duration }))
     if (column === 'streak') return choices(STREAK_FILTER_CHOICES, filters.streak, (streak) => set({ streak }))
+    if (is_mark_column(column) || column === 'history') return undefined
 
     const group_id = column.slice('group:'.length)
     const tag_choices = [
@@ -155,7 +161,6 @@ export function TaskTable(props: TaskTableProps) {
       <span className="task_title_cell">
         <input type="checkbox" checked={task.is_done} onChange={() => actions.on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
         <span className="task_title">{task.title}</span>
-        <TitleMarks task={task} actions={actions} show_streak={false} />
         {actions.can_add_subtasks && (
           <button className="icon row_button" onClick={() => set_adding_subtask_to(task.id)} aria-label="Add subtask">
             +
@@ -173,7 +178,14 @@ export function TaskTable(props: TaskTableProps) {
     const task = row.node.task
     if (is_date_column(column)) return <DateLabel task={task} column={column} actions={actions} />
     if (column === 'duration') return <DurationLabel task={task} />
+    if (column === 'my_day') return actions.is_in_my_day(task) && <span className="task_mark" title="In My Day">☀</span>
+    if (column === 'notes') return task.notes && <span className="task_mark" title="Has notes">≡</span>
+    if (column === 'repeats') return task.recurrence && <span className="task_mark" title="Repeats">↻</span>
     if (column === 'streak') return <StreakBadge task={task} streak={actions.streak_of(task)} show_broken />
+    if (column === 'history') {
+      const history = actions.history_of(task)
+      return history.length > 0 && <StreakStrip history={history} limit={ROW_STRIP_LENGTH} />
+    }
     return row_tags_of(task, actions)
       .filter((tag) => `group:${tag.group_id}` === column)
       .map((tag) => <TagChip key={tag.id} tag={tag} label={tag_path(tag, tags)} title={tag_path(tag, tags)} on_remove={() => actions.on_untag(task, tag)} />)
@@ -187,7 +199,7 @@ export function TaskTable(props: TaskTableProps) {
     id: column,
     label: column_label(column),
     cell: column === 'title' ? title_cell : (row) => cell(row, column),
-    sort: (row) => (row.kind === 'task' ? table_sort_value(row.node.task, column, sort_context, is_descending(column)) : null),
+    sort: column === 'history' ? undefined : (row) => (row.kind === 'task' ? table_sort_value(row.node.task, column, sort_context, is_descending(column)) : null),
     class: column === 'title' ? 'title_column' : is_date_column(column) || column === 'duration' ? 'date_column' : undefined,
     width: column === 'title' ? undefined : default_column_width(column),
     min_width: Math.min(COLUMN_WIDTH_RANGE.min, MIN_SCALED_WIDTH),

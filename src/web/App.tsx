@@ -683,8 +683,9 @@ export function App() {
     shown_tasks.filter((task) => task.is_done && ![...subtree_ids(task.id, tasks)].some((id) => open_task_ids.has(id))).map((task) => task.id)
   )
   const clearable_tasks = shown_tasks.filter((task) => fully_done_ids.has(task.id) && (task.parent_id === null || !fully_done_ids.has(task.parent_id)))
-  const column_order = ordered_columns(settings.table_column_order, tag_groups)
-  const sort_context: SortContext = { tags_of: task_tags_of, streak_of, date_field: settings.task_date_field, last_done_of, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
+  // The history column is there only while streak dots show on rows.
+  const column_order = ordered_columns(settings.table_column_order, tag_groups).filter((column) => column !== 'history' || settings.show_streak_strip_on_rows)
+  const sort_context: SortContext = { tags_of: task_tags_of, streak_of, is_in_my_day: (task) => is_in_my_day(task, shown_since), date_field: settings.task_date_field, last_done_of, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
   const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, sort_context) : nested_tasks
 
   // Upcoming always groups by date and lists the later dates of repeating tasks; other views group as picked.

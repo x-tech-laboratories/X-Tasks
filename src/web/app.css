@@ -114,13 +114,14 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
 .grouping_select.is_selected { border-color: var(--accent); color: var(--accent); }
 
-/* On a phone the task list runs edge to edge, and a row's date and tags wrap under its title. */
+/* On a phone the task list runs edge to edge, a row's date and tags wrap under its title, and a table card's title wraps instead of cutting off. */
 @media (max-width: 700px) {
   .syntax_preview { margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-5)) var(--space-6); }
   .task_pane > .page-head .page-title { flex-wrap: wrap; row-gap: var(--space-3); }
   .task_pane > .task_list { margin-right: calc(-1 * var(--space-5)); margin-left: calc(-1 * var(--space-5)); border-right: 0; border-left: 0; border-radius: 0; }
   .task { flex-wrap: wrap; row-gap: var(--space-2); }
   .task .task_title_cell { flex: 1 0 60%; }
+  .task_row .task_title { flex: 1; white-space: normal; overflow-wrap: anywhere; text-align: left; }
 }
 
 /* ========================================================================== */

@@ -15,7 +15,7 @@ import { placement_at, type DropPlacement } from '@x-tech-laboratories/x-libs/we
 import { tag_color_style, tag_path, type TaskNode } from './views'
 
 // A row's strip shows about a week of a daily routine.
-const ROW_STRIP_LENGTH = 7
+export const ROW_STRIP_LENGTH = 7
 
 // ============================================================================
 // Task actions

@@ -12,8 +12,15 @@ import { task_is_in_view, type TaskNode } from './views'
 // Columns
 // ============================================================================
 
-// A table column is the title, a date, the duration, the streak, or one filter group, named by "group:" and the group's id.
-export type TableColumn = 'title' | DateColumn | 'duration' | 'streak' | `group:${string}`
+// A table column is the title, a date, the duration, a mark, the streak, the history strip, or one filter group, named by "group:" and the group's id.
+export type TableColumn = 'title' | DateColumn | 'duration' | MarkColumn | 'streak' | 'history' | `group:${string}`
+
+// The columns that each show one mark: the task is in My Day, has notes, or repeats.
+export type MarkColumn = 'my_day' | 'notes' | 'repeats'
+
+export function is_mark_column(column: string): column is MarkColumn {
+  return column === 'my_day' || column === 'notes' || column === 'repeats'
+}
 
 // The smart date shows the done date once a task is ticked and the date picked in settings before that; the others show one date each.
 export type DateColumn = 'date' | 'start' | 'due' | 'done'
@@ -75,7 +82,7 @@ function group_id_of(column: string): string | null {
 
 // Every column after the title, in the order a table starts with.
 export function all_table_columns(tag_groups: TagGroup[]): TableColumn[] {
-  return ['date', ...OPTIONAL_COLUMNS, 'streak', ...tag_groups.map(group_column)]
+  return ['date', ...OPTIONAL_COLUMNS, 'my_day', 'notes', 'repeats', 'streak', 'history', ...tag_groups.map(group_column)]
 }
 
 // Lists the columns after the title in their saved order, leaving out removed groups and placing any column not yet saved just after the one before it.
@@ -88,6 +95,7 @@ export const COLUMN_WIDTH_RANGE = { min: 64, max: 480 }
 
 export function default_column_width(column: TableColumn): number {
   if (is_date_column(column)) return 104
+  if (is_mark_column(column)) return 64
   if (column === 'streak') return 84
   if (column === 'duration') return 112
   return 124
@@ -105,6 +113,7 @@ export function column_width(widths: Record<string, number>, column: TableColumn
 export interface SortContext {
   tags_of: (task: Task) => Tag[]
   streak_of: StreakOf
+  is_in_my_day: (task: Task) => boolean
   date_field: TaskDateField
   last_done_of: LastDoneOf
   // Every tag numbered in its sidebar order, and in that order with each set of siblings reversed.
@@ -123,7 +132,11 @@ export function table_sort_value(task: Task, column: TableColumn, context: SortC
   if (column === 'title') return task.title
   if (is_date_column(column)) return column_date(task, column, context.date_field, context.last_done_of)
   if (column === 'duration') return task_duration_minutes(task)
+  if (column === 'my_day') return context.is_in_my_day(task) ? 1 : null
+  if (column === 'notes') return task.notes ? 1 : null
+  if (column === 'repeats') return task.recurrence ? 1 : null
   if (column === 'streak') return context.streak_of(task)?.current ?? null
+  if (column === 'history') return null
   const group_id = group_id_of(column)
   const ranks_by_id = is_descending ? context.reversed_tag_rank : context.tag_rank
   const ranks = context.tags_of(task).filter((tag) => tag.group_id === group_id).map((tag) => ranks_by_id.get(tag.id) ?? 0)
@@ -212,6 +225,7 @@ export function is_column_filtered(filters: TableFilters, column: TableColumn): 
   if (is_date_column(column)) return (filters.dates[column] ?? 'any') !== 'any'
   if (column === 'duration') return filters.duration !== 'any'
   if (column === 'streak') return filters.streak !== 'any'
+  if (is_mark_column(column) || column === 'history') return false
   return Boolean(filters.group_tag_ids[group_id_of(column)!])
 }
 
@@ -221,6 +235,7 @@ export function without_column_filter(filters: TableFilters, column: TableColumn
   if (is_date_column(column)) return { ...filters, dates: { ...filters.dates, [column]: 'any' } }
   if (column === 'duration') return { ...filters, duration: 'any' }
   if (column === 'streak') return { ...filters, streak: 'any' }
+  if (is_mark_column(column) || column === 'history') return filters
   return { ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id_of(column)!]: '' } }
 }
 
