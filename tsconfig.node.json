@@ -1,14 +1,11 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "./tsconfig.base.json",
   "include": ["electron.vite.config.ts", "vite.web.config.ts", "vite.server.config.ts", "vite.android.config.ts", "vite.seed.config.ts", "src/main/**/*", "src/server/**/*", "src/dev/**/*", "src/preload/**/*", "src/shared/**/*"],
   "compilerOptions": {
     "composite": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "lib": ["ES2024"],
     "types": ["node", "electron-vite/node"],
-    "baseUrl": ".",
-    "paths": { "@shared/*": ["src/shared/*"] }
+    "paths": { "@shared/*": ["./src/shared/*"] }
   }
 }

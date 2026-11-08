@@ -8,7 +8,7 @@ export default defineConfig({
     ssr: resolve('src/dev/seed_database.ts'),
     outDir: resolve('out/seed'),
     emptyOutDir: true,
-    target: 'node22',
+    target: 'node24',
     rollupOptions: { output: { entryFileNames: 'index.js' } }
   }
 })

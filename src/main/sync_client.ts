@@ -48,8 +48,11 @@ function normalise_url(server_url: string): string {
 // ============================================================================
 
 class SyncHttpError extends Error {
-  constructor(readonly status: number, message: string) {
+  status: number
+
+  constructor(status: number, message: string) {
     super(message)
+    this.status = status
   }
 }
 

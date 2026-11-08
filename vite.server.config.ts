@@ -8,7 +8,7 @@ export default defineConfig({
     ssr: resolve('src/server/index.ts'),
     outDir: resolve('out/server'),
     emptyOutDir: true,
-    target: 'node22',
+    target: 'node24',
     rollupOptions: { output: { entryFileNames: 'index.js' } }
   }
 })

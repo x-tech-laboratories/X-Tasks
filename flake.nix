@@ -11,7 +11,7 @@
       let
         pkgs = import nixpkgs { inherit system; };
         electron = pkgs.electron_43;
-        nodejs = pkgs.nodejs_22;
+        nodejs = pkgs.nodejs_24;
 
         # The Android SDK is unfree and needs its license accepted, so only the Android shells use this package set.
         android_pkgs = import nixpkgs {
@@ -154,7 +154,7 @@
             runHook postBuild
           '';
 
-          # Node 22 still marks node:sqlite as experimental and would warn on every start.
+          # Node 24 still marks node:sqlite as experimental and would warn on every start.
           installPhase = ''
             runHook preInstall
             npm prune --omit=dev --ignore-scripts

@@ -1,19 +1,15 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "./tsconfig.base.json",
   "include": [
     "src/renderer/**/*", "src/preload/*.d.ts", "src/shared/**/*",
     "src/main/sql_database.ts", "src/main/task_database.ts", "src/main/sync_engine.ts", "src/main/sync_client.ts"
   ],
   "compilerOptions": {
     "composite": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "verbatimModuleSyntax": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.web.tsbuildinfo",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": [],
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": { "@renderer/*": ["src/renderer/*"], "@shared/*": ["src/shared/*"] }
+    "paths": { "@renderer/*": ["./src/renderer/*"], "@shared/*": ["./src/shared/*"] }
   }
 }
