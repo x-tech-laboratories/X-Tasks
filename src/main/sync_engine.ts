@@ -2,6 +2,7 @@
 import { DEVICE_ONLY_SETTINGS } from '@shared/settings'
 import type { SyncChange } from '@shared/sync'
 import type { SqlDatabase, SqlValue } from './sql_database'
+import { record_task_versions } from './task_versions'
 
 // ============================================================================
 // Synced tables
@@ -310,6 +311,7 @@ function in_sync_transaction<Result>(database: SqlDatabase, work: () => Result):
     database.exec('PRAGMA defer_foreign_keys = ON')
     const result = work()
     remove_orphans(database)
+    record_task_versions(database, 'elsewhere')
     database.exec('UPDATE sync_state SET is_applying = 0')
     database.exec('COMMIT')
     return result

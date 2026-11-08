@@ -16,7 +16,7 @@ import {
   add_tag, add_tag_group, add_task, link_tasks, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
   list_tasks, move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, unlink_tasks, set_setting, update_tag, update_tag_group,
   set_task_done, set_task_my_day, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
-  untag_task
+  untag_task, list_task_versions, list_recent_versions, restore_task_version
 } from './task_database'
 
 // ============================================================================
@@ -92,7 +92,7 @@ function open_from_second_launch(argv: string[]): void {
 function register_bridge_handlers(): void {
   tasks_bridge.handle(ipcMain, {
     list_tasks, add_task, set_task_done, set_task_title, set_task_notes, set_task_schedule, set_task_my_day, remove_task, move_task, tag_task, untag_task,
-    link_tasks, unlink_tasks, list_completions,
+    link_tasks, unlink_tasks, list_completions, list_task_versions, list_recent_versions, restore_task_version,
     list_tag_groups, add_tag_group, update_tag_group, remove_tag_group, move_tag_group,
     list_tags, add_tag, update_tag, remove_tag, move_tag
   })

@@ -19,6 +19,7 @@ import app_icon from '../../resources/icon.svg?no-inline'
 import { BACK_EVENT } from './back_navigation'
 import { BoardView, DONE_COLUMN, NO_TAG_COLUMN, OPEN_COLUMN, date_columns, status_columns, tag_columns } from './BoardView'
 import { CalendarView } from './CalendarView'
+import { HistoryPage } from './HistoryPage'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { UntrustedCertificatePrompt } from './CertificateDialog'
@@ -29,6 +30,7 @@ import { AddTaskRow, SyntaxPreview } from './SyntaxHelp'
 import { query_matches, syntax_by_id, type SyntaxContext } from './syntax'
 import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
+import { TaskHistoryDialog } from './TaskHistory'
 import { Sidebar, SidebarFoot } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
 import { ordered_detail_sections } from './detail_sections'
@@ -92,6 +94,8 @@ export function App() {
   const now = format_local(use_now(), true)
   const today = now.slice(0, 10)
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
+  // The task whose history is open, and the version picked in it.
+  const [history_open, set_history_open] = useState<{ task_id: string; version_id: number | null } | null>(null)
   const [editing_group, set_editing_group] = useState<TagGroup | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
   // Groupings picked in a view but not yet saved for it, kept until the app closes.
@@ -258,7 +262,7 @@ export function App() {
     set_multibar_text(text)
     if (!text.trim()) return
     if (is_settings_open) set_is_settings_open(false)
-    if (selected_view.kind === 'reports') select_view({ kind: 'all' })
+    if (is_page_view(selected_view)) select_view({ kind: 'all' })
   }
 
   // The names and relative dates the multibar's syntaxes read text against.
@@ -414,6 +418,11 @@ export function App() {
     set_tasks((current_tasks) =>
       current_tasks.filter((each) => !removed_ids.has(each.id)).map((each) => ({ ...each, links: each.links.filter((link) => !removed_ids.has(link.other_id)) }))
     )
+  }
+
+  // A restored version can bring back tasks and change others it links to, so the whole list loads again.
+  function reload_tasks(): void {
+    void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
   }
 
   function finish_removal(): void {
@@ -654,14 +663,15 @@ export function App() {
   if (!settings) return null
 
   const is_reports = selected_view.kind === 'reports'
+  const is_history = selected_view.kind === 'history'
   // Each view shows the layout saved for it, or one picked there and not yet saved when layouts are saved by hand.
   const stored_layout = saved_layout(settings, selected_view)
   const view_layout = (settings.layout_memory === 'on_demand' ? unsaved_layouts[view_key(selected_view)] : undefined) ?? stored_layout
   const has_unsaved_layout = !is_same_layout(view_layout, stored_layout)
   const layout = view_layout.layout
-  const is_table = layout === 'table' && !is_reports
+  const is_table = layout === 'table' && !is_page_view(selected_view)
   // The board, calendar and Gantt chart take the whole width of the pane, as the table does.
-  const is_wide = layout !== 'list' && !is_reports
+  const is_wide = layout !== 'list' && !is_page_view(selected_view)
   const shown_since = my_day_since(settings, today)
   const is_searching = multibar_text.trim() !== ''
   const typing_context: SyntaxContext = { tags, tag_groups, date_field: settings.task_date_field, now: parse_local(now) }
@@ -710,7 +720,7 @@ export function App() {
       : is_grouped_by_date ? date_columns(task_tree, settings.task_date_field, now, is_sorted) : status_columns(task_tree)
 
   // Every row on screen from top to bottom, leaving out those inside collapsed tasks; only these can be picked.
-  const shown_rows = is_settings_open || is_reports || layout === 'calendar' ? []
+  const shown_rows = is_settings_open || is_page_view(selected_view) || layout === 'calendar' ? []
     : layout === 'board' ? [...new Map(board_columns.flatMap((column) => column.nodes).map((node) => [node.task.id, node.task])).values()]
       : rows_of(is_grouped && layout !== 'gantt' ? task_groups.flatMap((group) => group.nodes) : task_tree, settings.collapsed_task_ids)
   shown_rows_ref.current = shown_rows
@@ -997,6 +1007,8 @@ export function App() {
       on_change_relationships={change_relationships}
       on_add_tag_group={add_tag_group}
     />
+  ) : is_history ? (
+    <HistoryPage tasks={tasks} on_open_history={(task_id, version_id) => set_history_open({ task_id, version_id })} />
   ) : is_reports ? (
     <ReportsPage
       widgets={settings.report_widgets}
@@ -1225,6 +1237,7 @@ export function App() {
               is_in_my_day={is_in_my_day(selected_task, shown_since)}
               on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
               on_remove={remove_task}
+              on_show_history={(task) => set_history_open({ task_id: task.id, version_id: null })}
               on_close={() => set_selected_task_id(null)}
             />
           </div>
@@ -1271,6 +1284,17 @@ export function App() {
         />
       )}
 
+      {history_open && (
+        <TaskHistoryDialog
+          key={`${history_open.task_id}:${history_open.version_id}`}
+          task_id={history_open.task_id}
+          version_id={history_open.version_id}
+          context={{ tasks, tags, relationships: settings.task_relationships, date_field: settings.task_date_field }}
+          on_restored={reload_tasks}
+          on_close={() => set_history_open(null)}
+        />
+      )}
+
       <UntrustedCertificatePrompt />
 
       {is_picking && (
@@ -1287,6 +1311,15 @@ export function App() {
       )}
     </Shell>
   )
+}
+
+// ============================================================================
+// Pages
+// ============================================================================
+
+// The views that show a page of their own in place of tasks.
+function is_page_view(view: View): boolean {
+  return view.kind === 'reports' || view.kind === 'history'
 }
 
 // ============================================================================

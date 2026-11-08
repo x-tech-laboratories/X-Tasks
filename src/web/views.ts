@@ -17,7 +17,8 @@ export const BUILT_IN_VIEWS: { view: View; label: string }[] = [
   { view: { kind: 'all' }, label: 'All tasks' },
   { view: { kind: 'active' }, label: 'Active' },
   { view: { kind: 'completed' }, label: 'Completed' },
-  { view: { kind: 'reports' }, label: 'Reports' }
+  { view: { kind: 'reports' }, label: 'Reports' },
+  { view: { kind: 'history' }, label: 'History' }
 ]
 
 // ============================================================================
@@ -59,6 +60,7 @@ export function task_is_in_view(
     case 'active': return !task.is_done
     case 'completed': return task.is_done
     case 'reports': return false
+    case 'history': return false
     case 'tag': {
       const chain_tag_ids = chain_tag_ids_of(task, all_tasks)
       const matched_ids = (tag_id: string) => (tag_scope === 'own' ? [tag_id] : [...subtree_ids(tag_id, tags)])
