@@ -85,7 +85,8 @@ html.follows_host_theme {
 .task_pane.is_wide.is_table > .table-wrap { flex: 0 1 auto; }
 
 /* The title, the date and the count of tasks left share one line with the view's buttons. */
-.task_pane > .page-head { margin-bottom: var(--space-6); }
+.task_pane > .page-head { max-width: none; margin-left: 0; margin-right: 0; margin-bottom: var(--space-6); }
+.task_pane > .page-head .head-actions { margin-left: auto; }
 .task_pane > .page-head .page-title { align-items: baseline; }
 .task_pane > .page-head .page-identity > div { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-5); }
 .task_pane > .page-head h1 { white-space: nowrap; word-break: normal; }
