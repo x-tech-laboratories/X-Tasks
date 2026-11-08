@@ -9,6 +9,7 @@ import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type G
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
+import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
 import { grouping_choices, view_of_key } from './grouping'
 import { TASK_LAYOUT_CHOICES } from './layouts'
 import { RecurrencePicker } from './RecurrencePicker'
@@ -396,6 +397,16 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
         <RescheduleOptionsEditor options={settings.reschedule_options} on_change={(options) => on_change('reschedule_options', options)} />
       </SettingsGroup>
 
+      <SettingsGroup heading="Task details" hint="The sections a task's details show, top to bottom. Turned off sections are left out.">
+        <DetailSectionsEditor
+          order={ordered_detail_sections(settings.task_detail_order, tag_groups)}
+          hidden={settings.hidden_task_detail_sections}
+          tag_groups={tag_groups}
+          on_change_order={(order) => on_change('task_detail_order', order)}
+          on_change_hidden={(hidden) => on_change('hidden_task_detail_sections', hidden)}
+        />
+      </SettingsGroup>
+
       <SettingsGroup
         heading="Relationships"
         hint={
@@ -536,6 +547,41 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
           on_close={() => set_picking_rule_id(null)}
         />
       )}
+    </>
+  )
+}
+
+// ============================================================================
+// Task detail sections
+// ============================================================================
+
+interface DetailSectionsEditorProps {
+  order: TaskDetailSection[]
+  hidden: string[]
+  tag_groups: TagGroup[]
+  on_change_order: (order: TaskDetailSection[]) => void
+  on_change_hidden: (hidden: string[]) => void
+}
+
+// Each section of a task's details with a switch to show it and buttons to move it up or down.
+function DetailSectionsEditor({ order, hidden, tag_groups, on_change_order, on_change_hidden }: DetailSectionsEditorProps) {
+  function set_shown(section: TaskDetailSection, is_shown: boolean): void {
+    const others = hidden.filter((each) => each !== section)
+    on_change_hidden(is_shown ? others : [...others, section])
+  }
+
+  return (
+    <>
+      {order.map((section, index) => {
+        const name = detail_section_name(section, tag_groups)
+        return (
+          <div key={section} className="setting-row reschedule_option">
+            <span className="detail_section_name">{name}</span>
+            <Switch label={`Show ${name}`} checked={!hidden.includes(section)} on_change={(is_shown) => set_shown(section, is_shown)} />
+            <RowActions index={index} count={order.length} remove_label="" on_move={(from, to) => on_change_order(moved(order, from, to))} />
+          </div>
+        )
+      })}
     </>
   )
 }

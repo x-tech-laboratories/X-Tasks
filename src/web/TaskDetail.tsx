@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
@@ -15,6 +15,7 @@ import { format_local, has_time, parse_local } from '@x-tech-laboratories/x-libs
 import {
   describe_recurrence, due_after, duration_between, duration_label, durations_for_start, moved_alongside, recurrence_anchor, start_before, with_recurrence
 } from '@shared/schedule'
+import type { TaskDetailSection } from './detail_sections'
 import { tag_path } from './views'
 
 // ============================================================================
@@ -30,6 +31,8 @@ interface TaskDetailProps {
   tag_groups: TagGroup[]
   tags: Tag[]
   date_field: TaskDateField
+  // The sections shown, in the order shown.
+  sections: TaskDetailSection[]
   subtask_count: number
   // Every task, for picking the ones this task is linked to.
   tasks: Task[]
@@ -55,7 +58,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, date_field, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -123,126 +126,165 @@ export function TaskDetail({
         </header>
   )
 
+  // One tag group's tags: a single choice for a one-tag-per-task group, or chips and a picker for adding more.
+  function render_group(group: TagGroup): ReactNode {
+    // Rule tags apply by themselves, so only plain tags are offered, and a group of nothing but rule tags is left out.
+    const group_tags = tags.filter((tag) => tag.group_id === group.id && !tag.rule)
+    if (group_tags.length === 0 && tags.some((tag) => tag.group_id === group.id)) return null
+    const task_tags = group_tags.filter((tag) => task.tag_ids.includes(tag.id))
+    const other_tags = group_tags.filter((tag) => !task.tag_ids.includes(tag.id))
+    const tag_by_id = (tag_id: string) => group_tags.find((tag) => tag.id === tag_id)
+
+    // A one-tag-per-task group is a single choice, with None to clear it.
+    if (group.is_single_choice && task_tags.length <= 1) {
+      const current_tag = task_tags[0]
+      return (
+        <label className="field">
+          <span className="field-label">{group.name}</span>
+          <TreeSelect
+            label={group.name}
+            items={group_tags}
+            name_of={(tag) => tag.name}
+            value={current_tag?.id ?? ''}
+            blank_label="None"
+            on_change={(tag_id) => {
+              const chosen_tag = tag_by_id(tag_id)
+              if (chosen_tag) on_tag(task, chosen_tag)
+              else if (current_tag) on_untag(task, current_tag)
+            }}
+          />
+        </label>
+      )
+    }
+
+    return (
+      <div className="field">
+        <span className="field-label">{group.name}</span>
+        {task_tags.length > 0 && (
+          <div className="chips">
+            {task_tags.map((tag) => <TagChip key={tag.id} tag={tag} label={tag_path(tag, tags)} on_remove={() => on_untag(task, tag)} />)}
+          </div>
+        )}
+        {other_tags.length > 0 && (
+          <TreeSelect
+            label={`Add ${group.name} tag`}
+            items={group_tags}
+            name_of={(tag) => tag.name}
+            value=""
+            blank_label={`Add ${group.name.toLowerCase()} tag…`}
+            disabled_ids={task.tag_ids}
+            on_change={(tag_id) => {
+              const tag = tag_by_id(tag_id)
+              if (tag) on_tag(task, tag)
+            }}
+          />
+        )}
+      </div>
+    )
+  }
+
+  function render_section(section: TaskDetailSection): ReactNode {
+    if (section.startsWith('group:')) {
+      const group = tag_groups.find((each) => `group:${each.id}` === section)
+      return group ? render_group(group) : null
+    }
+    switch (section) {
+      case 'my_day':
+        return (
+          <button className={cx('my_day_button', is_in_my_day && 'is_selected')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
+            {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
+          </button>
+        )
+      case 'start':
+        return <DateTimeField label="Start" value={task.start_at} on_change={change_start} />
+      case 'duration':
+        return (
+          task.start_at && (
+            <label className="field">
+              <span className="field-label">Duration</span>
+              <select value={is_linked ? duration?.id ?? CUSTOM : UNSET} onChange={(event) => choose_duration(event.currentTarget.value)}>
+                <option value={UNSET}>Unset</option>
+                {task.due_at && <option value={CUSTOM}>Custom</option>}
+                {durations_for_start(durations, task.start_at).map((each) => (
+                  <option key={each.id} value={each.id}>
+                    {duration_label(each)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
+        )
+      case 'due':
+        return <DateTimeField label="Due" value={task.due_at} on_change={change_due} />
+      case 'done':
+        return (
+          <DateTimeField
+            label="Done"
+            value={task.done_at && format_local(new Date(task.done_at), true)}
+            on_change={(done_at) => on_set_done_at(task, done_at && parse_local(done_at).toISOString())}
+          />
+        )
+      case 'reschedule':
+        return <button onClick={() => on_reschedule(task)}>Reschedule…</button>
+      case 'repeat':
+        return (
+          <div className="field">
+            <span className="field-label">Repeat</span>
+            <button className="recurrence_button" onClick={() => set_is_picking_recurrence(true)}>
+              {describe_recurrence(schedule, date_field)}
+            </button>
+          </div>
+        )
+      case 'relationships':
+        return (
+          <RelationshipsField
+            task={task}
+            tasks={tasks}
+            relationships={relationships}
+            on_link={(other, relationship_id, is_inverse) => on_link(task, other, relationship_id, is_inverse)}
+            on_unlink={(other) => on_unlink(task, other)}
+          />
+        )
+      case 'streak':
+        return (
+          streak && (
+            <div className="field">
+              <span className="field-label">Streak</span>
+              <span>
+                {streak.current > 0 ? (
+                  <>
+                    <span className="streak_badge">🔥 {streak.current}</span> in a row {task.recurrence ? 'on time' : 'done with its routine'}
+                  </>
+                ) : (
+                  'No streak'
+                )}{' '}
+                · best {streak.best}
+              </span>
+              {history.length > 0 && <StreakStrip history={history} limit={28} />}
+            </div>
+          )
+        )
+      case 'notes':
+        return (
+          <label className="field task_detail_notes">
+            <span className="field-label">Notes</span>
+            <textarea
+              value={notes_draft}
+              onChange={(event) => set_notes_draft(event.currentTarget.value)}
+              onBlur={commit_notes}
+              onKeyDown={(event) => event.key === 'Escape' && event.currentTarget.blur()}
+              placeholder="Add notes"
+            />
+          </label>
+        )
+    }
+  }
+
   return (
     <aside className="task_detail" aria-label="Task details">
       {topbar ? createPortal(header, topbar) : header}
       <div className="task_detail_body">
-        <button className={cx('my_day_button', is_in_my_day && 'is_selected')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
-          {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
-        </button>
-
-        {tag_groups.map((group) => {
-          // Rule tags apply by themselves, so only plain tags are offered, and a group of nothing but rule tags is left out.
-          const group_tags = tags.filter((tag) => tag.group_id === group.id && !tag.rule)
-          if (group_tags.length === 0 && tags.some((tag) => tag.group_id === group.id)) return null
-          const task_tags = group_tags.filter((tag) => task.tag_ids.includes(tag.id))
-          const other_tags = group_tags.filter((tag) => !task.tag_ids.includes(tag.id))
-          const tag_by_id = (tag_id: string) => group_tags.find((tag) => tag.id === tag_id)
-
-          // A one-tag-per-task group is a single choice, with None to clear it.
-          if (group.is_single_choice && task_tags.length <= 1) {
-            const current_tag = task_tags[0]
-            return (
-              <label key={group.id} className="field">
-                <span className="field-label">{group.name}</span>
-                <TreeSelect
-                  label={group.name}
-                  items={group_tags}
-                  name_of={(tag) => tag.name}
-                  value={current_tag?.id ?? ''}
-                  blank_label="None"
-                  on_change={(tag_id) => {
-                    const chosen_tag = tag_by_id(tag_id)
-                    if (chosen_tag) on_tag(task, chosen_tag)
-                    else if (current_tag) on_untag(task, current_tag)
-                  }}
-                />
-              </label>
-            )
-          }
-
-          return (
-            <div key={group.id} className="field">
-              <span className="field-label">{group.name}</span>
-              {task_tags.length > 0 && (
-                <div className="chips">
-                  {task_tags.map((tag) => <TagChip key={tag.id} tag={tag} label={tag_path(tag, tags)} on_remove={() => on_untag(task, tag)} />)}
-                </div>
-              )}
-              {other_tags.length > 0 && (
-                <TreeSelect
-                  label={`Add ${group.name} tag`}
-                  items={group_tags}
-                  name_of={(tag) => tag.name}
-                  value=""
-                  blank_label={`Add ${group.name.toLowerCase()} tag…`}
-                  disabled_ids={task.tag_ids}
-                  on_change={(tag_id) => {
-                    const tag = tag_by_id(tag_id)
-                    if (tag) on_tag(task, tag)
-                  }}
-                />
-              )}
-            </div>
-          )
-        })}
-
-        <DateTimeField label="Start" value={task.start_at} on_change={change_start} />
-        {task.start_at && (
-          <label className="field">
-            <span className="field-label">Duration</span>
-            <select value={is_linked ? duration?.id ?? CUSTOM : UNSET} onChange={(event) => choose_duration(event.currentTarget.value)}>
-              <option value={UNSET}>Unset</option>
-              {task.due_at && <option value={CUSTOM}>Custom</option>}
-              {durations_for_start(durations, task.start_at).map((each) => (
-                <option key={each.id} value={each.id}>
-                  {duration_label(each)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <DateTimeField label="Due" value={task.due_at} on_change={change_due} />
-        <DateTimeField
-          label="Done"
-          value={task.done_at && format_local(new Date(task.done_at), true)}
-          on_change={(done_at) => on_set_done_at(task, done_at && parse_local(done_at).toISOString())}
-        />
-        <button className="fit-content" onClick={() => on_reschedule(task)}>
-          Reschedule…
-        </button>
-
-        <div className="field">
-          <span className="field-label">Repeat</span>
-          <button className="recurrence_button" onClick={() => set_is_picking_recurrence(true)}>
-            {describe_recurrence(schedule, date_field)}
-          </button>
-        </div>
-
-        <RelationshipsField
-          task={task}
-          tasks={tasks}
-          relationships={relationships}
-          on_link={(other, relationship_id, is_inverse) => on_link(task, other, relationship_id, is_inverse)}
-          on_unlink={(other) => on_unlink(task, other)}
-        />
-
-        {streak && (
-          <div className="field">
-            <span className="field-label">Streak</span>
-            <span>
-              {streak.current > 0 ? (
-                <>
-                  <span className="streak_badge">🔥 {streak.current}</span> in a row {task.recurrence ? 'on time' : 'done with its routine'}
-                </>
-              ) : (
-                'No streak'
-              )}{' '}
-              · best {streak.best}
-            </span>
-            {history.length > 0 && <StreakStrip history={history} limit={28} />}
-          </div>
-        )}
+        {sections.map((section) => <Fragment key={section}>{render_section(section)}</Fragment>)}
 
         {is_picking_recurrence && (
           <RecurrencePicker
@@ -252,17 +294,6 @@ export function TaskDetail({
             on_close={() => set_is_picking_recurrence(false)}
           />
         )}
-
-        <label className="field task_detail_notes">
-          <span className="field-label">Notes</span>
-          <textarea
-            value={notes_draft}
-            onChange={(event) => set_notes_draft(event.currentTarget.value)}
-            onBlur={commit_notes}
-            onKeyDown={(event) => event.key === 'Escape' && event.currentTarget.blur()}
-            placeholder="Add notes"
-          />
-        </label>
 
         <footer className="task_detail_footer">
           <span className="muted small">
@@ -339,7 +370,7 @@ function RelationshipsField({ task, tasks, relationships, on_link, on_unlink }: 
         </div>
       ))}
       {relationships.length > 0 && (
-        <button className="fit-content" onClick={() => set_is_adding(true)}>
+        <button onClick={() => set_is_adding(true)}>
           Add relationship…
         </button>
       )}

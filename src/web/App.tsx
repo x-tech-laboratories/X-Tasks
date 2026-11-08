@@ -29,6 +29,7 @@ import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
 import { Sidebar, SidebarFoot } from './Sidebar'
 import { TaskDetail } from './TaskDetail'
+import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
 import { coming_repeats, group_by_date } from './dates'
@@ -1199,6 +1200,7 @@ export function App() {
               tag_groups={tag_groups}
               tags={tags}
               date_field={settings.task_date_field}
+              sections={ordered_detail_sections(settings.task_detail_order, tag_groups).filter((section) => !settings.hidden_task_detail_sections.includes(section))}
               subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
               tasks={tasks}
               relationships={settings.task_relationships}

@@ -185,6 +185,10 @@ export interface Settings {
   shown_table_columns: string[]
   // Widths in pixels of table columns dragged away from their default; the title takes whatever room is left.
   table_column_widths: Record<string, number>
+  // The order of the sections in a task's details; sections for groups added since come just after the one before them.
+  task_detail_order: string[]
+  // The sections left out of a task's details.
+  hidden_task_detail_sections: string[]
   // Widths in pixels of the left sidebar and the task detail panel, set by dragging their edges.
   sidebar_width: number
   detail_width: number
@@ -252,6 +256,8 @@ export const DEFAULT_SETTINGS: Settings = {
   hidden_table_columns: [],
   shown_table_columns: [],
   table_column_widths: {},
+  task_detail_order: [],
+  hidden_task_detail_sections: [],
   sidebar_width: 248,
   detail_width: 340,
   reschedule_options: [

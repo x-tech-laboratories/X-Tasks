@@ -241,7 +241,6 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 .topbar > .task_detail_header { flex: none; align-self: stretch; box-sizing: border-box; width: var(--side-pane-width, 360px); margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6)) calc(-1 * var(--space-4)) 0; padding: 0 var(--space-6); border-left: var(--border-width) solid var(--border-hover); background-color: var(--surface-secondary); }
 .task_detail_header button { flex: none; }
 .task_detail_header input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
-.my_day_button { align-self: flex-start; }
 .my_day_button.is_selected { border-color: var(--accent); color: var(--accent); }
 .recurrence_button { display: block; overflow: hidden; font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .task_detail_notes { flex: 1; min-height: 160px; }
@@ -310,7 +309,7 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 .task_pane .settings-group + .settings-group { margin-top: var(--space-7); }
 /* The rows that list options, colours and relationships are denser than a single setting. */
 .reschedule_option { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--space-5); }
-.reschedule_option > input:not([type]), .reschedule_rule, .tag_color_hex { flex: 1; min-width: 0; }
+.reschedule_option > input:not([type]), .reschedule_rule, .tag_color_hex, .detail_section_name { flex: 1; min-width: 0; }
 .tag_color_hex { font-family: var(--font-family-monospace); }
 .sync_input { width: min(260px, 100%); }
 .duration_amount { display: flex; align-items: center; gap: var(--space-1); color: var(--text-secondary); }
