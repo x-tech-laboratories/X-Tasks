@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
-import { PageHeading, RowActions, SettingRow, SettingsGroup, Stack, moved } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { PageHeading, RowActions, SettingRow, SettingsPage as SettingsSections, Stack, moved, type SettingsCategory } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { describe_rule } from 'recurrence-input'
 
@@ -556,135 +556,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
 
   return (
     <>
-      <PageHeading title="Settings" />
+      <PageHeading class_name="inline" title="Settings" />
 
-      <div className="settings_page">
-        <div className="settings_layout">
-          <SettingsOutline categories={categories} />
-
-          <div className="settings_sections">
-            {categories.map((category) => (
-              <section key={category.heading} className="settings_category">
-                <h2 className="settings_category_heading">{category.heading}</h2>
-                {category.sections.map((section) => (
-                  <div key={section.id} id={section_anchor(section.id)} className="settings_section">
-                    <SettingsGroup heading={section.heading} hint={section.hint}>
-                      {section.content}
-                    </SettingsGroup>
-                  </div>
-                ))}
-              </section>
-            ))}
-          </div>
-        </div>
-      </div>
+      <SettingsSections categories={categories} />
     </>
-  )
-}
-
-// ============================================================================
-// Outline
-// ============================================================================
-
-interface SettingsSection {
-  id: string
-  heading: string
-  hint?: string
-  content: ReactNode
-}
-
-interface SettingsCategory {
-  heading: string
-  sections: SettingsSection[]
-}
-
-function section_anchor(id: string): string {
-  return `settings-${id}`
-}
-
-// How far below the top of the outline a section's heading may sit and still count as the one being read.
-const CURRENT_SECTION_SLACK_PX = 48
-
-// How long a jump from the outline may take before the outline follows scrolling again.
-const JUMP_TIMEOUT_MS = 1000
-
-// A list of every section beside the page that jumps to the one clicked and marks the one being read.
-function SettingsOutline({ categories }: { categories: SettingsCategory[] }) {
-  const ids = categories.flatMap((category) => category.sections.map((section) => section.id))
-  const [current_id, set_current_id] = useState(ids[0])
-  const outline = useRef<HTMLElement>(null)
-  const is_jumping = useRef(false)
-  const jump_timer = useRef<number>(undefined)
-  const ids_key = ids.join(' ')
-
-  useEffect(() => {
-    // The section being read is the last one whose heading has reached the top of the outline, or the last one once scrolled to the end.
-    function follow_scroll(event: Event): void {
-      if (is_jumping.current || !outline.current || outline.current.contains(event.target as Node)) return
-      const top = outline.current.getBoundingClientRect().top + CURRENT_SECTION_SLACK_PX
-      const scroller = event.target instanceof Element ? event.target : document.scrollingElement
-      const is_at_end = scroller !== null && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
-
-      let reached = ids[0]
-      for (const id of ids) {
-        const element = document.getElementById(section_anchor(id))
-        if (element && element.getBoundingClientRect().top <= top) reached = id
-      }
-      set_current_id(is_at_end ? ids.at(-1) : reached)
-    }
-
-    function end_jump(): void {
-      is_jumping.current = false
-    }
-
-    document.addEventListener('scroll', follow_scroll, { capture: true, passive: true })
-    document.addEventListener('scrollend', end_jump, { capture: true })
-    return () => {
-      document.removeEventListener('scroll', follow_scroll, { capture: true })
-      document.removeEventListener('scrollend', end_jump, { capture: true })
-      window.clearTimeout(jump_timer.current)
-    }
-  }, [ids_key])
-
-  // An outline taller than the window scrolls itself to keep the current section's link in view.
-  useEffect(() => {
-    const nav = outline.current
-    const link = nav?.querySelector<HTMLElement>('.is_current')
-    if (!nav || !link) return
-    if (link.offsetTop < nav.scrollTop) nav.scrollTop = link.offsetTop
-    else if (link.offsetTop + link.offsetHeight > nav.scrollTop + nav.clientHeight) nav.scrollTop = link.offsetTop + link.offsetHeight - nav.clientHeight
-  }, [current_id])
-
-  function jump_to(id: string): void {
-    set_current_id(id)
-    is_jumping.current = true
-    window.clearTimeout(jump_timer.current)
-    jump_timer.current = window.setTimeout(() => (is_jumping.current = false), JUMP_TIMEOUT_MS)
-    document.getElementById(section_anchor(id))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  return (
-    <nav ref={outline} className="settings_outline" aria-label="Settings sections">
-      {categories.map((category) => (
-        <div key={category.heading} className="settings_outline_category">
-          <span className="settings_outline_heading">{category.heading}</span>
-          {category.sections.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section_anchor(section.id)}`}
-              className={section.id === current_id ? 'settings_outline_link is_current' : 'settings_outline_link'}
-              aria-current={section.id === current_id ? 'location' : undefined}
-              onClick={(event) => {
-                event.preventDefault()
-                jump_to(section.id)
-              }}
-            >
-              {section.heading}
-            </a>
-          ))}
-        </div>
-      ))}
-    </nav>
   )
 }
 

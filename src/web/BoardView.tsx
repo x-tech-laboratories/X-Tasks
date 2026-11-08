@@ -96,7 +96,7 @@ export function BoardView({ columns, actions, column_group_id, open_dependency_c
         >
           <h2 className={cx('board_column_heading', column.key === 'overdue' && 'is_overdue')}>
             {column.label}
-            <span className="group_count">{column.nodes.length}</span>
+            <span className="group-count">{column.nodes.length}</span>
           </h2>
           <ul className="board_cards">
             {column.nodes.map((node) => (
@@ -141,7 +141,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
   const date = task_date_of(task, actions.date_field)
   const done_children = children.filter((child) => child.task.is_done).length
 
-  const card_class = cx('board_card', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', actions.is_picked(task) && 'is_picked', tint_tag && 'has_tint')
+  const card_class = cx('board_card', task.is_done && 'is_done', actions.selected_task_id === task.id && 'selected', actions.is_picked(task) && 'picked', tint_tag && 'has-tint')
 
   return (
     <li

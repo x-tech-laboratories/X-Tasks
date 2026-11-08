@@ -209,9 +209,9 @@ export function tag_path(tag: Tag, tags: Tag[]): string {
   return path_names(tag, tags, (each) => each.name).join(' › ')
 }
 
-// Hands the tag's colour to its styles as --tag-color, or nothing when it has none.
+// Hands the tag's colour to its styles as --item-color, or nothing when it has none.
 export function tag_color_style(tag: Tag): Record<string, string> | undefined {
-  return tag.color ? { '--tag-color': tag.color } : undefined
+  return tag.color ? { '--item-color': tag.color } : undefined
 }
 
 // Puts the tag's icon in front of the text that names it, when it has one.

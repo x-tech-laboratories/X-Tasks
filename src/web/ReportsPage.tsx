@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { Chip } from '@x-tech-laboratories/x-libs/web/react/badges'
 import { CommitInput, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
@@ -82,6 +83,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
   return (
     <>
       <PageHeading
+        class_name="inline"
         title="Reports"
         actions={
           <button onClick={(event) => open_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, run: () => add_widget(kind) })))}>
@@ -185,12 +187,14 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
         {chosen_tags.length > 0 && (
           <div className="tag_chips">
             {chosen_tags.map((tag) => (
-              <span key={tag.id} className="tag_chip">
+              <Chip
+                key={tag.id}
+                class_name="tag_chip"
+                on_remove={() => on_change({ ...widget, tag_ids: widget.tag_ids.filter((tag_id) => tag_id !== tag.id) })}
+                remove_label={`Remove tag ${tag.name}`}
+              >
                 {tag_path(tag, tags)}
-                <button onClick={() => on_change({ ...widget, tag_ids: widget.tag_ids.filter((tag_id) => tag_id !== tag.id) })} aria-label={`Remove tag ${tag.name}`}>
-                  ×
-                </button>
-              </span>
+              </Chip>
             ))}
           </div>
         )}

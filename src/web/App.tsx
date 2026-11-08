@@ -653,12 +653,6 @@ export function App() {
     if (detail_width !== undefined) document.body.style.setProperty('--side-pane-width', `${detail_width}px`)
   }, [detail_width])
 
-  // The Shell puts the sidebar's width on its layout only, so the top bar's name gets it through the body to line up.
-  const sidebar_width = settings?.sidebar_width
-  useEffect(() => {
-    if (sidebar_width !== undefined) document.body.style.setProperty('--sidebar-width', `${sidebar_width}px`)
-  }, [sidebar_width])
-
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
@@ -1023,6 +1017,7 @@ export function App() {
   ) : (
     <>
       <PageHeading
+        class_name="inline"
         title={view_title(selected_view, tags)}
         subtitle={
           <>
@@ -1050,7 +1045,7 @@ export function App() {
           )}
           {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && (
             <select
-              className={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
+              className={is_grouped ? 'active' : undefined}
               value={shown_grouping}
               onChange={(event) => pick_grouping(event.currentTarget.value as TaskGrouping)}
               aria-label="Group by"
@@ -1150,7 +1145,7 @@ export function App() {
                 <li key={group.key} className="task_group">
                   <h2 className={cx('group_heading', is_grouped_by_date && group.key === 'overdue' && 'is_overdue')}>
                     {group.label}
-                    <span className="group_count">{group.nodes.length + group.repeats.length}</span>
+                    <span className="group-count">{group.nodes.length + group.repeats.length}</span>
                   </h2>
                   <ul className="task_list">
                     {group.nodes.map((node) => (
