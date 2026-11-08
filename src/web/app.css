@@ -80,8 +80,8 @@ body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: 
 
 /* A group's row reads as a heading over its tags, and a row's add button waits for the pointer. */
 .sidebar_group_row .tree-label { color: var(--text-secondary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
-.sidebar_add { visibility: hidden; }
-.tree-row:hover .sidebar_add, .sidebar_add:focus-visible { visibility: visible; }
+/* It takes no room until then, so the counts stay lined up at the row's end. */
+.tree-row:not(:hover, :focus-within) .sidebar_add { display: none; }
 .tag_color_dot { display: inline-block; width: 8px; height: 8px; margin-right: var(--space-3); border-radius: 50%; background: var(--tag-color); vertical-align: 0.05em; }
 
 /* ========================================================================== */
