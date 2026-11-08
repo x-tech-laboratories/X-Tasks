@@ -80,7 +80,7 @@ export function SyntaxPreview({ problems }: { problems: string[] }) {
   return (
     <div className="syntax_preview" aria-live="polite">
       {problems.map((problem) => (
-        <span key={problem} className="chip tone-warn">{problem}</span>
+        <span key={problem} className="syntax_problem">{problem}</span>
       ))}
     </div>
   )
@@ -92,9 +92,9 @@ export function SyntaxPreview({ problems }: { problems: string[] }) {
 
 export function SyntaxExamples({ examples }: { examples: SyntaxExample[] }) {
   return (
-    <dl className="facts facts-rows syntax_examples">
+    <dl className="syntax_examples">
       {examples.map((example) => (
-        <div key={example.text}>
+        <div key={example.text} className="syntax_example">
           <dt>
             <code>{example.text}</code>
           </dt>
@@ -107,7 +107,7 @@ export function SyntaxExamples({ examples }: { examples: SyntaxExample[] }) {
 
 function SyntaxSection({ syntax, heading, examples }: { syntax: Syntax; heading: string; examples: SyntaxExample[] }) {
   return (
-    <section>
+    <section className="syntax_help_section">
       <h3 className="settings-heading">
         {heading}: {syntax.name}
       </h3>
@@ -128,7 +128,7 @@ export function SyntaxHelpDialog({ quick_add_syntax, search_syntax, on_close }: 
   const search = syntax_by_id(search_syntax)
 
   return (
-    <Dialog title="Writing in the bar" on_close={on_close} wide buttons={<button type="button" className="accent solid" onClick={on_close}>Close</button>}>
+    <Dialog title="Writing in the bar" class_name="syntax_help_dialog" on_close={on_close} buttons={<button type="button" className="accent solid" onClick={on_close}>Close</button>}>
       <p className="setting-hint">Typing searches as you go, and Enter adds what you typed as a task. Pick each syntax from the button beside the bar or in Settings.</p>
       <SyntaxSection syntax={quick_add} heading="Adding" examples={quick_add.quick_add_examples} />
       <SyntaxSection syntax={search} heading="Searching" examples={search.search_examples} />

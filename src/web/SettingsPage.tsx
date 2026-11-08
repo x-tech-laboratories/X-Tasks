@@ -1083,7 +1083,7 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
         <SettingRow key={backup.name} label={format_taken_at(backup.taken_at)} hint={`${backup.is_automatic ? 'Daily' : 'By hand'} · ${format_size(backup.size_bytes)}`}>
           <button onClick={() => void restore(backup)}>Restore</button>
           <span className="row-actions">
-            <button className="icon danger" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>
+            <button className="icon remove" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>
               ×
             </button>
           </span>
@@ -1120,7 +1120,7 @@ function SavedGroupings({ groupings, tags, tag_groups, on_change }: SavedGroupin
             </select>
             <span className="row-actions">
               <button
-                className="icon danger"
+                className="icon remove"
                 onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
                 aria-label={`Use the default grouping for ${title}`}
                 title="Use the default grouping"
@@ -1165,7 +1165,7 @@ function SavedLayouts({ layouts, tags, on_change }: SavedLayoutsProps) {
             </select>
             <span className="row-actions">
               <button
-                className="icon danger"
+                className="icon remove"
                 onClick={() => on_change(Object.fromEntries(entries.filter(([each_key]) => each_key !== key)))}
                 aria-label={`Use the default layout for ${title}`}
                 title="Use the default layout"

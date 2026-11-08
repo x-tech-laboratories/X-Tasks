@@ -207,7 +207,7 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
         {CONDITION_CHOICES.map(({ kind, label }) => <option key={kind} value={kind}>{label}</option>)}
       </select>
       {controls()}
-      <button type="button" className="icon danger" onClick={on_remove} aria-label="Remove condition">
+      <button type="button" className="icon remove" onClick={on_remove} aria-label="Remove condition">
         ×
       </button>
     </li>

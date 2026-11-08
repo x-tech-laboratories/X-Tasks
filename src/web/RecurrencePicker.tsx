@@ -31,6 +31,7 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
   return (
     <Dialog
       title="Repeat"
+      class_name="recurrence_dialog"
       on_close={on_close}
       buttons={
         <>

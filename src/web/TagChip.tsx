@@ -25,7 +25,7 @@ export function TagChip({ tag, label = tag.name, title, on_remove }: TagChipProp
     <span className={class_name} style={tag_color_style(tag) as CSSProperties | undefined} title={title}>
       {with_icon(tag, label)}
       {on_remove && !tag.rule && (
-        <button type="button" className="icon" onClick={on_remove} aria-label={`Remove tag ${tag.name}`}>
+        <button type="button" className="icon remove" onClick={on_remove} aria-label={`Remove tag ${tag.name}`}>
           ×
         </button>
       )}

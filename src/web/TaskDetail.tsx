@@ -99,12 +99,12 @@ export function TaskDetail({
           onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
           aria-label="Title"
         />
-        <button className="icon" onClick={on_close} aria-label="Close details">
+        <button className="icon remove" onClick={on_close} aria-label="Close details">
           ×
         </button>
       </header>
 
-      <button className={cx('my_day_button', is_in_my_day && 'accent solid')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
+      <button className={cx('my_day_button', is_in_my_day && 'is_selected')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
         {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
       </button>
 
@@ -190,7 +190,7 @@ export function TaskDetail({
 
       <div className="field">
         <span className="field-label">Repeat</span>
-        <button className="fit-content" onClick={() => set_is_picking_recurrence(true)}>
+        <button className="recurrence_button" onClick={() => set_is_picking_recurrence(true)}>
           {describe_recurrence(schedule, date_field)}
         </button>
       </div>
@@ -305,7 +305,7 @@ function RelationshipsField({ task, tasks, relationships, on_link, on_unlink }: 
               .map(({ other }) => (
                 <span key={other.id} className={other.is_done ? 'chip dependency_chip is_done' : 'chip dependency_chip'}>
                   {other.title}
-                  <button type="button" className="icon" onClick={() => on_unlink(other)} aria-label={`Remove ${label.toLowerCase()} ${other.title}`}>
+                  <button type="button" className="icon remove" onClick={() => on_unlink(other)} aria-label={`Remove ${label.toLowerCase()} ${other.title}`}>
                     ×
                   </button>
                 </span>
@@ -357,6 +357,7 @@ function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: R
   return (
     <Dialog
       title="Add relationship"
+      class_name="relationship_dialog"
       on_close={on_close}
       buttons={
         <>

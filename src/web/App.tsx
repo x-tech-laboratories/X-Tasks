@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { theme_choice, type Theme } from '@x-tech-laboratories/x-libs/web/theme'
@@ -636,6 +636,12 @@ export function App() {
   }, [completions])
   const last_done_of: LastDoneOf = (task) => last_done_by_task_id.get(task.id) ?? null
 
+  // The details pane's width reaches main's grid through the body, since the Shell gives main only a class.
+  const detail_width = settings?.detail_width
+  useEffect(() => {
+    if (detail_width !== undefined) document.body.style.setProperty('--side-pane-width', `${detail_width}px`)
+  }, [detail_width])
+
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
@@ -1012,7 +1018,7 @@ export function App() {
         title={view_title(selected_view, tags)}
         subtitle={
           <>
-            {selected_view.kind === 'my_day' && <span>{parse_local(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · </span>}
+            {selected_view.kind === 'my_day' && <span className="my_day_date">{parse_local(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>}
             <span className="remaining_count">{remaining_count} left</span>
           </>
         }
@@ -1036,6 +1042,7 @@ export function App() {
           )}
           {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && (
             <select
+              className={is_grouped ? 'grouping_select is_selected' : 'grouping_select'}
               value={shown_grouping}
               onChange={(event) => pick_grouping(event.currentTarget.value as TaskGrouping)}
               aria-label="Group by"
@@ -1172,15 +1179,18 @@ export function App() {
       }}
       menu_open={is_sidebar_open}
       on_menu_open_change={set_is_sidebar_open}
-      main_class={cx('task_main', selected_task && 'has_detail')}
+      main_class={cx('task_main', selected_task && 'with-side-pane')}
+      contained
+      brand_in_sidebar
       view_key={is_settings_open ? 'settings' : view_key(selected_view)}
     >
-      <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
-      <div className="task_panes" style={{ '--detail-width': `${settings.detail_width}px` } as CSSProperties}>
+      <div className="main-pane">
+        <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
         <div className={cx('task_pane', is_wide && !is_settings_open && `is_wide is_${layout}`)}>{task_pane}</div>
+      </div>
 
         {selected_task && (
-          <div className="detail_pane">
+          <div className="side-pane">
             <ResizeHandle
               side="right"
               size={settings.detail_width}
@@ -1221,7 +1231,6 @@ export function App() {
             />
           </div>
         )}
-      </div>
 
       {rescheduling_tasks.length > 0 && (
         <ReschedulePopup

@@ -98,7 +98,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
           const filter_names = widget.tag_ids.flatMap((tag_id) => tags.find((tag) => tag.id === tag_id)?.name ?? [])
           const tools = (
             <>
-              <span className="muted">
+              <span className="report_card_caption">
                 Last {plural(widget.days, 'day')}
                 {filter_names.length > 0 && ` · ${filter_names.join(', ')}`}
               </span>
@@ -110,7 +110,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
 
           return (
             <div key={widget.id} onContextMenu={(event) => open_widget_menu(event, widget, index)}>
-              <Section title={widget.title} tools={tools}>
+              <Section title={widget.title} tools={tools} class_name="report_card">
                 {editing_id === widget.id && (
                   <WidgetEditor widget={widget} tags={tags} tag_groups={tag_groups} on_change={update_widget} on_close={() => set_editing_id(null)} />
                 )}
@@ -165,7 +165,7 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
       </label>
 
       {widget.kind === 'streaks' && (
-        <label className="check">
+        <label className="check report_editor_check">
           <Switch label="Show subtasks under each routine" checked={!widget.hide_subtasks} on_change={(on) => on_change({ ...widget, hide_subtasks: !on })} />
           Show subtasks under each routine
         </label>
@@ -206,7 +206,7 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
         </select>
       </div>
 
-      <button className="fit-content" onClick={on_close}>Done</button>
+      <button className="report_editor_done" onClick={on_close}>Done</button>
     </div>
   )
 }
@@ -227,7 +227,7 @@ interface StreakTableProps {
 // A subtask's streak and share count the routine's ticks it was done in, so the ones often left undone stand out.
 function StreakTable({ widget, widget_tasks, completions, tasks, today, on_select_task }: StreakTableProps) {
   const rows = streak_rows(widget, widget_tasks, completions, tasks, today)
-  if (rows.length === 0) return <p className="muted">No repeating tasks here.</p>
+  if (rows.length === 0) return <p className="report_empty">No repeating tasks here.</p>
 
   return (
     <table className="report_table">
@@ -302,7 +302,7 @@ function TickCalendar({ widget, counts, today }: TickCalendarProps) {
           })
         )}
       </div>
-      <p className="muted">{plural(total, 'tick')} in all</p>
+      <p className="report_card_caption">{plural(total, 'tick')} in all</p>
     </div>
   )
 }
@@ -343,8 +343,8 @@ interface TagBarsProps {
 }
 
 function TagBars({ rows, tags, group }: TagBarsProps) {
-  if (!group) return <p className="muted">Pick a tag group to split by.</p>
-  if (rows.length === 0) return <p className="muted">No ticks in these days.</p>
+  if (!group) return <p className="report_empty">Pick a tag group to split by.</p>
+  if (rows.length === 0) return <p className="report_empty">No ticks in these days.</p>
   const busiest = Math.max(...rows.map(({ count }) => count))
 
   return (

@@ -45,6 +45,7 @@ export function ReschedulePopup({ tasks, options, date_field, on_reschedule, on_
   return (
     <Dialog
       title={tasks.length === 1 ? 'Reschedule' : `Reschedule ${tasks.length} tasks`}
+      class_name="reschedule_dialog"
       on_close={on_close}
       buttons={<button type="button" onClick={on_close}>Cancel</button>}
     >

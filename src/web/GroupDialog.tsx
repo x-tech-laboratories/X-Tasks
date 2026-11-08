@@ -65,6 +65,7 @@ export function GroupDialog({ heading, group, tags, tasks, on_save, on_close }: 
   return (
     <Dialog
       title={heading}
+      class_name="group_dialog"
       on_close={on_close}
       buttons={
         <>
