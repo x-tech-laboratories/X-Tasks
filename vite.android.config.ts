@@ -15,11 +15,11 @@ function android_content_policy(): Plugin {
 
 // The page for the Capacitor app, built with mode "android" so it keeps its database on the phone.
 export default defineConfig({
-  root: resolve('src/renderer'),
+  root: resolve('src/web'),
   base: './',
   mode: 'android',
   plugins: [react(), android_content_policy()],
-  resolve: { alias: { '@shared': resolve('src/shared'), '@renderer': resolve('src/renderer') } },
+  resolve: { alias: { '@shared': resolve('src/shared'), '@web': resolve('src/web') } },
   optimizeDeps: { exclude: ['@sqlite.org/sqlite-wasm'] },
   build: { outDir: resolve('out/android'), emptyOutDir: true }
 })

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { split_words } from '../../src/renderer/syntax/dates.ts'
-import { find_repeat, read_repeat_value } from '../../src/renderer/syntax/repeats.ts'
+import { split_words } from '../../src/web/syntax/dates.ts'
+import { find_repeat, read_repeat_value } from '../../src/web/syntax/repeats.ts'
 import { NOW } from './context.ts'
 
 // ============================================================================

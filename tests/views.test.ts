@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { nest_tasks } from '../src/renderer/views.ts'
+import { nest_tasks } from '../src/web/views.ts'
 import { make_task } from './fixtures.ts'
 
 // ============================================================================

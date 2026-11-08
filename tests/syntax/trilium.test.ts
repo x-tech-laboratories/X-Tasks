@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { TRILIUM_SYNTAX } from '../../src/renderer/syntax/trilium.ts'
-import type { QuickAdd } from '../../src/renderer/syntax/types.ts'
+import { TRILIUM_SYNTAX } from '../../src/web/syntax/trilium.ts'
+import type { QuickAdd } from '../../src/web/syntax/types.ts'
 import { CONTEXT } from './context.ts'
 
 // ============================================================================

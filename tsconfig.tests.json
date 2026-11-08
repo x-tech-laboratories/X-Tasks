@@ -1,11 +1,11 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["tests/**/*", "vitest.config.ts", "src/shared/recurrence-input.d.ts", "src/preload/index.d.ts", "src/renderer/**/*.d.ts"],
+  "include": ["tests/**/*", "vitest.config.ts", "src/shared/recurrence-input.d.ts", "src/preload/index.d.ts", "src/web/**/*.d.ts"],
   "compilerOptions": {
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["node"],
-    "paths": { "@renderer/*": ["./src/renderer/*"], "@shared/*": ["./src/shared/*"] }
+    "paths": { "@web/*": ["./src/web/*"], "@shared/*": ["./src/shared/*"] }
   }
 }

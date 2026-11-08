@@ -4,7 +4,7 @@ import './dom_stubs.ts'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 
-import { App } from '../src/renderer/App.tsx'
+import { App } from '../src/web/App.tsx'
 import { install_fake_bridge } from './fake_bridge.ts'
 import { make_group, make_tag, make_task } from './fixtures.ts'
 

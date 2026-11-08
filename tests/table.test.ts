@@ -7,8 +7,8 @@ import type { Task } from '../src/shared/tasks.ts'
 import {
   COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, column_width, default_column_width, ordered_columns, sort_task_tree, tag_ranks, task_passes_filters,
   type SortContext, type TableFilters
-} from '../src/renderer/table.ts'
-import { nest_tasks, type TaskNode } from '../src/renderer/views.ts'
+} from '../src/web/table.ts'
+import { nest_tasks, type TaskNode } from '../src/web/views.ts'
 import { make_group, make_tag, make_task } from './fixtures.ts'
 
 // ============================================================================

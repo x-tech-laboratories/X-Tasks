@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { TODOIST_SYNTAX } from '../../src/renderer/syntax/todoist.ts'
-import type { QuickAdd } from '../../src/renderer/syntax/types.ts'
+import { TODOIST_SYNTAX } from '../../src/web/syntax/todoist.ts'
+import type { QuickAdd } from '../../src/web/syntax/types.ts'
 import { CONTEXT } from './context.ts'
 
 // ============================================================================

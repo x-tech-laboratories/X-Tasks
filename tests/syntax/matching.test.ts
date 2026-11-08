@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest'
 
-import { query_matches } from '../../src/renderer/syntax/matching.ts'
-import { TODOIST_SYNTAX } from '../../src/renderer/syntax/todoist.ts'
-import type { SearchContext, SearchQuery } from '../../src/renderer/syntax/types.ts'
+import { query_matches } from '../../src/web/syntax/matching.ts'
+import { TODOIST_SYNTAX } from '../../src/web/syntax/todoist.ts'
+import type { SearchContext, SearchQuery } from '../../src/web/syntax/types.ts'
 import { make_task } from '../fixtures.ts'
 import { CONTEXT, NOW, TAGS } from './context.ts'
 

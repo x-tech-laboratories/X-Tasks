@@ -68,7 +68,7 @@
 ## Quality
 
 - [ ] Tests for the database queries and schema migrations
-- [ ] Tests for the view helpers in `src/renderer/views.ts`
+- [ ] Tests for the view helpers in `src/web/views.ts`
 - [ ] CI that typechecks, tests and builds
 
 ## Research

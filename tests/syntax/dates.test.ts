@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { read_task_date, read_time, TITLE_DATE_OPTIONS, VALUE_DATE_OPTIONS } from '../../src/renderer/syntax/dates.ts'
+import { read_task_date, read_time, TITLE_DATE_OPTIONS, VALUE_DATE_OPTIONS } from '../../src/web/syntax/dates.ts'
 import { NOW } from './context.ts'
 
 // ============================================================================

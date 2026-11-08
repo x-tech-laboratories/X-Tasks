@@ -176,7 +176,7 @@ what you typed as a task. The button beside it picks how it reads each, apart:
 **Plain** takes the text as typed, **Todoist** (which Planify follows) reads `#tag`, `@label`, `p1`, dates such as
 `tomorrow at 5pm` and filters such as `today | overdue`, **GTG** reads `tags:`, `due:`, `start:`, `every:` and
 `!today !or !tomorrow`, and **Trilium** reads `#area=Career`, `#dueDate=TODAY+7` and `NOT(#recurrence)`. Each syntax lives
-in `src/renderer/syntax/`, sharing one reader for dates and repeats, and turns a search into one query that every syntax
+in `src/web/syntax/`, sharing one reader for dates and repeats, and turns a search into one query that every syntax
 matches the same way. **Syntax help** in that menu, and the Syntax section of Settings, show examples of each.
 
 ## Board, calendar and Gantt
@@ -208,8 +208,8 @@ later launches, so a run with `X_TASKS_DB` set never hands its link to another w
 - `src/server` — the web server, which shares the task database code with `src/main`
 - `src/main/sync_engine.ts` — change tracking and merging; `src/main/sync_client.ts` syncs a device with the server
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
-  `src/renderer/web_bridge.ts` sets up the same bridge over HTTP
-- `src/renderer` — the React interface; `src/renderer/android` holds the Android app's database and bridge
+  `src/web/web_bridge.ts` sets up the same bridge over HTTP
+- `src/web` — the React interface; `src/web/android` holds the Android app's database and bridge
 - `android` — the Capacitor Android project
 - `src/shared` — types and channel names used by both sides
 

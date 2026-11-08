@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "include": [
-    "src/renderer/**/*", "src/preload/*.d.ts", "src/shared/**/*",
+    "src/web/**/*", "src/preload/*.d.ts", "src/shared/**/*",
     "src/main/sql_database.ts", "src/main/task_database.ts", "src/main/sync_engine.ts", "src/main/sync_client.ts"
   ],
   "compilerOptions": {
@@ -10,6 +10,6 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": [],
     "jsx": "react-jsx",
-    "paths": { "@renderer/*": ["./src/renderer/*"], "@shared/*": ["./src/shared/*"] }
+    "paths": { "@web/*": ["./src/web/*"], "@shared/*": ["./src/shared/*"] }
   }
 }

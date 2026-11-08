@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { GTG_SYNTAX } from '../../src/renderer/syntax/gtg.ts'
-import type { QuickAdd } from '../../src/renderer/syntax/types.ts'
+import { GTG_SYNTAX } from '../../src/web/syntax/gtg.ts'
+import type { QuickAdd } from '../../src/web/syntax/types.ts'
 import { CONTEXT } from './context.ts'
 
 // ============================================================================

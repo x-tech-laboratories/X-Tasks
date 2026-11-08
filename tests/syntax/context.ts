@@ -1,4 +1,4 @@
-import type { SyntaxContext } from '../../src/renderer/syntax/types.ts'
+import type { SyntaxContext } from '../../src/web/syntax/types.ts'
 import { make_group, make_tag } from '../fixtures.ts'
 
 // ============================================================================

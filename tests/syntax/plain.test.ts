@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { PLAIN_SYNTAX } from '../../src/renderer/syntax/plain.ts'
-import { syntax_by_id } from '../../src/renderer/syntax/index.ts'
+import { PLAIN_SYNTAX } from '../../src/web/syntax/plain.ts'
+import { syntax_by_id } from '../../src/web/syntax/index.ts'
 import { CONTEXT } from './context.ts'
 
 // ============================================================================
