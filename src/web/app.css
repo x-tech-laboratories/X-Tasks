@@ -83,16 +83,14 @@ body.contained .sidebar { position: relative; align-self: stretch; min-height: 0
 /* ========================================================================== */
 
 .task_pane { min-width: 0; }
-/* Reading layouts stay a comfortable width; the wide layouts take the whole pane and scroll inside it. */
-.task_pane > * { max-width: 720px; margin-left: auto; margin-right: auto; }
-.task_pane.is_wide > * { max-width: none; margin-left: 0; margin-right: 0; }
+/* Every layout takes the whole pane; the wide ones scroll inside it. */
 .task_pane.is_wide { display: flex; flex-direction: column; height: calc(100vh - var(--frame-height) - 28px - var(--space-7)); }
 .task_pane.is_wide > * { flex: none; }
 .task_pane.is_wide > :is(.table-wrap, .board_view, .calendar_view, .gantt_view) { flex: 1 1 auto; min-height: 0; }
 .task_pane.is_wide.is_table > .table-wrap { flex: 0 1 auto; }
 
 /* The title, the date and the count of tasks left share one line with the view's buttons. */
-.task_pane > .page-head { max-width: none; margin-left: 0; margin-right: 0; margin-bottom: var(--space-6); }
+.task_pane > .page-head { margin-bottom: var(--space-6); }
 .task_pane > .page-head .head-actions { margin-left: auto; }
 .task_pane > .page-head .page-title { align-items: baseline; }
 .task_pane > .page-head .page-identity > div { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-5); }
