@@ -30,7 +30,7 @@
     "@fastify/static": "^10.1.10",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
-    "@x-tech-laboratories/halon": "^0.6.0",
+    "@x-tech-laboratories/halon": "^0.7.0",
     "@x-tech-laboratories/x-libs": "^0.14.0",
     "fastify": "^5.12.8",
     "frappe-gantt": "1.2.2",

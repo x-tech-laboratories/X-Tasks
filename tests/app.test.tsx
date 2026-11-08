@@ -10,6 +10,13 @@ import { make_group, make_tag, make_task } from './fixtures.ts'
 
 afterEach(cleanup)
 
+// jsdom lays nothing out, so nothing is ever resized; the table measures its pane with one.
+globalThis.ResizeObserver ??= class {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
 // ============================================================================
 // Setup
 // ============================================================================

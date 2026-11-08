@@ -14,6 +14,8 @@ import { undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/t
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
+// A file of its own rather than inlined, since the page's policy allows no data: images.
+import app_icon from '../../resources/icon.svg?no-inline'
 import { BACK_EVENT } from './back_navigation'
 import { BoardView, DONE_COLUMN, NO_TAG_COLUMN, OPEN_COLUMN, date_columns, status_columns, tag_columns } from './BoardView'
 import { CalendarView } from './CalendarView'
@@ -1159,6 +1161,7 @@ export function App() {
   return (
     <Shell
       brand="X-Tasks"
+      brand_icon={app_icon}
       brand_href="?"
       theme={theme}
       tools={multibar}
