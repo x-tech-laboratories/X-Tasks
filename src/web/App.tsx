@@ -1108,6 +1108,7 @@ export function App() {
       {layout === 'gantt' && visible_tasks.length > 0 && (
         <GanttView
           rows={shown_rows}
+          tasks={tasks}
           waits_on={waits_on}
           scale={view_layout.gantt_scale}
           selected_task_id={selected_task_id}
