@@ -1118,6 +1118,7 @@ export function App() {
           hidden_columns={settings.hidden_table_columns}
           shown_columns={settings.shown_table_columns}
           column_widths={settings.table_column_widths}
+          scrolls_sideways={settings.scroll_table_sideways}
           sort={settings.table_sort}
           filters={table_filters}
           collapsed_ids={settings.collapsed_task_ids}

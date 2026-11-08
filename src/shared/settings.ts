@@ -185,6 +185,8 @@ export interface Settings {
   shown_table_columns: string[]
   // Widths in pixels of table columns dragged away from their default; the title takes whatever room is left.
   table_column_widths: Record<string, number>
+  // When set, the task table keeps its columns at their set widths and scrolls sideways instead of shrinking them to fit.
+  scroll_table_sideways: boolean
   // The order of the sections in a task's details; sections for groups added since come just after the one before them.
   task_detail_order: string[]
   // The sections left out of a task's details.
@@ -256,6 +258,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hidden_table_columns: [],
   shown_table_columns: [],
   table_column_widths: {},
+  scroll_table_sideways: false,
   task_detail_order: [],
   hidden_task_detail_sections: [],
   sidebar_width: 248,
