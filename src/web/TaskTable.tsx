@@ -10,7 +10,7 @@ import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import type { RepeatOccurrence, TaskGroup } from './dates'
 import {
-  COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, STREAK_FILTER_CHOICES, date_filter_choices, default_column_width, group_column,
+  COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, MARK_FILTER_CHOICES, NO_TAG_FILTER, STREAK_FILTER_CHOICES, date_filter_choices, default_column_width, group_column,
   has_table_filters, is_column_filtered, is_column_shown, is_date_column, is_mark_column, table_sort_value, tag_ranks, type SortContext, type TableColumn,
   type TableFilters
 } from './table'
@@ -102,9 +102,9 @@ export function TaskTable(props: TaskTableProps) {
     if (column === 'due') return 'Due'
     if (column === 'done') return 'Done'
     if (column === 'duration') return 'Duration'
-    if (column === 'my_day') return 'My Day'
-    if (column === 'notes') return 'Notes'
-    if (column === 'repeats') return 'Repeats'
+    if (column === 'my_day') return '☀'
+    if (column === 'notes') return '≡'
+    if (column === 'repeats') return '↻'
     if (column === 'streak') return 'Streak'
     if (column === 'history') return 'History'
     return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
@@ -121,7 +121,7 @@ export function TaskTable(props: TaskTableProps) {
     )
   }
 
-  // The title filters by typed text; the dates, duration, streak and each group pick one choice from a list; the marks and history do not filter.
+  // The title filters by typed text; the dates, duration, streak and each group pick one choice from a list; history does not.
   function filter_of(column: TableColumn): ((close: () => void) => ReactNode) | undefined {
     const set = (change: Partial<TableFilters>) => props.on_filters_change({ ...filters, ...change })
     if (column === 'title') {
@@ -132,7 +132,8 @@ export function TaskTable(props: TaskTableProps) {
     if (is_date_column(column)) return choices(date_filter_choices(column), filters.dates[column] ?? 'any', (value) => set({ dates: { ...filters.dates, [column]: value } }))
     if (column === 'duration') return choices(DURATION_FILTER_CHOICES, filters.duration, (duration) => set({ duration }))
     if (column === 'streak') return choices(STREAK_FILTER_CHOICES, filters.streak, (streak) => set({ streak }))
-    if (is_mark_column(column) || column === 'history') return undefined
+    if (is_mark_column(column)) return choices(MARK_FILTER_CHOICES[column], filters.marks[column] ?? 'any', (value) => set({ marks: { ...filters.marks, [column]: value } }))
+    if (column === 'history') return undefined
 
     const group_id = column.slice('group:'.length)
     const tag_choices = [

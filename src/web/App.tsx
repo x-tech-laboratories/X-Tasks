@@ -674,7 +674,7 @@ export function App() {
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
   const is_filtered = is_table && has_table_filters(table_filters)
   const is_sorted = is_table && settings.table_sort.length > 0
-  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of)) : visible_tasks
+  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of, (each) => is_in_my_day(each, shown_since))) : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
   const waits_on = waits_on_by_task(tasks, settings.task_relationships)
   // A completed task with an open subtask stays, and one whose parent is cleared goes with that parent.

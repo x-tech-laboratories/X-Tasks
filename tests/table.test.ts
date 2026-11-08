@@ -132,6 +132,17 @@ describe('task_passes_filters', () => {
     expect(passes(task, { title: 'shop' })).toBe(false)
   })
 
+  test('mark filters keep the tasks with or without the mark', () => {
+    const noted = make_task({ id: 'noted', notes: 'Call first' })
+    const plain = make_task({ id: 'plain', notes: '' })
+    const keep = (task: Task, filters: Partial<TableFilters>) => task_passes_filters(task, { ...EMPTY_TABLE_FILTERS, ...filters }, [task], tags, () => null, TODAY, 'due', () => null, (each) => each.id === 'plain')
+    expect(keep(noted, { marks: { notes: 'with' } })).toBe(true)
+    expect(keep(plain, { marks: { notes: 'with' } })).toBe(false)
+    expect(keep(plain, { marks: { notes: 'without' } })).toBe(true)
+    expect(keep(plain, { marks: { my_day: 'with' } })).toBe(true)
+    expect(keep(noted, { marks: { my_day: 'with' } })).toBe(false)
+  })
+
   test('date filters compare the day part against today', () => {
     const yesterday = make_task({ id: 'y', due_at: '2026-03-10' })
     const today = make_task({ id: 't', due_at: '2026-03-11T08:00' })

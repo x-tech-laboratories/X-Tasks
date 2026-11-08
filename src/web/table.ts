@@ -202,21 +202,32 @@ export const STREAK_FILTER_CHOICES: { value: StreakFilter; label: string }[] = [
   { value: 'untracked', label: 'Not tracked' }
 ]
 
+// A mark filter keeps the tasks that have the mark, or the ones that lack it.
+export type MarkFilter = 'any' | 'with' | 'without'
+
+export const MARK_FILTER_CHOICES: Record<MarkColumn, { value: MarkFilter; label: string }[]> = {
+  my_day: [{ value: 'any', label: 'Any' }, { value: 'with', label: 'In My Day' }, { value: 'without', label: 'Not in My Day' }],
+  notes: [{ value: 'any', label: 'Any' }, { value: 'with', label: 'Has notes' }, { value: 'without', label: 'No notes' }],
+  repeats: [{ value: 'any', label: 'Any' }, { value: 'with', label: 'Repeats' }, { value: 'without', label: 'Does not repeat' }]
+}
+
 // A group filter is empty for any tag, "none" for tasks without one, or a tag id that matches that tag and the tags below it.
 export interface TableFilters {
   title: string
   dates: Partial<Record<DateColumn, DateFilter>>
   duration: DurationFilter
   streak: StreakFilter
+  marks: Partial<Record<MarkColumn, MarkFilter>>
   group_tag_ids: Record<string, string>
 }
 
 export const NO_TAG_FILTER = 'none'
 
-export const EMPTY_TABLE_FILTERS: TableFilters = { title: '', dates: {}, duration: 'any', streak: 'any', group_tag_ids: {} }
+export const EMPTY_TABLE_FILTERS: TableFilters = { title: '', dates: {}, duration: 'any', streak: 'any', marks: {}, group_tag_ids: {} }
 
 export function has_table_filters(filters: TableFilters): boolean {
   return filters.title.trim() !== '' || Object.values(filters.dates).some((filter) => filter !== 'any') || filters.duration !== 'any' || filters.streak !== 'any' ||
+    Object.values(filters.marks).some((filter) => filter !== 'any') ||
     Object.values(filters.group_tag_ids).some(Boolean)
 }
 
@@ -225,7 +236,8 @@ export function is_column_filtered(filters: TableFilters, column: TableColumn): 
   if (is_date_column(column)) return (filters.dates[column] ?? 'any') !== 'any'
   if (column === 'duration') return filters.duration !== 'any'
   if (column === 'streak') return filters.streak !== 'any'
-  if (is_mark_column(column) || column === 'history') return false
+  if (is_mark_column(column)) return (filters.marks[column] ?? 'any') !== 'any'
+  if (column === 'history') return false
   return Boolean(filters.group_tag_ids[group_id_of(column)!])
 }
 
@@ -235,7 +247,8 @@ export function without_column_filter(filters: TableFilters, column: TableColumn
   if (is_date_column(column)) return { ...filters, dates: { ...filters.dates, [column]: 'any' } }
   if (column === 'duration') return { ...filters, duration: 'any' }
   if (column === 'streak') return { ...filters, streak: 'any' }
-  if (is_mark_column(column) || column === 'history') return filters
+  if (is_mark_column(column)) return { ...filters, marks: { ...filters.marks, [column]: 'any' } }
+  if (column === 'history') return filters
   return { ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id_of(column)!]: '' } }
 }
 
@@ -248,7 +261,8 @@ export function task_passes_filters(
   streak_of: StreakOf,
   today: string,
   date_field: TaskDateField,
-  last_done_of: LastDoneOf
+  last_done_of: LastDoneOf,
+  is_in_my_day: (task: Task) => boolean = () => false
 ): boolean {
   const title_text = filters.title.trim().toLocaleLowerCase()
   if (title_text && !task.title.toLocaleLowerCase().includes(title_text)) return false
@@ -259,6 +273,11 @@ export function task_passes_filters(
   }
   if (!duration_passes(task_duration_minutes(task), filters.duration)) return false
   if (!streak_passes(streak_of(task), filters.streak)) return false
+  for (const [column, filter] of Object.entries(filters.marks) as [MarkColumn, MarkFilter][]) {
+    if (filter === 'any') continue
+    const has_mark = column === 'my_day' ? is_in_my_day(task) : column === 'notes' ? Boolean(task.notes) : Boolean(task.recurrence)
+    if (has_mark !== (filter === 'with')) return false
+  }
 
   return Object.entries(filters.group_tag_ids).every(([group_id, tag_id]) => {
     if (!tag_id) return true
