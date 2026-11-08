@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { Tree, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/react/tree'
@@ -256,15 +257,15 @@ export function Sidebar({
             <a
               key={view.kind}
               href={`?view=${view.kind}`}
-              className={is_active ? 'active' : undefined}
+              className={cx('tree-row', is_active && 'active')}
               aria-current={is_active ? 'page' : undefined}
               onClick={(event) => {
                 event.preventDefault()
                 on_select_view(view)
               }}
             >
-              <span>{label}</span>
-              {count > 0 && <span className="sidebar_count">{count}</span>}
+              <span className="tree-label">{label}</span>
+              {count > 0 && <span className="tree-extra sidebar_count">{count}</span>}
             </a>
           )
         })}
@@ -309,14 +310,14 @@ export function SidebarFoot({ is_settings_open, on_open_settings }: SidebarFootP
       <SyncButton on_open_settings={on_open_settings} />
       <a
         href="?settings"
-        className={is_settings_open ? 'active' : undefined}
+        className={cx('tree-row', is_settings_open && 'active')}
         aria-current={is_settings_open ? 'page' : undefined}
         onClick={(event) => {
           event.preventDefault()
           on_open_settings()
         }}
       >
-        <span className="sidebar_icon_label">
+        <span className="tree-label sidebar_icon_label">
           <CogIcon />
           <span>Settings</span>
         </span>
@@ -338,7 +339,7 @@ function CogIcon() {
 // Two circling arrows for the sync button; they turn while a sync runs.
 function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
   return (
-    <svg className={is_spinning ? 'sidebar_icon is_spinning' : 'sidebar_icon'} viewBox="0 0 24 24" aria-hidden="true">
+    <svg className={cx('sidebar_icon', is_spinning && 'is_spinning')} viewBox="0 0 24 24" aria-hidden="true">
       <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
       <path d="M3 21v-5h5" />
       <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
@@ -394,12 +395,12 @@ function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
   }
 
   return (
-    <button className={needs_user ? 'sync_button tone-bad' : 'sync_button'} title={sync_tooltip(status)} disabled={status.state === 'syncing'} onClick={click}>
-      <span className="sidebar_icon_label">
+    <button className={cx('tree-row sync_button', needs_user && 'tone-bad')} title={sync_tooltip(status)} disabled={status.state === 'syncing'} onClick={click}>
+      <span className="tree-label sidebar_icon_label">
         <SyncIcon is_spinning={status.state === 'syncing'} />
         <span>{sync_label(status)}</span>
       </span>
-      {status.pending_changes > 0 && <span className="sidebar_count">{status.pending_changes} pending</span>}
+      {status.pending_changes > 0 && <span className="tree-extra sidebar_count">{status.pending_changes} pending</span>}
     </button>
   )
 }

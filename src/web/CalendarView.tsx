@@ -8,6 +8,7 @@ import 'fullcalendar/themes/classic/theme.css'
 import 'fullcalendar/themes/classic/palette.css'
 import { useEffect, useRef, useState } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { Segmented } from '@x-tech-laboratories/x-libs/web/react/controls'
 import type { CalendarSpan, TaskDateField } from '@shared/settings'
 import { days_between, format_local, has_time } from '@x-tech-laboratories/x-libs/dates'
@@ -140,7 +141,7 @@ function task_event(task: Task, tags: Tag[], selected_task_id: string | null): E
   if (!span) return []
   const is_all_day = !has_time(span.start) && !has_time(span.end)
   const is_single = span.start === span.end
-  const class_names = [task.is_done ? 'is_done' : '', task.id === selected_task_id ? 'is_selected' : ''].filter(Boolean).join(' ')
+  const class_names = cx(task.is_done && 'is_done', task.id === selected_task_id && 'is_selected')
 
   return [{
     id: task.id,

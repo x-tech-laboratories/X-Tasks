@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { set_drag_badge } from '@x-tech-laboratories/x-libs/web/drag'
 import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
 import type { TaskDateField } from '@shared/settings'
@@ -148,7 +149,7 @@ export function DateLabel({ task, column, actions }: { task: Task; column: DateC
   if (!date) return null
   const is_late = (column === 'date' || column === 'due') && !task.is_done && is_overdue(date)
   return (
-    <span className={is_late ? 'due_label is_overdue' : 'due_label'}>
+    <span className={cx('due_label', is_late && 'is_overdue')}>
       {column === 'date' && task.is_done && task.done_at ? 'Done ' : ''}
       {relative_day_label(date)}
     </span>
@@ -231,10 +232,10 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   }
 
   const is_picked = actions.is_picked(task)
-  const row_class = [
+  const row_class = cx(
     'task', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', is_picked && 'is_picked',
     is_picked && actions.is_dragging_picked && 'is_dragged', actions.tint_rows && row_tint_style(task, actions) && 'has_tint', shown_placement && `drop-${shown_placement}`
-  ].filter(Boolean).join(' ')
+  )
 
   return (
     <li className="task_item">

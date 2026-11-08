@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
@@ -103,7 +104,7 @@ export function TaskDetail({
         </button>
       </header>
 
-      <button className={is_in_my_day ? 'accent solid' : undefined} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
+      <button className={cx('my_day_button', is_in_my_day && 'accent solid')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
         {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
       </button>
 

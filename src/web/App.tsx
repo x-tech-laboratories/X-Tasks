@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { theme_choice, type Theme } from '@x-tech-laboratories/x-libs/web/theme'
 import { SearchBox, Segmented } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, SelectionBar } from '@x-tech-laboratories/x-libs/web/react/layout'
@@ -1131,7 +1132,7 @@ export function App() {
           {is_grouped
             ? task_groups.map((group) => (
                 <li key={group.key} className="task_group">
-                  <h2 className={is_grouped_by_date && group.key === 'overdue' ? 'group_heading is_overdue' : 'group_heading'}>
+                  <h2 className={cx('group_heading', is_grouped_by_date && group.key === 'overdue' && 'is_overdue')}>
                     {group.label}
                     <span className="group_count">{group.nodes.length + group.repeats.length}</span>
                   </h2>
@@ -1171,12 +1172,12 @@ export function App() {
       }}
       menu_open={is_sidebar_open}
       on_menu_open_change={set_is_sidebar_open}
-      main_class={selected_task ? 'task_main has_detail' : 'task_main'}
+      main_class={cx('task_main', selected_task && 'has_detail')}
       view_key={is_settings_open ? 'settings' : view_key(selected_view)}
     >
       <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
       <div className="task_panes" style={{ '--detail-width': `${settings.detail_width}px` } as CSSProperties}>
-        <div className={is_wide && !is_settings_open ? `task_pane is_wide is_${layout}` : 'task_pane'}>{task_pane}</div>
+        <div className={cx('task_pane', is_wide && !is_settings_open && `is_wide is_${layout}`)}>{task_pane}</div>
 
         {selected_task && (
           <div className="detail_pane">

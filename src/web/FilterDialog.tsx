@@ -289,7 +289,7 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
     <Dialog
       title={heading}
       on_close={on_close}
-      wide={is_rule}
+      class_name={is_rule ? 'rule_dialog' : undefined}
       buttons={
         <>
           <span className="muted dialog_count">{count_text()}</span>

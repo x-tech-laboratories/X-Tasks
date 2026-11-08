@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
+
 import type { Tag } from '@shared/tasks'
 import { tag_color_style, with_icon } from './views'
 
@@ -18,7 +20,7 @@ interface TagChipProps {
 
 // A tag as a chip in its own colour, with a button to take it off when it can be.
 export function TagChip({ tag, label = tag.name, title, on_remove }: TagChipProps) {
-  const class_name = ['chip', 'tag_chip', tag.color && 'has_color', tag.rule && 'is_rule'].filter(Boolean).join(' ')
+  const class_name = cx('chip', 'tag_chip', tag.color && 'has_color', tag.rule && 'is_rule')
   return (
     <span className={class_name} style={tag_color_style(tag) as CSSProperties | undefined} title={title}>
       {with_icon(tag, label)}

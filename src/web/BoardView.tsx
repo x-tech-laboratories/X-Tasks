@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 
 import type { TaskDateField } from '@shared/settings'
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { is_overdue, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import { task_date_of } from '@shared/schedule'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
@@ -82,7 +83,7 @@ export function BoardView({ columns, actions, column_group_id, open_dependency_c
       {columns.map((column) => (
         <section
           key={column.key}
-          className={['board_column', drop_key === column.key && 'is_drop_target'].filter(Boolean).join(' ')}
+          className={cx('board_column', drop_key === column.key && 'is_drop_target')}
           onDragOver={(event) => {
             if (!dragged || !column.accepts_drop || column.key === dragged.from_key) return
             event.preventDefault()
@@ -93,7 +94,7 @@ export function BoardView({ columns, actions, column_group_id, open_dependency_c
           }}
           onDrop={() => drop(column)}
         >
-          <h2 className={column.key === 'overdue' ? 'board_column_heading is_overdue' : 'board_column_heading'}>
+          <h2 className={cx('board_column_heading', column.key === 'overdue' && 'is_overdue')}>
             {column.label}
             <span className="group_count">{column.nodes.length}</span>
           </h2>
@@ -140,9 +141,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
   const date = task_date_of(task, actions.date_field)
   const done_children = children.filter((child) => child.task.is_done).length
 
-  const card_class = [
-    'board_card', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', actions.is_picked(task) && 'is_picked', tint_tag && 'has_tint'
-  ].filter(Boolean).join(' ')
+  const card_class = cx('board_card', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', actions.is_picked(task) && 'is_picked', tint_tag && 'has_tint')
 
   return (
     <li
@@ -167,7 +166,7 @@ function BoardCard({ node, actions, column_group_id, waiting_count, on_drag_star
         <span className="task_title">{task.title}</span>
       </div>
       <div className="board_card_details">
-        {date && <span className={!task.is_done && is_overdue(date) ? 'due_label is_overdue' : 'due_label'}>{relative_day_label(date)}</span>}
+        {date && <span className={cx('due_label', !task.is_done && is_overdue(date) && 'is_overdue')}>{relative_day_label(date)}</span>}
         {task.recurrence && <span className="task_mark" title="Repeats">↻</span>}
         {task.notes && <span className="task_mark" title="Has notes">≡</span>}
         {children.length > 0 && <span className="subtask_count" title="Subtasks done">{done_children}/{children.length}</span>}

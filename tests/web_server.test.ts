@@ -50,7 +50,7 @@ describe('signing in', () => {
   it('sends a browser without a session to the login page', async () => {
     const response = await app.inject({ method: 'GET', url: '/' })
     expect(response.statusCode).toBe(303)
-    expect(response.headers.location).toBe('login')
+    expect(response.headers.location).toBe('/login')
   })
 
   it('refuses an API call without a session in plain words', async () => {
@@ -68,7 +68,7 @@ describe('signing in', () => {
   it('sets the session cookie on the right token and sends the browser to the page', async () => {
     const response = await sign_in(ACCESS_TOKEN)
     expect(response.statusCode).toBe(303)
-    expect(response.headers.location).toBe('./')
+    expect(response.headers.location).toBe('/')
     const cookie = response.cookies.find((candidate) => candidate.name === SESSION_COOKIE)
     expect(cookie?.httpOnly).toBe(true)
     expect(cookie?.sameSite).toBe('Strict')

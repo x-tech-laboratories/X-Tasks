@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
+import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { MenuList } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
 import { SearchBox } from '@x-tech-laboratories/x-libs/web/react/controls'
@@ -241,10 +242,7 @@ export function TaskTable(props: TaskTableProps) {
     if (row.kind === 'repeat') return 'task_row is_repeat'
     const task = row.node.task
     const is_picked = actions.is_picked(task)
-    return [
-      'task_row', task.is_done && 'is_done', is_picked && 'is_picked',
-      is_picked && actions.is_dragging_picked && 'is_dragged', row_tint_style(task, actions) && 'has_tint'
-    ].filter(Boolean).join(' ')
+    return cx('task_row', task.is_done && 'is_done', is_picked && 'is_picked', is_picked && actions.is_dragging_picked && 'is_dragged', row_tint_style(task, actions) && 'has_tint')
   }
 
   return (
@@ -255,6 +253,7 @@ export function TaskTable(props: TaskTableProps) {
       row_key={row_key}
       row_selected={(row) => row.kind === 'task' && actions.selected_task_id === row.node.task.id}
       caption="Tasks"
+      wrap_class="scroll"
       sorting={sorting}
       on_sorting_change={(next) => props.on_sort_change(next.map((key) => ({ column: key.key as TableColumn, is_descending: key.descending })))}
       column_order={all_columns}

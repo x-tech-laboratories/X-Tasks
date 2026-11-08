@@ -39,14 +39,16 @@ html.follows_host_theme {
 
 /* The sidebar scrolls its views and tags while its foot stays at the bottom. */
 .sidebar { overflow-y: auto; }
-.sidebar_views { display: flex; flex-direction: column; gap: var(--border-width); margin-bottom: var(--space-4); }
-.sidebar_views a, .sidebar_foot a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.sidebar_foot { display: flex; flex-direction: column; gap: var(--border-width); margin-top: auto; padding-top: var(--space-4); }
-.sidebar_count { flex: none; color: var(--text-tertiary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+.sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-4); border-bottom: var(--border-width) solid var(--border-default); }
+.sidebar_foot { display: flex; flex-direction: column; gap: var(--space-1); margin-top: auto; padding-top: var(--space-4); }
+/* The view and Settings links are tree rows like the tags, and the open one is raised the way a picked tree row is. */
+.sidebar_views a, .sidebar_foot a { text-decoration: none; cursor: pointer; }
+.sidebar_views a.active, .sidebar_foot a.active { background-color: var(--surface-default); color: var(--text-heading); box-shadow: var(--shadow-item); font-weight: 500; }
+.sidebar_count { font-variant-numeric: tabular-nums; }
 .sidebar_icon_label { display: inline-flex; align-items: center; gap: var(--space-3); }
 .sidebar_icon { width: var(--icon-size-small); height: var(--icon-size-small); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sidebar_icon.is_spinning { animation: spin 1s linear infinite; }
-.sync_button { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-color: transparent; background: transparent; }
+.sync_button { width: 100%; height: auto; border-color: transparent; background: transparent; font-weight: 400; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -64,14 +66,22 @@ html.follows_host_theme {
 .task_panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
 .task_main.has_detail .task_panes { grid-template-columns: minmax(0, 1fr) var(--detail-width); }
 .task_pane { min-width: 0; }
+/* Reading layouts stay a comfortable width; the table takes the whole pane and scrolls in its own box. */
+.task_pane > * { max-width: 720px; margin-left: auto; margin-right: auto; }
+.task_pane.is_table > * { max-width: none; margin-left: 0; margin-right: 0; }
+.task_pane.is_wide.is_table { display: flex; flex-direction: column; max-height: calc(100vh - var(--frame-height) - 28px - var(--space-7)); }
+.task_pane.is_wide.is_table > * { flex: none; }
+.task_pane.is_wide.is_table > .table-wrap { flex: 0 1 auto; min-height: 0; }
 .detail_pane {
   position: sticky;
   top: calc(var(--frame-height) + var(--space-4));
   align-self: start;
   max-height: calc(100vh - var(--frame-height) - var(--space-8));
   overflow-y: auto;
-  padding-left: var(--space-5);
-  border-left: var(--border-width) solid var(--border-default);
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-default);
+  background: var(--surface-secondary);
 }
 .detail_pane > .detail_resize { position: absolute; top: 0; bottom: 0; left: 0; }
 
@@ -81,7 +91,7 @@ html.follows_host_theme {
 @media (max-width: 768px) {
   .task_main.has_detail .task_panes { grid-template-columns: minmax(0, 1fr); }
   .task_main.has_detail .task_pane { display: none; }
-  .detail_pane { position: static; max-height: none; padding-left: 0; border-left: 0; }
+  .detail_pane { position: static; max-height: none; padding: 0; border: 0; background: transparent; }
   .detail_pane > .detail_resize { display: none; }
 }
 
@@ -175,7 +185,8 @@ html.follows_host_theme {
 .task_detail { display: flex; flex-direction: column; gap: var(--space-5); padding-bottom: var(--space-6); }
 .task_detail .field { display: flex; }
 .task_detail_header { display: flex; align-items: center; gap: var(--space-3); }
-.task_detail_title { flex: 1; min-width: 0; font-size: var(--text-h3); font-weight: 600; }
+.task_detail_header input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
+.my_day_button { align-self: flex-start; }
 .task_detail_notes textarea { min-height: 120px; resize: vertical; }
 .task_detail_footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .relationship_group { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -186,6 +197,7 @@ html.follows_host_theme {
 /* Dialogs                                                                    */
 /* ========================================================================== */
 
+.dialog.rule_dialog { width: min(640px, calc(100vw - 2 * var(--space-6))); }
 .dialog_form { display: flex; flex-direction: column; gap: var(--space-5); }
 .dialog_form .field { display: flex; }
 .dialog_count { margin-right: auto; align-self: center; }

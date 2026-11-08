@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import './dom_stubs.ts'
+import '@x-tech-laboratories/x-libs/web/react/test_stubs'
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
