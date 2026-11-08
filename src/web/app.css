@@ -467,11 +467,9 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 /* Every scroll bar is Halon's 10px thumb: the standard properties would swap it for the system's own bar, arrows and shading included. */
 * { scrollbar-width: auto; scrollbar-color: auto; }
 
-/* A table fits its pane instead of scrolling sideways: the task takes 30% and the other columns share the rest, cutting off what does not fit. */
-.task_pane > .table-wrap { overflow-x: hidden; }
+/* The table's columns shrink to fit its pane (see TaskTable), cutting off what does not fit. */
 .task_pane > .table-wrap > table { table-layout: fixed; }
-.task_pane > .table-wrap :is(th, td) { width: auto !important; min-width: 0 !important; max-width: none !important; overflow: hidden; text-overflow: ellipsis; }
-.task_pane > .table-wrap thead th:first-child { width: 30% !important; }
+.task_pane > .table-wrap :is(th, td) { overflow: hidden; text-overflow: ellipsis; }
 .task_pane > .table-wrap th > button.sort { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* The column picker sits past the last heading instead of over it. */

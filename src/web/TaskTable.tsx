@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { MenuList } from '@x-tech-laboratories/x-libs/web/react/menus'
@@ -78,6 +78,10 @@ interface TaskTableProps {
 }
 
 // The table layout: each column sorts, filters from its funnel, moves, resizes and hides, and subtasks nest under their tasks.
+// The room the task column keeps before the other columns shrink, and the narrowest a shrunk column gets.
+const TITLE_ROOM = 280
+const MIN_SCALED_WIDTH = 40
+
 export function TaskTable(props: TaskTableProps) {
   const { tree, groups, actions, tags, tag_groups, filters } = props
   const [adding_subtask_to, set_adding_subtask_to] = useState<string | null>(null)
@@ -186,7 +190,7 @@ export function TaskTable(props: TaskTableProps) {
     sort: (row) => (row.kind === 'task' ? table_sort_value(row.node.task, column, sort_context, is_descending(column)) : null),
     class: column === 'title' ? 'title_column' : is_date_column(column) || column === 'duration' ? 'date_column' : undefined,
     width: column === 'title' ? undefined : default_column_width(column),
-    min_width: COLUMN_WIDTH_RANGE.min,
+    min_width: Math.min(COLUMN_WIDTH_RANGE.min, MIN_SCALED_WIDTH),
     max_width: COLUMN_WIDTH_RANGE.max,
     hideable: column !== 'title',
     movable: column !== 'title',
@@ -199,6 +203,23 @@ export function TaskTable(props: TaskTableProps) {
   // ==========================================================================
 
   const hidden = props.column_order.filter((column) => !is_column_shown(column, props.hidden_columns, props.shown_columns))
+
+  // The set widths shrink together when they would not leave the task its room, so the table fits the pane; widths dragged then are scaled back up to keep.
+  const [pane, set_pane] = useState<HTMLElement | null>(null)
+  const [pane_width, set_pane_width] = useState(0)
+  useEffect(() => {
+    if (!pane) return
+    const observer = new ResizeObserver(() => set_pane_width(pane.clientWidth))
+    observer.observe(pane)
+    return () => observer.disconnect()
+  }, [pane])
+  const set_widths = Object.fromEntries(props.column_order.filter((column) => !hidden.includes(column)).map((column) => [column, props.column_widths[column] ?? default_column_width(column)]))
+  const set_total = Object.values(set_widths).reduce((sum, width) => sum + width, 0)
+  const scale = pane_width > 0 && set_total > 0 ? Math.min(1, Math.max(0, pane_width - TITLE_ROOM) / set_total) : 1
+  const shown_widths = scale === 1 ? props.column_widths : Object.fromEntries(Object.entries(set_widths).map(([column, width]) => [column, Math.max(MIN_SCALED_WIDTH, Math.round(width * scale))]))
+  function change_widths(widths: Record<string, number>, done: boolean): void {
+    props.on_column_widths_change(scale === 1 ? widths : Object.fromEntries(Object.entries(widths).map(([column, width]) => [column, Math.round(width / scale)])), done)
+  }
 
   function change_hidden(next_hidden: string[]): void {
     for (const column of props.column_order) {
@@ -246,45 +267,48 @@ export function TaskTable(props: TaskTableProps) {
   }
 
   return (
-    <DataTable<TableRow>
-      columns={columns}
-      rows={rows}
-      groups={row_groups}
-      row_key={row_key}
-      row_selected={(row) => row.kind === 'task' && actions.selected_task_id === row.node.task.id}
-      caption="Tasks"
-      wrap_class="scroll"
-      sorting={sorting}
-      on_sorting_change={(next) => props.on_sort_change(next.map((key) => ({ column: key.key as TableColumn, is_descending: key.descending })))}
-      column_order={all_columns}
-      on_column_order_change={(order) => props.on_column_order_change(order.filter((column) => column !== 'title') as TableColumn[])}
-      column_widths={props.column_widths}
-      on_column_widths_change={props.on_column_widths_change}
-      hidden_columns={hidden}
-      on_hidden_columns_change={change_hidden}
-      on_clear_filters={has_table_filters(filters) ? () => props.on_filters_change(EMPTY_TABLE_FILTERS) : undefined}
-      get_children={(row) => (row.kind === 'task' ? row.node.children.map(task_row) : undefined)}
-      expanded={expanded}
-      on_expanded_change={change_expanded}
-      on_row_click={(row, event) => (row.kind === 'task' ? click_task(row.node.task, actions, event) : actions.on_select(row.repeat.task))}
-      on_row_context_menu={(row, event) => row.kind === 'task' && open_task_menu(row.node.task, actions, event, () => set_adding_subtask_to(row.node.task.id))}
-      row_class={row_class}
-      row_style={(row) => (row.kind === 'task' ? row_tint_style(row.node.task, actions) : undefined)}
-      render_after_row={(row) =>
-        row.kind === 'task' && adding_subtask_to === row.node.task.id ? (
-          <SubtaskForm
-            on_add={(title) => {
-              actions.on_add_subtask(row.node.task, title)
-              if (actions.is_collapsed(row.node.task)) actions.on_set_collapsed(row.node.task, false)
-            }}
-            on_close={() => set_adding_subtask_to(null)}
-          />
-        ) : null
-      }
-      on_row_drag_start={(row, event) => (row.kind === 'task' ? start_task_drag(row.node.task, actions, event) : event.preventDefault())}
-      on_row_drag_end={actions.on_drag_end}
-      can_drop_on_row={(row, placement) => row.kind === 'task' && actions.can_drop_on(task_of(row)) && (placement === 'inside' || actions.can_drop_beside)}
-      on_row_drop={(row, placement) => row.kind === 'task' && actions.on_drop(row.node.task, placement)}
-    />
+    <>
+      <span ref={(probe) => set_pane(probe?.parentElement ?? null)} hidden />
+      <DataTable<TableRow>
+        columns={columns}
+        rows={rows}
+        groups={row_groups}
+        row_key={row_key}
+        row_selected={(row) => row.kind === 'task' && actions.selected_task_id === row.node.task.id}
+        caption="Tasks"
+        wrap_class="scroll"
+        sorting={sorting}
+        on_sorting_change={(next) => props.on_sort_change(next.map((key) => ({ column: key.key as TableColumn, is_descending: key.descending })))}
+        column_order={all_columns}
+        on_column_order_change={(order) => props.on_column_order_change(order.filter((column) => column !== 'title') as TableColumn[])}
+        column_widths={shown_widths}
+        on_column_widths_change={change_widths}
+        hidden_columns={hidden}
+        on_hidden_columns_change={change_hidden}
+        on_clear_filters={has_table_filters(filters) ? () => props.on_filters_change(EMPTY_TABLE_FILTERS) : undefined}
+        get_children={(row) => (row.kind === 'task' ? row.node.children.map(task_row) : undefined)}
+        expanded={expanded}
+        on_expanded_change={change_expanded}
+        on_row_click={(row, event) => (row.kind === 'task' ? click_task(row.node.task, actions, event) : actions.on_select(row.repeat.task))}
+        on_row_context_menu={(row, event) => row.kind === 'task' && open_task_menu(row.node.task, actions, event, () => set_adding_subtask_to(row.node.task.id))}
+        row_class={row_class}
+        row_style={(row) => (row.kind === 'task' ? row_tint_style(row.node.task, actions) : undefined)}
+        render_after_row={(row) =>
+          row.kind === 'task' && adding_subtask_to === row.node.task.id ? (
+            <SubtaskForm
+              on_add={(title) => {
+                actions.on_add_subtask(row.node.task, title)
+                if (actions.is_collapsed(row.node.task)) actions.on_set_collapsed(row.node.task, false)
+              }}
+              on_close={() => set_adding_subtask_to(null)}
+            />
+          ) : null
+        }
+        on_row_drag_start={(row, event) => (row.kind === 'task' ? start_task_drag(row.node.task, actions, event) : event.preventDefault())}
+        on_row_drag_end={actions.on_drag_end}
+        can_drop_on_row={(row, placement) => row.kind === 'task' && actions.can_drop_on(task_of(row)) && (placement === 'inside' || actions.can_drop_beside)}
+        on_row_drop={(row, placement) => row.kind === 'task' && actions.on_drop(row.node.task, placement)}
+      />
+    </>
   )
 }
