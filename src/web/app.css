@@ -61,7 +61,11 @@ html.follows_host_theme {
 .syntax_problem { color: var(--status-danger); }
 
 /* The sidebar fills its row instead of growing with its tags, so they scroll while its foot stays at the bottom and its grab bar on its own edge. */
-body.contained .sidebar { position: relative; top: auto; align-self: stretch; padding-right: 0; padding-left: 0; min-height: 0; overflow: hidden; }
+/* Stretching also makes the phone's fixed drawer span from the top bar to the bottom of the screen, where Halon's start alignment would shrink it to its tags. */
+body.contained .sidebar { align-self: stretch; padding-right: 0; padding-left: 0; min-height: 0; overflow: hidden; }
+@media (min-width: 701px) {
+  body.contained .sidebar { position: relative; top: auto; }
+}
 .sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--border-default); }
 .sidebar_foot { display: flex; flex: none; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
 /* The sidebar's inset sits inside what scrolls, so the scroll bar runs flush with its edge. */
