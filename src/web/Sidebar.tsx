@@ -1,3 +1,5 @@
+import { ThemeButton } from '@x-tech-laboratories/x-libs/web/react/shell'
+import type { ThemeChoice } from '@x-tech-laboratories/x-libs/web/theme'
 import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
@@ -299,15 +301,17 @@ export function Sidebar({
 // ============================================================================
 
 interface SidebarFootProps {
+  theme: ThemeChoice
   is_settings_open: boolean
   on_open_settings: () => void
 }
 
 // The sync button and the way into Settings, at the foot of the sidebar.
-export function SidebarFoot({ is_settings_open, on_open_settings }: SidebarFootProps) {
+export function SidebarFoot({ theme, is_settings_open, on_open_settings }: SidebarFootProps) {
   return (
     <div className="sidebar_foot">
       <SyncButton on_open_settings={on_open_settings} />
+      <ThemeButton choice={theme} />
       <a
         href="?settings"
         className={cx('tree-row', is_settings_open && 'active')}

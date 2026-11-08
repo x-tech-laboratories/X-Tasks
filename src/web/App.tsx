@@ -1155,7 +1155,7 @@ export function App() {
       theme={theme}
       tools={multibar}
       sidebar={sidebar}
-      sidebar_foot={<SidebarFoot is_settings_open={is_settings_open} on_open_settings={open_settings} />}
+      sidebar_foot={<SidebarFoot theme={theme} is_settings_open={is_settings_open} on_open_settings={open_settings} />}
       sidebar_width={{
         default_width: DEFAULT_SETTINGS.sidebar_width,
         min: SIDEBAR_WIDTH_RANGE.min,
@@ -1167,7 +1167,6 @@ export function App() {
       on_menu_open_change={set_is_sidebar_open}
       main_class={cx('task_main', selected_task && 'with-side-pane')}
       contained
-      brand_in_sidebar
       view_key={is_settings_open ? 'settings' : view_key(selected_view)}
     >
       <div className="main-pane">

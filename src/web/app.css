@@ -30,7 +30,15 @@ html.follows_host_theme {
 /* Frame                                                                      */
 /* ========================================================================== */
 
-/* The bar takes the whole top bar. */
+/* The app's name fills the top bar above the sidebar, bordered off from it, so the bar starts in line with the pane. */
+@media (min-width: 701px) {
+  .topbar > .brand { display: flex; flex: none; align-items: center; align-self: stretch; box-sizing: border-box; width: var(--sidebar-width); margin: calc(-1 * var(--space-4)) 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-6)); padding: 0 var(--space-6); border-right: var(--border-width) solid var(--border-default); }
+}
+
+/* The theme button sits in the sidebar's foot instead. */
+.topbar > #theme { display: none; }
+
+/* The bar takes the rest of the top bar. */
 .multibar { display: flex; flex: 1; align-items: center; gap: var(--space-4); min-width: 0; }
 .multibar input.filter { flex: 1; min-width: 0; }
 
