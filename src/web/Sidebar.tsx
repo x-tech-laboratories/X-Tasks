@@ -1,6 +1,7 @@
-import { useEffect, useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
+import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
+import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { Tree, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/react/tree'
 import type { SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
@@ -375,22 +376,21 @@ function sync_tooltip(status: SyncStatus): string {
 
 // Shows when this device last synced and how many changes wait to go out; a click syncs now, or opens settings when sync needs the user.
 function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
-  const [status, set_status] = useState<SyncStatus | null>(null)
+  const sync = use_resource(() => window.x_settings.get_sync_status(), [], { refresh_in_milliseconds: SYNC_STATUS_POLL_MS })
+  // Set while a sync asked for here runs, so the button spins before the next status arrives.
+  const [is_syncing, set_is_syncing] = useState(false)
 
-  useEffect(() => {
-    const refresh = (): void => void window.x_settings.get_sync_status().then(set_status)
-    refresh()
-    const timer = setInterval(refresh, SYNC_STATUS_POLL_MS)
-    return () => clearInterval(timer)
-  }, [])
-
+  const status: SyncStatus | null = sync.data && is_syncing ? { ...sync.data, state: 'syncing' } : sync.data
   if (!status || status.state === 'off') return null
   const needs_user = status.state === 'failed' || status.state === 'needs_setup'
 
   function click(): void {
     if (needs_user) return on_open_settings()
-    set_status({ ...status!, state: 'syncing' })
-    void window.x_settings.sync_now().then(set_status)
+    set_is_syncing(true)
+    void window.x_settings
+      .sync_now()
+      .then(() => sync.reload(true))
+      .finally(() => set_is_syncing(false))
   }
 
   return (

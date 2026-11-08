@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 
 import { MenuList } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
+import { SearchBox } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { DataTable, type RowGroup, type Sorting, type TableColumn as DataColumn } from '@x-tech-laboratories/x-libs/web/react/table'
 import type { TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
@@ -115,15 +116,7 @@ export function TaskTable(props: TaskTableProps) {
     const set = (change: Partial<TableFilters>) => props.on_filters_change({ ...filters, ...change })
     if (column === 'title') {
       return (close) => (
-        <input
-          type="search"
-          className="filter"
-          value={filters.title}
-          onChange={(event) => set({ title: event.currentTarget.value })}
-          onKeyDown={(event) => event.key === 'Enter' && close()}
-          placeholder="Title contains"
-          aria-label="Filter by title"
-        />
+        <SearchBox label="Filter by title" value={filters.title} on_input={(title) => set({ title })} on_submit={close} auto_focus />
       )
     }
     if (is_date_column(column)) return choices(date_filter_choices(column), filters.dates[column] ?? 'any', (value) => set({ dates: { ...filters.dates, [column]: value } }))
@@ -249,7 +242,7 @@ export function TaskTable(props: TaskTableProps) {
     const task = row.node.task
     const is_picked = actions.is_picked(task)
     return [
-      'task_row', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', is_picked && 'is_picked',
+      'task_row', task.is_done && 'is_done', is_picked && 'is_picked',
       is_picked && actions.is_dragging_picked && 'is_dragged', row_tint_style(task, actions) && 'has_tint'
     ].filter(Boolean).join(' ')
   }
@@ -260,6 +253,7 @@ export function TaskTable(props: TaskTableProps) {
       rows={rows}
       groups={row_groups}
       row_key={row_key}
+      row_selected={(row) => row.kind === 'task' && actions.selected_task_id === row.node.task.id}
       caption="Tasks"
       sorting={sorting}
       on_sorting_change={(next) => props.on_sort_change(next.map((key) => ({ column: key.key as TableColumn, is_descending: key.descending })))}

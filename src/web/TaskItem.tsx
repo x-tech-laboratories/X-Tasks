@@ -233,7 +233,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
   const is_picked = actions.is_picked(task)
   const row_class = [
     'task', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', is_picked && 'is_picked',
-    is_picked && actions.is_dragging_picked && 'is_dragged', actions.tint_rows && row_tint_style(task, actions) && 'has_tint', shown_placement && `drop_${shown_placement}`
+    is_picked && actions.is_dragging_picked && 'is_dragged', actions.tint_rows && row_tint_style(task, actions) && 'has_tint', shown_placement && `drop-${shown_placement}`
   ].filter(Boolean).join(' ')
 
   return (

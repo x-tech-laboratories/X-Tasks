@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEve
 
 import { theme_choice, type Theme } from '@x-tech-laboratories/x-libs/web/theme'
 import { SearchBox, Segmented } from '@x-tech-laboratories/x-libs/web/react/controls'
-import { SelectionBar } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { PageHeading, SelectionBar } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import { toggled, with_range } from '@x-tech-laboratories/x-libs/web/selection'
@@ -1007,13 +1007,16 @@ export function App() {
     />
   ) : (
     <>
-      <header className="task_pane_header">
-        <h1>{view_title(selected_view, tags)}</h1>
-        {selected_view.kind === 'my_day' && (
-          <span className="muted">{parse_local(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-        )}
-        <span className="muted remaining_count">{remaining_count} left</span>
-        <span className="toolbar">
+      <PageHeading
+        title={view_title(selected_view, tags)}
+        subtitle={
+          <>
+            {selected_view.kind === 'my_day' && <span>{parse_local(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · </span>}
+            <span className="remaining_count">{remaining_count} left</span>
+          </>
+        }
+        actions={
+          <>
           {selected_view.kind === 'my_day' && visible_tasks.length > 0 && <button onClick={clear_my_day}>Clear</button>}
           {clearable_tasks.length > 0 && (
             <button onClick={() => clear_completed(clearable_tasks)} title="Delete the completed tasks shown here">
@@ -1056,8 +1059,9 @@ export function App() {
             </button>
           )}
           <Segmented label="Layout" choices={TASK_LAYOUT_CHOICES} value={layout} on_change={(value) => pick_layout({ layout: value })} />
-        </span>
-      </header>
+          </>
+        }
+      />
 
       {typed_task?.title && <AddTaskRow quick_add={typed_task} tags={tags} on_add={() => void add_typed_task()} on_cancel={() => set_multibar_text('')} />}
 

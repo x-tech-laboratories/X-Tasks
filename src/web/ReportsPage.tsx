@@ -1,7 +1,7 @@
 import { useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
 import { CommitInput, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
-import { Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { PageHeading, Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
 
 import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind } from '@shared/settings'
@@ -81,15 +81,14 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
 
   return (
     <>
-      <header className="task_pane_header">
-        <h1>Reports</h1>
-        <button
-          className="fit-content"
-          onClick={(event) => open_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, run: () => add_widget(kind) })))}
-        >
-          Add card
-        </button>
-      </header>
+      <PageHeading
+        title="Reports"
+        actions={
+          <button onClick={(event) => open_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, run: () => add_widget(kind) })))}>
+            Add card
+          </button>
+        }
+      />
 
       {widgets.length === 0 && <p className="empty">No cards yet. Add one to see your streaks and ticks.</p>}
 

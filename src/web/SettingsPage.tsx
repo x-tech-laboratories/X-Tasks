@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
-import { RowActions, SettingRow, SettingsGroup, Stack, moved } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { PageHeading, RowActions, SettingRow, SettingsGroup, Stack, moved } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type McpStatus, type OverdueRepeatReschedule, type TrustedCertificate, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
@@ -138,13 +139,9 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_change_relationships, on_add_tag_group }: SettingsPageProps) {
-  const [database_path, set_database_path] = useState('')
+  const database_path = use_resource(() => window.x_settings.get_database_path(), []).data ?? ''
   const [new_group_name, set_new_group_name] = useState('')
   const [is_new_group_rule, set_is_new_group_rule] = useState(false)
-
-  useEffect(() => {
-    void window.x_settings.get_database_path().then(set_database_path)
-  }, [])
 
   function submit_new_group(event: FormEvent): void {
     event.preventDefault()
@@ -157,9 +154,7 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
 
   return (
     <>
-      <header className="task_pane_header">
-        <h1>Settings</h1>
-      </header>
+      <PageHeading title="Settings" />
 
       <SettingsGroup heading="Appearance">
         <SettingRow label="Theme" hint="System follows the light or dark choice of your desktop.">
@@ -751,11 +746,7 @@ interface McpEditorProps {
 
 // Turns the local MCP endpoint on or off, sets its port, and shows the address to give an AI assistant.
 function McpEditor({ settings, on_change }: McpEditorProps) {
-  const [status, set_status] = useState<McpStatus | null>(null)
-
-  useEffect(() => {
-    void window.x_settings.get_mcp_status().then(set_status)
-  }, [settings.mcp_enabled, settings.mcp_port])
+  const status = use_resource(() => window.x_settings.get_mcp_status(), [settings.mcp_enabled, settings.mcp_port]).data
 
   function change_port(text: string): void {
     const port = Math.round(Number(text))
@@ -833,30 +824,27 @@ function error_message(error: unknown): string {
 }
 
 function SyncEditor() {
-  const [status, set_status] = useState<SyncStatus | null>(null)
+  const sync = use_resource(() => window.x_settings.get_sync_status(), [], { refresh_in_milliseconds: SYNC_STATUS_POLL_MS })
+  const status = sync.data
   const [server_url, set_server_url] = useState('')
   const [token, set_token] = useState('')
   const [is_busy, set_is_busy] = useState(false)
   const [error, set_error] = useState('')
 
+  // The address field starts with the saved server, once only, so typing is never overwritten by a later poll.
+  const has_prefilled = useRef(false)
   useEffect(() => {
-    let is_first = true
-    const refresh = (): void =>
-      void window.x_settings.get_sync_status().then((next) => {
-        set_status(next)
-        if (is_first && next.server_url) set_server_url(next.server_url)
-        is_first = false
-      })
-    refresh()
-    const timer = setInterval(refresh, SYNC_STATUS_POLL_MS)
-    return () => clearInterval(timer)
-  }, [])
+    if (has_prefilled.current || !status) return
+    has_prefilled.current = true
+    if (status.server_url) set_server_url(status.server_url)
+  }, [status])
 
   async function run(action: () => Promise<SyncStatus>): Promise<void> {
     set_is_busy(true)
     set_error('')
     try {
-      set_status(await action())
+      await action()
+      await sync.reload(true)
       set_token('')
     } catch (caught) {
       set_error(error_message(caught))
@@ -913,15 +901,12 @@ function SyncEditor() {
 
 // Takes the certificate authority of a server whose certificate this device does not already trust, such as a home server's own.
 function TrustedCertificateEditor({ server_url }: { server_url: string }) {
-  const [saved, set_saved] = useState<TrustedCertificate | null>(null)
+  const trusted = use_resource(() => window.x_settings.get_trusted_certificate(), [])
+  const saved = trusted.data
   const [pem, set_pem] = useState('')
   const [error, set_error] = useState('')
   const [offered, set_offered] = useState<ServerCertificate | null>(null)
   const [is_reading, set_is_reading] = useState(false)
-
-  useEffect(() => {
-    void window.x_settings.get_trusted_certificate().then(set_saved)
-  }, [])
 
   // Reads the authority straight from the server, so it need not be found and pasted by hand.
   async function read_from_server(): Promise<void> {
@@ -941,7 +926,8 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
   async function save(text: string): Promise<void> {
     set_error('')
     try {
-      set_saved(await window.x_settings.set_trusted_certificate(text))
+      await window.x_settings.set_trusted_certificate(text)
+      await trusted.reload(true)
       set_pem('')
     } catch (caught) {
       set_error(error_message(caught))
@@ -977,7 +963,7 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
           server_url={server_url.trim()}
           on_close={() => {
             set_offered(null)
-            void window.x_settings.get_trusted_certificate().then(set_saved)
+            void trusted.reload(true)
           }}
         />
       )}

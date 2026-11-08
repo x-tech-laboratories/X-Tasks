@@ -75,8 +75,7 @@ html.follows_host_theme {
 }
 .detail_pane > .detail_resize { position: absolute; top: 0; bottom: 0; left: 0; }
 
-.task_pane_header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); margin-bottom: var(--space-6); }
-.task_pane_header .toolbar { margin-left: auto; }
+.task_pane > .page-head { margin-bottom: var(--space-6); }
 
 /* On a phone a task's details cover the tasks. */
 @media (max-width: 768px) {
@@ -128,16 +127,13 @@ html.follows_host_theme {
 
 /* Done, opened, picked and tinted rows, the same in the list and the table. */
 .task.is_done .task_title, .task_row.is_done .task_title, .board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
-.task.is_selected, .task_row.is_selected td, .board_card.is_selected { background: var(--surface-navigation-hover); }
+.task.is_selected, .board_card.is_selected { background: var(--surface-navigation-hover); }
 .task.has_tint, .task_row.has_tint td, .board_card.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
 /* A row picked for a bulk action shows an accent wash and a bar down its left edge, never a tick, since a tick means done. */
 .task.is_picked, .task_row.is_picked td, .board_card.is_picked { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); }
 .task.is_picked, .task_row.is_picked td:first-child, .board_card.is_picked { box-shadow: inset 3px 0 0 var(--accent); }
 .task.is_dragged, .task_row.is_dragged { opacity: 0.5; }
 
-.drop_before { box-shadow: inset 0 2px 0 var(--accent); }
-.drop_after { box-shadow: inset 0 -2px 0 var(--accent); }
-.drop_inside { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .add_task_row {
   display: flex;
