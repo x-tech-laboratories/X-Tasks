@@ -300,6 +300,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
   --g-handle-color: var(--text-secondary);
 }
 .gantt_view .bar-wrapper.is_done { opacity: 0.55; }
+.gantt_view .bar-wrapper.is_outside { opacity: 0.55; }
+.gantt_view .bar-wrapper.is_outside .bar { stroke: var(--text-secondary); stroke-dasharray: 4 3; }
 .gantt_view .bar-wrapper.is_selected .bar { stroke: var(--text-heading); stroke-width: 2; }
 
 /* ========================================================================== */
