@@ -284,7 +284,7 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           hint:
             'The ways one task can relate to another, named from both ends. Setting one on a task gives the other task its inverse, so ' +
             '"A waits on B" shows on B as "B blocks A". Use the same name twice for a relationship that reads the same both ways. A ' +
-            'waiting task shows how many open tasks it waits on, and the Gantt chart draws an arrow to it.',
+            'task that depends on another shows how many open tasks it waits on, and the Gantt chart draws an arrow to it.',
           content: <RelationshipsEditor relationships={settings.task_relationships} tasks={tasks} on_change={on_change_relationships} />
         }
       ]
@@ -735,11 +735,11 @@ function RelationshipsEditor({ relationships, tasks, on_change }: RelationshipsE
           <select
             value={relationship.waiter}
             onChange={(event) => update(relationship.id, { waiter: event.currentTarget.value as TaskRelationship['waiter'] })}
-            aria-label="Which task waits"
+            aria-label="Which task depends on the other"
           >
-            <option value="none">Neither waits</option>
-            <option value="first">A waits on B</option>
-            <option value="second">B waits on A</option>
+            <option value="none">Neither depends on the other</option>
+            <option value="first">A depends on B</option>
+            <option value="second">B depends on A</option>
           </select>
           <RowActions
             index={index}
