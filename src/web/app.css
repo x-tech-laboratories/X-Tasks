@@ -491,8 +491,9 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 /* Every scroll bar is Halon's 10px thumb: the standard properties would swap it for the system's own bar, arrows and shading included. */
 * { scrollbar-width: auto; scrollbar-color: auto; }
 
-/* The table's columns shrink to fit its pane (see TaskTable), cutting off what does not fit. */
+/* The table's columns shrink to fit its pane (see TaskTable), cutting off what does not fit, unless it scrolls sideways. */
 .task_pane > .table-wrap > table { table-layout: fixed; }
+.task_pane > .table-wrap.scrolls_sideways > table { min-width: var(--table-scrolling-width); }
 .task_pane > .table-wrap :is(th, td) { overflow: hidden; text-overflow: ellipsis; }
 .task_pane > .table-wrap th > button.sort { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 

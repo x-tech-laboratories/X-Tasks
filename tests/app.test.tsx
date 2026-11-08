@@ -93,6 +93,14 @@ describe('the table layout', () => {
     expect(settings_api.set_setting).toHaveBeenCalledWith('table_sort', [{ column: 'title', is_descending: false }])
   })
 
+  test('a table set to scroll sideways grows past its pane to keep the task its room', async () => {
+    await show_app({ task_layout: 'table', scroll_table_sideways: true })
+
+    const wrap = screen.getByRole('table').parentElement
+    expect(wrap?.classList.contains('scrolls_sideways')).toBe(true)
+    expect(wrap?.parentElement?.style.getPropertyValue('--table-scrolling-width')).toMatch(/^\d+px$/)
+  })
+
   test('folding a task saves it among the collapsed tasks', async () => {
     const { settings_api } = await show_app({ task_layout: 'table' })
 

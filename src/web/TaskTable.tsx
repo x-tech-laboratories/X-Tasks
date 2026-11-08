@@ -67,6 +67,8 @@ interface TaskTableProps {
   hidden_columns: string[]
   shown_columns: string[]
   column_widths: Record<string, number>
+  // When set, the columns keep their set widths and the table scrolls sideways instead of shrinking them.
+  scrolls_sideways: boolean
   sort: TableSortKey[]
   filters: TableFilters
   collapsed_ids: string[]
@@ -232,7 +234,15 @@ export function TaskTable(props: TaskTableProps) {
   }, [pane])
   const set_widths = Object.fromEntries(props.column_order.filter((column) => !hidden.includes(column)).map((column) => [column, props.column_widths[column] ?? default_column_width(column)]))
   const set_total = Object.values(set_widths).reduce((sum, width) => sum + width, 0)
-  const scale = pane_width > 0 && set_total > 0 ? Math.min(1, Math.max(0, pane_width - TITLE_ROOM) / set_total) : 1
+  const scale = !props.scrolls_sideways && pane_width > 0 && set_total > 0 ? Math.min(1, Math.max(0, pane_width - TITLE_ROOM) / set_total) : 1
+
+  // A table that scrolls sideways grows past the pane so the task keeps its room beside the set widths.
+  const scrolling_width = props.scrolls_sideways ? set_total + TITLE_ROOM : undefined
+  useEffect(() => {
+    if (!pane || scrolling_width === undefined) return
+    pane.style.setProperty('--table-scrolling-width', `${scrolling_width}px`)
+    return () => void pane.style.removeProperty('--table-scrolling-width')
+  }, [pane, scrolling_width])
   const shown_widths = scale === 1 ? props.column_widths : Object.fromEntries(Object.entries(set_widths).map(([column, width]) => [column, Math.max(MIN_SCALED_WIDTH, Math.round(width * scale))]))
   function change_widths(widths: Record<string, number>, done: boolean): void {
     props.on_column_widths_change(scale === 1 ? widths : Object.fromEntries(Object.entries(widths).map(([column, width]) => [column, Math.round(width / scale)])), done)
@@ -293,7 +303,7 @@ export function TaskTable(props: TaskTableProps) {
         row_key={row_key}
         row_selected={(row) => row.kind === 'task' && actions.selected_task_id === row.node.task.id}
         caption="Tasks"
-        wrap_class="scroll"
+        wrap_class={cx('scroll', props.scrolls_sideways && 'scrolls_sideways')}
         sorting={sorting}
         on_sorting_change={(next) => props.on_sort_change(next.map((key) => ({ column: key.key as TableColumn, is_descending: key.descending })))}
         column_order={all_columns}

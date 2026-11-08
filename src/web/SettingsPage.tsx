@@ -370,6 +370,10 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
                 <Segmented label="Layout per view" choices={LAYOUT_MEMORY_CHOICES} value={settings.layout_memory} on_change={(value) => on_change('layout_memory', value)} />
               </SettingRow>
 
+              <SettingRow label="Scroll the table sideways" hint="The table's columns keep their widths and scroll sideways when they do not fit, instead of shrinking." as_label>
+                <Switch label="Scroll the table sideways" checked={settings.scroll_table_sideways} on_change={(on) => on_change('scroll_table_sideways', on)} />
+              </SettingRow>
+
               {settings.layout_memory !== 'shared' && (
                 <SavedLayouts layouts={settings.view_layouts} tags={tags} on_change={(layouts) => on_change('view_layouts', layouts)} />
               )}
