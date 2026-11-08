@@ -5,7 +5,7 @@ import { PageHeading, RowActions, SettingRow, SettingsGroup, Stack, moved } from
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { describe_rule } from 'recurrence-input'
 
-import { MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
@@ -539,6 +539,32 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           )
         },
         { id: 'backups', heading: 'Backups', content: <BackupsEditor settings={settings} on_change={on_change} /> },
+        {
+          id: 'history',
+          heading: 'History',
+          hint: 'Every change to a task is kept as a version you can compare and restore, and syncs to every connected device.',
+          content: (
+            <>
+              <SettingRow label="Delete old history" hint="Deletes versions older than the period below on every device. Each task keeps its newest version." as_label>
+                <Switch label="Delete old history" checked={settings.prune_history} on_change={(on) => on_change('prune_history', on)} />
+              </SettingRow>
+              <SettingRow label="Days of history to keep" hint="A deleted task can be restored only while its last version is kept." as_label>
+                <CommitInput
+                  type="number"
+                  min={HISTORY_DAYS_RANGE.min}
+                  max={HISTORY_DAYS_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.history_days}
+                  disabled={!settings.prune_history}
+                  on_commit={(event) =>
+                    void on_change('history_days', Math.min(HISTORY_DAYS_RANGE.max, Math.max(HISTORY_DAYS_RANGE.min, Math.round(Number(event.currentTarget.value) || HISTORY_DAYS_RANGE.min))))
+                  }
+                />
+              </SettingRow>
+            </>
+          )
+        },
         ...(window.x_settings.host !== 'web'
           ? [
               {

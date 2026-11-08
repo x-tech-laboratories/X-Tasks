@@ -29,18 +29,19 @@ export interface TaskSnapshot {
 // How a version came about: the task made, changed, deleted or restored, or as it stood when history began.
 export type VersionKind = 'created' | 'edited' | 'deleted' | 'restored' | 'first_seen'
 
-// Whether the change was made on this device, or arrived by sync from another.
+// Whether the change was made on this device, or on another and synced here.
 export type VersionOrigin = 'here' | 'elsewhere'
 
 // One entry in a task's history, holding the whole task as that change left it; a deleted task's entry holds what it was before.
 export interface TaskVersion {
-  id: number
+  // The same on every device the version syncs to.
+  id: string
   task_id: string
   changed_at: string
   kind: VersionKind
   origin: VersionOrigin
   // The version a restore brought back, when it names one.
-  restored_from: number | null
+  restored_from: string | null
   snapshot: TaskSnapshot
   // The task's version before this one, for showing what this one changed.
   previous: TaskSnapshot | null

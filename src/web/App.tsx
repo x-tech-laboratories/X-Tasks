@@ -95,7 +95,7 @@ export function App() {
   const today = now.slice(0, 10)
   const [filter_editing, set_filter_editing] = useState<FilterEditing | null>(null)
   // The task whose history is open, and the version picked in it.
-  const [history_open, set_history_open] = useState<{ task_id: string; version_id: number | null } | null>(null)
+  const [history_open, set_history_open] = useState<{ task_id: string; version_id: string | null } | null>(null)
   const [editing_group, set_editing_group] = useState<TagGroup | null>(null)
   const [table_filters, set_table_filters] = useState<TableFilters>(EMPTY_TABLE_FILTERS)
   // Groupings picked in a view but not yet saved for it, kept until the app closes.

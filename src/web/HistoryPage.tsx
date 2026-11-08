@@ -16,7 +16,7 @@ const RECENT_LIMIT = 300
 interface HistoryPageProps {
   // Every task, so the list loads again whenever one changes.
   tasks: Task[]
-  on_open_history: (task_id: string, version_id: number) => void
+  on_open_history: (task_id: string, version_id: string) => void
 }
 
 // The latest changes to every task under the day each was made, deleted tasks included; picking one opens that task's history.

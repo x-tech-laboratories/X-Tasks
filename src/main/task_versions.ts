@@ -1,4 +1,4 @@
-import { is_same_snapshot, normalized_snapshot, type SnapshotLink, type TaskSnapshot, type TaskVersion, type VersionKind, type VersionOrigin } from '@shared/versions'
+import { is_same_snapshot, normalized_snapshot, type SnapshotLink, type TaskSnapshot, type TaskVersion, type VersionKind } from '@shared/versions'
 import type { SqlDatabase } from './sql_database'
 
 // ============================================================================
@@ -28,7 +28,7 @@ export function drop_version_triggers(database: SqlDatabase): void {
   for (const trigger of VERSION_TRIGGERS) database.exec(`DROP TRIGGER IF EXISTS ${trigger.name}`)
 }
 
-// Also gives every task with no history yet a first version, as it stands now.
+// Also gives every task with no history yet a first version, as it stands now, with an id every device gives it alike.
 export function install_version_triggers(database: SqlDatabase): void {
   drop_version_triggers(database)
   for (const trigger of VERSION_TRIGGERS) database.exec(`CREATE TRIGGER ${trigger.name} ${trigger.sql}`)
@@ -36,8 +36,13 @@ export function install_version_triggers(database: SqlDatabase): void {
   const unseen = database.prepare('SELECT id FROM tasks WHERE id NOT IN (SELECT task_id FROM task_versions)').all() as { id: string }[]
   for (const { id } of unseen) {
     const snapshot = read_snapshot(database, id)!
-    insert_version(database, id, snapshot.created_at, 'first_seen', 'here', null, snapshot)
+    insert_version(database, `first_seen:${id}`, id, snapshot.created_at, 'first_seen', null, snapshot)
   }
+}
+
+// Writes that arrive by sync touch tasks too, but their versions come from the device that made them.
+export function forget_touched_tasks(database: SqlDatabase): void {
+  database.exec('DELETE FROM task_versions_pending')
 }
 
 // ============================================================================
@@ -87,33 +92,36 @@ export function read_snapshot(database: SqlDatabase, task_id: string): TaskSnaps
 // ============================================================================
 
 interface VersionRow {
-  id: number
+  uid: string
   task_id: string
   changed_at: string
   kind: VersionKind
-  origin: VersionOrigin
-  restored_from: number | null
+  is_here: number
+  restored_from: string | null
   snapshot: string
   previous: string | null
 }
 
+// Versions run in the order they were made, whichever device made them and whenever they arrived.
+const NEWEST_FIRST = 'ORDER BY changed_at DESC, id DESC'
+
 function insert_version(
-  database: SqlDatabase, task_id: string, changed_at: string, kind: VersionKind, origin: VersionOrigin, restored_from: number | null, snapshot: TaskSnapshot
+  database: SqlDatabase, uid: string, task_id: string, changed_at: string, kind: VersionKind, restored_from: string | null, snapshot: TaskSnapshot
 ): void {
   database
-    .prepare('INSERT INTO task_versions (task_id, changed_at, kind, origin, restored_from, snapshot) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(task_id, changed_at, kind, origin, restored_from, JSON.stringify(snapshot))
+    .prepare('INSERT INTO task_versions (uid, task_id, changed_at, kind, site, restored_from, snapshot) VALUES (?, ?, ?, ?, (SELECT site FROM sync_state), ?, ?)')
+    .run(uid, task_id, changed_at, kind, restored_from, JSON.stringify(snapshot))
 }
 
 function latest_version(database: SqlDatabase, task_id: string): { kind: VersionKind; snapshot: TaskSnapshot } | null {
-  const row = database.prepare('SELECT kind, snapshot FROM task_versions WHERE task_id = ? ORDER BY id DESC LIMIT 1').get(task_id) as
+  const row = database.prepare(`SELECT kind, snapshot FROM task_versions WHERE task_id = ? ${NEWEST_FIRST} LIMIT 1`).get(task_id) as
     | { kind: VersionKind; snapshot: string }
     | undefined
   return row ? { kind: row.kind, snapshot: JSON.parse(row.snapshot) as TaskSnapshot } : null
 }
 
 // Saves a version of each task touched since the last call, skipping any that ended up as they were; restores name the version each task came back from.
-export function record_task_versions(database: SqlDatabase, origin: VersionOrigin, restored_from = new Map<string, number>()): void {
+export function record_task_versions(database: SqlDatabase, restored_from = new Map<string, string>()): void {
   const touched = database.prepare('SELECT task_id FROM task_versions_pending').all() as { task_id: string }[]
   if (touched.length === 0) return
   const changed_at = new Date().toISOString()
@@ -121,31 +129,49 @@ export function record_task_versions(database: SqlDatabase, origin: VersionOrigi
   for (const { task_id } of touched) {
     const current = read_snapshot(database, task_id)
     const latest = latest_version(database, task_id)
-    const restored_id = restored_from.get(task_id) ?? null
+    const restored_uid = restored_from.get(task_id) ?? null
     const was_deleted = latest?.kind === 'deleted'
+    const uid = crypto.randomUUID()
 
     if (!current) {
-      if (latest && !was_deleted) insert_version(database, task_id, changed_at, 'deleted', origin, null, latest.snapshot)
+      if (latest && !was_deleted) insert_version(database, uid, task_id, changed_at, 'deleted', null, latest.snapshot)
     } else if (!latest) {
-      insert_version(database, task_id, changed_at, 'created', origin, null, current)
-    } else if (was_deleted || restored_id !== null || !is_same_snapshot(latest.snapshot, current)) {
-      const kind = was_deleted || restored_id !== null ? 'restored' : 'edited'
-      insert_version(database, task_id, changed_at, kind, origin, restored_id, current)
+      insert_version(database, uid, task_id, changed_at, 'created', null, current)
+    } else if (was_deleted || restored_uid !== null || !is_same_snapshot(latest.snapshot, current)) {
+      const kind = was_deleted || restored_uid !== null ? 'restored' : 'edited'
+      insert_version(database, uid, task_id, changed_at, kind, restored_uid, current)
     }
   }
   database.exec('DELETE FROM task_versions_pending')
+}
+
+// Versions made before the cutoff go, except the newest of each task still there, which later changes are compared against.
+export function prune_task_versions(database: SqlDatabase, cutoff: string): void {
+  database
+    .prepare(
+      `DELETE FROM task_versions WHERE changed_at < ? AND id NOT IN (
+         SELECT id FROM (SELECT id, task_id, ROW_NUMBER() OVER (PARTITION BY task_id ${NEWEST_FIRST}) AS rank FROM task_versions)
+         WHERE rank = 1 AND task_id IN (SELECT id FROM tasks)
+       )`
+    )
+    .run(cutoff)
 }
 
 // ============================================================================
 // Reading
 // ============================================================================
 
-const VERSION_COLUMNS = `id, task_id, changed_at, kind, origin, restored_from, snapshot,
-  LAG(snapshot) OVER (PARTITION BY task_id ORDER BY id) AS previous`
+const VERSION_COLUMNS = `id, uid, task_id, changed_at, kind, site = (SELECT site FROM sync_state) AS is_here, restored_from, snapshot,
+  LAG(snapshot) OVER (PARTITION BY task_id ORDER BY changed_at, id) AS previous`
 
 function row_to_version(row: VersionRow): TaskVersion {
   return {
-    ...row,
+    id: row.uid,
+    task_id: row.task_id,
+    changed_at: row.changed_at,
+    kind: row.kind,
+    origin: row.is_here === 1 ? 'here' : 'elsewhere',
+    restored_from: row.restored_from,
     snapshot: JSON.parse(row.snapshot) as TaskSnapshot,
     previous: row.previous === null ? null : (JSON.parse(row.previous) as TaskSnapshot)
   }
@@ -153,13 +179,13 @@ function row_to_version(row: VersionRow): TaskVersion {
 
 // One task's versions, newest first.
 export function read_task_versions(database: SqlDatabase, task_id: string): TaskVersion[] {
-  const rows = database.prepare(`SELECT ${VERSION_COLUMNS} FROM task_versions WHERE task_id = ? ORDER BY id DESC`).all(task_id)
+  const rows = database.prepare(`SELECT ${VERSION_COLUMNS} FROM task_versions WHERE task_id = ? ${NEWEST_FIRST}`).all(task_id)
   return (rows as unknown as VersionRow[]).map(row_to_version)
 }
 
 // The latest versions of every task, deleted ones included, newest first.
 export function read_recent_versions(database: SqlDatabase, limit: number): TaskVersion[] {
-  const rows = database.prepare(`SELECT * FROM (SELECT ${VERSION_COLUMNS} FROM task_versions) ORDER BY id DESC LIMIT ?`).all(limit)
+  const rows = database.prepare(`SELECT * FROM (SELECT ${VERSION_COLUMNS} FROM task_versions) ${NEWEST_FIRST} LIMIT ?`).all(limit)
   return (rows as unknown as VersionRow[]).map(row_to_version)
 }
 
@@ -220,33 +246,34 @@ function apply_snapshot(database: SqlDatabase, task_id: string, snapshot: TaskSn
 
 // Brings a task back to one of its versions; a deleted task comes back with the subtasks deleted along with it.
 // Returns the version each restored task came back from, for the new versions to name.
-export function restore_version(database: SqlDatabase, version_id: number): Map<string, number> {
-  const row = database.prepare('SELECT id, task_id, changed_at, kind, snapshot FROM task_versions WHERE id = ?').get(version_id) as
-    | Pick<VersionRow, 'id' | 'task_id' | 'changed_at' | 'kind' | 'snapshot'>
+export function restore_version(database: SqlDatabase, version_id: string): Map<string, string> {
+  const row = database.prepare('SELECT uid, task_id, snapshot FROM task_versions WHERE uid = ?').get(version_id) as
+    | Pick<VersionRow, 'uid' | 'task_id' | 'snapshot'>
     | undefined
   if (!row) throw new Error(`no such version: ${version_id}`)
-  const restored_from = new Map<string, number>()
+  const restored_from = new Map<string, string>()
   const was_gone = !task_exists(database, row.task_id)
 
   apply_snapshot(database, row.task_id, JSON.parse(row.snapshot) as TaskSnapshot)
-  restored_from.set(row.task_id, row.id)
+  restored_from.set(row.task_id, row.uid)
   if (!was_gone) return restored_from
 
   // Subtasks deleted with the task were recorded at the same moment, and come back only while they are still gone.
   const deleted_together = database
     .prepare(
-      `SELECT id, task_id, snapshot FROM task_versions AS version
-       WHERE kind = 'deleted' AND changed_at = (SELECT changed_at FROM task_versions WHERE task_id = ? AND kind = 'deleted' ORDER BY id DESC LIMIT 1)
-         AND id = (SELECT MAX(id) FROM task_versions WHERE task_id = version.task_id)`
+      `SELECT uid, task_id, snapshot FROM task_versions AS version
+       WHERE kind = 'deleted'
+         AND changed_at = (SELECT changed_at FROM task_versions WHERE task_id = ? AND kind = 'deleted' ${NEWEST_FIRST} LIMIT 1)
+         AND uid = (SELECT uid FROM task_versions WHERE task_id = version.task_id ${NEWEST_FIRST} LIMIT 1)`
     )
-    .all(row.task_id) as Pick<VersionRow, 'id' | 'task_id' | 'snapshot'>[]
+    .all(row.task_id) as Pick<VersionRow, 'uid' | 'task_id' | 'snapshot'>[]
   const waiting = deleted_together.map((each) => ({ ...each, snapshot: JSON.parse(each.snapshot) as TaskSnapshot }))
 
   for (let parent_ids = [row.task_id]; parent_ids.length > 0; ) {
     const children = waiting.filter((each) => each.snapshot.parent_id !== null && parent_ids.includes(each.snapshot.parent_id) && !task_exists(database, each.task_id))
     for (const child of children) {
       apply_snapshot(database, child.task_id, child.snapshot)
-      restored_from.set(child.task_id, child.id)
+      restored_from.set(child.task_id, child.uid)
     }
     parent_ids = children.map((child) => child.task_id)
   }
