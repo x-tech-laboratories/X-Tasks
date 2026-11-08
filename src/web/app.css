@@ -475,5 +475,12 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 /* The column picker sits past the last heading instead of over it. */
 .task_pane > .table-wrap thead th:last-child { padding-right: calc(var(--space-5) + var(--row-height) + var(--space-2)); }
 
-/* A task's date and time fields take equal shares of the row. */
-.task_detail .date-time-inputs > input, .task_detail .date-time-inputs > input[type="time"] { flex: 1 1 0; }
+/* A date, its time and the clear button make one joined control, like a segmented switch, with room for each part. */
+.date-time-inputs { flex-wrap: nowrap; gap: 0; }
+.date-time-inputs > input { flex: 1 1 auto; min-width: 9.5em; border-radius: 0; }
+.date-time-inputs > input[type="time"] { flex: 1 1 auto; min-width: 7.5em; }
+.date-time-inputs > button { height: var(--control-height); border-radius: 0; }
+.date-time-inputs > :not(:first-child) { margin-left: calc(-1 * var(--border-width)); }
+.date-time-inputs > :first-child { border-top-left-radius: var(--radius-small); border-bottom-left-radius: var(--radius-small); }
+.date-time-inputs > :last-child { border-top-right-radius: var(--radius-small); border-bottom-right-radius: var(--radius-small); }
+.date-time-inputs > :is(input, button):is(:hover, :focus) { position: relative; z-index: 1; }
