@@ -22,6 +22,7 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     remove_task: vi.fn(async (task_id: string) => void tasks.splice(tasks.findIndex((task) => task.id === task_id), 1)),
     set_task_done: vi.fn(async () => undefined),
     set_task_my_day: vi.fn(async () => undefined),
+    set_task_notes: vi.fn(async () => undefined),
     set_task_schedule: vi.fn(async () => undefined),
     move_task: vi.fn(async () => undefined),
     move_tag: vi.fn(async () => undefined),

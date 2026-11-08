@@ -17,7 +17,7 @@ afterEach(cleanup)
 const group = make_group({ id: 'context', name: 'Context' })
 const tags = [make_tag({ id: 'home', group_id: 'context', name: 'Home', position: 1 }), make_tag({ id: 'work', group_id: 'context', name: 'Work', position: 2 })]
 const tasks = [
-  make_task({ id: 'milk', title: 'Buy milk', position: 1, tag_ids: ['home'] }),
+  make_task({ id: 'milk', title: 'Buy milk', position: 1, tag_ids: ['home'], notes: 'Get the **oat** kind' }),
   make_task({ id: 'report', title: 'Write report', position: 2, tag_ids: ['work'], due_at: '2026-03-12' }),
   make_task({ id: 'outline', title: 'Outline', parent_id: 'report', position: 1 })
 ]
@@ -139,6 +139,34 @@ describe('removing a task', () => {
     await waitFor(() => expect(tasks_api.remove_task).toHaveBeenCalledWith('milk'))
     expect(tasks_api.remove_task).not.toHaveBeenCalledWith('report')
     await act(async () => undefined)
+  })
+})
+
+// ============================================================================
+// Notes
+// ============================================================================
+
+describe('notes', () => {
+  test('show their Markdown formatted in the details', async () => {
+    await show_app()
+
+    fireEvent.click(screen.getByText('Buy milk'))
+
+    const notes = await screen.findByRole('textbox', { name: 'Notes' })
+    expect(within(notes).getByText('oat').tagName).toBe('STRONG')
+  })
+
+  test('open in a dialog whose edits are saved when it closes', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Buy milk'))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Open notes in a dialog' }))
+    const dialog = screen.getByRole('dialog', { name: 'Notes' })
+    act(() => { fireEvent.click(within(dialog).getByRole('button', { name: 'Heading' })) })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Notes' })).toBeNull()
+    expect(tasks_api.set_task_notes).toHaveBeenCalledWith('milk', '## Get the **oat** kind')
   })
 })
 
