@@ -311,7 +311,24 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 /* Settings                                                                   */
 /* ========================================================================== */
 
-.task_pane .settings-group + .settings-group { margin-top: var(--space-7); }
+/* The outline sits beside the sections and stays in view while they scroll, short enough to clear the pane's bottom padding; on a narrow pane it goes above them. */
+.settings_page { container-type: inline-size; }
+.settings_layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); align-items: start; gap: var(--space-8); }
+.settings_outline { position: sticky; top: 0; display: grid; gap: var(--space-5); max-height: calc(100vh - var(--frame-height) - 96px); overflow-y: auto; }
+.settings_outline_category { display: grid; }
+.settings_outline_heading { padding: 0 var(--space-4) var(--space-2); color: var(--text-secondary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
+.settings_outline_link { padding: var(--space-1) var(--space-4); border-left: 2px solid transparent; border-radius: 0 var(--radius-small) var(--radius-small) 0; color: var(--text-body); font-size: var(--text-control); text-decoration: none; }
+.settings_outline_link:hover { background-color: var(--surface-secondary); color: var(--text-heading); }
+.settings_outline_link.is_current { border-left-color: var(--accent); background-color: var(--surface-secondary); color: var(--text-heading); font-weight: 500; }
+.settings_sections { display: grid; gap: var(--space-8); min-width: 0; }
+.settings_category { display: grid; gap: var(--space-7); }
+.settings_category_heading { margin: 0; padding-bottom: var(--space-3); border-bottom: var(--border-width) solid var(--border-default); color: var(--text-heading); font-size: var(--text-h2); font-weight: 600; }
+.settings_section { scroll-margin-top: var(--space-5); }
+@container (max-width: 720px) {
+  .settings_layout { grid-template-columns: minmax(0, 1fr); }
+  .settings_outline { position: static; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); max-height: none; }
+  .settings_outline_category { display: flex; flex-wrap: wrap; align-items: center; }
+}
 /* The rows that list options, colours and relationships are denser than a single setting. */
 .reschedule_option { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--space-5); }
 .reschedule_option > input:not([type]), .reschedule_rule, .tag_color_hex, .detail_section_name { flex: 1; min-width: 0; }
