@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, RowActions, SettingRow, SettingsGroup, Stack, moved } from '@x-tech-laboratories/x-libs/web/react/layout'
@@ -153,317 +153,533 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
     set_new_group_name('')
   }
 
+  const categories: SettingsCategory[] = [
+    {
+      heading: 'General',
+      sections: [
+        {
+          id: 'appearance',
+          heading: 'Appearance',
+          content: (
+            <>
+              <SettingRow label="Theme" hint="System follows the light or dark choice of your desktop.">
+                <Segmented label="Theme" choices={THEME_CHOICES} value={settings.theme} on_change={(value) => on_change('theme', value)} />
+              </SettingRow>
+
+              <SettingRow label="Tint task rows by tag" hint="Each task row takes a light shade of its first coloured tag, its own tags before rule tags." as_label>
+                <Switch label="Tint task rows by tag" checked={settings.tint_rows_by_tag} on_change={(on) => on_change('tint_rows_by_tag', on)} />
+              </SettingRow>
+
+              <SettingRow label="Streak dots on task rows" hint="Routines and their subtasks show their last week of done and missed occurrences beside the title." as_label>
+                <Switch label="Streak dots on task rows" checked={settings.show_streak_strip_on_rows} on_change={(on) => on_change('show_streak_strip_on_rows', on)} />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'startup',
+          heading: 'Startup',
+          content: (
+            <SettingRow label="Open on launch" hint="The view shown when the app starts." as_label>
+              <Select bare label="Open on launch" options={LAUNCH_VIEW_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.launch_view} on_change={(value) => on_change('launch_view', value)} />
+            </SettingRow>
+          )
+        }
+      ]
+    },
+    {
+      heading: 'Tasks',
+      sections: [
+        {
+          id: 'adding-tasks',
+          heading: 'Adding tasks',
+          content: (
+            <>
+              <SyntaxSetting
+                label="Syntax"
+                hint="How Enter reads tags, dates and repeats out of what you typed; the rest becomes the title."
+                value={settings.quick_add_syntax}
+                on_change={(id) => on_change('quick_add_syntax', id)}
+                examples_of={(id) => syntax_by_id(id).quick_add_examples}
+              />
+
+              <SettingRow
+                label="Subtasks start with their parent's tags"
+                hint="A new subtask is given its parent's tags when added. Either way it already shows wherever its parent does."
+                as_label
+              >
+                <Switch label="Subtasks start with their parent's tags" checked={settings.subtasks_inherit_tags} on_change={(on) => on_change('subtasks_inherit_tags', on)} />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'completing-tasks',
+          heading: 'Completing tasks',
+          content: (
+            <>
+              <SettingRow
+                label="Collapse completed branches"
+                hint="Completing a task folds its subtasks away once they are all done too. Other tasks stay as they are."
+                as_label
+              >
+                <Switch label="Collapse completed branches" checked={settings.collapse_completed_branches} on_change={(on) => on_change('collapse_completed_branches', on)} />
+              </SettingRow>
+
+              <SettingRow label="Ask before clearing completed tasks" hint="Undo can still bring them back for a few seconds either way." as_label>
+                <Switch label="Ask before clearing completed tasks" checked={settings.confirm_clear_completed} on_change={(on) => on_change('confirm_clear_completed', on)} />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'my-day',
+          heading: 'My Day',
+          content: (
+            <>
+              <SettingRow label="Clear My Day each day" hint="My Day starts empty every morning. When off, tasks stay until you take them out." as_label>
+                <Switch label="Clear My Day each day" checked={settings.auto_clear_my_day} on_change={(on) => on_change('auto_clear_my_day', on)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Add due tasks to My Day"
+                hint="Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date."
+                as_label
+              >
+                <Switch label="Add due tasks to My Day" checked={settings.add_due_to_my_day} on_change={(on) => on_change('add_due_to_my_day', on)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Remove completed tasks from My Day"
+                hint="Completing a top-level task takes it out of My Day. Subtasks stay with their parent."
+                as_label
+              >
+                <Switch label="Remove completed tasks from My Day" checked={settings.remove_done_from_my_day} on_change={(on) => on_change('remove_done_from_my_day', on)} />
+              </SettingRow>
+
+              <SettingRow label="Remove rescheduled tasks from My Day" hint="Moving a task's task date past today takes it out of My Day." as_label>
+                <Switch label="Remove rescheduled tasks from My Day" checked={settings.remove_future_from_my_day} on_change={(on) => on_change('remove_future_from_my_day', on)} />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'task-details',
+          heading: 'Task details',
+          hint: "The sections a task's details show, top to bottom. Turned off sections are left out.",
+          content: (
+            <DetailSectionsEditor
+              order={ordered_detail_sections(settings.task_detail_order, tag_groups)}
+              hidden={settings.hidden_task_detail_sections}
+              tag_groups={tag_groups}
+              on_change_order={(order) => on_change('task_detail_order', order)}
+              on_change_hidden={(hidden) => on_change('hidden_task_detail_sections', hidden)}
+            />
+          )
+        },
+        {
+          id: 'relationships',
+          heading: 'Relationships',
+          hint:
+            'The ways one task can relate to another, named from both ends. Setting one on a task gives the other task its inverse, so ' +
+            '"A waits on B" shows on B as "B blocks A". Use the same name twice for a relationship that reads the same both ways. A ' +
+            'waiting task shows how many open tasks it waits on, and the Gantt chart draws an arrow to it.',
+          content: <RelationshipsEditor relationships={settings.task_relationships} tasks={tasks} on_change={on_change_relationships} />
+        }
+      ]
+    },
+    {
+      heading: 'Dates',
+      sections: [
+        {
+          id: 'dates',
+          heading: 'Dates and repeats',
+          content: (
+            <>
+              <SettingRow label="Task date" hint="The date shown beside each task, and used to sort, filter, reschedule and fill My Day." as_label>
+                <Select bare label="Task date" options={TASK_DATE_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.task_date_field} on_change={(value) => on_change('task_date_field', value)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Overdue repeating tasks"
+                hint="Each day, open repeating tasks whose task date has passed move to today, or skip ahead to their first repeat date from today on."
+                as_label
+              >
+                <Select bare label="Overdue repeating tasks" options={OVERDUE_REPEAT_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.reschedule_overdue_repeats} on_change={(value) => on_change('reschedule_overdue_repeats', value)} />
+              </SettingRow>
+
+              <SettingRow label="Repeats in Upcoming" hint="How many days ahead Upcoming lists the later dates of repeating tasks. Zero lists none." as_label>
+                <CommitInput
+                  type="number"
+                  min={UPCOMING_REPEAT_DAYS_RANGE.min}
+                  max={UPCOMING_REPEAT_DAYS_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.upcoming_repeat_days}
+                  on_commit={(event) =>
+                    on_change('upcoming_repeat_days', Math.min(UPCOMING_REPEAT_DAYS_RANGE.max, Math.max(UPCOMING_REPEAT_DAYS_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
+                  }
+                  aria-label="Days ahead"
+                />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'reschedule',
+          heading: 'Reschedule',
+          hint:
+            "The quick days offered by Reschedule in a task's menu and details. Each is a number of days from today, or the next " +
+            'date of a repeat rule counted from now. The task keeps its time of day.',
+          content: <RescheduleOptionsEditor options={settings.reschedule_options} on_change={(options) => on_change('reschedule_options', options)} />
+        },
+        {
+          id: 'durations',
+          heading: 'Durations',
+          hint:
+            "The gaps offered by Duration in a task's details, which set the due date that long after the start. Units can be mixed, " +
+            'such as 1 hour 30 minutes. A gap with minutes or hours shows only when the start has a time, and Same day only when it ' +
+            'has none.',
+          content: <DurationsEditor durations={settings.task_durations} on_change={(durations) => on_change('task_durations', durations)} />
+        }
+      ]
+    },
+    {
+      heading: 'Views',
+      sections: [
+        {
+          id: 'layout',
+          heading: 'Layout',
+          content: (
+            <>
+              <SettingRow
+                label="Default layout"
+                hint="How a view shows its tasks when no layout is saved for it: a list, a table, a board, a calendar or a Gantt chart."
+                as_label
+              >
+                <Select bare label="Default layout" options={TASK_LAYOUT_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.task_layout} on_change={(value) => on_change('task_layout', value)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Layout per view"
+                hint={
+                  'Remembered: each view or tag selection keeps the layout, calendar span and Gantt scale last picked in it. Saved by ' +
+                  'hand: each keeps its own once Save layout is pressed. Same everywhere: a layout picked in one view applies to every view.'
+                }
+              >
+                <Segmented label="Layout per view" choices={LAYOUT_MEMORY_CHOICES} value={settings.layout_memory} on_change={(value) => on_change('layout_memory', value)} />
+              </SettingRow>
+
+              {settings.layout_memory !== 'shared' && (
+                <SavedLayouts layouts={settings.view_layouts} tags={tags} on_change={(layouts) => on_change('view_layouts', layouts)} />
+              )}
+            </>
+          )
+        },
+        {
+          id: 'grouping',
+          heading: 'Grouping',
+          content: (
+            <>
+              <SettingRow
+                label="Default grouping"
+                hint="The headings a view puts its tasks under when no grouping is saved for it. Upcoming always goes by date."
+                as_label
+              >
+                <Select bare label="Default grouping" options={grouping_choices(tag_groups).map(({ value, label }): [typeof value, string] => [value, label])} value={settings.task_grouping} on_change={(value) => on_change('task_grouping', value)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Grouping per view"
+                hint={
+                  'Remembered: each view or tag selection keeps the grouping last picked in it. Saved by hand: each keeps its own ' +
+                  'once Save grouping is pressed. Same everywhere: a grouping picked at the top of a view applies to every view.'
+                }
+              >
+                <Segmented label="Grouping per view" choices={GROUPING_MEMORY_CHOICES} value={settings.grouping_memory} on_change={(value) => on_change('grouping_memory', value)} />
+              </SettingRow>
+
+              {settings.grouping_memory !== 'shared' && (
+                <SavedGroupings groupings={settings.view_groupings} tags={tags} tag_groups={tag_groups} on_change={(groupings) => on_change('view_groupings', groupings)} />
+              )}
+            </>
+          )
+        },
+        {
+          id: 'calendar',
+          heading: 'Calendar',
+          content: (
+            <>
+              <SettingRow
+                label="Time slots"
+                hint="How much time each row covers in the calendar's week and day views, which is also the step a dragged task snaps to."
+                as_label
+              >
+                <Select bare label="Calendar time slots" options={CALENDAR_SLOT_CHOICES.map((minutes): [number, string] => [minutes, minutes_label(minutes)])} value={settings.calendar_slot_minutes} on_change={(value) => on_change('calendar_slot_minutes', value)} />
+              </SettingRow>
+
+              <SettingRow label="Time labels" hint="How often a time is printed down the side of the calendar's week and day views." as_label>
+                <Select bare label="Calendar time labels" options={CALENDAR_SLOT_LABEL_CHOICES.map((minutes): [number, string] => [minutes, minutes_label(minutes)])} value={settings.calendar_slot_label_minutes} on_change={(value) => on_change('calendar_slot_label_minutes', value)} />
+              </SettingRow>
+            </>
+          )
+        }
+      ]
+    },
+    {
+      heading: 'Tags and search',
+      sections: [
+        {
+          id: 'tags',
+          heading: 'Tags',
+          content: (
+            <>
+              <form onSubmit={submit_new_group}>
+                <SettingRow
+                  label="New filter group"
+                  hint="Adds a section to the sidebar with its own tags: plain tags given by hand, such as Context, or rule tags that apply themselves, such as Overdue."
+                >
+                  <input
+                    value={new_group_name}
+                    onChange={(event) => set_new_group_name(event.currentTarget.value)}
+                    placeholder="Group name"
+                    aria-label="New filter group"
+                  />
+                  <select
+                    value={is_new_group_rule ? 'rule' : 'plain'}
+                    onChange={(event) => set_is_new_group_rule(event.currentTarget.value === 'rule')}
+                    aria-label="New filter group type"
+                  >
+                    <option value="plain">Plain tags</option>
+                    <option value="rule">Rule tags</option>
+                  </select>
+                  <button type="submit">Add</button>
+                </SettingRow>
+              </form>
+
+              <SettingRow
+                label="Tag selection"
+                hint={
+                  'How many sidebar tags can be selected at once: one in all, one from each group, or any number. Clicking a selected ' +
+                  'tag clears it.'
+                }
+              >
+                <Segmented label="Tag selection" choices={TAG_SELECTION_CHOICES} value={settings.tag_selection} on_change={(value) => on_change('tag_selection', value)} />
+              </SettingRow>
+
+              <SettingRow label="Match tasks with" hint="Whether a task must have every selected tag, or just one of them, to show.">
+                <Segmented label="Match tasks with" choices={TAG_MATCH_CHOICES} value={settings.tag_match} on_change={(value) => on_change('tag_match', value)} />
+              </SettingRow>
+
+              <SettingRow label="Parent tags show" hint="Whether selecting a tag with tags inside it shows their tasks too, or only the tasks with that tag itself.">
+                <Segmented label="Parent tags show" choices={TAG_SCOPE_CHOICES} value={settings.tag_scope} on_change={(value) => on_change('tag_scope', value)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Show empty tags"
+                hint="When off, the sidebar hides tags no task has, done or not. A selected tag, and one holding a tag that shows, still shows."
+                as_label
+              >
+                <Switch label="Show empty tags" checked={settings.show_empty_tags} on_change={(on) => on_change('show_empty_tags', on)} />
+              </SettingRow>
+
+              <SettingRow label="Ask before deleting a tag" hint="Deleting a tag also deletes its sub-tags. Tasks are kept." as_label>
+                <Switch label="Ask before deleting a tag" checked={settings.confirm_tag_removal} on_change={(on) => on_change('confirm_tag_removal', on)} />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'tag-colours',
+          heading: 'Tag colours',
+          hint:
+            'The colours offered as swatches when editing a tag. Any other colour can still be picked there. Changing a swatch ' +
+            'leaves tags already given that colour as they are.',
+          content: <TagColorsEditor colors={settings.tag_colors} on_change={(colors) => on_change('tag_colors', colors)} />
+        },
+        {
+          id: 'search',
+          heading: 'Search',
+          content: (
+            <>
+              <SettingRow
+                label="Search in"
+                hint="Whether typing in the bar at the top searches only the view on screen, or every task. Enter still adds the task to the view on screen."
+              >
+                <Segmented label="Search in" choices={SEARCH_SCOPE_CHOICES} value={settings.search_scope} on_change={(value) => on_change('search_scope', value)} />
+              </SettingRow>
+
+              <SyntaxSetting
+                label="Syntax"
+                hint="How typing in the bar filters tasks; words a syntax does not know are looked for in titles and notes."
+                value={settings.search_syntax}
+                on_change={(id) => on_change('search_syntax', id)}
+                examples_of={(id) => syntax_by_id(id).search_examples}
+              />
+            </>
+          )
+        }
+      ]
+    },
+    {
+      heading: 'Data',
+      sections: [
+        {
+          id: 'storage',
+          heading: 'Storage',
+          content: (
+            <SettingRow label="Database" hint={<span className="path">{database_path}</span>}>
+              {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>}
+            </SettingRow>
+          )
+        },
+        { id: 'backups', heading: 'Backups', content: <BackupsEditor settings={settings} on_change={on_change} /> },
+        ...(window.x_settings.host !== 'web'
+          ? [
+              {
+                id: 'sync',
+                heading: 'Sync',
+                hint: "Keeps this device's tasks in step with an X-Tasks server and every device connected to it. Changes made offline are sent when the server can be reached.",
+                content: <SyncEditor />
+              }
+            ]
+          : []),
+        ...(window.x_settings.host !== 'android' ? [{ id: 'mcp', heading: 'MCP server', content: <McpEditor settings={settings} on_change={on_change} /> }] : [])
+      ]
+    }
+  ]
+
   return (
     <>
       <PageHeading title="Settings" />
 
-      <SettingsGroup heading="Appearance">
-        <SettingRow label="Theme" hint="System follows the light or dark choice of your desktop.">
-          <Segmented label="Theme" choices={THEME_CHOICES} value={settings.theme} on_change={(value) => on_change('theme', value)} />
-        </SettingRow>
+      <div className="settings_page">
+        <div className="settings_layout">
+          <SettingsOutline categories={categories} />
 
-        <SettingRow label="Streak dots on task rows" hint="Routines and their subtasks show their last week of done and missed occurrences beside the title." as_label>
-          <Switch label="Streak dots on task rows" checked={settings.show_streak_strip_on_rows} on_change={(on) => on_change('show_streak_strip_on_rows', on)} />
-        </SettingRow>
-
-        <SettingRow label="Tint task rows by tag" hint="Each task row takes a light shade of its first coloured tag, its own tags before rule tags." as_label>
-          <Switch label="Tint task rows by tag" checked={settings.tint_rows_by_tag} on_change={(on) => on_change('tint_rows_by_tag', on)} />
-        </SettingRow>
-      </SettingsGroup>
-
-      <SettingsGroup heading="Behaviour">
-        <SettingRow
-          label="Subtasks start with their parent's tags"
-          hint="A new subtask is given its parent's tags when added. Either way it already shows wherever its parent does."
-          as_label
-        >
-          <Switch label="Subtasks start with their parent's tags" checked={settings.subtasks_inherit_tags} on_change={(on) => on_change('subtasks_inherit_tags', on)} />
-        </SettingRow>
-
-        <SettingRow label="Open on launch" hint="The view shown when the app starts." as_label>
-          <Select bare label="Open on launch" options={LAUNCH_VIEW_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.launch_view} on_change={(value) => on_change('launch_view', value)} />
-        </SettingRow>
-
-        <SettingRow label="Task date" hint="The date shown beside each task, and used to sort, filter, reschedule and fill My Day." as_label>
-          <Select bare label="Task date" options={TASK_DATE_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.task_date_field} on_change={(value) => on_change('task_date_field', value)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Collapse completed branches"
-          hint="Completing a task folds its subtasks away once they are all done too. Other tasks stay as they are."
-          as_label
-        >
-          <Switch label="Collapse completed branches" checked={settings.collapse_completed_branches} on_change={(on) => on_change('collapse_completed_branches', on)} />
-        </SettingRow>
-
-        <SettingRow label="Clear My Day each day" hint="My Day starts empty every morning. When off, tasks stay until you take them out." as_label>
-          <Switch label="Clear My Day each day" checked={settings.auto_clear_my_day} on_change={(on) => on_change('auto_clear_my_day', on)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Remove completed tasks from My Day"
-          hint="Completing a top-level task takes it out of My Day. Subtasks stay with their parent."
-          as_label
-        >
-          <Switch label="Remove completed tasks from My Day" checked={settings.remove_done_from_my_day} on_change={(on) => on_change('remove_done_from_my_day', on)} />
-        </SettingRow>
-
-        <SettingRow label="Remove rescheduled tasks from My Day" hint="Moving a task's task date past today takes it out of My Day." as_label>
-          <Switch label="Remove rescheduled tasks from My Day" checked={settings.remove_future_from_my_day} on_change={(on) => on_change('remove_future_from_my_day', on)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Add due tasks to My Day"
-          hint="Open tasks whose task date is today or earlier go into My Day each morning, and when given such a date."
-          as_label
-        >
-          <Switch label="Add due tasks to My Day" checked={settings.add_due_to_my_day} on_change={(on) => on_change('add_due_to_my_day', on)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Overdue repeating tasks"
-          hint="Each day, open repeating tasks whose task date has passed move to today, or skip ahead to their first repeat date from today on."
-          as_label
-        >
-          <Select bare label="Overdue repeating tasks" options={OVERDUE_REPEAT_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.reschedule_overdue_repeats} on_change={(value) => on_change('reschedule_overdue_repeats', value)} />
-        </SettingRow>
-
-        <SettingRow label="Repeats in Upcoming" hint="How many days ahead Upcoming lists the later dates of repeating tasks. Zero lists none." as_label>
-          <CommitInput
-            type="number"
-            min={UPCOMING_REPEAT_DAYS_RANGE.min}
-            max={UPCOMING_REPEAT_DAYS_RANGE.max}
-            step="1"
-            className="input-xs"
-            value={settings.upcoming_repeat_days}
-            on_commit={(event) =>
-              on_change('upcoming_repeat_days', Math.min(UPCOMING_REPEAT_DAYS_RANGE.max, Math.max(UPCOMING_REPEAT_DAYS_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
-            }
-            aria-label="Days ahead"
-          />
-        </SettingRow>
-
-        <SettingRow label="Ask before deleting a tag" hint="Deleting a tag also deletes its sub-tags. Tasks are kept." as_label>
-          <Switch label="Ask before deleting a tag" checked={settings.confirm_tag_removal} on_change={(on) => on_change('confirm_tag_removal', on)} />
-        </SettingRow>
-
-        <SettingRow label="Ask before clearing completed tasks" hint="Undo can still bring them back for a few seconds either way." as_label>
-          <Switch label="Ask before clearing completed tasks" checked={settings.confirm_clear_completed} on_change={(on) => on_change('confirm_clear_completed', on)} />
-        </SettingRow>
-      </SettingsGroup>
-
-      <SettingsGroup heading="Layout">
-        <SettingRow
-          label="Default layout"
-          hint="How a view shows its tasks when no layout is saved for it: a list, a table, a board, a calendar or a Gantt chart."
-          as_label
-        >
-          <Select bare label="Default layout" options={TASK_LAYOUT_CHOICES.map(({ value, label }): [typeof value, string] => [value, label])} value={settings.task_layout} on_change={(value) => on_change('task_layout', value)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Calendar time slots"
-          hint="How much time each row covers in the calendar's week and day views, which is also the step a dragged task snaps to."
-          as_label
-        >
-          <Select bare label="Calendar time slots" options={CALENDAR_SLOT_CHOICES.map((minutes): [number, string] => [minutes, minutes_label(minutes)])} value={settings.calendar_slot_minutes} on_change={(value) => on_change('calendar_slot_minutes', value)} />
-        </SettingRow>
-
-        <SettingRow label="Calendar time labels" hint="How often a time is printed down the side of the calendar's week and day views." as_label>
-          <Select bare label="Calendar time labels" options={CALENDAR_SLOT_LABEL_CHOICES.map((minutes): [number, string] => [minutes, minutes_label(minutes)])} value={settings.calendar_slot_label_minutes} on_change={(value) => on_change('calendar_slot_label_minutes', value)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Layout per view"
-          hint={
-            'Remembered: each view or tag selection keeps the layout, calendar span and Gantt scale last picked in it. Saved by ' +
-            'hand: each keeps its own once Save layout is pressed. Same everywhere: a layout picked in one view applies to every view.'
-          }
-        >
-          <Segmented label="Layout per view" choices={LAYOUT_MEMORY_CHOICES} value={settings.layout_memory} on_change={(value) => on_change('layout_memory', value)} />
-        </SettingRow>
-
-        {settings.layout_memory !== 'shared' && (
-          <SavedLayouts layouts={settings.view_layouts} tags={tags} on_change={(layouts) => on_change('view_layouts', layouts)} />
-        )}
-      </SettingsGroup>
-
-      <SettingsGroup heading="Grouping">
-        <SettingRow
-          label="Default grouping"
-          hint="The headings a view puts its tasks under when no grouping is saved for it. Upcoming always goes by date."
-          as_label
-        >
-          <Select bare label="Default grouping" options={grouping_choices(tag_groups).map(({ value, label }): [typeof value, string] => [value, label])} value={settings.task_grouping} on_change={(value) => on_change('task_grouping', value)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Grouping per view"
-          hint={
-            'Remembered: each view or tag selection keeps the grouping last picked in it. Saved by hand: each keeps its own ' +
-            'once Save grouping is pressed. Same everywhere: a grouping picked at the top of a view applies to every view.'
-          }
-        >
-          <Segmented label="Grouping per view" choices={GROUPING_MEMORY_CHOICES} value={settings.grouping_memory} on_change={(value) => on_change('grouping_memory', value)} />
-        </SettingRow>
-
-        {settings.grouping_memory !== 'shared' && (
-          <SavedGroupings groupings={settings.view_groupings} tags={tags} tag_groups={tag_groups} on_change={(groupings) => on_change('view_groupings', groupings)} />
-        )}
-      </SettingsGroup>
-
-      <SettingsGroup heading="Filters">
-        <form onSubmit={submit_new_group}>
-          <SettingRow
-            label="New filter group"
-            hint="Adds a section to the sidebar with its own tags: plain tags given by hand, such as Context, or rule tags that apply themselves, such as Overdue."
-          >
-            <input
-              value={new_group_name}
-              onChange={(event) => set_new_group_name(event.currentTarget.value)}
-              placeholder="Group name"
-              aria-label="New filter group"
-            />
-            <select
-              value={is_new_group_rule ? 'rule' : 'plain'}
-              onChange={(event) => set_is_new_group_rule(event.currentTarget.value === 'rule')}
-              aria-label="New filter group type"
-            >
-              <option value="plain">Plain tags</option>
-              <option value="rule">Rule tags</option>
-            </select>
-            <button type="submit">Add</button>
-          </SettingRow>
-        </form>
-
-        <SettingRow
-          label="Tag selection"
-          hint={
-            'How many sidebar tags can be selected at once: one in all, one from each group, or any number. Clicking a selected ' +
-            'tag clears it.'
-          }
-        >
-          <Segmented label="Tag selection" choices={TAG_SELECTION_CHOICES} value={settings.tag_selection} on_change={(value) => on_change('tag_selection', value)} />
-        </SettingRow>
-
-        <SettingRow label="Match tasks with" hint="Whether a task must have every selected tag, or just one of them, to show.">
-          <Segmented label="Match tasks with" choices={TAG_MATCH_CHOICES} value={settings.tag_match} on_change={(value) => on_change('tag_match', value)} />
-        </SettingRow>
-
-        <SettingRow label="Parent tags show" hint="Whether selecting a tag with tags inside it shows their tasks too, or only the tasks with that tag itself.">
-          <Segmented label="Parent tags show" choices={TAG_SCOPE_CHOICES} value={settings.tag_scope} on_change={(value) => on_change('tag_scope', value)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Show empty tags"
-          hint="When off, the sidebar hides tags no task has, done or not. A selected tag, and one holding a tag that shows, still shows."
-          as_label
-        >
-          <Switch label="Show empty tags" checked={settings.show_empty_tags} on_change={(on) => on_change('show_empty_tags', on)} />
-        </SettingRow>
-
-        <SettingRow
-          label="Search"
-          hint="Whether typing in the bar at the top searches only the view on screen, or every task. Enter still adds the task to the view on screen."
-        >
-          <Segmented label="Search" choices={SEARCH_SCOPE_CHOICES} value={settings.search_scope} on_change={(value) => on_change('search_scope', value)} />
-        </SettingRow>
-      </SettingsGroup>
-
-      <SettingsGroup heading="Syntax">
-        <SyntaxSetting
-          label="Adding tasks"
-          hint="How Enter reads tags, dates and repeats out of what you typed; the rest becomes the title."
-          value={settings.quick_add_syntax}
-          on_change={(id) => on_change('quick_add_syntax', id)}
-          examples_of={(id) => syntax_by_id(id).quick_add_examples}
-        />
-        <SyntaxSetting
-          label="Searching"
-          hint="How typing in the bar filters tasks; words a syntax does not know are looked for in titles and notes."
-          value={settings.search_syntax}
-          on_change={(id) => on_change('search_syntax', id)}
-          examples_of={(id) => syntax_by_id(id).search_examples}
-        />
-      </SettingsGroup>
-
-      <SettingsGroup
-        heading="Reschedule"
-        hint={
-          "The quick days offered by Reschedule in a task's menu and details. Each is a number of days from today, or the next " +
-          'date of a repeat rule counted from now. The task keeps its time of day.'
-        }
-      >
-        <RescheduleOptionsEditor options={settings.reschedule_options} on_change={(options) => on_change('reschedule_options', options)} />
-      </SettingsGroup>
-
-      <SettingsGroup heading="Task details" hint="The sections a task's details show, top to bottom. Turned off sections are left out.">
-        <DetailSectionsEditor
-          order={ordered_detail_sections(settings.task_detail_order, tag_groups)}
-          hidden={settings.hidden_task_detail_sections}
-          tag_groups={tag_groups}
-          on_change_order={(order) => on_change('task_detail_order', order)}
-          on_change_hidden={(hidden) => on_change('hidden_task_detail_sections', hidden)}
-        />
-      </SettingsGroup>
-
-      <SettingsGroup
-        heading="Relationships"
-        hint={
-          'The ways one task can relate to another, named from both ends. Setting one on a task gives the other task its inverse, so ' +
-          '"A waits on B" shows on B as "B blocks A". Use the same name twice for a relationship that reads the same both ways. A ' +
-          'waiting task shows how many open tasks it waits on, and the Gantt chart draws an arrow to it.'
-        }
-      >
-        <RelationshipsEditor relationships={settings.task_relationships} tasks={tasks} on_change={on_change_relationships} />
-      </SettingsGroup>
-
-      <SettingsGroup
-        heading="Durations"
-        hint={
-          "The gaps offered by Duration in a task's details, which set the due date that long after the start. Units can be mixed, " +
-          'such as 1 hour 30 minutes. A gap with minutes or hours shows only when the start has a time, and Same day only when it ' +
-          'has none.'
-        }
-      >
-        <DurationsEditor durations={settings.task_durations} on_change={(durations) => on_change('task_durations', durations)} />
-      </SettingsGroup>
-
-      <SettingsGroup
-        heading="Tag colours"
-        hint={
-          'The colours offered as swatches when editing a tag. Any other colour can still be picked there. Changing a swatch ' +
-          'leaves tags already given that colour as they are.'
-        }
-      >
-        <TagColorsEditor colors={settings.tag_colors} on_change={(colors) => on_change('tag_colors', colors)} />
-      </SettingsGroup>
-
-      <SettingsGroup heading="Storage">
-        <SettingRow label="Database" hint={<span className="path">{database_path}</span>}>
-          {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_database_folder()}>Show in folder</button>}
-        </SettingRow>
-      </SettingsGroup>
-
-      <SettingsGroup heading="Backups">
-        <BackupsEditor settings={settings} on_change={on_change} />
-      </SettingsGroup>
-
-      {window.x_settings.host !== 'android' && (
-        <SettingsGroup heading="MCP server">
-          <McpEditor settings={settings} on_change={on_change} />
-        </SettingsGroup>
-      )}
-
-      {window.x_settings.host !== 'web' && (
-        <SettingsGroup
-          heading="Sync"
-          hint="Keeps this device's tasks in step with an X-Tasks server and every device connected to it. Changes made offline are sent when the server can be reached."
-        >
-          <SyncEditor />
-        </SettingsGroup>
-      )}
+          <div className="settings_sections">
+            {categories.map((category) => (
+              <section key={category.heading} className="settings_category">
+                <h2 className="settings_category_heading">{category.heading}</h2>
+                {category.sections.map((section) => (
+                  <div key={section.id} id={section_anchor(section.id)} className="settings_section">
+                    <SettingsGroup heading={section.heading} hint={section.hint}>
+                      {section.content}
+                    </SettingsGroup>
+                  </div>
+                ))}
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
     </>
+  )
+}
+
+// ============================================================================
+// Outline
+// ============================================================================
+
+interface SettingsSection {
+  id: string
+  heading: string
+  hint?: string
+  content: ReactNode
+}
+
+interface SettingsCategory {
+  heading: string
+  sections: SettingsSection[]
+}
+
+function section_anchor(id: string): string {
+  return `settings-${id}`
+}
+
+// How far below the top of the outline a section's heading may sit and still count as the one being read.
+const CURRENT_SECTION_SLACK_PX = 48
+
+// How long a jump from the outline may take before the outline follows scrolling again.
+const JUMP_TIMEOUT_MS = 1000
+
+// A list of every section beside the page that jumps to the one clicked and marks the one being read.
+function SettingsOutline({ categories }: { categories: SettingsCategory[] }) {
+  const ids = categories.flatMap((category) => category.sections.map((section) => section.id))
+  const [current_id, set_current_id] = useState(ids[0])
+  const outline = useRef<HTMLElement>(null)
+  const is_jumping = useRef(false)
+  const jump_timer = useRef<number>(undefined)
+  const ids_key = ids.join(' ')
+
+  useEffect(() => {
+    // The section being read is the last one whose heading has reached the top of the outline, or the last one once scrolled to the end.
+    function follow_scroll(event: Event): void {
+      if (is_jumping.current || !outline.current || outline.current.contains(event.target as Node)) return
+      const top = outline.current.getBoundingClientRect().top + CURRENT_SECTION_SLACK_PX
+      const scroller = event.target instanceof Element ? event.target : document.scrollingElement
+      const is_at_end = scroller !== null && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+
+      let reached = ids[0]
+      for (const id of ids) {
+        const element = document.getElementById(section_anchor(id))
+        if (element && element.getBoundingClientRect().top <= top) reached = id
+      }
+      set_current_id(is_at_end ? ids.at(-1) : reached)
+    }
+
+    function end_jump(): void {
+      is_jumping.current = false
+    }
+
+    document.addEventListener('scroll', follow_scroll, { capture: true, passive: true })
+    document.addEventListener('scrollend', end_jump, { capture: true })
+    return () => {
+      document.removeEventListener('scroll', follow_scroll, { capture: true })
+      document.removeEventListener('scrollend', end_jump, { capture: true })
+      window.clearTimeout(jump_timer.current)
+    }
+  }, [ids_key])
+
+  // An outline taller than the window scrolls itself to keep the current section's link in view.
+  useEffect(() => {
+    const nav = outline.current
+    const link = nav?.querySelector<HTMLElement>('.is_current')
+    if (!nav || !link) return
+    if (link.offsetTop < nav.scrollTop) nav.scrollTop = link.offsetTop
+    else if (link.offsetTop + link.offsetHeight > nav.scrollTop + nav.clientHeight) nav.scrollTop = link.offsetTop + link.offsetHeight - nav.clientHeight
+  }, [current_id])
+
+  function jump_to(id: string): void {
+    set_current_id(id)
+    is_jumping.current = true
+    window.clearTimeout(jump_timer.current)
+    jump_timer.current = window.setTimeout(() => (is_jumping.current = false), JUMP_TIMEOUT_MS)
+    document.getElementById(section_anchor(id))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  return (
+    <nav ref={outline} className="settings_outline" aria-label="Settings sections">
+      {categories.map((category) => (
+        <div key={category.heading} className="settings_outline_category">
+          <span className="settings_outline_heading">{category.heading}</span>
+          {category.sections.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section_anchor(section.id)}`}
+              className={section.id === current_id ? 'settings_outline_link is_current' : 'settings_outline_link'}
+              aria-current={section.id === current_id ? 'location' : undefined}
+              onClick={(event) => {
+                event.preventDefault()
+                jump_to(section.id)
+              }}
+            >
+              {section.heading}
+            </a>
+          ))}
+        </div>
+      ))}
+    </nav>
   )
 }
 
