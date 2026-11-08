@@ -11,7 +11,7 @@ import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import type { RepeatOccurrence, TaskGroup } from './dates'
 import {
   COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, MARK_FILTER_CHOICES, NO_TAG_FILTER, STREAK_FILTER_CHOICES, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_column_shown, is_date_column, is_mark_column, table_sort_value, tag_ranks, type SortContext, type TableColumn,
+  has_table_filters, is_column_filtered, is_column_shown, is_date_column, is_mark_column, table_sort_value, tag_ranks, type MarkColumn, type SortContext, type TableColumn,
   type TableFilters
 } from './table'
 import {
@@ -83,6 +83,9 @@ interface TaskTableProps {
 const TITLE_ROOM = 280
 const MIN_SCALED_WIDTH = 40
 
+// The mark columns head with their icon, so they stay narrow, and keep their names for menus, filters and hover.
+const MARK_ICONS: Record<MarkColumn, string> = { my_day: '☀', notes: '≡', repeats: '↻' }
+
 export function TaskTable(props: TaskTableProps) {
   const { tree, groups, actions, tags, tag_groups, filters } = props
   const [adding_subtask_to, set_adding_subtask_to] = useState<string | null>(null)
@@ -102,9 +105,9 @@ export function TaskTable(props: TaskTableProps) {
     if (column === 'due') return 'Due'
     if (column === 'done') return 'Done'
     if (column === 'duration') return 'Duration'
-    if (column === 'my_day') return '☀'
-    if (column === 'notes') return '≡'
-    if (column === 'repeats') return '↻'
+    if (column === 'my_day') return 'My Day'
+    if (column === 'notes') return 'Notes'
+    if (column === 'repeats') return 'Repeats'
     if (column === 'streak') return 'Streak'
     if (column === 'history') return 'History'
     return tag_groups.find((group) => group_column(group) === column)?.name ?? ''
@@ -199,6 +202,7 @@ export function TaskTable(props: TaskTableProps) {
   const columns: DataColumn<TableRow>[] = all_columns.map((column) => ({
     id: column,
     label: column_label(column),
+    header: is_mark_column(column) ? MARK_ICONS[column] : undefined,
     cell: column === 'title' ? title_cell : (row) => cell(row, column),
     sort: column === 'history' ? undefined : (row) => (row.kind === 'task' ? table_sort_value(row.node.task, column, sort_context, is_descending(column)) : null),
     class: column === 'title' ? 'title_column' : is_date_column(column) || column === 'duration' ? 'date_column' : undefined,
