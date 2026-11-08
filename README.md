@@ -191,7 +191,7 @@ how long it runs. Each view keeps its own layout, or every view shares one, as S
 
 Add relationship… in a task's details picks a relationship and another task side by side, and the other task shows
 the inverse, so "A waits on B" reads "B blocks A" from B. Settings › Relationships names each relationship from both
-ends, such as Depends on and Needed by, and says which task waits on the other; a waiting task shows how many open
+ends, such as Depends on and Needed by, and says which task depends on the other; that task shows how many open
 tasks it waits on and the Gantt chart draws an arrow to it. Filters can test a task's relationships, such as waiting
 on an open task, having none, or being linked to one task in particular.
 
