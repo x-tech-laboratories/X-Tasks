@@ -56,8 +56,8 @@ html.follows_host_theme {
 }
 .syntax_problem { color: var(--status-danger); }
 
-/* The sidebar fills its row instead of growing with its tags, so they scroll while its foot stays at the bottom. */
-body.contained .sidebar { align-self: stretch; min-height: 0; overflow: hidden; }
+/* The sidebar fills its row instead of growing with its tags, so they scroll while its foot stays at the bottom and its grab bar on its own edge. */
+body.contained .sidebar { position: relative; align-self: stretch; min-height: 0; overflow: hidden; }
 .sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--border-default); }
 .sidebar_foot { display: flex; flex: none; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
 /* The view and Settings links are tree rows like the tags, and the open one is raised the way a picked tree row is. */
@@ -211,6 +211,8 @@ body.contained .sidebar { align-self: stretch; min-height: 0; overflow: hidden; 
 /* A coloured tag is tinted with its colour and edged in it, keeping the text readable in either theme. */
 .tag_chip.has_color { box-shadow: inset 0 0 0 var(--border-width) var(--tag-color); background: color-mix(in srgb, var(--tag-color) 18%, var(--surface-default)); color: var(--text-body); }
 .tag_chip.is_rule.has_color { border-color: var(--tag-color); box-shadow: none; }
+/* In a table a chip is its fill alone, without an outline. */
+.table-wrap .tag_chip { border: 0; box-shadow: none; }
 .dependency_chip.is_done { color: var(--text-tertiary); text-decoration: line-through; }
 
 /* ========================================================================== */
@@ -218,7 +220,11 @@ body.contained .sidebar { align-self: stretch; min-height: 0; overflow: hidden; 
 /* ========================================================================== */
 
 /* The details fill the side pane, the notes taking the room left over. */
+/* The pane is bordered off from the tasks; its header stays put while the rest scrolls under it. */
+.task_main > .side-pane { padding-bottom: 0; overflow: hidden; border-left: var(--border-width) solid var(--border-hover); }
 .task_detail { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; }
+.task_detail_header { flex: none; }
+.task_detail_body { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; margin: 0 calc(-1 * var(--space-6)); padding: 0 var(--space-6) var(--space-6); overflow-y: auto; }
 .task_detail .field { display: flex; }
 .task_detail_header { display: flex; align-items: center; gap: var(--space-4); }
 .task_detail_header button { flex: none; }
@@ -440,3 +446,11 @@ body.contained .sidebar { align-self: stretch; min-height: 0; overflow: hidden; 
 .report_tag_track { height: 10px; }
 .report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--tag-color, var(--accent)); }
 .report_tag_count { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ========================================================================== */
+/* Buttons                                                                    */
+/* ========================================================================== */
+
+/* Halon's ghost buttons, in the top bar, the selection bar and as icons, are drawn as regular ones. */
+:is(button.icon, .topbar button, .selection-bar button):not(.tag_chip button) { border-color: var(--border-default); background-color: var(--surface-default); }
+:is(button.icon, .topbar button, .selection-bar button):not(.tag_chip button):hover:not(:disabled) { border-color: var(--accent); background-color: var(--surface-default); }

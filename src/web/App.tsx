@@ -641,6 +641,12 @@ export function App() {
     if (detail_width !== undefined) document.body.style.setProperty('--side-pane-width', `${detail_width}px`)
   }, [detail_width])
 
+  // The Shell puts the sidebar's width on its layout only, so the top bar's name gets it through the body to line up.
+  const sidebar_width = settings?.sidebar_width
+  useEffect(() => {
+    if (sidebar_width !== undefined) document.body.style.setProperty('--sidebar-width', `${sidebar_width}px`)
+  }, [sidebar_width])
+
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
