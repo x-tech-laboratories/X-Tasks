@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest'
 
 import { task_duration } from '../src/shared/settings.ts'
 import {
-  describe_recurrence, due_after, duration_between, duration_label, next_schedule, overdue_repeat_schedule, recurrence_anchor, reschedule_day, rescheduled, rule_format,
-  with_recurrence
+  describe_recurrence, due_after, duration_between, duration_label, moved_alongside, next_schedule, overdue_repeat_schedule, recurrence_anchor, reschedule_day, rescheduled, rule_format,
+  start_before, with_recurrence
 } from '../src/shared/schedule.ts'
 import { make_task } from './fixtures.ts'
 
@@ -33,6 +33,20 @@ describe('durations', () => {
     const durations = [task_duration('day', { days: 1 }), task_duration('week', { weeks: 1 })]
     expect(duration_between(durations, '2026-03-11', '2026-03-18')?.id).toBe('week')
     expect(duration_between(durations, '2026-03-11', '2026-03-13')).toBeNull()
+  })
+
+  test('start_before steps back from the due date, or gives none when no start leads there', () => {
+    expect(start_before('2026-03-11', task_duration('d', { days: 2 }), false)).toBe('2026-03-09')
+    expect(start_before('2026-03-11T01:00', task_duration('h', { hours: 2 }), true)).toBe('2026-03-10T23:00')
+    expect(start_before('2026-04-15', task_duration('m', { months: 1 }), false)).toBe('2026-03-15')
+    expect(start_before('2026-03-31', task_duration('m', { months: 1 }), false)).toBeNull()
+    expect(start_before('2026-03-11T09:00', task_duration('d', { days: 1 }), false)).toBeNull()
+  })
+
+  test('moved_alongside moves a date as far as the other moved, to the minute only when all have times', () => {
+    expect(moved_alongside('2026-03-13', '2026-03-11', '2026-03-14')).toBe('2026-03-16')
+    expect(moved_alongside('2026-03-13T17:00', '2026-03-11T09:00', '2026-03-11T23:30')).toBe('2026-03-14T07:30')
+    expect(moved_alongside('2026-03-13', '2026-03-11T09:00', '2026-03-12T23:30')).toBe('2026-03-14')
   })
 })
 

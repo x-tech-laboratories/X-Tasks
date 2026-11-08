@@ -44,6 +44,28 @@ export function due_after(start_at: string, duration: TaskDuration): string {
   return format_local(due, has_time(start_at))
 }
 
+// The start that lies the given duration before the due date, or null when no start leads back to that exact due date,
+// such as a start without a time before a due date with one, or a month back from the 31st.
+export function start_before(due_at: string, duration: TaskDuration, with_time: boolean): string | null {
+  const due = parse_local(due_at)
+  due.setHours(due.getHours() - duration.hours, due.getMinutes() - duration.minutes)
+  due.setDate(due.getDate() - duration.weeks * 7 - duration.days)
+  const last_day = new Date(due.getFullYear(), due.getMonth() - duration.months + 1, 0).getDate()
+  const start = new Date(due.getFullYear(), due.getMonth() - duration.months, Math.min(due.getDate(), last_day), due.getHours(), due.getMinutes())
+  const start_at = format_local(start, with_time)
+  return due_after(start_at, duration) === due_at ? start_at : null
+}
+
+// Moves a date as far as another date moved from `from` to `to`: to the minute when all three have a time, or else by whole days.
+export function moved_alongside(task_date: string, from: string, to: string): string {
+  const date = parse_local(task_date)
+  const from_date = parse_local(from)
+  const to_date = parse_local(to)
+  if (has_time(task_date) && has_time(from) && has_time(to)) date.setMinutes(date.getMinutes() + Math.round((to_date.getTime() - from_date.getTime()) / 60_000))
+  else date.setDate(date.getDate() + days_between(from_date, to_date))
+  return format_local(date, has_time(task_date))
+}
+
 // The listed duration that leads from start to due, or null when the gap matches none of them.
 export function duration_between(durations: TaskDuration[], start_at: string | null, due_at: string | null): TaskDuration | null {
   if (start_at === null || due_at === null) return null

@@ -11,15 +11,19 @@ import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
 import { TagChip } from './TagChip'
 import type { TaskDateField, TaskDuration, TaskRelationship } from '@shared/settings'
-import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
+import { format_local, has_time, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import {
-  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, recurrence_anchor, with_recurrence
+  describe_recurrence, due_after, duration_between, duration_label, durations_for_start, moved_alongside, recurrence_anchor, start_before, with_recurrence
 } from '@shared/schedule'
 import { tag_path } from './views'
 
 // ============================================================================
 // Task detail
 // ============================================================================
+
+// The Duration choices that are not listed durations.
+const UNSET = 'unset'
+const CUSTOM = 'custom'
 
 interface TaskDetailProps {
   task: Task
@@ -73,19 +77,30 @@ export function TaskDetail({
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
   }
 
+  // The start and due dates move together until Unset is picked, which frees them until a duration or Custom is picked again.
+  const is_linked = task.are_dates_linked && task.start_at !== null && task.due_at !== null
   const duration = duration_between(durations, task.start_at, task.due_at)
 
-  // While a listed duration is in force, moving the start moves the due date with it.
+  // Moving the start moves the due date with it: by the listed duration when one is in force, or else by the same distance.
   function change_start(start_at: string | null): void {
-    const listed_duration = start_at && duration && durations_for_start(durations, start_at).includes(duration) ? duration : null
-    const due_at = start_at && listed_duration ? due_after(start_at, listed_duration) : task.due_at
+    if (!is_linked || !start_at) return on_set_schedule(task, { ...schedule, start_at })
+    const listed_duration = duration && durations_for_start(durations, start_at).includes(duration) ? duration : null
+    const due_at = listed_duration ? due_after(start_at, listed_duration) : moved_alongside(task.due_at!, task.start_at!, start_at)
     on_set_schedule(task, { ...schedule, start_at, due_at })
   }
 
-  // Custom leaves the due date as it is.
+  // And moving the due date moves the start back with it the same way.
+  function change_due(due_at: string | null): void {
+    if (!is_linked || !due_at) return on_set_schedule(task, { ...schedule, due_at })
+    const start_at = (duration && start_before(due_at, duration, has_time(task.start_at!))) ?? moved_alongside(task.start_at!, task.due_at!, due_at)
+    on_set_schedule(task, { ...schedule, start_at, due_at })
+  }
+
+  // Custom and Unset leave the due date as it is.
   function choose_duration(duration_id: string): void {
     const chosen = durations.find((each) => each.id === duration_id)
-    if (chosen && task.start_at) on_set_schedule(task, { ...schedule, due_at: due_after(task.start_at, chosen) })
+    const due_at = chosen && task.start_at ? due_after(task.start_at, chosen) : task.due_at
+    on_set_schedule(task, { ...schedule, due_at, are_dates_linked: duration_id !== UNSET })
   }
 
   // The checkbox, title and close button sit in the top bar above the pane, so they stay put while the pane scrolls.
@@ -176,8 +191,9 @@ export function TaskDetail({
         {task.start_at && (
           <label className="field">
             <span className="field-label">Duration</span>
-            <select value={duration?.id ?? ''} onChange={(event) => choose_duration(event.currentTarget.value)}>
-              <option value="">{task.due_at ? 'Custom' : 'None'}</option>
+            <select value={is_linked ? duration?.id ?? CUSTOM : UNSET} onChange={(event) => choose_duration(event.currentTarget.value)}>
+              <option value={UNSET}>Unset</option>
+              {task.due_at && <option value={CUSTOM}>Custom</option>}
               {durations_for_start(durations, task.start_at).map((each) => (
                 <option key={each.id} value={each.id}>
                   {duration_label(each)}
@@ -186,7 +202,7 @@ export function TaskDetail({
             </select>
           </label>
         )}
-        <DateTimeField label="Due" value={task.due_at} on_change={(due_at) => on_set_schedule(task, { ...schedule, due_at })} />
+        <DateTimeField label="Due" value={task.due_at} on_change={change_due} />
         <DateTimeField
           label="Done"
           value={task.done_at && format_local(new Date(task.done_at), true)}

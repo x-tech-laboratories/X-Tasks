@@ -179,7 +179,9 @@ const SCHEMA_MIGRATIONS = [
    );
    CREATE INDEX task_dependencies_by_dependency ON task_dependencies (depends_on_id)`,
   // Each link names its relationship from the Relationships setting; links made before then are the preset Waits on.
-  `ALTER TABLE task_dependencies ADD COLUMN relationship_id TEXT NOT NULL DEFAULT 'waits_on'`
+  `ALTER TABLE task_dependencies ADD COLUMN relationship_id TEXT NOT NULL DEFAULT 'waits_on'`,
+  // A task's start and due dates move together unless its Duration is set to Unset.
+  `ALTER TABLE tasks ADD COLUMN are_dates_linked INTEGER NOT NULL DEFAULT 1`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
@@ -234,6 +236,7 @@ interface TaskRow {
   start_at: string | null
   due_at: string | null
   recurrence: string
+  are_dates_linked: number
   my_day_on: string | null
   created_at: string
   parent_id: string | null
@@ -302,6 +305,7 @@ function row_to_task(row: TaskRow, tag_ids: string[], links: TaskLink[]): Task {
     start_at: row.start_at,
     due_at: row.due_at,
     recurrence: row.recurrence,
+    are_dates_linked: row.are_dates_linked === 1,
     my_day_on: row.my_day_on,
     created_at: row.created_at,
     parent_id: row.parent_id,
@@ -347,6 +351,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     start_at: null,
     due_at: null,
     recurrence: '',
+    are_dates_linked: true,
     my_day_on,
     created_at: new Date().toISOString(),
     parent_id,
@@ -402,8 +407,8 @@ export function set_task_notes(task_id: string, notes: string): void {
 
 export function set_task_schedule(task_id: string, schedule: TaskSchedule): void {
   open_database()
-    .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ? WHERE id = ?')
-    .run(schedule.start_at, schedule.due_at, schedule.recurrence, task_id)
+    .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = COALESCE(?, are_dates_linked) WHERE id = ?')
+    .run(schedule.start_at, schedule.due_at, schedule.recurrence, schedule.are_dates_linked === undefined ? null : Number(schedule.are_dates_linked), task_id)
 }
 
 export function set_task_my_day(task_id: string, my_day_on: string | null): void {

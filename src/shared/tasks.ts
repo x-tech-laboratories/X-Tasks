@@ -14,6 +14,8 @@ export interface Task {
   start_at: string | null
   due_at: string | null
   recurrence: string
+  // Whether moving the start or due date moves the other with it; off once the Duration is set to Unset.
+  are_dates_linked: boolean
   // The local day, as YYYY-MM-DD, the task was added to My Day; empty when it is not in My Day.
   my_day_on: string | null
   created_at: string
@@ -31,7 +33,8 @@ export interface TaskLink {
 }
 
 // Dates are local clock times, as YYYY-MM-DD or YYYY-MM-DDTHH:MM; recurrence is an RFC 5545 rule without the RRULE: prefix.
-export type TaskSchedule = Pick<Task, 'start_at' | 'due_at' | 'recurrence'>
+// A schedule without are_dates_linked leaves the task's own setting as it is.
+export type TaskSchedule = Pick<Task, 'start_at' | 'due_at' | 'recurrence'> & Partial<Pick<Task, 'are_dates_linked'>>
 
 // One tick of a task, kept so streaks and reports can look back over every time it was done.
 export interface Completion {
