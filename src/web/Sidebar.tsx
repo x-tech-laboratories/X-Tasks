@@ -1,6 +1,5 @@
-import { ThemeButton } from '@x-tech-laboratories/x-libs/web/react/shell'
-import type { ThemeChoice } from '@x-tech-laboratories/x-libs/web/theme'
-import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
+import { next_theme, type Theme, type ThemeChoice } from '@x-tech-laboratories/x-libs/web/theme'
+import { useEffect, useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
@@ -311,7 +310,7 @@ export function SidebarFoot({ theme, is_settings_open, on_open_settings }: Sideb
   return (
     <div className="sidebar_foot">
       <SyncButton on_open_settings={on_open_settings} />
-      <ThemeButton choice={theme} />
+      <ThemeRow choice={theme} />
       <a
         href="?settings"
         className={cx('tree-row', is_settings_open && 'active')}
@@ -331,6 +330,44 @@ export function SidebarFoot({ theme, is_settings_open, on_open_settings }: Sideb
 }
 
 // A cogwheel for the Settings link.
+// The theme picker as a sidebar row: its icon and name, stepping to the next theme on each click.
+const THEME_NAMES: Record<Theme, string> = { system: 'System theme', light: 'Light theme', dark: 'Dark theme' }
+
+function ThemeRow({ choice }: { choice: ThemeChoice }) {
+  const [theme, set_theme] = useState(choice.get())
+  useEffect(() => choice.on_change(set_theme), [choice])
+
+  return (
+    <button className="tree-row sync_button" title="Click to change the theme" onClick={() => choice.set(next_theme(choice.get()))}>
+      <span className="tree-label sidebar_icon_label">
+        <ThemeIcon theme={theme} />
+        <span>{THEME_NAMES[theme]}</span>
+      </span>
+    </button>
+  )
+}
+
+// A sun for light, a moon for dark, and a half-filled circle for following the system.
+function ThemeIcon({ theme }: { theme: Theme }) {
+  return (
+    <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
+      {theme === 'light' && (
+        <>
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </>
+      )}
+      {theme === 'dark' && <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />}
+      {theme === 'system' && (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 function CogIcon() {
   return (
     <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">

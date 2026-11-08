@@ -61,10 +61,10 @@ body.contained .sidebar { position: relative; top: auto; align-self: stretch; pa
 .sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--border-default); }
 .sidebar_foot { display: flex; flex: none; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
 /* The sidebar's inset sits inside what scrolls, so the scroll bar runs flush with its edge. */
-body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: var(--space-4); padding-left: var(--space-4); }
+body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: var(--space-2); padding-left: var(--space-4); }
 /* The view and Settings links are tree rows like the tags, and the open one is raised the way a picked tree row is. */
 .sidebar_views a, .sidebar_foot a { text-decoration: none; cursor: pointer; }
-.sidebar_views .tree-row, .sidebar_foot .tree-row { padding: 0 var(--space-4); }
+.sidebar_views .tree-row, .sidebar_foot .tree-row { padding: 0 var(--space-2) 0 var(--space-4); }
 .sidebar_views a.active, .sidebar_foot a.active { background-color: var(--surface-default); color: var(--text-heading); box-shadow: var(--shadow-item); font-weight: 500; }
 .sidebar_count { color: var(--text-tertiary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
 .sidebar_icon_label { display: inline-flex; align-items: center; gap: var(--space-3); }
@@ -86,9 +86,13 @@ body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: 
 
 .task_pane { min-width: 0; }
 /* Every layout takes the whole pane; the wide ones scroll inside it. */
-.task_pane.is_wide { display: flex; flex-direction: column; height: calc(100vh - var(--frame-height) - 28px - var(--space-7)); }
-.task_pane.is_wide > * { flex: none; }
-.task_pane.is_wide > :is(.table-wrap, .board_view, .calendar_view, .gantt_view) { flex: 1 1 auto; min-height: 0; }
+/* A task view fills the main pane without scrolling it; its list, table, board, calendar or chart scrolls instead. */
+body.contained main.task_main:not(.with-side-pane):has(> .main-pane > .task_pane > :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view)) { display: flex; flex-direction: column; padding-bottom: 0; overflow: hidden; }
+body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; padding-bottom: var(--space-7); overflow: hidden; }
+.main-pane > .task_pane:has(> :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.task_pane > * { flex: none; }
+.task_pane > :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view) { flex: 1 1 auto; min-height: 0; }
+.task_pane > .task_list { flex: 0 1 auto; overflow-y: auto; }
 .task_pane.is_wide.is_table > .table-wrap { flex: 0 1 auto; }
 
 /* The title, the date and the count of tasks left share one line with the view's buttons. */
@@ -455,3 +459,23 @@ body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: 
 /* Halon's ghost buttons, in the top bar, the selection bar and as icons, are drawn as regular ones. */
 :is(button.icon, .topbar button, .selection-bar button):not(.tag_chip button) { border-color: var(--border-default); background-color: var(--surface-default); }
 :is(button.icon, .topbar button, .selection-bar button):not(.tag_chip button):hover:not(:disabled) { border-color: var(--accent); background-color: var(--surface-default); }
+
+/* ========================================================================== */
+/* Scroll bars and tables                                                     */
+/* ========================================================================== */
+
+/* Every scroll bar is Halon's 10px thumb: the standard properties would swap it for the system's own bar, arrows and shading included. */
+* { scrollbar-width: auto; scrollbar-color: auto; }
+
+/* A table fits its pane instead of scrolling sideways: the task takes 30% and the other columns share the rest, cutting off what does not fit. */
+.task_pane > .table-wrap { overflow-x: hidden; }
+.task_pane > .table-wrap > table { table-layout: fixed; }
+.task_pane > .table-wrap :is(th, td) { width: auto !important; min-width: 0 !important; max-width: none !important; overflow: hidden; text-overflow: ellipsis; }
+.task_pane > .table-wrap thead th:first-child { width: 30% !important; }
+.task_pane > .table-wrap th > button.sort { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* The column picker sits past the last heading instead of over it. */
+.task_pane > .table-wrap thead th:last-child { padding-right: calc(var(--space-5) + var(--row-height) + var(--space-2)); }
+
+/* A task's date and time fields take equal shares of the row. */
+.task_detail .date-time-inputs > input, .task_detail .date-time-inputs > input[type="time"] { flex: 1 1 0; }

@@ -1023,14 +1023,14 @@ export function App() {
             </button>
           )}
           {parent_ids.length > 0 && (layout === 'list' || layout === 'table' || layout === 'gantt') && (
-            <>
+            <div className="segmented" role="group" aria-label="Subtasks">
               <button onClick={() => set_tasks_collapsed(parent_ids, true)} disabled={!has_expanded_parent} title="Collapse every task with subtasks">
                 Collapse all
               </button>
               <button onClick={() => set_tasks_collapsed(parent_ids, false)} disabled={!has_collapsed_parent} title="Expand every task with subtasks">
                 Expand all
               </button>
-            </>
+            </div>
           )}
           {!is_upcoming && layout !== 'calendar' && layout !== 'gantt' && (
             <select
