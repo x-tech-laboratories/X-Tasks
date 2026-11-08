@@ -118,7 +118,7 @@ function create_mcp_server(on_change: () => void): McpServer {
   server.registerTool(
     'list_tasks',
     {
-      description: 'Lists tasks with their notes, dates, recurrence, My Day day, parent and tags.',
+      description: 'Lists tasks with their notes (Markdown), dates, recurrence, My Day day, parent and tags.',
       inputSchema: { include_done: z.boolean().default(false).describe('Also list completed tasks') }
     },
     ({ include_done }) => as_text(describe_tasks(list_tasks().filter((task) => include_done || !task.is_done)))
@@ -144,7 +144,7 @@ function create_mcp_server(on_change: () => void): McpServer {
       description: 'Adds a task, or a subtask when parent_id is given.',
       inputSchema: {
         title: z.string().trim().min(1),
-        notes: z.string().optional(),
+        notes: z.string().optional().describe('Markdown, shown formatted'),
         parent_id: z.string().optional().describe('The task to put this one under'),
         tag_ids: z.array(z.string()).default([]),
         start_at: task_date.optional(),
@@ -173,7 +173,7 @@ function create_mcp_server(on_change: () => void): McpServer {
       inputSchema: {
         task_id: z.string(),
         title: z.string().trim().min(1).optional(),
-        notes: z.string().optional(),
+        notes: z.string().optional().describe('Markdown, shown formatted'),
         start_at: task_date.optional(),
         due_at: task_date.optional(),
         recurrence: z.string().optional().describe('An RFC 5545 rule without the RRULE: prefix; an empty string stops it repeating'),

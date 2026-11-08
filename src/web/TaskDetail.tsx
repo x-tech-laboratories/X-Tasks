@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
+import { RichText } from '@x-tech-laboratories/x-libs/web/react/rich_text'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
 import { can_link, links_of, type SeenLink, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
@@ -64,6 +65,7 @@ export function TaskDetail({
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
   const [is_picking_recurrence, set_is_picking_recurrence] = useState(false)
+  const [is_notes_open, set_is_notes_open] = useState(false)
   const schedule: TaskSchedule = { start_at: task.start_at, due_at: task.due_at, recurrence: task.recurrence }
 
   // Escape closes the panel even from its fields, each of which saves on blur first; a dialog open over it keeps Escape for itself.
@@ -78,6 +80,16 @@ export function TaskDetail({
 
   function commit_notes(): void {
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
+  }
+
+  function close_notes(): void {
+    commit_notes()
+    set_is_notes_open(false)
+  }
+
+  // Escape leaves the notes, saving them, before it closes the panel or the notes dialog.
+  function blur_on_escape(event: KeyboardEvent<HTMLElement>): void {
+    if (event.key === 'Escape' && document.activeElement instanceof HTMLElement) document.activeElement.blur()
   }
 
   // The start and due dates move together until Unset is picked, which frees them until a duration or Custom is picked again.
@@ -266,16 +278,13 @@ export function TaskDetail({
         )
       case 'notes':
         return (
-          <label className="field task_detail_notes">
-            <span className="field-label">Notes</span>
-            <textarea
-              value={notes_draft}
-              onChange={(event) => set_notes_draft(event.currentTarget.value)}
-              onBlur={commit_notes}
-              onKeyDown={(event) => event.key === 'Escape' && event.currentTarget.blur()}
-              placeholder="Add notes"
-            />
-          </label>
+          <div className="field task_detail_notes" onKeyDown={blur_on_escape}>
+            <div className="task_detail_notes_head">
+              <span className="field-label">Notes</span>
+              <button type="button" className="icon" onClick={() => set_is_notes_open(true)} aria-label="Open notes in a dialog" title="Open notes in a dialog">⤢</button>
+            </div>
+            <RichText label="Notes" value={notes_draft} on_change={set_notes_draft} on_blur={commit_notes} placeholder="Add notes" />
+          </div>
         )
     }
   }
@@ -285,6 +294,14 @@ export function TaskDetail({
       {topbar ? createPortal(header, topbar) : header}
       <div className="side-pane-body">
         {sections.map((section) => <Fragment key={section}>{render_section(section)}</Fragment>)}
+
+        {is_notes_open && (
+          <Dialog title="Notes" subtitle={task.title} full on_close={close_notes} buttons={<button className="accent solid" onClick={close_notes}>Done</button>}>
+            <div className="task_detail_notes_dialog" onKeyDown={blur_on_escape}>
+              <RichText label="Notes" value={notes_draft} on_change={set_notes_draft} on_blur={commit_notes} placeholder="Add notes" autofocus />
+            </div>
+          </Dialog>
+        )}
 
         {is_picking_recurrence && (
           <RecurrencePicker

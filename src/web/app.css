@@ -151,7 +151,11 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .task_detail_header input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
 .recurrence_button { display: block; overflow: hidden; font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .task_detail_notes { flex: 1; min-height: 160px; }
-.task_detail_notes textarea { flex: 1; resize: none; }
+.task_detail_notes .rich-text { flex: 1; }
+.task_detail_notes_head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+/* The notes dialog gives the notes the whole window. */
+.task_detail_notes_dialog { display: flex; flex: 1; flex-direction: column; min-height: 0; height: 100%; }
+.task_detail_notes_dialog .rich-text { flex: 1; }
 .task_detail_footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); color: var(--text-tertiary); font-size: var(--text-caption); }
 .task_detail_footer .muted { color: inherit; }
 .relationship_group { display: flex; flex-direction: column; gap: var(--space-2); }

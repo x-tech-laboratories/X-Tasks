@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, saved_task_duration, type Settings } from '@shared/settings'
+import { as_code_block } from '@x-tech-laboratories/x-libs/web/markdown_text'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
 import type { TaskVersion } from '@shared/versions'
 import type { SqlDatabase } from './sql_database'
@@ -9,8 +10,8 @@ import { drop_version_triggers, install_version_triggers, read_recent_versions, 
 // Schema
 // ============================================================================
 
-// Each entry upgrades the schema by one version; append new ones, never edit old ones.
-const SCHEMA_MIGRATIONS = [
+// Each entry upgrades the schema by one version, as SQL or as code; append new ones, never edit old ones.
+const SCHEMA_MIGRATIONS: (string | ((database: SqlDatabase) => void))[] = [
   `CREATE TABLE IF NOT EXISTS tasks (
      id TEXT PRIMARY KEY,
      title TEXT NOT NULL,
@@ -195,8 +196,16 @@ const SCHEMA_MIGRATIONS = [
      snapshot TEXT NOT NULL
    );
    CREATE INDEX task_versions_by_task ON task_versions (task_id, id);
-   CREATE TABLE task_versions_pending (task_id TEXT PRIMARY KEY) WITHOUT ROWID`
+   CREATE TABLE task_versions_pending (task_id TEXT PRIMARY KEY) WITHOUT ROWID`,
+  // Notes are Markdown; each plain one goes into a code block, so every character shows as it was written.
+  wrap_notes_in_code_blocks
 ]
+
+function wrap_notes_in_code_blocks(database: SqlDatabase): void {
+  const notes = database.prepare("SELECT id, notes FROM tasks WHERE notes <> ''").all() as { id: string; notes: string }[]
+  const update = database.prepare('UPDATE tasks SET notes = ? WHERE id = ?')
+  for (const task of notes) update.run(as_code_block(task.notes), task.id)
+}
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
 function in_transaction<Result>(database: SqlDatabase, work: () => Result): Result {
@@ -232,7 +241,9 @@ function migrate_schema(database: SqlDatabase): void {
 
   for (let version = user_version; version < SCHEMA_MIGRATIONS.length; version += 1) {
     in_transaction(database, () => {
-      database.exec(SCHEMA_MIGRATIONS[version]!)
+      const migration = SCHEMA_MIGRATIONS[version]!
+      if (typeof migration === 'string') database.exec(migration)
+      else migration(database)
       database.exec(`PRAGMA user_version = ${version + 1}`)
     })
   }
