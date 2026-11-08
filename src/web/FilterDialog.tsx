@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 
-import { ColorPicker } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { ColorPicker, TreePicker } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 
-import { EMPTY_RULE, type DueCondition, type LinkDirection, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import { EMPTY_RULE, type DueCondition, type LinkDirection, type LinkTarget, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import type { TaskRelationship } from '@shared/settings'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
 import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
@@ -151,16 +151,10 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
         const link_condition = condition
         const side = condition.relationship_id === '' ? '' : `${condition.relationship_id}:${condition.direction}`
         const side_choices = link_side_choices(relationships)
-        const target = condition.target === 'task' ? `task:${condition.task_id}` : condition.target
 
         function choose_side(value: string): void {
           const [relationship_id = '', direction = 'either'] = value.split(':')
           on_change({ ...link_condition, relationship_id, direction: direction as LinkDirection })
-        }
-
-        function choose_target(value: string): void {
-          if (value.startsWith('task:')) on_change({ ...link_condition, target: 'task', task_id: value.slice('task:'.length) })
-          else on_change({ ...link_condition, target: value as 'any' | 'open', task_id: '' })
         }
 
         return (
@@ -171,16 +165,21 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
               {side !== '' && !side_choices.some((choice) => choice.value === side) && <option value={side}>Deleted relationship</option>}
               {side_choices.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <select value={target} onChange={(event) => choose_target(event.currentTarget.value)} aria-label="Linked task">
+            <select value={condition.target} onChange={(event) => on_change({ ...condition, target: event.currentTarget.value as LinkTarget, task_id: '' })} aria-label="Linked task">
               <option value="any">any task</option>
               <option value="open">an open task</option>
-              {condition.target === 'task' && !tasks.some((task) => task.id === condition.task_id) && <option value={target}>Deleted task</option>}
-              {[...tasks].sort((first, second) => first.title.localeCompare(second.title)).map((task) => (
-                <option key={task.id} value={`task:${task.id}`}>
-                  {task.title}
-                </option>
-              ))}
+              <option value="task">a chosen task</option>
             </select>
+            {condition.target === 'task' && (
+              <TreePicker
+                label="Task"
+                items={tasks}
+                name_of={(task) => task.title}
+                value={condition.task_id}
+                placeholder={condition.task_id === '' ? 'Choose a task…' : 'Deleted task'}
+                on_change={(task_id) => on_change({ ...condition, task_id })}
+              />
+            )}
           </>
         )
       }
