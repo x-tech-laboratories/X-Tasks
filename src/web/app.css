@@ -162,6 +162,9 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .group_heading:not(:first-child) { border-top: var(--border-width) solid var(--border-default); }
 .group_heading.is_overdue, tr.group-row.is_overdue th { color: var(--status-danger); }
 .group_count { color: var(--text-tertiary); font-weight: 400; }
+/* The table's group rows match the list's headings: shaded, with the count set off from the label. */
+tbody tr.group-row > th { background-color: var(--surface-secondary); font-size: var(--text-caption); font-weight: 600; }
+tr.group-row .group_count { margin-left: var(--space-3); }
 
 /* Done, opened, picked and tinted rows, the same in the list, the table and the board. */
 .task.is_done .task_title, .task_row.is_done .task_title, .board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
