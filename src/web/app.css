@@ -509,3 +509,37 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 .date-time-inputs > :first-child { border-top-left-radius: var(--radius-small); border-bottom-left-radius: var(--radius-small); }
 .date-time-inputs > :last-child { border-top-right-radius: var(--radius-small); border-bottom-right-radius: var(--radius-small); }
 .date-time-inputs > :is(input, button):is(:hover, :focus) { position: relative; z-index: 1; }
+
+/* ========================================================================== */
+/* History                                                                    */
+/* ========================================================================== */
+
+.task_detail_actions { display: flex; gap: var(--space-3); }
+
+/* The versions list down the left of the dialog and the picked one's changes beside it, stacked on a phone. */
+.history_dialog .version_history { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: var(--space-5); min-height: 320px; }
+@media (max-width: 640px) { .history_dialog .version_history { grid-template-columns: 1fr; } }
+.version_list { display: flex; flex-direction: column; gap: var(--space-1); max-height: 60vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.version_row, .history_row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); width: 100%; height: auto; padding: var(--space-3) var(--space-4); border-color: transparent; background: transparent; font-weight: 400; text-align: left; }
+.version_row.is_selected { border-color: var(--accent); background-color: var(--focus-ring); }
+.version_summary { color: var(--text-body); font-weight: 600; }
+.version_detail { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+/* Each changed field's name over what it was and what it became. */
+.snapshot_fields { display: flex; flex-direction: column; gap: var(--space-4); margin: 0; }
+.snapshot_fields dt { color: var(--text-secondary); font-size: var(--text-caption); font-weight: 600; }
+.snapshot_fields dd { margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.text_diff { white-space: pre-wrap; }
+.value_diff { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.diff_removed { background-color: color-mix(in srgb, var(--status-danger) 18%, transparent); color: var(--text-body); text-decoration: line-through; }
+.diff_added { background-color: color-mix(in srgb, var(--status-success) 22%, transparent); color: var(--text-body); }
+.chip.diff_removed, .chip.diff_added { border-color: transparent; }
+
+/* The History page lists the latest changes under the day each was made. */
+.history_list { margin: 0; padding: 0; list-style: none; }
+.history_list > li + li { border-top: var(--border-width) solid var(--border-default); }
+.history_row { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-4); border-radius: 0; }
+.history_row:hover { background-color: var(--surface-navigation-hover); }
+.history_title { color: var(--text-body); font-weight: 600; }
+.history_title.is_gone { color: var(--text-tertiary); text-decoration: line-through; }
+.history_summary { flex: 1; color: var(--text-secondary); }

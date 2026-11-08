@@ -46,7 +46,8 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'all', label: 'All tasks' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
-  { value: 'reports', label: 'Reports' }
+  { value: 'reports', label: 'Reports' },
+  { value: 'history', label: 'History' }
 ]
 
 const TAG_SELECTION_CHOICES: { value: TagSelection; label: string }[] = [

@@ -9,7 +9,7 @@ import type { View } from './tasks'
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
 // The view the app opens on, where 'last' means the one shown when it was closed.
-export type LaunchView = 'last' | 'my_day' | 'upcoming' | 'all' | 'active' | 'completed' | 'reports'
+export type LaunchView = 'last' | 'my_day' | 'upcoming' | 'all' | 'active' | 'completed' | 'reports' | 'history'
 
 // How the center pane shows tasks: a plain list, a table with aligned columns, a board of columns, a calendar, or a Gantt chart.
 export type TaskLayout = 'list' | 'table' | 'board' | 'calendar' | 'gantt'

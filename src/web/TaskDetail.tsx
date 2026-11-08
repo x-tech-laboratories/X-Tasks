@@ -54,12 +54,13 @@ interface TaskDetailProps {
   is_in_my_day: boolean
   on_set_my_day: (task: Task, is_added: boolean) => void
   on_remove: (task: Task) => void
+  on_show_history: (task: Task) => void
   on_close: () => void
 }
 
 export function TaskDetail({
   task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
-  is_in_my_day, on_set_my_day, on_remove, on_close, streak, history
+  is_in_my_day, on_set_my_day, on_remove, on_show_history, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -300,9 +301,12 @@ export function TaskDetail({
             Created {new Date(task.created_at).toLocaleDateString()}
             {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
           </span>
-          <button className="danger" onClick={() => on_remove(task)}>
-            Delete
-          </button>
+          <span className="task_detail_actions">
+            <button onClick={() => on_show_history(task)}>History</button>
+            <button className="danger" onClick={() => on_remove(task)}>
+              Delete
+            </button>
+          </span>
         </footer>
       </div>
     </aside>

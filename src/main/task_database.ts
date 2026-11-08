@@ -1,7 +1,9 @@
 import { DEFAULT_SETTINGS, saved_task_duration, type Settings } from '@shared/settings'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
+import type { TaskVersion } from '@shared/versions'
 import type { SqlDatabase } from './sql_database'
 import { drop_sync_triggers, install_sync_triggers } from './sync_engine'
+import { drop_version_triggers, install_version_triggers, read_recent_versions, read_task_versions, record_task_versions, restore_version } from './task_versions'
 
 // ============================================================================
 // Schema
@@ -181,15 +183,28 @@ const SCHEMA_MIGRATIONS = [
   // Each link names its relationship from the Relationships setting; links made before then are the preset Waits on.
   `ALTER TABLE task_dependencies ADD COLUMN relationship_id TEXT NOT NULL DEFAULT 'waits_on'`,
   // A task's start and due dates move together unless its Duration is set to Unset.
-  `ALTER TABLE tasks ADD COLUMN are_dates_linked INTEGER NOT NULL DEFAULT 1`
+  `ALTER TABLE tasks ADD COLUMN are_dates_linked INTEGER NOT NULL DEFAULT 1`,
+  // Each task's history keeps the whole task after every change; tasks touched by a write wait in the pending table until it is recorded.
+  `CREATE TABLE task_versions (
+     id INTEGER PRIMARY KEY,
+     task_id TEXT NOT NULL,
+     changed_at TEXT NOT NULL,
+     kind TEXT NOT NULL,
+     origin TEXT NOT NULL,
+     restored_from INTEGER,
+     snapshot TEXT NOT NULL
+   );
+   CREATE INDEX task_versions_by_task ON task_versions (task_id, id);
+   CREATE TABLE task_versions_pending (task_id TEXT PRIMARY KEY) WITHOUT ROWID`
 ]
 
 // Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
-function in_transaction(database: SqlDatabase, work: () => void): void {
+function in_transaction<Result>(database: SqlDatabase, work: () => Result): Result {
   database.exec('BEGIN')
   try {
-    work()
+    const result = work()
     database.exec('COMMIT')
+    return result
   } catch (error) {
     database.exec('ROLLBACK')
     throw error
@@ -208,9 +223,10 @@ function undo_reverted_list_tree(database: SqlDatabase): void {
   })
 }
 
-// Sync's triggers name table columns, so they come off while migrations reshape tables and go back on after.
+// Sync's and history's triggers name table columns, so they come off while migrations reshape tables and go back on after.
 function migrate_schema(database: SqlDatabase): void {
   drop_sync_triggers(database)
+  drop_version_triggers(database)
   undo_reverted_list_tree(database)
   const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
 
@@ -221,6 +237,17 @@ function migrate_schema(database: SqlDatabase): void {
     })
   }
   install_sync_triggers(database)
+  in_transaction(database, () => install_version_triggers(database))
+}
+
+// Runs a change as one transaction that also saves a new version of every task it touched.
+function write<Result>(work: (database: SqlDatabase) => Result): Result {
+  const database = open_database()
+  return in_transaction(database, () => {
+    const result = work(database)
+    record_task_versions(database, 'here')
+    return result
+  })
 }
 
 // ============================================================================
@@ -341,7 +368,6 @@ export function list_tasks(): Task[] {
 }
 
 export function add_task(title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null): Task {
-  const database = open_database()
   const task: Task = {
     id: crypto.randomUUID(),
     title,
@@ -360,7 +386,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     links: []
   }
 
-  in_transaction(database, () => {
+  write((database) => {
     database
       .prepare('INSERT INTO tasks (id, title, is_done, my_day_on, created_at, parent_id, position) VALUES (?, ?, 0, ?, ?, ?, ?)')
       .run(task.id, task.title, task.my_day_on, task.created_at, task.parent_id, task.position)
@@ -372,10 +398,9 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
 
 // A recurring task stays open when ticked, yet still records the time it was done.
 export function set_task_done(task_id: string, is_done: boolean, done_at: string | null, log_change: CompletionLogChange): void {
-  const database = open_database()
   const latest_entry = 'SELECT MAX(id) FROM task_completions WHERE task_id = ?'
 
-  in_transaction(database, () => {
+  write((database) => {
     database.prepare('UPDATE tasks SET is_done = ?, done_at = ? WHERE id = ?').run(is_done ? 1 : 0, done_at, task_id)
     if (log_change.kind === 'add' && done_at !== null) {
       database
@@ -398,36 +423,36 @@ export function list_completions(): Completion[] {
 }
 
 export function set_task_title(task_id: string, title: string): void {
-  open_database().prepare('UPDATE tasks SET title = ? WHERE id = ?').run(title, task_id)
+  write((database) => database.prepare('UPDATE tasks SET title = ? WHERE id = ?').run(title, task_id))
 }
 
 export function set_task_notes(task_id: string, notes: string): void {
-  open_database().prepare('UPDATE tasks SET notes = ? WHERE id = ?').run(notes, task_id)
+  write((database) => database.prepare('UPDATE tasks SET notes = ? WHERE id = ?').run(notes, task_id))
 }
 
 export function set_task_schedule(task_id: string, schedule: TaskSchedule): void {
-  open_database()
-    .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = COALESCE(?, are_dates_linked) WHERE id = ?')
-    .run(schedule.start_at, schedule.due_at, schedule.recurrence, schedule.are_dates_linked === undefined ? null : Number(schedule.are_dates_linked), task_id)
+  write((database) =>
+    database
+      .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = COALESCE(?, are_dates_linked) WHERE id = ?')
+      .run(schedule.start_at, schedule.due_at, schedule.recurrence, schedule.are_dates_linked === undefined ? null : Number(schedule.are_dates_linked), task_id)
+  )
 }
 
 export function set_task_my_day(task_id: string, my_day_on: string | null): void {
-  open_database().prepare('UPDATE tasks SET my_day_on = ? WHERE id = ?').run(my_day_on, task_id)
+  write((database) => database.prepare('UPDATE tasks SET my_day_on = ? WHERE id = ?').run(my_day_on, task_id))
 }
 
 export function remove_task(task_id: string): void {
-  open_database().prepare('DELETE FROM tasks WHERE id = ?').run(task_id)
+  write((database) => database.prepare('DELETE FROM tasks WHERE id = ?').run(task_id))
 }
 
 export function move_task(task_id: string, parent_id: string | null, position: number): void {
-  open_database().prepare('UPDATE tasks SET parent_id = ?, position = ? WHERE id = ?').run(parent_id, position, task_id)
+  write((database) => database.prepare('UPDATE tasks SET parent_id = ?, position = ? WHERE id = ?').run(parent_id, position, task_id))
 }
 
 // In a one-tag-per-task group, the new tag replaces whichever tag of that group the task had.
 export function tag_task(task_id: string, tag_id: string): void {
-  const database = open_database()
-
-  in_transaction(database, () => {
+  write((database) => {
     database
       .prepare(
         `DELETE FROM task_tags WHERE task_id = ? AND tag_id IN (
@@ -443,14 +468,12 @@ export function tag_task(task_id: string, tag_id: string): void {
 }
 
 export function untag_task(task_id: string, tag_id: string): void {
-  open_database().prepare('DELETE FROM task_tags WHERE task_id = ? AND tag_id = ?').run(task_id, tag_id)
+  write((database) => database.prepare('DELETE FROM task_tags WHERE task_id = ? AND tag_id = ?').run(task_id, tag_id))
 }
 
 // Two tasks share at most one link, so a link made the other way round goes first.
 export function link_tasks(task_id: string, other_id: string, relationship_id: string): void {
-  const database = open_database()
-
-  in_transaction(database, () => {
+  write((database) => {
     database.prepare('DELETE FROM task_dependencies WHERE task_id = ? AND depends_on_id = ?').run(other_id, task_id)
     database
       .prepare(
@@ -463,9 +486,32 @@ export function link_tasks(task_id: string, other_id: string, relationship_id: s
 
 // Removes the two tasks' link whichever of them made it.
 export function unlink_tasks(task_id: string, other_id: string): void {
-  open_database()
-    .prepare('DELETE FROM task_dependencies WHERE (task_id = ? AND depends_on_id = ?) OR (task_id = ? AND depends_on_id = ?)')
-    .run(task_id, other_id, other_id, task_id)
+  write((database) =>
+    database
+      .prepare('DELETE FROM task_dependencies WHERE (task_id = ? AND depends_on_id = ?) OR (task_id = ? AND depends_on_id = ?)')
+      .run(task_id, other_id, other_id, task_id)
+  )
+}
+
+// ============================================================================
+// Task history
+// ============================================================================
+
+export function list_task_versions(task_id: string): TaskVersion[] {
+  return read_task_versions(open_database(), task_id)
+}
+
+export function list_recent_versions(limit: number): TaskVersion[] {
+  return read_recent_versions(open_database(), limit)
+}
+
+// The restore is itself a change, so the history gains a new version rather than losing the ones after the restored one.
+export function restore_task_version(version_id: number): void {
+  const database = open_database()
+  in_transaction(database, () => {
+    record_task_versions(database, 'here')
+    record_task_versions(database, 'here', restore_version(database, version_id))
+  })
 }
 
 // ============================================================================
@@ -500,9 +546,7 @@ export function add_tag_group(name: string, is_rule: boolean): TagGroup {
 // A group turned to rules gives each plain tag an empty rule and takes its tags off every task; one turned plain drops the rules.
 // Only a plain group can limit a task to one tag, and turning that on leaves tasks already holding several as they are.
 export function update_tag_group(group_id: string, name: string, is_rule: boolean, is_single_choice: boolean): void {
-  const database = open_database()
-
-  in_transaction(database, () => {
+  write((database) => {
     database
       .prepare('UPDATE tag_groups SET name = ?, is_rule = ?, is_single_choice = ? WHERE id = ?')
       .run(name, is_rule ? 1 : 0, is_single_choice && !is_rule ? 1 : 0, group_id)
@@ -517,7 +561,7 @@ export function update_tag_group(group_id: string, name: string, is_rule: boolea
 
 // Its tags go with it, while their tasks stay and only lose the tags.
 export function remove_tag_group(group_id: string): void {
-  open_database().prepare('DELETE FROM tag_groups WHERE id = ?').run(group_id)
+  write((database) => database.prepare('DELETE FROM tag_groups WHERE id = ?').run(group_id))
 }
 
 export function move_tag_group(group_id: string, position: number): void {
@@ -559,9 +603,7 @@ export function add_tag(name: string, group_id: string, parent_id: string | null
 
 // A rule tag is never held by hand, so giving the tag a rule takes it off every task that had it.
 export function update_tag(tag_id: string, name: string, rule: TagRule | null, color: string | null, icon: string | null, shows_on_rows: boolean): void {
-  const database = open_database()
-
-  in_transaction(database, () => {
+  write((database) => {
     database
       .prepare('UPDATE tags SET name = ?, rule = ?, color = ?, icon = ?, shows_on_rows = ? WHERE id = ?')
       .run(name, rule === null ? null : JSON.stringify(rule), color, icon, shows_on_rows ? 1 : 0, tag_id)
@@ -571,7 +613,7 @@ export function update_tag(tag_id: string, name: string, rule: TagRule | null, c
 
 // Sub-tags go with it, while its tasks stay and only lose the tags.
 export function remove_tag(tag_id: string): void {
-  open_database().prepare('DELETE FROM tags WHERE id = ?').run(tag_id)
+  write((database) => database.prepare('DELETE FROM tags WHERE id = ?').run(tag_id))
 }
 
 export function move_tag(tag_id: string, parent_id: string | null, position: number): void {

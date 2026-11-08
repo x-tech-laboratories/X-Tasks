@@ -1,4 +1,5 @@
 import type { TaskRelationship } from './settings'
+import type { TaskVersion } from './versions'
 
 // ============================================================================
 // Task, tag and tag group
@@ -126,6 +127,7 @@ export type View =
   | { kind: 'active' }
   | { kind: 'completed' }
   | { kind: 'reports' }
+  | { kind: 'history' }
   | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================
@@ -237,6 +239,12 @@ export interface TasksApi {
   link_tasks: (task_id: string, other_id: string, relationship_id: string) => Promise<void>
   unlink_tasks: (task_id: string, other_id: string) => Promise<void>
   list_completions: () => Promise<Completion[]>
+  // A task's history, newest first, kept after the task is deleted.
+  list_task_versions: (task_id: string) => Promise<TaskVersion[]>
+  // The latest changes to every task, newest first.
+  list_recent_versions: (limit: number) => Promise<TaskVersion[]>
+  // Brings the task back as one of its versions had it, adding the restore to its history as a new version.
+  restore_task_version: (version_id: number) => Promise<void>
 
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string, is_rule: boolean) => Promise<TagGroup>
