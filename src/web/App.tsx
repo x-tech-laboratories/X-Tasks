@@ -1010,6 +1010,7 @@ export function App() {
       completions={completions}
       tags={tags}
       tag_groups={tag_groups}
+      relationships={settings.task_relationships}
       today={today}
       on_change_widgets={(widgets) => void change_setting('report_widgets', widgets)}
       on_select_task={(task) => set_selected_task_id(task.id)}

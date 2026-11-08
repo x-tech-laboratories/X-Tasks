@@ -1,4 +1,4 @@
-import type { ReportWidget } from '@shared/settings'
+import type { ReportWidget, TaskRelationship } from '@shared/settings'
 import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import {
   record_since, repeating_ancestor_of, routine_history, routine_streak, subtask_history, subtask_streak, type HistoryMark, type RoutineRecord,
@@ -125,4 +125,50 @@ export function ticks_per_tag(
   const rows: { tag: Tag | null; count: number }[] = top_tags.map((tag) => ({ tag, count: ticks.filter((tick) => holds(tick.task_id, tag)).length }))
   rows.push({ tag: null, count: ticks.filter((tick) => !top_tags.some((tag) => holds(tick.task_id, tag))).length })
   return rows.filter((row) => row.count > 0).sort((first, second) => second.count - first.count)
+}
+
+// ============================================================================
+// Task map
+// ============================================================================
+
+export interface TaskMapNode {
+  id: string
+  task: Task
+  // How many lines meet the task, so busier tasks draw larger.
+  degree: number
+}
+
+export interface TaskMapLink {
+  source: string
+  target: string
+  // A subtask line from parent to subtask, or a relationship link from the task that made it.
+  kind: 'subtask' | 'relationship'
+  // How the link reads in words, as in "Write report waits on Gather data".
+  description: string
+  // Whether the link reads differently each way, so it draws an arrow.
+  is_directed: boolean
+}
+
+// The card's tasks that have a parent, a subtask or a link among them, with the lines between them.
+export function task_map(widget: ReportWidget, widget_tasks: Task[], relationships: TaskRelationship[]): { nodes: TaskMapNode[]; links: TaskMapLink[] } {
+  const shown = new Map(widget_tasks.filter((task) => widget.show_done || !task.is_done).map((task) => [task.id, task]))
+  const links: TaskMapLink[] = []
+
+  for (const task of shown.values()) {
+    const parent = task.parent_id === null ? undefined : shown.get(task.parent_id)
+    if (parent) links.push({ source: parent.id, target: task.id, kind: 'subtask', description: `${task.title} is a subtask of ${parent.title}`, is_directed: false })
+
+    for (const link of task.links) {
+      const other = shown.get(link.other_id)
+      const relationship = relationships.find((each) => each.id === link.relationship_id)
+      if (!other || !relationship) continue
+      const description = `${task.title} ${relationship.name.toLowerCase()} ${other.title}`
+      links.push({ source: task.id, target: other.id, kind: 'relationship', description, is_directed: relationship.name !== relationship.inverse_name })
+    }
+  }
+
+  const degrees = new Map<string, number>()
+  for (const { source, target } of links) for (const id of [source, target]) degrees.set(id, (degrees.get(id) ?? 0) + 1)
+  const nodes = [...degrees].map(([id, degree]) => ({ id, task: shown.get(id)!, degree }))
+  return { nodes, links }
 }

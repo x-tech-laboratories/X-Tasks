@@ -359,6 +359,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .report_week_bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); }
 .report_week_axis { display: flex; justify-content: space-between; margin-top: var(--space-2); color: var(--text-tertiary); font-size: var(--text-caption); }
 
+.report_task_map { height: 440px; overflow: hidden; border-radius: var(--radius-small); background: var(--surface-secondary); }
+
 .report_tag_bars { display: flex; flex-direction: column; gap: var(--space-3); }
 .report_tag_row { display: grid; grid-template-columns: minmax(80px, 160px) 1fr 40px; align-items: center; gap: var(--space-4); font-size: var(--text-control); }
 .report_tag_name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
