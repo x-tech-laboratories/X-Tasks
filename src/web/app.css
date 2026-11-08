@@ -30,10 +30,9 @@ html.follows_host_theme {
 /* Frame                                                                      */
 /* ========================================================================== */
 
-/* The bar takes the whole top bar, with the syntax button beside it. */
+/* The bar takes the whole top bar. */
 .multibar { display: flex; flex: 1; align-items: center; gap: var(--space-4); min-width: 0; }
 .multibar input.filter { flex: 1; min-width: 0; }
-.syntax_button { flex: none; }
 
 /* What the bar could not read shows in a band across the top of the pane. */
 .syntax_preview {
@@ -49,10 +48,10 @@ html.follows_host_theme {
 }
 .syntax_problem { color: var(--status-danger); }
 
-/* The sidebar scrolls its views and tags while its foot stays at the bottom. */
-.sidebar { overflow-y: auto; }
+/* The sidebar fills its row instead of growing with its tags, so they scroll while its foot stays at the bottom. */
+body.contained .sidebar { align-self: stretch; min-height: 0; overflow: hidden; }
 .sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--border-default); }
-.sidebar_foot { display: flex; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
+.sidebar_foot { display: flex; flex: none; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
 /* The view and Settings links are tree rows like the tags, and the open one is raised the way a picked tree row is. */
 .sidebar_views a, .sidebar_foot a { text-decoration: none; cursor: pointer; }
 .sidebar_views .tree-row, .sidebar_foot .tree-row { padding: 0 var(--space-4); }
@@ -235,7 +234,6 @@ html.follows_host_theme {
 .dialog.group_dialog { width: min(480px, calc(100vw - 2 * var(--space-7))); }
 .dialog.recurrence_dialog, .dialog.relationship_dialog { width: min(560px, calc(100vw - 2 * var(--space-7))); }
 .dialog.rule_dialog { width: min(640px, calc(100vw - 2 * var(--space-7))); }
-.dialog.syntax_help_dialog { width: min(680px, calc(100vw - 2 * var(--space-7))); }
 .dialog_form { display: flex; flex-direction: column; gap: var(--space-5); }
 .dialog_form .field { display: flex; }
 .dialog_count { margin-right: auto; align-self: center; color: var(--text-tertiary); font-size: var(--text-caption); }
@@ -255,7 +253,6 @@ html.follows_host_theme {
 .rule_unit { color: var(--text-secondary); font-size: var(--text-control); }
 
 /* The syntax help lists each example beside its meaning. */
-.syntax_help_section { margin-top: var(--space-6); }
 .syntax_examples { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; }
 .syntax_example { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: baseline; }
 .syntax_example dt { min-width: 0; overflow-wrap: anywhere; }

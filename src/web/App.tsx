@@ -23,7 +23,7 @@ import { UntrustedCertificatePrompt } from './CertificateDialog'
 import { FilterDialog } from './FilterDialog'
 import { GANTT_SCALE_CHOICES, GanttView } from './GanttView'
 import { TASK_LAYOUT_CHOICES, is_same_layout, saved_layout, with_view_layout } from './layouts'
-import { AddTaskRow, SyntaxHelpDialog, SyntaxPreview, syntax_button_label, syntax_menu_items } from './SyntaxHelp'
+import { AddTaskRow, SyntaxPreview } from './SyntaxHelp'
 import { query_matches, syntax_by_id, type SyntaxContext } from './syntax'
 import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
@@ -76,7 +76,6 @@ export function App() {
   // On a phone the sidebar is a drawer over the tasks, open only while this is set.
   const [is_sidebar_open, set_is_sidebar_open] = useState(false)
   const [multibar_text, set_multibar_text] = useState('')
-  const [is_syntax_help_open, set_is_syntax_help_open] = useState(false)
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   // Tasks picked for a bulk action, apart from the one whose details are open.
@@ -948,19 +947,6 @@ export function App() {
         value={multibar_text}
         on_input={change_multibar_text}
       />
-      <button
-        type="button"
-        className="syntax_button"
-        onClick={(event) =>
-          open_context_menu(
-            event,
-            syntax_menu_items(settings.quick_add_syntax, settings.search_syntax, (key, id) => void change_setting(key, id), () => set_is_syntax_help_open(true))
-          )
-        }
-        title="How the bar reads what you type"
-      >
-        {syntax_button_label(settings.quick_add_syntax, settings.search_syntax)}
-      </button>
     </form>
   )
 
@@ -1261,9 +1247,6 @@ export function App() {
         />
       )}
 
-      {is_syntax_help_open && (
-        <SyntaxHelpDialog quick_add_syntax={settings.quick_add_syntax} search_syntax={settings.search_syntax} on_close={() => set_is_syntax_help_open(false)} />
-      )}
 
       {editing_group && (
         <GroupDialog
