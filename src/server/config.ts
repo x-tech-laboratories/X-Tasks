@@ -3,13 +3,6 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-import { schedule_automatic_backups } from '../main/database_backups'
-import { stop_mcp_server } from '../main/mcp_server'
-import { open_task_database } from '../main/node_task_database'
-import { close_task_database, has_changed_elsewhere } from '../main/task_database'
-import { restart_mcp_server } from './bridge_handlers'
-import { announce_change, create_web_server } from './web_server'
-
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -27,7 +20,7 @@ or from X_TASKS_TOKEN. Without one the server only listens on this machine.`
 
 const LOOPBACK_HOSTS = ['127.0.0.1', '::1', 'localhost']
 
-interface ServerConfig {
+export interface ServerConfig {
   database_path: string
   host: string
   port: number
@@ -42,7 +35,7 @@ function read_access_token(): string {
 }
 
 // The database is never guessed, so the server cannot open the desktop app's own file by accident.
-function read_config(): ServerConfig {
+export function read_config(): ServerConfig {
   const { values } = parseArgs({
     options: {
       database: { type: 'string' },
@@ -74,48 +67,4 @@ function read_config(): ServerConfig {
     throw new Error(`listening on ${config.host} needs an access token; set X_TASKS_TOKEN_FILE or X_TASKS_TOKEN`)
   }
   return config
-}
-
-// ============================================================================
-// Lifecycle
-// ============================================================================
-
-// Checks the database every second and tells each page when another program has changed it.
-function watch_for_outside_changes(): void {
-  setInterval(() => {
-    if (has_changed_elsewhere()) announce_change()
-  }, 1000)
-}
-
-function main(): void {
-  const config = read_config()
-  open_task_database(config.database_path)
-
-  const server = create_web_server({ web_folder: config.web_folder, access_token: config.access_token })
-  void restart_mcp_server({ announce_change_to_all: () => announce_change() })
-  watch_for_outside_changes()
-  schedule_automatic_backups()
-
-  server.listen(config.port, config.host, () => {
-    const shown_host = config.host.includes(':') ? `[${config.host}]` : config.host
-    console.log(`x-tasks server on http://${shown_host}:${config.port}, using ${config.database_path}`)
-  })
-
-  const shut_down = (): void => {
-    server.closeAllConnections()
-    server.close()
-    void stop_mcp_server().then(() => {
-      close_task_database()
-      process.exit(0)
-    })
-  }
-  process.on('SIGINT', shut_down)
-  process.on('SIGTERM', shut_down)
-}
-
-try {
-  main()
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
 }

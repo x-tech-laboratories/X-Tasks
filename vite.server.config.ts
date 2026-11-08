@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   resolve: { alias: { '@shared': resolve('src/shared') } },
   build: {
-    ssr: resolve('src/server/index.ts'),
+    ssr: resolve('src/server/main.ts'),
     outDir: resolve('out/server'),
     emptyOutDir: true,
     target: 'node24',
