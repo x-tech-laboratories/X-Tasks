@@ -183,13 +183,13 @@ export function TaskDetail({
         value={task.done_at && format_local(new Date(task.done_at), true)}
         on_change={(done_at) => on_set_done_at(task, done_at && parse_local(done_at).toISOString())}
       />
-      <button className="start_button" onClick={() => on_reschedule(task)}>
+      <button className="fit-content" onClick={() => on_reschedule(task)}>
         Reschedule…
       </button>
 
       <div className="field">
         <span className="field-label">Repeat</span>
-        <button className="start_button" onClick={() => set_is_picking_recurrence(true)}>
+        <button className="fit-content" onClick={() => set_is_picking_recurrence(true)}>
           {describe_recurrence(schedule, date_field)}
         </button>
       </div>
@@ -313,7 +313,7 @@ function RelationshipsField({ task, tasks, relationships, on_link, on_unlink }: 
         </div>
       ))}
       {relationships.length > 0 && (
-        <button className="start_button" onClick={() => set_is_adding(true)}>
+        <button className="fit-content" onClick={() => set_is_adding(true)}>
           Add relationship…
         </button>
       )}

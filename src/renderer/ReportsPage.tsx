@@ -84,7 +84,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
       <header className="task_pane_header">
         <h1>Reports</h1>
         <button
-          className="report_add_button"
+          className="fit-content"
           onClick={(event) => open_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, run: () => add_widget(kind) })))}
         >
           Add card
@@ -207,7 +207,7 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
         </select>
       </div>
 
-      <button className="report_editor_done" onClick={on_close}>Done</button>
+      <button className="fit-content" onClick={on_close}>Done</button>
     </div>
   )
 }

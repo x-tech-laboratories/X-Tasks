@@ -56,7 +56,7 @@ function DaysInput({ days, on_change }: { days: number; on_change: (days: number
   return (
     <>
       <input
-        className="rule_days"
+        className="input-xs"
         type="number"
         min="1"
         value={days}
@@ -311,7 +311,7 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
 
         <label className="field">
           <span className="field-label">Icon</span>
-          <input className="tag_icon_input" value={icon_draft ?? ''} onChange={(event) => change_icon(event.currentTarget)} placeholder="Emoji" />
+          <input className="input-xs" value={icon_draft ?? ''} onChange={(event) => change_icon(event.currentTarget)} placeholder="Emoji" />
         </label>
 
         <label className="check">
@@ -348,7 +348,7 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
 
             <button
               type="button"
-              className="start_button"
+              className="fit-content"
               onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags, groups)] })}
             >
               Add condition

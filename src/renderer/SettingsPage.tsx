@@ -238,7 +238,7 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
             min={UPCOMING_REPEAT_DAYS_RANGE.min}
             max={UPCOMING_REPEAT_DAYS_RANGE.max}
             step="1"
-            className="reschedule_days"
+            className="input-xs"
             value={settings.upcoming_repeat_days}
             on_commit={(event) =>
               on_change('upcoming_repeat_days', Math.min(UPCOMING_REPEAT_DAYS_RANGE.max, Math.max(UPCOMING_REPEAT_DAYS_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
@@ -509,7 +509,7 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
               type="number"
               min="0"
               step="1"
-              className="reschedule_days"
+              className="input-xs"
               value={option.days}
               on_commit={(event) => update(option.id, { days: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
               aria-label="Days from today"
@@ -529,7 +529,7 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
         </div>
       ))}
 
-      <button className="reschedule_add" onClick={add}>
+      <button className="fit-content" onClick={add}>
         Add option
       </button>
 
@@ -614,7 +614,7 @@ function RelationshipsEditor({ relationships, tasks, on_change }: RelationshipsE
         </div>
       ))}
 
-      <button className="reschedule_add" onClick={add}>
+      <button className="fit-content" onClick={add}>
         Add relationship
       </button>
     </>
@@ -666,7 +666,7 @@ function TagColorsEditor({ colors, on_change }: TagColorsEditorProps) {
         </div>
       ))}
 
-      <button className="reschedule_add" onClick={() => on_change([...colors, '#64748b'])}>
+      <button className="fit-content" onClick={() => on_change([...colors, '#64748b'])}>
         Add colour
       </button>
     </>
@@ -714,6 +714,7 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
                 type="number"
                 min="0"
                 step="1"
+                className="input-xs"
                 value={duration[unit]}
                 on_commit={(event) => update(duration.id, { [unit]: Math.max(0, Math.round(Number(event.currentTarget.value) || 0)) })}
                 aria-label={unit}
@@ -732,7 +733,7 @@ function DurationsEditor({ durations, on_change }: DurationsEditorProps) {
         </div>
       ))}
 
-      <button className="reschedule_add" onClick={add}>
+      <button className="fit-content" onClick={add}>
         Add duration
       </button>
     </>
@@ -777,7 +778,7 @@ function McpEditor({ settings, on_change }: McpEditorProps) {
           min={MCP_PORT_RANGE.min}
           max={MCP_PORT_RANGE.max}
           step="1"
-          className="mcp_port"
+          className="input-sm"
           value={settings.mcp_port}
           on_commit={(event) => change_port(event.currentTarget.value)}
           aria-label="MCP server port"
@@ -1081,7 +1082,7 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
           type="number"
           min="1"
           step="1"
-          className="backup_keep"
+          className="input-xs"
           value={settings.auto_backups_to_keep}
           disabled={!settings.auto_backup}
           on_commit={(event) =>
