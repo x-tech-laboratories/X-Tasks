@@ -1,7 +1,8 @@
 import { next_theme, type Theme, type ThemeChoice } from '@x-tech-laboratories/x-libs/web/theme'
-import { useEffect, useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
+import { useEffect, useState, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
+import { ColorDot } from '@x-tech-laboratories/x-libs/web/react/badges'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { Tree, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/react/tree'
@@ -9,7 +10,7 @@ import type { SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { TagScope, TaskDateField } from '@shared/settings'
 import { children_of } from '@x-tech-laboratories/x-libs/web/tree'
-import { BUILT_IN_VIEWS, is_same_view, is_tag_selected, tag_color_style, task_is_in_view, with_icon, type View } from './views'
+import { BUILT_IN_VIEWS, is_same_view, is_tag_selected, task_is_in_view, with_icon, type View } from './views'
 
 // ============================================================================
 // Rows
@@ -210,7 +211,7 @@ export function Sidebar({
     const tag = row.tag
     return (
       <span className="sidebar_tag_name">
-        {tag.color && <span className="tag_color_dot" style={tag_color_style(tag) as CSSProperties | undefined} aria-hidden="true" />}
+        {tag.color && <ColorDot color={tag.color} />}
         {with_icon(tag, tag.name)}
       </span>
     )
@@ -223,10 +224,10 @@ export function Sidebar({
     return (
       <>
         {row.kind === 'tag' && row.tag.rule && <span className="muted" title="Rule tag: applied to every task its rule matches">ƒ</span>}
-        {count > 0 && <span className="sidebar_count">{count}</span>}
+        {count > 0 && <span>{count}</span>}
         <button
           type="button"
-          className="icon sidebar_add"
+          className="icon hover-reveal no-room"
           onClick={(event) => {
             event.stopPropagation()
             add_tag_at(spot)
@@ -250,7 +251,7 @@ export function Sidebar({
 
   return (
     <>
-      <div className="sidebar_views">
+      <div className="sidebar-nav">
         {BUILT_IN_VIEWS.map(({ view, label }) => {
           const is_active = selected_view !== null && is_same_view(view, selected_view)
           const count = view_count(view)
@@ -266,7 +267,7 @@ export function Sidebar({
               }}
             >
               <span className="tree-label">{label}</span>
-              {count > 0 && <span className="tree-extra sidebar_count">{count}</span>}
+              {count > 0 && <span className="tree-extra">{count}</span>}
             </a>
           )
         })}
@@ -278,7 +279,7 @@ export function Sidebar({
         render_item={render_row}
         render_extra={render_extra}
         name_of={(row) => (row.kind === 'group' ? row.group.name : row.tag.name)}
-        row_class={(row) => (row.kind === 'group' ? 'sidebar_group_row' : undefined)}
+        row_class={(row) => (row.kind === 'group' ? 'tree-heading' : undefined)}
         collapsed={new Set(collapsed_ids)}
         on_collapsed_change={save_collapsed}
         selected_ids={selected_ids}
@@ -308,7 +309,7 @@ interface SidebarFootProps {
 // The sync button and the way into Settings, at the foot of the sidebar.
 export function SidebarFoot({ theme, is_settings_open, on_open_settings }: SidebarFootProps) {
   return (
-    <div className="sidebar_foot">
+    <>
       <SyncButton on_open_settings={on_open_settings} />
       <ThemeRow choice={theme} />
       <a
@@ -320,12 +321,12 @@ export function SidebarFoot({ theme, is_settings_open, on_open_settings }: Sideb
           on_open_settings()
         }}
       >
-        <span className="tree-label sidebar_icon_label">
+        <span className="tree-label">
           <CogIcon />
           <span>Settings</span>
         </span>
       </a>
-    </div>
+    </>
   )
 }
 
@@ -338,8 +339,8 @@ function ThemeRow({ choice }: { choice: ThemeChoice }) {
   useEffect(() => choice.on_change(set_theme), [choice])
 
   return (
-    <button className="tree-row sync_button" title="Click to change the theme" onClick={() => choice.set(next_theme(choice.get()))}>
-      <span className="tree-label sidebar_icon_label">
+    <button className="tree-row" title="Click to change the theme" onClick={() => choice.set(next_theme(choice.get()))}>
+      <span className="tree-label">
         <ThemeIcon theme={theme} />
         <span>{THEME_NAMES[theme]}</span>
       </span>
@@ -350,7 +351,7 @@ function ThemeRow({ choice }: { choice: ThemeChoice }) {
 // A sun for light, a moon for dark, and a half-filled circle for following the system.
 function ThemeIcon({ theme }: { theme: Theme }) {
   return (
-    <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="line-icon" viewBox="0 0 24 24" aria-hidden="true">
       {theme === 'light' && (
         <>
           <circle cx="12" cy="12" r="4" />
@@ -370,7 +371,7 @@ function ThemeIcon({ theme }: { theme: Theme }) {
 
 function CogIcon() {
   return (
-    <svg className="sidebar_icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="line-icon" viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -380,7 +381,7 @@ function CogIcon() {
 // Two circling arrows for the sync button; they turn while a sync runs.
 function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
   return (
-    <svg className={cx('sidebar_icon', is_spinning && 'is_spinning')} viewBox="0 0 24 24" aria-hidden="true">
+    <svg className={cx('line-icon', is_spinning && 'spinning')} viewBox="0 0 24 24" aria-hidden="true">
       <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
       <path d="M3 21v-5h5" />
       <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
@@ -436,12 +437,12 @@ function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
   }
 
   return (
-    <button className={cx('tree-row sync_button', needs_user && 'tone-bad')} title={sync_tooltip(status)} disabled={status.state === 'syncing'} onClick={click}>
-      <span className="tree-label sidebar_icon_label">
+    <button className={cx('tree-row', needs_user && 'tone-bad')} title={sync_tooltip(status)} disabled={status.state === 'syncing'} onClick={click}>
+      <span className="tree-label">
         <SyncIcon is_spinning={status.state === 'syncing'} />
         <span>{sync_label(status)}</span>
       </span>
-      {status.pending_changes > 0 && <span className="tree-extra sidebar_count">{status.pending_changes} pending</span>}
+      {status.pending_changes > 0 && <span className="tree-extra">{status.pending_changes} pending</span>}
     </button>
   )
 }

@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
@@ -111,7 +110,7 @@ export function TaskDetail({
   const [topbar, set_topbar] = useState<Element | null>(null)
   useEffect(() => set_topbar(document.querySelector('.topbar')), [])
   const header = (
-        <header className="task_detail_header">
+        <header className="side-pane-head task_detail_header">
           <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
           <input
             className="task_detail_title"
@@ -192,7 +191,7 @@ export function TaskDetail({
     switch (section) {
       case 'my_day':
         return (
-          <button className={cx('my_day_button', is_in_my_day && 'is_selected')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
+          <button aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
             {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
           </button>
         )
@@ -284,7 +283,7 @@ export function TaskDetail({
   return (
     <aside className="task_detail" aria-label="Task details">
       {topbar ? createPortal(header, topbar) : header}
-      <div className="task_detail_body">
+      <div className="side-pane-body">
         {sections.map((section) => <Fragment key={section}>{render_section(section)}</Fragment>)}
 
         {is_picking_recurrence && (

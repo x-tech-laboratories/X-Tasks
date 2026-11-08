@@ -1,9 +1,7 @@
-import type { CSSProperties } from 'react'
-
-import { cx } from '@x-tech-laboratories/x-libs/web/dom'
+import { Chip } from '@x-tech-laboratories/x-libs/web/react/badges'
 
 import type { Tag } from '@shared/tasks'
-import { tag_color_style, with_icon } from './views'
+import { with_icon } from './views'
 
 // ============================================================================
 // Tag chip
@@ -18,17 +16,11 @@ interface TagChipProps {
   on_remove?: () => void
 }
 
-// A tag as a chip in its own colour, with a button to take it off when it can be.
+// A tag as a chip in its own colour, dashed when a rule put it there, with a button to take it off when it can be.
 export function TagChip({ tag, label = tag.name, title, on_remove }: TagChipProps) {
-  const class_name = cx('chip', 'tag_chip', tag.color && 'has_color', tag.rule && 'is_rule')
   return (
-    <span className={class_name} style={tag_color_style(tag) as CSSProperties | undefined} title={title}>
+    <Chip class_name="tag_chip" title={title} color={tag.color} dashed={Boolean(tag.rule)} on_remove={tag.rule ? undefined : on_remove} remove_label={`Remove tag ${tag.name}`}>
       {with_icon(tag, label)}
-      {on_remove && !tag.rule && (
-        <button type="button" className="icon remove" onClick={on_remove} aria-label={`Remove tag ${tag.name}`}>
-          ×
-        </button>
-      )}
-    </span>
+    </Chip>
   )
 }
