@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
@@ -87,22 +88,29 @@ export function TaskDetail({
     if (chosen && task.start_at) on_set_schedule(task, { ...schedule, due_at: due_after(task.start_at, chosen) })
   }
 
+  // The checkbox, title and close button sit in the top bar above the pane, so they stay put while the pane scrolls.
+  const [topbar, set_topbar] = useState<Element | null>(null)
+  useEffect(() => set_topbar(document.querySelector('.topbar')), [])
+  const header = (
+        <header className="task_detail_header">
+          <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
+          <input
+            className="task_detail_title"
+            value={title_draft}
+            onChange={(event) => set_title_draft(event.currentTarget.value)}
+            onBlur={commit_title}
+            onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
+            aria-label="Title"
+          />
+          <button className="icon remove" onClick={on_close} aria-label="Close details">
+            ×
+          </button>
+        </header>
+  )
+
   return (
     <aside className="task_detail" aria-label="Task details">
-      <header className="task_detail_header">
-        <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
-        <input
-          className="task_detail_title"
-          value={title_draft}
-          onChange={(event) => set_title_draft(event.currentTarget.value)}
-          onBlur={commit_title}
-          onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
-          aria-label="Title"
-        />
-        <button className="icon remove" onClick={on_close} aria-label="Close details">
-          ×
-        </button>
-      </header>
+      {topbar ? createPortal(header, topbar) : header}
       <div className="task_detail_body">
         <button className={cx('my_day_button', is_in_my_day && 'is_selected')} aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
           {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}

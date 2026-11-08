@@ -57,9 +57,11 @@ html.follows_host_theme {
 .syntax_problem { color: var(--status-danger); }
 
 /* The sidebar fills its row instead of growing with its tags, so they scroll while its foot stays at the bottom and its grab bar on its own edge. */
-body.contained .sidebar { position: relative; align-self: stretch; min-height: 0; overflow: hidden; }
+body.contained .sidebar { position: relative; top: auto; align-self: stretch; padding-right: 0; padding-left: 0; min-height: 0; overflow: hidden; }
 .sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--border-default); }
 .sidebar_foot { display: flex; flex: none; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
+/* The sidebar's inset sits inside what scrolls, so the scroll bar runs flush with its edge. */
+body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: var(--space-4); padding-left: var(--space-4); }
 /* The view and Settings links are tree rows like the tags, and the open one is raised the way a picked tree row is. */
 .sidebar_views a, .sidebar_foot a { text-decoration: none; cursor: pointer; }
 .sidebar_views .tree-row, .sidebar_foot .tree-row { padding: 0 var(--space-4); }
@@ -221,10 +223,11 @@ body.contained .sidebar { position: relative; align-self: stretch; min-height: 0
 /* The pane is bordered off from the tasks; its header stays put while the rest scrolls under it. */
 .task_main > .side-pane { padding-bottom: 0; overflow: hidden; border-left: var(--border-width) solid var(--border-hover); }
 .task_detail { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; }
-.task_detail_header { flex: none; }
 .task_detail_body { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; margin: 0 calc(-1 * var(--space-6)); padding: 0 var(--space-6) var(--space-6); overflow-y: auto; }
 .task_detail .field { display: flex; }
 .task_detail_header { display: flex; align-items: center; gap: var(--space-4); }
+/* In the top bar the header spans the pane below it, bordered off like the pane. */
+.topbar > .task_detail_header { flex: none; align-self: stretch; box-sizing: border-box; width: var(--side-pane-width, 360px); margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6)) calc(-1 * var(--space-4)) 0; padding: 0 var(--space-6); border-left: var(--border-width) solid var(--border-hover); background-color: var(--surface-secondary); }
 .task_detail_header button { flex: none; }
 .task_detail_header input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
 .my_day_button { align-self: flex-start; }
