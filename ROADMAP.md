@@ -16,6 +16,8 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Show an error when a database call fails instead of leaving the screen out of step
 - [ ] Export and import tasks as JSON
 - [ ] Reorder and tag tasks by touch, since dragging needs a mouse
+- [ ] Choose how sync settles an edit made on two devices: the newest edit wins, as now, or a ranked
+  list of devices decides which one takes precedence
 - [ ] Installable desktop packages beyond Nix (in progress on `worktree-desktop-packages`)
 - [ ] User and developer docs on GitHub Pages (in progress on `worktree-github-pages`)
 
