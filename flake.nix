@@ -95,7 +95,7 @@
           version = (builtins.fromJSON (builtins.readFile ./package.json)).version;
           src = self;
 
-          npmDepsHash = "sha256-w2JWmWVT+QYNRQjH1RRIfcDJ1Mif7n932XPxQKK9eZ0=";
+          npmDepsHash = "sha256-3G9Xu9WTx2gYmvz4maMD+4AhVO1UP5JG8TFLQKzM6W8=";
           inherit nodejs;
 
           # The npm-downloaded Electron cannot run on NixOS and the download needs the network.
