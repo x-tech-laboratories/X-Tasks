@@ -48,6 +48,8 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Sync through WebDAV, Dropbox or a local file as well as the server, with end-to-end encryption
 - [ ] Plugins
 - [ ] Translations
+- [ ] Choose how sync settles an edit made on two devices: the newest edit wins, as now, or a ranked
+  list of devices decides which one takes precedence
 - [ ] Installable desktop packages beyond Nix (in progress on `worktree-desktop-packages`)
 - [ ] User and developer docs on GitHub Pages (in progress on `worktree-github-pages`)
 
