@@ -30,7 +30,7 @@ tasks, tags and groups for them.
 ## CI
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`: `npm ci`, typecheck, build, tests and lint.
-`.github/workflows/android.yml` builds and publishes the release APK on pushes to `main`.
+`.github/workflows/android.yml` builds the release APK, the AppImage and the Flatpak on pushes to `main` and publishes them as one release.
 
 ## Code style
 

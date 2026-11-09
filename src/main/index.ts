@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, screen, shell } from 'electron'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
@@ -25,6 +26,8 @@ import {
 
 // Dev runs set this so Electron's own profile stays apart from the installed app's.
 if (process.env.X_TASKS_USER_DATA) app.setPath('userData', process.env.X_TASKS_USER_DATA)
+// Flatpak moves the config folder into its sandbox; the Flatpak may write ~/.config/x-tasks, so it keeps the profile the other builds use.
+else if (process.env.FLATPAK_ID) app.setPath('userData', join(homedir(), '.config', 'x-tasks'))
 
 // ============================================================================
 // Window

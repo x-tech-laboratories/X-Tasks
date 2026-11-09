@@ -25,11 +25,27 @@ npm run dev      # hot-reloading dev build
 npm run app      # build once and launch
 npm run build    # typecheck and production build
 nix build        # the packaged app, in ./result/bin/x-tasks
+npm run dist     # an AppImage and a Flatpak bundle, in dist/
 ```
 
 Tasks are stored in an SQLite database at `~/.config/x-tasks/tasks.db` on Linux, using Electron's
 built-in `node:sqlite`, together with the choices made on the Settings page. Set `X_TASKS_DB` to use a
 different file.
+
+### AppImage and Flatpak
+
+`npm run dist` builds both with electron-builder, set up in `electron-builder.yml`. The Flatpak needs
+`flatpak` and `flatpak-builder` on the build machine and the Flathub remote added, from which it installs
+the Freedesktop runtime and the Electron base app. The Release workflow builds both on every push to
+`main` and attaches them to the same `v1.0.<run>` release as the Android APK.
+
+```sh
+flatpak install --user dist/x-tasks-x86_64.flatpak
+dist/x-tasks-x86_64.AppImage
+```
+
+Both keep their data in `~/.config/x-tasks`, like the Nix package; the Flatpak is given access to that
+folder instead of its own sandboxed one, so moving between them keeps the tasks.
 
 ### Development database
 

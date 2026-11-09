@@ -16,14 +16,23 @@ server so all your devices show the same tasks.
 
 ## Desktop
 
-The desktop app is packaged with Nix:
+Download the [AppImage](https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks-x86_64.AppImage)
+or the [Flatpak](https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks-x86_64.flatpak) from the
+latest release:
+
+```sh
+chmod +x x-tasks-x86_64.AppImage && ./x-tasks-x86_64.AppImage
+flatpak install --user x-tasks-x86_64.flatpak
+```
+
+On Nix, run it from the flake instead, or add the flake's package to your system:
 
 ```sh
 nix run github:x-tech-laboratories/X-Tasks
 ```
 
-or add the flake's package to your system. The package's desktop entry also registers `x-tasks://` links (see
-[Task links](tasks.html#task-links)).
+The Flatpak and the Nix package register `x-tasks://` links (see [Task links](tasks.html#task-links)). Every desktop
+build keeps its tasks in `~/.config/x-tasks`, so you can move between them.
 
 Your tasks are kept in `~/.config/x-tasks/tasks.db`, together with your settings. The Settings page shows the exact
 path under **Storage**.

@@ -1,7 +1,7 @@
 # Changelog
 
-What has shipped, newest first. Work still to do is in [ROADMAP.md](ROADMAP.md). The Android app
-is released separately, as `v1.0.<build>` on every push to `main`.
+What has shipped, newest first. Work still to do is in [ROADMAP.md](ROADMAP.md). The Android app,
+AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `main`.
 
 ## Unreleased
 
@@ -22,6 +22,7 @@ is released separately, as `v1.0.<build>` on every push to `main`.
 - Outline beside the settings page, with its sections regrouped by topic
 - Back up an older database before upgrading its schema, on desktop and Android
 - Pick a tag's icon from a searchable emoji picker instead of typing it
+- AppImage and Flatpak builds of the desktop app, attached to each release
 
 ### Changed
 

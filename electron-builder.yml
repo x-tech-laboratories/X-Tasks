@@ -1,0 +1,43 @@
+# Linux packages of the desktop app: `npm run dist` writes an AppImage and a Flatpak bundle to dist/.
+appId: com.xtechlaboratories.xtasks
+productName: X-Tasks
+executableName: x-tasks
+copyright: X-Tech Laboratories
+directories:
+  output: dist
+files:
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
+  - resources/**
+  - package.json
+protocols:
+  - name: X-Tasks task link
+    schemes: [x-tasks]
+linux:
+  target: [AppImage, flatpak]
+  category: Office
+  icon: resources/icon.png
+  synopsis: Todo manager
+  desktop:
+    entry:
+      Name: X-Tasks
+      Comment: Todo manager
+      Categories: Office;ProjectManagement;
+appImage:
+  artifactName: x-tasks-${arch}.AppImage
+flatpak:
+  artifactName: x-tasks-${arch}.flatpak
+  runtimeVersion: '25.08'
+  baseVersion: '25.08'
+  finishArgs:
+    - --share=ipc
+    - --share=network
+    - --socket=x11
+    - --socket=wayland
+    - --device=dri
+    - --talk-name=org.freedesktop.Notifications
+    # VSCode's terminal exports this, which makes Electron run as bare node.
+    - --unset-env=ELECTRON_RUN_AS_NODE
+    # The same tasks.db the other builds use, so switching between them keeps the tasks.
+    - --filesystem=xdg-config/x-tasks:create
