@@ -36,6 +36,8 @@ changes, from another browser, the desktop app or a phone.
 
 In a browser the app follows your system's light or dark theme.
 
+![Upcoming in the dark theme]({{ '/assets/screenshots/dark.png' | relative_url }})
+
 You can open a particular view straight from the address by adding `?view=`:
 
 | Address ending                | Opens                                  |
@@ -55,6 +57,10 @@ to install it and receive every new build as an update.
 
 On a phone, the sidebar becomes a drawer behind the menu button, and a task's details fill the screen. Long-press a
 task for its menu.
+
+| Sidebar drawer | Task details |
+| :-: | :-: |
+| ![The sidebar as a drawer]({{ '/assets/screenshots/phone-drawer.png' | relative_url }}){: width="240" } | ![A task's details on a phone]({{ '/assets/screenshots/phone-details.png' | relative_url }}){: width="240" } |
 
 ## Your first few minutes
 

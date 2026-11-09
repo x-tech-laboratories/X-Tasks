@@ -27,6 +27,8 @@ To add a subtask, choose **Add subtask** from a task's right-click menu (long-pr
 - **Details:** click a row, or choose **Open details**, to open its details panel on the right (full screen on a
   phone). Drag the panel's edge to make it wider.
 
+![A project task's details beside the list: its groups' tags, dates, repeat, relationships and notes]({{ '/assets/screenshots/overview.png' | relative_url }})
+
 The details panel holds these sections, which you can reorder or hide in Settings › Tasks › Task details:
 
 | Section           | What it holds                                                                   |
@@ -73,6 +75,9 @@ done and missed occurrences beside each routine's title.
 ## My Day
 
 My Day is today's plan. Add a task from its details, its right-click menu, or by adding it while My Day is open.
+
+![My Day with five tasks]({{ '/assets/screenshots/my-day.png' | relative_url }})
+
 Subtasks come along with their parent. Settings › Tasks › My Day controls how it fills and empties itself:
 
 | Setting                                  | Default | What it does                                                           |

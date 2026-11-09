@@ -64,6 +64,8 @@ Click a tag to show its tasks; click it again to clear it. Three settings in Set
 With the defaults, clicking *Work* under Area and *P1* under Priority shows the tasks that are both Work and P1, and
 clicking *Client B* also shows tasks tagged *Client B › Website*.
 
+![The "Due this week" rule tag selected in the sidebar; rule tags show ƒ and a count, and a dashed outline on rows]({{ '/assets/screenshots/rule-tag-view.png' | relative_url }})
+
 **Show empty tags** can be turned off to hide tags no task has.
 
 Remember that a task holds its parent's tags: a subtask of a *Work* task shows under *Work* even if it has no tags of
@@ -78,7 +80,9 @@ editor.
 2. Add conditions. Each one is a row: pick a kind, then fill in the rest.
 3. Save. The tag now applies itself to every matching task, and keeps doing so as tasks change.
 
-A rule with no conditions matches every task.
+A rule with no conditions matches every task. The dialog shows how many tasks match as you edit.
+
+![The rule editor: Status is not done, Filter group has no tag from Projects, Nesting is a top-level task]({{ '/assets/screenshots/rule-editor.png' | relative_url }})
 
 ### Conditions
 

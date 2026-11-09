@@ -28,6 +28,8 @@ Because a view is only a filter, a task can show in many places at once: a task 
 shows under *Work*, under *Urgent*, in My Day and in Upcoming — and it is still the same task. Edit it anywhere and
 the change shows everywhere.
 
+![All tasks: projects are ordinary tasks with nested subtasks, all in the one list]({{ '/assets/screenshots/all-tasks.png' | relative_url }})
+
 {: .tip }
 > Where another app would make you create a "Work" list and a "Home" list, X-Tasks has you create an *Area* filter
 > group with *Work* and *Home* tags. You get the same lists, plus the ability to combine them with every other tag.
@@ -76,6 +78,8 @@ Select tags in the sidebar to filter. By default you can pick **one tag from eac
 all of them — *Work* in Area plus *P1* in Priority shows your urgent work. See
 [Tags and filters](tags-and-filters.html) for every option.
 
+![The sidebar's Type, Filters and Projects groups, with nested project tags, and the "Due this week" rule tag selected]({{ '/assets/screenshots/rule-tag-view.png' | relative_url }})
+
 ## Rule tags: tags that apply themselves
 
 A filter group can hold **plain tags**, which you give to tasks by hand, or **rule tags**, which you never give by
@@ -89,6 +93,8 @@ hand. Each rule tag has a **rule**: a set of conditions, matched by *all* or *an
 - whether it has **any tags at all**;
 - what its **title** contains;
 - its **relationships** to other tasks (waits on an open task, has none, linked to one particular task).
+
+![Editing the rule of a "No project" tag]({{ '/assets/screenshots/rule-editor.png' | relative_url }})
 
 The tag then applies to every task matching its rule, **automatically and immediately**. When a task stops matching —
 it gets done, its date moves, a tag comes off — the rule tag goes away by itself.

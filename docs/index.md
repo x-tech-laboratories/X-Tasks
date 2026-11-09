@@ -14,6 +14,8 @@ apply themselves.
 [Read the user guide](user/){: .btn .btn-primary .mr-2 }
 [Read the developer guide](developer/){: .btn }
 
+![All tasks in one list, with projects nested as tasks and their subtasks, and plain and rule tags on every row]({{ '/assets/screenshots/all-tasks.png' | relative_url }})
+
 ---
 
 ## The four ideas behind X-Tasks
@@ -44,6 +46,8 @@ groups and task attributes — status, start and due dates, repeats, nesting, op
 it applies itself to every task that matches, right now. *Overdue work*, *Actionable*, *Waiting on someone* or *Done
 this week* become tags you can click, combine and report on like any other.
 
+![The rule editor for a "No project" tag: open, top-level tasks with no tag from the Projects group]({{ '/assets/screenshots/rule-editor.png' | relative_url }})
+
 ---
 
 ## On the desktop, on the web and on your phone
@@ -55,6 +59,10 @@ The same app runs in three places, with the same features and the same look:
 | **Desktop** | An Electron app for Linux, with its own database on your computer. Works fully offline.         |
 | **Web**     | `x-tasks-server` serves the app to any browser, signed in with an access token.                 |
 | **Android** | A native app built from the same page, with its own database on the phone. Works fully offline. |
+
+| Phone: sidebar drawer | Phone: task details | Dark theme |
+| :-: | :-: | :-: |
+| ![The sidebar as a drawer on a phone]({{ '/assets/screenshots/phone-drawer.png' | relative_url }}){: width="200" } | ![A task's details filling a phone screen]({{ '/assets/screenshots/phone-details.png' | relative_url }}){: width="200" } | ![Upcoming in the dark theme]({{ '/assets/screenshots/dark.png' | relative_url }}) |
 
 ## Sync between all your devices
 
@@ -69,6 +77,8 @@ X-Tasks keeps a **history** of every change to every task — titles, notes, dat
 with word-level differences. Browse it across all tasks on the History page or for a single task from its details,
 and restore any earlier version, even of a deleted task. History can sync between devices too. See
 [History](user/history.html).
+
+![A task's history, showing the words added to its notes in one version]({{ '/assets/screenshots/task-history.png' | relative_url }})
 
 ---
 

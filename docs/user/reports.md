@@ -10,6 +10,8 @@ The **Reports** view is a page of cards you choose and arrange. Add cards, move 
 each card's menu. Most cards look back a set number of days, and any card can be limited to tasks holding certain tags
 — plain or [rule tags](tags-and-filters.html#rule-tags).
 
+![The Reports page: routine streaks, ticks per day and ticks per week]({{ '/assets/screenshots/reports.png' | relative_url }})
+
 | Card                | Shows                                                                                    |
 | :------------------ | :--------------------------------------------------------------------------------------- |
 | **Routine streaks** | Each repeating task's current streak and recent done and missed occurrences; subtasks can be left out |

@@ -29,6 +29,8 @@ Every view is a filter over the [one big list](core-concepts.html#one-big-list).
 
 **Repeats in Upcoming** sets how many days ahead Upcoming lists the later dates of repeating tasks (default 7).
 
+![Upcoming: overdue tasks, then each day, with the later dates of repeating tasks in italics]({{ '/assets/screenshots/upcoming.png' | relative_url }})
+
 ## Layouts
 
 The switch at the top of a view shows its tasks in one of five layouts:
@@ -43,6 +45,14 @@ The switch at the top of a view shows its tasks in one of five layouts:
   **Time slots** and **Time labels** set the step of the week and day views.
 - **Gantt** — a timeline by day, week or month, with arrows for tasks that wait on others. Drag and resize bars to
   change dates.
+
+![The table layout]({{ '/assets/screenshots/table.png' | relative_url }})
+
+![The board layout, grouped by priority]({{ '/assets/screenshots/board.png' | relative_url }})
+
+![The calendar layout, by month]({{ '/assets/screenshots/calendar.png' | relative_url }})
+
+![The Gantt layout, by day]({{ '/assets/screenshots/gantt.png' | relative_url }})
 
 **Layout per view** chooses how layouts are remembered: each view keeps the last one picked in it (*Remembered*,
 the default), each keeps one once you press **Save layout** (*Saved by hand*), or one layout applies everywhere

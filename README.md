@@ -4,6 +4,18 @@ A todo manager built with Electron, React and TypeScript, on the shared X-Libs w
 
 Documentation for users and developers: <https://x-tech-laboratories.github.io/X-Tasks/>, built from [`docs/`](docs/).
 
+![All tasks in one list, with projects as nested tasks and plain and rule tags on every row](docs/assets/screenshots/all-tasks.png)
+
+| Rule tags | Task history |
+| :-: | :-: |
+| ![Editing a rule tag's conditions](docs/assets/screenshots/rule-editor.png) | ![A task's history with a word-level diff](docs/assets/screenshots/task-history.png) |
+| **Board** | **Gantt** |
+| ![The board layout grouped by priority](docs/assets/screenshots/board.png) | ![The Gantt layout](docs/assets/screenshots/gantt.png) |
+| **Reports** | **Dark theme** |
+| ![Routine streaks and ticks per day and week](docs/assets/screenshots/reports.png) | ![Upcoming in the dark theme](docs/assets/screenshots/dark.png) |
+
+The screenshots show the example data from `npm run seed`.
+
 ## Development
 
 ```sh

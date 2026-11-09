@@ -16,6 +16,9 @@ done state and place in the list. Nothing you change is lost.
 - The **History** button in a task's details lists every version of that one task.
 
 Each version shows what changed from the one before it, down to the **individual words** of the title and notes.
+**Compared with now** shows how it differs from the task as it is today.
+
+![A task's history: the newest version added words to the notes]({{ '/assets/screenshots/task-history.png' | relative_url }})
 
 ## Restoring
 

@@ -35,6 +35,8 @@ browser signed in to that server — shows the same tasks, tags and settings.
    Either way, the data being replaced is backed up first.
 4. Press **Start syncing**.
 
+![The Sync settings: server address, access token, whose tasks to keep, and a trusted certificate authority]({{ '/assets/screenshots/settings-sync.png' | relative_url }})
+
 From then on, the device syncs by itself. Changes made offline are kept and sent once the server can be reached
 again.
 
