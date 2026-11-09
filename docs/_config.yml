@@ -1,0 +1,37 @@
+title: X-Tasks
+description: A todo manager built on one big list of infinitely nested tasks, with tags for anything you want to track.
+url: https://x-tech-laboratories.github.io
+baseurl: /X-Tasks
+
+remote_theme: just-the-docs/just-the-docs@v0.10.1
+plugins:
+  - jekyll-remote-theme
+
+search_enabled: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: Back to top
+
+aux_links:
+  GitHub: https://github.com/x-tech-laboratories/X-Tasks
+  Download for Android: https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks.apk
+
+gh_edit_link: true
+gh_edit_link_text: Edit this page on GitHub
+gh_edit_repository: https://github.com/x-tech-laboratories/X-Tasks
+gh_edit_branch: main
+gh_edit_source: docs
+gh_edit_view_mode: edit
+
+callouts:
+  tip:
+    title: Tip
+    color: green
+  note:
+    title: Note
+    color: blue
+  warning:
+    title: Warning
+    color: red
+
+footer_content: X-Tasks is free software under the GPL-3.0-or-later.

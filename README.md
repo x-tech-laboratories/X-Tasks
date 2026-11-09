@@ -2,6 +2,8 @@
 
 A todo manager built with Electron, React and TypeScript, on the shared X-Libs widgets and Halon styles.
 
+Documentation for users and developers: <https://x-tech-laboratories.github.io/X-Tasks/>, built from [`docs/`](docs/).
+
 ## Development
 
 ```sh
