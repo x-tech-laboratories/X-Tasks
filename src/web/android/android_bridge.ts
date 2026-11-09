@@ -10,7 +10,7 @@ import {
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group, list_task_versions, list_recent_versions, restore_task_version
 } from '../../main/task_database'
 import { request_back } from '../back_navigation'
-import { android_backups } from './android_backups'
+import { android_backups, back_up_before_upgrade } from './android_backups'
 import { BEFORE_SYNC_FILE, open_wasm_database, write_file } from './wasm_database'
 
 // ============================================================================
@@ -59,6 +59,7 @@ function answer<Args extends unknown[], Result>(call: (...args: Args) => Result)
 // Gives the page window.x_tasks and window.x_settings backed by a database kept on the phone, synced with a server when one is set.
 export async function install_android_bridge(): Promise<void> {
   const database = await open_wasm_database()
+  await back_up_before_upgrade(database)
   attach_task_database(database.connection, 'On this device')
   await database.save_now()
 
