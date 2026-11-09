@@ -1,15 +1,17 @@
 import { useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { Chip } from '@x-tech-laboratories/x-libs/web/react/badges'
 import { CommitInput, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
 
-import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind } from '@shared/settings'
+import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind, type TaskRelationship } from '@shared/settings'
 import { parse_local } from '@x-tech-laboratories/x-libs/dates'
 import type { Completion, Tag, TagGroup, Task } from '@shared/tasks'
 import { StreakStrip } from './StreakStrip'
+import { TaskMap } from './TaskMap'
 import {
-  day_offset, first_report_day, streak_rows, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of
+  day_offset, first_report_day, streak_rows, task_map, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of
 } from './reports'
 import { tag_color_style, tag_path, with_icon } from './views'
 
@@ -21,7 +23,8 @@ const WIDGET_KINDS: { kind: ReportWidgetKind; label: string; days: number }[] = 
   { kind: 'streaks', label: 'Routine streaks', days: 30 },
   { kind: 'calendar', label: 'Ticks per day', days: 182 },
   { kind: 'weekly', label: 'Ticks per week', days: 84 },
-  { kind: 'by_tag', label: 'Ticks by tag', days: 30 }
+  { kind: 'by_tag', label: 'Ticks by tag', days: 30 },
+  { kind: 'task_map', label: 'Task map', days: 30 }
 ]
 
 // The calendar shades a day by how its ticks compare with the busiest day shown.
@@ -45,12 +48,13 @@ interface ReportsPageProps {
   completions: Completion[]
   tags: Tag[]
   tag_groups: TagGroup[]
+  relationships: TaskRelationship[]
   today: string
   on_change_widgets: (widgets: ReportWidget[]) => void
   on_select_task: (task: Task) => void
 }
 
-export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, today, on_change_widgets, on_select_task }: ReportsPageProps) {
+export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, relationships, today, on_change_widgets, on_select_task }: ReportsPageProps) {
   const [editing_id, set_editing_id] = useState<string | null>(null)
 
   function add_widget(kind: ReportWidgetKind): void {
@@ -82,6 +86,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
   return (
     <>
       <PageHeading
+        class_name="inline"
         title="Reports"
         actions={
           <button onClick={(event) => open_context_menu(event, WIDGET_KINDS.map(({ kind, label }) => ({ label, run: () => add_widget(kind) })))}>
@@ -99,7 +104,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
           const tools = (
             <>
               <span className="report_card_caption">
-                Last {plural(widget.days, 'day')}
+                {widget.kind === 'task_map' ? (widget.show_done ? 'Open and done tasks' : 'Open tasks') : `Last ${plural(widget.days, 'day')}`}
                 {filter_names.length > 0 && ` · ${filter_names.join(', ')}`}
               </span>
               <button className="icon" onClick={(event) => open_widget_menu(event, widget, index)} aria-label={`Options for ${widget.title}`}>
@@ -123,6 +128,7 @@ export function ReportsPage({ widgets, tasks, completions, tags, tag_groups, tod
                 {widget.kind === 'by_tag' && (
                   <TagBars rows={ticks_per_tag(widget, widget_tasks, completions, tasks, tags, today)} tags={tags} group={tag_groups.find((group) => group.id === widget.group_id)} />
                 )}
+                {widget.kind === 'task_map' && <TaskMap {...task_map(widget, widget_tasks, relationships)} on_select_task={on_select_task} />}
               </Section>
             </div>
           )
@@ -159,15 +165,24 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
         <CommitInput value={widget.title} on_commit={(event) => on_change({ ...widget, title: event.currentTarget.value.trim() || widget.title })} />
       </label>
 
-      <label className="field">
-        <span className="field-label">Days</span>
-        <CommitInput type="number" min={REPORT_DAYS_RANGE.min} max={REPORT_DAYS_RANGE.max} value={widget.days} on_commit={(event) => set_days(event.currentTarget.value)} />
-      </label>
+      {widget.kind !== 'task_map' && (
+        <label className="field">
+          <span className="field-label">Days</span>
+          <CommitInput type="number" min={REPORT_DAYS_RANGE.min} max={REPORT_DAYS_RANGE.max} value={widget.days} on_commit={(event) => set_days(event.currentTarget.value)} />
+        </label>
+      )}
 
       {widget.kind === 'streaks' && (
         <label className="check report_editor_check">
           <Switch label="Show subtasks under each routine" checked={!widget.hide_subtasks} on_change={(on) => on_change({ ...widget, hide_subtasks: !on })} />
           Show subtasks under each routine
+        </label>
+      )}
+
+      {widget.kind === 'task_map' && (
+        <label className="check report_editor_check">
+          <Switch label="Show done tasks" checked={!!widget.show_done} on_change={(on) => on_change({ ...widget, show_done: on })} />
+          Show done tasks
         </label>
       )}
 
@@ -185,12 +200,14 @@ function WidgetEditor({ widget, tags, tag_groups, on_change, on_close }: WidgetE
         {chosen_tags.length > 0 && (
           <div className="tag_chips">
             {chosen_tags.map((tag) => (
-              <span key={tag.id} className="tag_chip">
+              <Chip
+                key={tag.id}
+                class_name="tag_chip"
+                on_remove={() => on_change({ ...widget, tag_ids: widget.tag_ids.filter((tag_id) => tag_id !== tag.id) })}
+                remove_label={`Remove tag ${tag.name}`}
+              >
                 {tag_path(tag, tags)}
-                <button onClick={() => on_change({ ...widget, tag_ids: widget.tag_ids.filter((tag_id) => tag_id !== tag.id) })} aria-label={`Remove tag ${tag.name}`}>
-                  ×
-                </button>
-              </span>
+              </Chip>
             ))}
           </div>
         )}

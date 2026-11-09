@@ -233,8 +233,8 @@ export function TaskItem({ node, actions }: TaskItemProps) {
 
   const is_picked = actions.is_picked(task)
   const row_class = cx(
-    'task', task.is_done && 'is_done', actions.selected_task_id === task.id && 'is_selected', is_picked && 'is_picked',
-    is_picked && actions.is_dragging_picked && 'is_dragged', actions.tint_rows && row_tint_style(task, actions) && 'has_tint', shown_placement && `drop-${shown_placement}`
+    'task reveals', task.is_done && 'is_done', actions.selected_task_id === task.id && 'selected', is_picked && 'picked',
+    is_picked && actions.is_dragging_picked && 'is_dragged', actions.tint_rows && row_tint_style(task, actions) && 'has-tint', shown_placement && `drop-${shown_placement}`
   )
 
   return (
@@ -273,7 +273,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         <span className="task_row_end">
           {is_collapsed && <span className="tree-count">{children.length}</span>}
           {actions.can_add_subtasks && (
-            <button className="icon row_button" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
+            <button className="icon hover-reveal" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">
               +
             </button>
           )}

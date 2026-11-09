@@ -99,8 +99,8 @@ export function saved_task_duration(saved: TaskDuration | { id: string; amount: 
   return task_duration(saved.id, { [`${saved.unit}s`]: saved.amount })
 }
 
-// A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, or ticks split by the tags of a group.
-export type ReportWidgetKind = 'streaks' | 'calendar' | 'weekly' | 'by_tag'
+// A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, ticks split by the tags of a group, or a map of linked tasks.
+export type ReportWidgetKind = 'streaks' | 'calendar' | 'weekly' | 'by_tag' | 'task_map'
 
 export interface ReportWidget {
   id: string
@@ -114,6 +114,8 @@ export interface ReportWidget {
   group_id: string
   // When set, a streak card lists only the routines, leaving out the subtasks under each.
   hide_subtasks?: boolean
+  // When set, a task map card keeps done tasks on the map.
+  show_done?: boolean
 }
 
 // A kind of link between two tasks, named both ways, as in "A waits on B" and "B blocks A".

@@ -168,7 +168,7 @@ export function TaskTable(props: TaskTableProps) {
         <input type="checkbox" checked={task.is_done} onChange={() => actions.on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
         <span className="task_title">{task.title}</span>
         {actions.can_add_subtasks && (
-          <button className="icon row_button" onClick={() => set_adding_subtask_to(task.id)} aria-label="Add subtask">
+          <button className="icon hover-reveal" onClick={() => set_adding_subtask_to(task.id)} aria-label="Add subtask">
             +
           </button>
         )}
@@ -279,7 +279,7 @@ export function TaskTable(props: TaskTableProps) {
     label: (
       <>
         {group.label}
-        <span className="group_count">{group.nodes.length + group.repeats.length}</span>
+        <span className="group-count">{group.nodes.length + group.repeats.length}</span>
       </>
     ),
     rows: [...group.nodes.map(task_row), ...group.repeats.map(repeat_row)],
@@ -290,7 +290,7 @@ export function TaskTable(props: TaskTableProps) {
     if (row.kind === 'repeat') return 'task_row is_repeat'
     const task = row.node.task
     const is_picked = actions.is_picked(task)
-    return cx('task_row', task.is_done && 'is_done', is_picked && 'is_picked', is_picked && actions.is_dragging_picked && 'is_dragged', row_tint_style(task, actions) && 'has_tint')
+    return cx('task_row', task.is_done && 'is_done', is_picked && 'picked', is_picked && actions.is_dragging_picked && 'is_dragged', row_tint_style(task, actions) && 'has-tint')
   }
 
   return (
@@ -303,7 +303,7 @@ export function TaskTable(props: TaskTableProps) {
         row_key={row_key}
         row_selected={(row) => row.kind === 'task' && actions.selected_task_id === row.node.task.id}
         caption="Tasks"
-        wrap_class={cx('scroll', props.scrolls_sideways && 'scrolls_sideways')}
+        wrap_class={cx('scroll fit', props.scrolls_sideways && 'scrolls_sideways')}
         sorting={sorting}
         on_sorting_change={(next) => props.on_sort_change(next.map((key) => ({ column: key.key as TableColumn, is_descending: key.descending })))}
         column_order={all_columns}

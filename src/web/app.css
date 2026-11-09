@@ -1,39 +1,8 @@
 /* X-Tasks' own layout and the parts only it draws, on Halon's tokens; Halon's halon.css styles every shared widget. */
 
 /* ========================================================================== */
-/* Host theme                                                                 */
-/* ========================================================================== */
-
-/* Inside the Linux sidebar the page takes the sidebar's own colours, handed to it as --sidebar-* variables. */
-html.follows_host_theme {
-  color-scheme: var(--sidebar-color-scheme, light dark);
-  --surface-root: var(--sidebar-bg);
-  --surface-default: var(--sidebar-base);
-  --surface-secondary: var(--sidebar-bg);
-  --surface-navigation: var(--sidebar-bg);
-  --surface-navigation-hover: var(--sidebar-hover);
-  --text-heading: var(--sidebar-fg);
-  --text-body: var(--sidebar-fg);
-  --text-on-navigation: var(--sidebar-fg);
-  --text-secondary: color-mix(in srgb, var(--sidebar-fg) 80%, var(--sidebar-bg));
-  --text-tertiary: color-mix(in srgb, var(--sidebar-fg) 65%, var(--sidebar-bg));
-  --text-on-fill: var(--sidebar-accent-fg);
-  --border-default: var(--sidebar-border);
-  --border-hover: color-mix(in srgb, var(--sidebar-fg) 40%, var(--sidebar-bg));
-  --border-control: color-mix(in srgb, var(--sidebar-fg) 55%, var(--sidebar-bg));
-  --accent: var(--sidebar-accent);
-  --focus-ring: color-mix(in srgb, var(--sidebar-accent) 25%, transparent);
-  --font-family-interface: var(--sidebar-font-family);
-}
-
-/* ========================================================================== */
 /* Frame                                                                      */
 /* ========================================================================== */
-
-/* The app's name fills the top bar above the sidebar, bordered off from it, so the bar starts in line with the pane. */
-@media (min-width: 701px) {
-  .topbar > .brand { display: flex; flex: none; align-items: center; align-self: stretch; box-sizing: border-box; width: var(--sidebar-width); margin: calc(-1 * var(--space-4)) 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-6)); padding: 0 var(--space-6); border-right: var(--border-width) solid var(--border-default); }
-}
 
 /* The theme button sits in the sidebar's foot instead. */
 .topbar > #theme { display: none; }
@@ -56,34 +25,6 @@ html.follows_host_theme {
 }
 .syntax_problem { color: var(--status-danger); }
 
-/* The sidebar fills its row instead of growing with its tags, so they scroll while its foot stays at the bottom and its grab bar on its own edge. */
-/* Stretching also makes the phone's fixed drawer span from the top bar to the bottom of the screen, where Halon's start alignment would shrink it to its tags. */
-body.contained .sidebar { align-self: stretch; padding-right: 0; padding-left: 0; min-height: 0; overflow: hidden; }
-@media (min-width: 701px) {
-  body.contained .sidebar { position: relative; top: auto; }
-}
-.sidebar_views { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--border-default); }
-.sidebar_foot { display: flex; flex: none; flex-direction: column; gap: var(--space-1); margin-top: auto; padding: var(--space-4) 0; }
-/* The sidebar's inset sits inside what scrolls, so the scroll bar runs flush with its edge. */
-body.contained .sidebar > :is(.sidebar-content, .sidebar_foot) { padding-right: var(--space-2); padding-left: var(--space-4); }
-/* The view and Settings links are tree rows like the tags, and the open one is raised the way a picked tree row is. */
-.sidebar_views a, .sidebar_foot a { text-decoration: none; cursor: pointer; }
-.sidebar_views .tree-row, .sidebar_foot .tree-row { padding: 0 var(--space-2) 0 var(--space-4); }
-.sidebar_views a.active, .sidebar_foot a.active { background-color: var(--surface-default); color: var(--text-heading); box-shadow: var(--shadow-item); font-weight: 500; }
-.sidebar_count { color: var(--text-tertiary); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
-.sidebar_icon_label { display: inline-flex; align-items: center; gap: var(--space-3); }
-.sidebar_icon { width: var(--icon-size-small); height: var(--icon-size-small); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.sidebar_icon.is_spinning { animation: spin 1s linear infinite; }
-.sync_button { width: 100%; height: var(--row-height); border-color: transparent; background: transparent; font-weight: 400; }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* A group's row reads as a heading over its tags, and a row's add button waits for the pointer. */
-.sidebar_group_row .tree-label { color: var(--text-secondary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
-/* It takes no room until then, so the counts stay lined up at the row's end. */
-.tree-row:not(:hover, :focus-within) .sidebar_add { display: none; }
-.tag_color_dot { display: inline-block; width: 8px; height: 8px; margin-right: var(--space-3); border-radius: 50%; background: var(--tag-color); vertical-align: 0.05em; }
-
 /* ========================================================================== */
 /* Panes                                                                      */
 /* ========================================================================== */
@@ -99,21 +40,14 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .task_pane > .task_list { flex: 0 1 auto; overflow-y: auto; }
 .task_pane.is_wide.is_table > .table-wrap { flex: 0 1 auto; }
 
-/* The title, the date and the count of tasks left share one line with the view's buttons. */
+/* The view's heading keeps clear of what follows it, and its date and count are as quiet as its subtitle. */
 .task_pane > .page-head { margin-bottom: var(--space-6); }
-.task_pane > .page-head .head-actions { margin-left: auto; }
-.task_pane > .page-head .page-title { align-items: baseline; }
-.task_pane > .page-head .page-identity > div { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-5); }
-.task_pane > .page-head h1 { white-space: nowrap; word-break: normal; }
-.task_pane > .page-head .page-subtitle { display: contents; }
 .my_day_date { color: var(--text-secondary); font-size: var(--text-control); }
 .remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
-.grouping_select.is_selected { border-color: var(--accent); color: var(--accent); }
 
 /* On a phone the task list runs edge to edge, a row's date and tags wrap under its title, and a table card's title wraps instead of cutting off. */
 @media (max-width: 700px) {
   .syntax_preview { margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-5)) var(--space-6); }
-  .task_pane > .page-head .page-title { flex-wrap: wrap; row-gap: var(--space-3); }
   .task_pane > .task_list { margin-right: calc(-1 * var(--space-5)); margin-left: calc(-1 * var(--space-5)); border-right: 0; border-left: 0; border-radius: 0; }
   .task { flex-wrap: wrap; row-gap: var(--space-2); }
   .task .task_title_cell { flex: 1 0 60%; }
@@ -142,7 +76,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
   cursor: pointer;
 }
 .task_pane > .task_list > .task_item:first-child > .task { border-top: 0; }
-.task:hover { background: var(--surface-secondary); }
+/* A tinted or picked row keeps its own fill under the pointer. */
+.task:not(.has-tint, .picked):hover { background: var(--surface-secondary); }
 .task.is_repeat, .task_row.is_repeat { color: var(--text-secondary); }
 .task.is_repeat .task_title, .task_row.is_repeat .task_title { font-style: italic; }
 .task .tree-toggle, .task .tree-spacer { width: var(--space-7); height: var(--space-7); }
@@ -154,29 +89,16 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .repeat_marker { flex: none; width: 16px; color: var(--text-tertiary); font-size: var(--text-caption); text-align: center; }
 .due_label { flex: none; color: var(--text-secondary); font-size: var(--text-caption); white-space: nowrap; }
 .due_label.is_overdue { color: var(--status-danger); }
-.row_button { visibility: hidden; }
-.task:hover .row_button, tr:hover .row_button, .row_button:focus-visible { visibility: visible; }
 .subtask_form { padding: var(--space-3) var(--space-4) var(--space-3) var(--space-8); border-top: var(--border-width) solid var(--border-default); }
 .subtask_form input { width: 100%; }
 
 .group_heading { display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-2); background: var(--surface-secondary); color: var(--text-heading); font-size: var(--text-caption); font-weight: 600; }
 .group_heading:not(:first-child) { border-top: var(--border-width) solid var(--border-default); }
 .group_heading.is_overdue, tr.group-row.is_overdue th { color: var(--status-danger); }
-.group_count { color: var(--text-tertiary); font-weight: 400; }
-/* The table's group rows match the list's headings: shaded, with the count set off from the label. */
-tbody tr.group-row > th { background-color: var(--surface-secondary); font-size: var(--text-caption); font-weight: 600; }
-tr.group-row .group_count { margin-left: var(--space-3); }
 
-/* Done, opened, picked and tinted rows, the same in the list, the table and the board. */
+/* Done and opened rows, the same in the list, the table and the board; Halon tints and picks them. */
 .task.is_done .task_title, .task_row.is_done .task_title, .board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
-.task.is_selected, .board_card.is_selected { background: var(--surface-navigation-hover); }
-/* A tinted row keeps its tag's shade light enough to read in either theme, and hover and selection still show over it. */
-.task.has_tint, .task_row.has_tint td, .board_card.has_tint { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-default)); }
-.task.has_tint:hover, .task_row.has_tint:hover td, .board_card.has_tint:hover { background: color-mix(in srgb, var(--tag-color) 20%, var(--surface-default)); }
-.task.has_tint.is_selected, .task_row.has_tint[aria-selected="true"] td, .board_card.has_tint.is_selected { background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-navigation-hover)); }
-/* A row picked for a bulk action shows an accent wash and a bar down its left edge, never a tick, since a tick means done. */
-.task.is_picked, .task.is_picked:hover, .task_row.is_picked td, .task_row.is_picked:hover td, .board_card.is_picked { background: color-mix(in srgb, var(--accent) 16%, var(--surface-default)); }
-.task.is_picked, .task_row.is_picked td:first-child, .board_card.is_picked { box-shadow: inset 3px 0 0 var(--accent); }
+:where(.task, .board_card).selected:not(.has-tint, .picked) { background: var(--surface-navigation-hover); }
 .task.is_dragged, .task_row.is_dragged { opacity: 0.5; }
 
 /* The row that adds the typed task sits above the list, drawn like a task that is not there yet. */
@@ -214,17 +136,8 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 /* Tags on tasks                                                              */
 /* ========================================================================== */
 
-.tag_chip { display: inline-flex; flex: none; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) 0 var(--space-3); border-radius: var(--radius-small); background: var(--surface-secondary); color: var(--text-secondary); font-size: var(--text-caption); line-height: var(--line-height-body); }
-.tag_chip button, .tag_chip button.icon { width: auto; height: auto; padding: 0 var(--space-1); border: 0; background: transparent; color: inherit; font-size: inherit; font-weight: 400; line-height: 1.4; }
-.tag_chip button:hover:not(:disabled), .tag_chip button.icon:hover:not(:disabled) { color: var(--status-danger); }
 .tag_chips, .chips:has(> .tag_chip) { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .tag_chips + select { margin-top: var(--space-3); }
-.tag_chip.is_rule { padding-right: var(--space-3); border: var(--border-width) dashed var(--border-hover); background: transparent; }
-/* A coloured tag is tinted with its colour and edged in it, keeping the text readable in either theme. */
-.tag_chip.has_color { box-shadow: inset 0 0 0 var(--border-width) var(--tag-color); background: color-mix(in srgb, var(--tag-color) 18%, var(--surface-default)); color: var(--text-body); }
-.tag_chip.is_rule.has_color { border-color: var(--tag-color); box-shadow: none; }
-/* In a table a chip is its fill alone, without an outline. */
-.table-wrap .tag_chip { border: 0; box-shadow: none; }
 .dependency_chip.is_done { color: var(--text-tertiary); text-decoration: line-through; }
 
 /* ========================================================================== */
@@ -232,20 +145,17 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 /* ========================================================================== */
 
 /* The details fill the side pane, the notes taking the room left over. */
-/* The pane is bordered off from the tasks; its header stays put while the rest scrolls under it. */
-.task_main > .side-pane { padding-bottom: 0; overflow: hidden; border-left: var(--border-width) solid var(--border-hover); }
 .task_detail { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; }
-.task_detail_body { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; margin: 0 calc(-1 * var(--space-6)); padding: 0 var(--space-6) var(--space-6); overflow-y: auto; }
 .task_detail .field { display: flex; }
-.task_detail_header { display: flex; align-items: center; gap: var(--space-4); }
-/* In the top bar the header spans the pane below it, bordered off like the pane. */
-.topbar > .task_detail_header { flex: none; align-self: stretch; box-sizing: border-box; width: var(--side-pane-width, 360px); margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6)) calc(-1 * var(--space-4)) 0; padding: 0 var(--space-6); border-left: var(--border-width) solid var(--border-hover); background-color: var(--surface-secondary); }
 .task_detail_header button { flex: none; }
 .task_detail_header input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
-.my_day_button.is_selected { border-color: var(--accent); color: var(--accent); }
 .recurrence_button { display: block; overflow: hidden; font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .task_detail_notes { flex: 1; min-height: 160px; }
-.task_detail_notes textarea { flex: 1; resize: none; }
+.task_detail_notes .rich-text { flex: 1; }
+.task_detail_notes_head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+/* The notes dialog gives the notes the whole window. */
+.task_detail_notes_dialog { display: flex; flex: 1; flex-direction: column; min-height: 0; height: 100%; }
+.task_detail_notes_dialog .rich-text { flex: 1; }
 .task_detail_footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); color: var(--text-tertiary); font-size: var(--text-caption); }
 .task_detail_footer .muted { color: inherit; }
 .relationship_group { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -307,24 +217,6 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 /* Settings                                                                   */
 /* ========================================================================== */
 
-/* The outline sits beside the sections and stays in view while they scroll, short enough to clear the pane's bottom padding; on a narrow pane it goes above them. */
-.settings_page { container-type: inline-size; }
-.settings_layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); align-items: start; gap: var(--space-8); }
-.settings_outline { position: sticky; top: 0; display: grid; gap: var(--space-5); max-height: calc(100vh - var(--frame-height) - 96px); overflow-y: auto; }
-.settings_outline_category { display: grid; }
-.settings_outline_heading { padding: 0 var(--space-4) var(--space-2); color: var(--text-secondary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
-.settings_outline_link { padding: var(--space-1) var(--space-4); border-left: 2px solid transparent; border-radius: 0 var(--radius-small) var(--radius-small) 0; color: var(--text-body); font-size: var(--text-control); text-decoration: none; }
-.settings_outline_link:hover { background-color: var(--surface-secondary); color: var(--text-heading); }
-.settings_outline_link.is_current { border-left-color: var(--accent); background-color: var(--surface-secondary); color: var(--text-heading); font-weight: 500; }
-.settings_sections { display: grid; gap: var(--space-8); min-width: 0; }
-.settings_category { display: grid; gap: var(--space-7); }
-.settings_category_heading { margin: 0; padding-bottom: var(--space-3); border-bottom: var(--border-width) solid var(--border-default); color: var(--text-heading); font-size: var(--text-h2); font-weight: 600; }
-.settings_section { scroll-margin-top: var(--space-5); }
-@container (max-width: 720px) {
-  .settings_layout { grid-template-columns: minmax(0, 1fr); }
-  .settings_outline { position: static; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); max-height: none; }
-  .settings_outline_category { display: flex; flex-wrap: wrap; align-items: center; }
-}
 /* The rows that list options, colours and relationships are denser than a single setting. */
 .reschedule_option { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--space-5); }
 .reschedule_option > input:not([type]), .reschedule_rule, .tag_color_hex, .detail_section_name { flex: 1; min-width: 0; }
@@ -412,6 +304,8 @@ tr.group-row .group_count { margin-left: var(--space-3); }
   --g-handle-color: var(--text-secondary);
 }
 .gantt_view .bar-wrapper.is_done { opacity: 0.55; }
+.gantt_view .bar-wrapper.is_outside { opacity: 0.55; }
+.gantt_view .bar-wrapper.is_outside .bar { stroke: var(--text-secondary); stroke-dasharray: 4 3; }
 .gantt_view .bar-wrapper.is_selected .bar { stroke: var(--text-heading); stroke-width: 2; }
 
 /* ========================================================================== */
@@ -469,46 +363,21 @@ tr.group-row .group_count { margin-left: var(--space-3); }
 .report_week_bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); }
 .report_week_axis { display: flex; justify-content: space-between; margin-top: var(--space-2); color: var(--text-tertiary); font-size: var(--text-caption); }
 
+.report_task_map { height: 440px; overflow: hidden; border-radius: var(--radius-small); background: var(--surface-secondary); }
+
 .report_tag_bars { display: flex; flex-direction: column; gap: var(--space-3); }
 .report_tag_row { display: grid; grid-template-columns: minmax(80px, 160px) 1fr 40px; align-items: center; gap: var(--space-4); font-size: var(--text-control); }
 .report_tag_name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .report_tag_track { height: 10px; }
-.report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--tag-color, var(--accent)); }
+.report_tag_bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--item-color, var(--accent)); }
 .report_tag_count { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ========================================================================== */
-/* Buttons                                                                    */
+/* Task table                                                                 */
 /* ========================================================================== */
 
-/* Halon's ghost buttons, in the top bar, the selection bar and as icons, are drawn as regular ones. */
-:is(button.icon, .topbar button, .selection-bar button):not(.tag_chip button) { border-color: var(--border-default); background-color: var(--surface-default); }
-:is(button.icon, .topbar button, .selection-bar button):not(.tag_chip button):hover:not(:disabled) { border-color: var(--accent); background-color: var(--surface-default); }
-
-/* ========================================================================== */
-/* Scroll bars and tables                                                     */
-/* ========================================================================== */
-
-/* Every scroll bar is Halon's 10px thumb: the standard properties would swap it for the system's own bar, arrows and shading included. */
-* { scrollbar-width: auto; scrollbar-color: auto; }
-
-/* The table's columns shrink to fit its pane (see TaskTable), cutting off what does not fit, unless it scrolls sideways. */
-.task_pane > .table-wrap > table { table-layout: fixed; }
+/* Halon fits the table's columns to its pane; set to scroll sideways, it keeps them wide enough to read. */
 .task_pane > .table-wrap.scrolls_sideways > table { min-width: var(--table-scrolling-width); }
-.task_pane > .table-wrap :is(th, td) { overflow: hidden; text-overflow: ellipsis; }
-.task_pane > .table-wrap th > button.sort { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-
-/* The column picker sits past the last heading instead of over it. */
-.task_pane > .table-wrap thead th:last-child { padding-right: calc(var(--space-5) + var(--row-height) + var(--space-2)); }
-
-/* A date, its time and the clear button make one joined control, like a segmented switch, with room for each part. */
-.date-time-inputs { flex-wrap: nowrap; gap: 0; }
-.date-time-inputs > input { flex: 1 1 auto; min-width: 9.5em; border-radius: 0; }
-.date-time-inputs > input[type="time"] { flex: 1 1 auto; min-width: 7.5em; }
-.date-time-inputs > button { height: var(--control-height); border-radius: 0; }
-.date-time-inputs > :not(:first-child) { margin-left: calc(-1 * var(--border-width)); }
-.date-time-inputs > :first-child { border-top-left-radius: var(--radius-small); border-bottom-left-radius: var(--radius-small); }
-.date-time-inputs > :last-child { border-top-right-radius: var(--radius-small); border-bottom-right-radius: var(--radius-small); }
-.date-time-inputs > :is(input, button):is(:hover, :focus) { position: relative; z-index: 1; }
 
 /* ========================================================================== */
 /* History                                                                    */

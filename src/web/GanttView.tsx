@@ -24,6 +24,8 @@ function mode_of(scale: GanttScale): string {
 interface GanttViewProps {
   // The rows on screen from top to bottom; those without dates are left off the chart.
   rows: Task[]
+  // Every task, so a task outside the view that a row waits on, or that waits on a row, can be charted for its arrow.
+  tasks: Task[]
   // The ids of the tasks each task waits on, by task id.
   waits_on: Map<string, string[]>
   scale: GanttScale
@@ -33,7 +35,7 @@ interface GanttViewProps {
   on_set_schedule: (task: Task, schedule: TaskSchedule) => void
 }
 
-// A bar runs from each task's start to its due date, with arrows from the tasks it waits on; dragging a bar or its ends reschedules it.
+// A bar runs from each task's start to its due date, with arrows from the tasks it waits on, even outside the view; dragging a bar or its ends reschedules it.
 export function GanttView(props: GanttViewProps) {
   const element = useRef<HTMLDivElement>(null)
   const gantt = useRef<Gantt | null>(null)
@@ -43,7 +45,7 @@ export function GanttView(props: GanttViewProps) {
   const latest = useRef(props)
   latest.current = props
 
-  const bars = gantt_tasks(props.rows, props.waits_on, props.selected_task_id)
+  const bars = gantt_tasks(props.rows, props.tasks, props.waits_on, props.selected_task_id)
   const bars_key = JSON.stringify(bars)
 
   useEffect(() => {
@@ -70,11 +72,11 @@ export function GanttView(props: GanttViewProps) {
       bar_height: 24,
       padding: 14,
       on_click: (bar) => {
-        const task = latest.current.rows.find((each) => each.id === bar.id)
+        const task = latest.current.tasks.find((each) => each.id === bar.id)
         if (task) latest.current.on_select(task)
       },
       on_date_change: (bar, start, end) => {
-        const task = latest.current.rows.find((each) => each.id === bar.id)
+        const task = latest.current.tasks.find((each) => each.id === bar.id)
         if (task) latest.current.on_set_schedule(task, moved_schedule(task, start, end))
       },
       on_view_change: (mode) => {
@@ -94,9 +96,18 @@ export function GanttView(props: GanttViewProps) {
   return <div className="gantt_view" ref={element} />
 }
 
-// A dated task becomes a bar, and only the tasks it waits on that are also charted get arrows.
-function gantt_tasks(rows: Task[], waits_on: Map<string, string[]>, selected_task_id: string | null): GanttTask[] {
-  const charted = rows.filter((task) => task_span(task) !== null)
+// A dated task becomes a bar, and a dated task outside the view joins below the rows when it waits on one of them or one waits on it, so every arrow has both ends.
+function gantt_tasks(rows: Task[], tasks: Task[], waits_on: Map<string, string[]>, selected_task_id: string | null): GanttTask[] {
+  const charted_rows = rows.filter((task) => task_span(task) !== null)
+  const row_ids = new Set(charted_rows.map((task) => task.id))
+  const outside = tasks.filter(
+    (task) =>
+      !row_ids.has(task.id) &&
+      task_span(task) !== null &&
+      ((waits_on.get(task.id) ?? []).some((id) => row_ids.has(id)) || charted_rows.some((row) => (waits_on.get(row.id) ?? []).includes(task.id)))
+  )
+  const outside_ids = new Set(outside.map((task) => task.id))
+  const charted = [...charted_rows, ...outside]
   const charted_ids = new Set(charted.map((task) => task.id))
 
   return charted.map((task) => {
@@ -108,7 +119,8 @@ function gantt_tasks(rows: Task[], waits_on: Map<string, string[]>, selected_tas
       end: span.end.replace('T', ' '),
       progress: task.is_done ? 100 : 0,
       dependencies: (waits_on.get(task.id) ?? []).filter((id) => charted_ids.has(id)).join(','),
-      custom_class: task.id === selected_task_id ? 'is_selected' : task.is_done ? 'is_done' : ''
+      // The chart takes one class per bar, so being selected wins over being outside the view, which wins over being done.
+      custom_class: task.id === selected_task_id ? 'is_selected' : outside_ids.has(task.id) ? 'is_outside' : task.is_done ? 'is_done' : ''
     }
   })
 }
