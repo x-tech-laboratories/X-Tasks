@@ -21,12 +21,13 @@ is released separately, as `v1.0.<build>` on every push to `main`.
 - Show, hide and reorder the task details sections in settings
 - Outline beside the settings page, with its sections regrouped by topic
 - Back up an older database before upgrading its schema, on desktop and Android
+- Pick a tag's icon from a searchable emoji picker instead of typing it
 
 ### Changed
 
 - Word a relationship's waiting choice as which task depends on the other
 - Enter in the bar opens the first task found, or adds the typed task when the search finds nothing
-- Draw the shared look from Halon 0.9 and X-Libs 0.18
+- Draw the shared look from Halon 0.10 and X-Libs 0.19
 - Put the app's name and icon in the top bar, the task detail header in the top bar, and the theme
   button above Settings
 
