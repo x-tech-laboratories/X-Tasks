@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, screen, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, shell } from 'electron'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
@@ -162,6 +162,8 @@ function start_app(): void {
     nativeTheme.themeSource = get_settings().theme
     register_bridge_handlers()
     void restart_mcp_server()
+    // The page has its own controls, so Electron's default File/Edit/View menu bar is dropped.
+    Menu.setApplicationMenu(null)
     create_main_window()
     watch_for_outside_changes()
     schedule_automatic_backups()
