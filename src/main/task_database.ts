@@ -232,10 +232,15 @@ function undo_reverted_list_tree(database: SqlDatabase): void {
   })
 }
 
+// Whether the file was saved by an older build, so opening it will change its schema; a new file has nothing to lose.
+export function is_upgrade_pending(database: SqlDatabase): boolean {
+  const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
+  return user_version > 0 && user_version < SCHEMA_MIGRATIONS.length
+}
+
 // Sync's and history's triggers name table columns, so they come off while migrations reshape tables and go back on after.
 function migrate_schema(database: SqlDatabase, back_up_before_upgrade?: (database: SqlDatabase) => void): void {
-  const { user_version: saved_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
-  if (saved_version > 0 && saved_version < SCHEMA_MIGRATIONS.length) back_up_before_upgrade?.(database)
+  if (is_upgrade_pending(database)) back_up_before_upgrade?.(database)
 
   drop_sync_triggers(database)
   drop_version_triggers(database)

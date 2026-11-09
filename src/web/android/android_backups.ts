@@ -3,7 +3,7 @@ import { registerPlugin } from '@capacitor/core'
 import { backups } from '@x-tech-laboratories/x-libs/backups'
 import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
 import { forget_sync_history } from '../../main/sync_engine'
-import { attach_task_database, get_settings, open_database } from '../../main/task_database'
+import { attach_task_database, get_settings, is_upgrade_pending, open_database } from '../../main/task_database'
 import type { WasmTaskDatabase } from './wasm_database'
 
 // ============================================================================
@@ -34,6 +34,19 @@ function to_base64(bytes: Uint8Array): string {
 
 function from_base64(text: string): Uint8Array {
   return Uint8Array.from(atob(text), (character) => character.charCodeAt(0))
+}
+
+// Before an older database is upgraded, its bytes go to the backup folder if one is picked; a failure is logged so the app still opens.
+export async function back_up_before_upgrade(database: WasmTaskDatabase): Promise<void> {
+  if (!is_upgrade_pending(database.connection)) return
+
+  try {
+    if (!(await backup_folder.get_folder()).name) return
+    const name = task_backup_naming.name_for(new Date(), false)
+    await backup_folder.write({ name, data: to_base64(database.export_bytes()) })
+  } catch (error) {
+    console.error('backup before upgrade failed:', error)
+  }
 }
 
 // ============================================================================
