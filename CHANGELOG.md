@@ -23,6 +23,9 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 - Back up an older database before upgrading its schema, on desktop and Android
 - Pick a tag's icon from a searchable emoji picker instead of typing it
 - AppImage and Flatpak builds of the desktop app, attached to each release
+- Date ranges set in settings, such as Earlier today, This week or Next week, for the headings of
+  Upcoming and date-grouped views and the table's date filters; Upcoming keeps to tasks overdue or
+  inside a range, and Overdue no longer holds today's tasks whose time has passed
 
 ### Changed
 

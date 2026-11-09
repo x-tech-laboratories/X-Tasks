@@ -5,7 +5,7 @@ import { MenuList } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
 import { SearchBox } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { DataTable, type RowGroup, type Sorting, type TableColumn as DataColumn } from '@x-tech-laboratories/x-libs/web/react/table'
-import type { TableSortKey } from '@shared/settings'
+import type { DateRange, TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import type { RepeatOccurrence, TaskGroup } from './dates'
@@ -71,6 +71,8 @@ interface TaskTableProps {
   scrolls_sideways: boolean
   sort: TableSortKey[]
   filters: TableFilters
+  // The date ranges the date filters offer.
+  date_ranges: DateRange[]
   collapsed_ids: string[]
   on_column_order_change: (order: TableColumn[]) => void
   on_show_column: (column: TableColumn, is_shown: boolean) => void
@@ -134,7 +136,7 @@ export function TaskTable(props: TaskTableProps) {
         <SearchBox label="Filter by title" value={filters.title} on_input={(title) => set({ title })} on_submit={close} auto_focus />
       )
     }
-    if (is_date_column(column)) return choices(date_filter_choices(column), filters.dates[column] ?? 'any', (value) => set({ dates: { ...filters.dates, [column]: value } }))
+    if (is_date_column(column)) return choices(date_filter_choices(column, props.date_ranges), filters.dates[column] ?? 'any', (value) => set({ dates: { ...filters.dates, [column]: value } }))
     if (column === 'duration') return choices(DURATION_FILTER_CHOICES, filters.duration, (duration) => set({ duration }))
     if (column === 'streak') return choices(STREAK_FILTER_CHOICES, filters.streak, (streak) => set({ streak }))
     if (is_mark_column(column)) return choices(MARK_FILTER_CHOICES[column], filters.marks[column] ?? 'any', (value) => set({ marks: { ...filters.marks, [column]: value } }))

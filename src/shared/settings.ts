@@ -1,4 +1,5 @@
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
+import type { RelativeRange } from '@x-tech-laboratories/x-libs/date_ranges'
 import type { SyncDirection, SyncStatus } from './sync'
 import type { View } from './tasks'
 
@@ -75,6 +76,16 @@ export interface RescheduleOption {
   days: number
   rule: string
 }
+
+// A named span of time from now, such as Earlier today or Next week, that dated tasks are grouped and filtered by; a task goes to the first range holding it.
+export interface DateRange extends RelativeRange {
+  id: string
+  name: string
+  // Splits the range into a heading per day, week or month, or keeps it under one.
+  split: DateRangeSplit
+}
+
+export type DateRangeSplit = 'none' | 'day' | 'week' | 'month'
 
 // A gap the Duration list in a task's details offers, which sets the due date that long after the start.
 export interface TaskDuration {
@@ -177,6 +188,8 @@ export interface Settings {
   view_groupings: Record<string, TaskGrouping>
   // How many days ahead Upcoming shows the later dates of repeating tasks; zero shows none.
   upcoming_repeat_days: number
+  // The headings of views grouped by date and the choices of the table's date filters; Upcoming shows only tasks inside one of them or overdue.
+  date_ranges: DateRange[]
   // The columns the task table is sorted by, most important first; empty keeps the order tasks were dragged into.
   table_sort: TableSortKey[]
   // The order of the table's columns after the title; columns for groups added since come at the end.
@@ -258,6 +271,15 @@ export const DEFAULT_SETTINGS: Settings = {
   grouping_memory: 'automatic',
   view_groupings: {},
   upcoming_repeat_days: 7,
+  date_ranges: [
+    { id: 'earlier-today', name: 'Earlier today', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'minute' }, split: 'none' },
+    { id: 'today', name: 'Today', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'day' }, split: 'none' },
+    { id: 'tomorrow', name: 'Tomorrow', start: { offset: 1, unit: 'day' }, end: { offset: 1, unit: 'day' }, split: 'none' },
+    { id: 'this-week', name: 'This week', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'week' }, split: 'none' },
+    { id: 'next-week', name: 'Next week', start: { offset: 1, unit: 'week' }, end: { offset: 1, unit: 'week' }, split: 'none' },
+    { id: 'this-month', name: 'This month', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'month' }, split: 'none' },
+    { id: 'later', name: 'Later', start: { offset: 0, unit: 'day' }, end: null, split: 'month' }
+  ],
   table_sort: [],
   table_column_order: [],
   hidden_table_columns: [],

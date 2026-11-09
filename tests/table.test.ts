@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import type { TableSortKey } from '../src/shared/settings.ts'
+import { DEFAULT_SETTINGS, type TableSortKey } from '../src/shared/settings.ts'
 import type { Tag } from '../src/shared/tasks.ts'
 import type { RoutineStreak } from '../src/shared/streaks.ts'
 import type { Task } from '../src/shared/tasks.ts'
@@ -8,6 +8,7 @@ import {
   COLUMN_WIDTH_RANGE, EMPTY_TABLE_FILTERS, NO_TAG_FILTER, column_width, default_column_width, ordered_columns, sort_task_tree, tag_ranks, task_passes_filters,
   type SortContext, type TableFilters
 } from '../src/web/table.ts'
+import { shown_ranges } from '../src/web/dates.ts'
 import { nest_tasks, type TaskNode } from '../src/web/views.ts'
 import { make_group, make_tag, make_task } from './fixtures.ts'
 
@@ -17,6 +18,7 @@ import { make_group, make_tag, make_task } from './fixtures.ts'
 
 const NOW = new Date(2026, 2, 11, 10, 0)
 const TODAY = '2026-03-11'
+const RANGES = shown_ranges(DEFAULT_SETTINGS.date_ranges, '2026-03-11T10:00')
 
 const no_streak = (): RoutineStreak | null => null
 const never_done = (): string | null => null
@@ -123,7 +125,7 @@ describe('task_passes_filters', () => {
   const tags = [make_tag({ id: 'work', group_id: 'area', name: 'Work' }), make_tag({ id: 'clients', group_id: 'area', name: 'Clients', parent_id: 'work' })]
 
   function passes(task: Task, filters: Partial<TableFilters>, streak: RoutineStreak | null = null, all_tasks: Task[] = [task]): boolean {
-    return task_passes_filters(task, { ...EMPTY_TABLE_FILTERS, ...filters }, all_tasks, tags, () => streak, TODAY, 'due', () => task.done_at)
+    return task_passes_filters(task, { ...EMPTY_TABLE_FILTERS, ...filters }, all_tasks, tags, () => streak, TODAY, 'due', () => task.done_at, () => false, RANGES)
   }
 
   test('the title filter matches a trimmed, case-blind substring', () => {
@@ -143,16 +145,23 @@ describe('task_passes_filters', () => {
     expect(keep(noted, { marks: { my_day: 'with' } })).toBe(false)
   })
 
-  test('date filters compare the day part against today', () => {
+  test('date filters keep the tasks inside the picked range, whichever range comes first', () => {
     const yesterday = make_task({ id: 'y', due_at: '2026-03-10' })
     const today = make_task({ id: 't', due_at: '2026-03-11T08:00' })
-    const later = make_task({ id: 'l', due_at: '2026-03-20' })
+    const this_week = make_task({ id: 'w', due_at: '2026-03-13' })
+    const later = make_task({ id: 'l', due_at: '2026-04-20' })
     const undated = make_task({ id: 'u' })
+    const tasks = [yesterday, today, this_week, later, undated]
 
-    expect([yesterday, today, later, undated].map((task) => passes(task, { dates: { due: 'earlier' } }))).toEqual([true, false, false, false])
-    expect([yesterday, today, later, undated].map((task) => passes(task, { dates: { due: 'today' } }))).toEqual([false, true, false, false])
-    expect([yesterday, today, later, undated].map((task) => passes(task, { dates: { due: 'upcoming' } }))).toEqual([false, false, true, false])
-    expect([yesterday, today, later, undated].map((task) => passes(task, { dates: { due: 'none' } }))).toEqual([false, false, false, true])
+    expect(tasks.map((task) => passes(task, { dates: { due: 'earlier' } }))).toEqual([true, false, false, false, false])
+    expect(tasks.map((task) => passes(task, { dates: { due: 'range:earlier-today' } }))).toEqual([false, true, false, false, false])
+    expect(tasks.map((task) => passes(task, { dates: { due: 'range:this-week' } }))).toEqual([false, true, true, false, false])
+    expect(tasks.map((task) => passes(task, { dates: { due: 'range:later' } }))).toEqual([false, true, true, true, false])
+    expect(tasks.map((task) => passes(task, { dates: { due: 'none' } }))).toEqual([false, false, false, false, true])
+  })
+
+  test('a filter on a range that no longer exists keeps every task', () => {
+    expect(passes(make_task({ id: 'u' }), { dates: { due: 'range:gone' } })).toBe(true)
   })
 
   test('overdue counts the time of day and skips done tasks', () => {
@@ -166,7 +175,7 @@ describe('task_passes_filters', () => {
     const on_time = make_task({ id: 'o', recurrence: 'FREQ=DAILY', due_at: '2026-03-12', done_at: '2026-03-11T09:00:00.000Z' })
     expect(passes(missed, { dates: { done: 'none' } })).toBe(true)
     expect(passes(on_time, { dates: { done: 'none' } })).toBe(false)
-    expect(passes(on_time, { dates: { done: 'today' } })).toBe(true)
+    expect(passes(on_time, { dates: { done: 'range:today' } })).toBe(true)
   })
 
   test('duration filters measure from start to due', () => {

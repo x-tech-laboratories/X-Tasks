@@ -3,9 +3,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, RowActions, SettingRow, SettingsPage as SettingsSections, Stack, moved, type SettingsCategory } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
+import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from 'recurrence-input'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection, SyncStatus } from '@shared/sync'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
@@ -31,6 +32,15 @@ const THEME_CHOICES: { value: ThemeChoice; label: string }[] = [
 const TASK_DATE_CHOICES: { value: TaskDateField; label: string }[] = [
   { value: 'due', label: 'Due date' },
   { value: 'start', label: 'Start date' }
+]
+
+const RANGE_UNIT_LABELS: Record<RangeUnit, string> = { minute: 'minutes', hour: 'hours', day: 'days', week: 'weeks', month: 'months', year: 'years' }
+
+const RANGE_SPLIT_CHOICES: { value: DateRangeSplit; label: string }[] = [
+  { value: 'none', label: 'One heading' },
+  { value: 'day', label: 'By day' },
+  { value: 'week', label: 'By week' },
+  { value: 'month', label: 'By month' }
 ]
 
 const OVERDUE_REPEAT_CHOICES: { value: OverdueRepeatReschedule; label: string }[] = [
@@ -325,6 +335,15 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
               </SettingRow>
             </>
           )
+        },
+        {
+          id: 'date_ranges',
+          heading: 'Date ranges',
+          hint:
+            'The headings of Upcoming and of views grouped by date, and the choices of the date filters. Each side counts from now, the ' +
+            'start from the beginning of its unit and the end to the finish of its, so 0 days to 0 minutes is earlier today and 1 week ' +
+            'to 1 week is next week. A task goes under the first range that holds it, and Upcoming shows only tasks overdue or in a range.',
+          content: <DateRangesEditor ranges={settings.date_ranges} on_change={(ranges) => on_change('date_ranges', ranges)} />
         },
         {
           id: 'reschedule',
@@ -670,6 +689,97 @@ function RescheduleOptionsEditor({ options, on_change }: RescheduleOptionsEditor
         />
       )}
     </>
+  )
+}
+
+// ============================================================================
+// Date ranges
+// ============================================================================
+
+interface DateRangesEditorProps {
+  ranges: DateRange[]
+  on_change: (ranges: DateRange[]) => void
+}
+
+// The date ranges in the order tasks are matched against them and their headings shown.
+function DateRangesEditor({ ranges, on_change }: DateRangesEditorProps) {
+  function update(id: string, change: Partial<DateRange>): void {
+    on_change(ranges.map((range) => (range.id === id ? { ...range, ...change } : range)))
+  }
+
+  function add(): void {
+    on_change([...ranges, { id: crypto.randomUUID(), name: 'New range', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'day' }, split: 'none' }])
+  }
+
+  return (
+    <>
+      {ranges.map((range, index) => (
+        <div key={range.id} className="setting-row reschedule_option date_range">
+          <CommitInput value={range.name} on_commit={(event) => update(range.id, { name: event.currentTarget.value.trim() || range.name })} aria-label="Range name" />
+          <RangeEdgeInput side="From" open_label="Any time before" edge={range.start} on_change={(start) => update(range.id, { start })} />
+          <RangeEdgeInput side="to" open_label="Any time after" edge={range.end} on_change={(end) => update(range.id, { end })} />
+          <select value={range.split} onChange={(event) => update(range.id, { split: event.currentTarget.value as DateRangeSplit })} aria-label="Headings">
+            {RANGE_SPLIT_CHOICES.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <RowActions
+            index={index}
+            count={ranges.length}
+            remove_label={`Remove ${range.name}`}
+            on_move={(from, to) => on_change(moved(ranges, from, to))}
+            on_remove={() => on_change(ranges.filter((each) => each.id !== range.id))}
+          />
+        </div>
+      ))}
+
+      <button className="fit-content" onClick={add}>
+        Add range
+      </button>
+    </>
+  )
+}
+
+interface RangeEdgeInputProps {
+  side: string
+  open_label: string
+  edge: RangeEdge | null
+  on_change: (edge: RangeEdge | null) => void
+}
+
+// One side of a range: so many units from now, or left open.
+function RangeEdgeInput({ side, open_label, edge, on_change }: RangeEdgeInputProps) {
+  return (
+    <span className="duration_amount">
+      {side}
+      {edge && (
+        <CommitInput
+          type="number"
+          step="1"
+          className="input-xs"
+          value={edge.offset}
+          on_commit={(event) => on_change({ ...edge, offset: Math.round(Number(event.currentTarget.value) || 0) })}
+          aria-label={`${side} how many`}
+        />
+      )}
+      <select
+        value={edge?.unit ?? 'open'}
+        onChange={(event) => {
+          const unit = event.currentTarget.value
+          on_change(unit === 'open' ? null : { offset: edge?.offset ?? 0, unit: unit as RangeUnit })
+        }}
+        aria-label={`${side} unit`}
+      >
+        {RANGE_UNITS.map((unit) => (
+          <option key={unit} value={unit}>
+            {RANGE_UNIT_LABELS[unit]}
+          </option>
+        ))}
+        <option value="open">{open_label}</option>
+      </select>
+    </span>
   )
 }
 

@@ -1,11 +1,13 @@
-import type { TableSortKey, TaskDateField } from '@shared/settings'
+import type { DateRange, TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { ordered_columns as ordered_column_ids, sorted_tree, type TreeRow } from '@x-tech-laboratories/x-libs/web/tables'
+import { is_in_range } from '@x-tech-laboratories/x-libs/date_ranges'
 import { days_between, format_local, has_time, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { format_duration } from '@x-tech-laboratories/x-libs/durations'
 import { task_date_of } from '@shared/schedule'
 import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
+import type { ShownRange } from './dates'
 import { task_is_in_view, type TaskNode } from './views'
 
 // ============================================================================
@@ -158,24 +160,17 @@ export function sort_task_tree(nodes: TaskNode[], sort: TableSortKey[], context:
 // Filtering
 // ============================================================================
 
-export type DateFilter = 'any' | 'overdue' | 'earlier' | 'today' | 'upcoming' | 'none'
+// Besides the fixed choices, a date filter can keep the tasks inside one of the date ranges, named by its id.
+export type DateFilter = 'any' | 'overdue' | 'earlier' | 'none' | `range:${string}`
 
 // Only the smart and due dates can be overdue, and a done date never lies ahead.
-export function date_filter_choices(column: DateColumn): { value: DateFilter; label: string }[] {
-  if (column === 'done') {
-    return [
-      { value: 'any', label: 'Any date' },
-      { value: 'earlier', label: 'Before today' },
-      { value: 'today', label: 'Today' },
-      { value: 'none', label: 'Not done' }
-    ]
-  }
+export function date_filter_choices(column: DateColumn, ranges: DateRange[]): { value: DateFilter; label: string }[] {
+  const range_choices = ranges.map((range): { value: DateFilter; label: string } => ({ value: `range:${range.id}`, label: range.name }))
   return [
     { value: 'any', label: 'Any date' },
-    column === 'start' ? { value: 'earlier', label: 'Before today' } : { value: 'overdue', label: 'Overdue' },
-    { value: 'today', label: 'Today' },
-    { value: 'upcoming', label: 'Later' },
-    { value: 'none', label: 'No date' }
+    column === 'due' || column === 'date' ? { value: 'overdue', label: 'Overdue' } : { value: 'earlier', label: 'Before today' },
+    ...range_choices,
+    { value: 'none', label: column === 'done' ? 'Not done' : 'No date' }
   ]
 }
 
@@ -262,14 +257,15 @@ export function task_passes_filters(
   today: string,
   date_field: TaskDateField,
   last_done_of: LastDoneOf,
-  is_in_my_day: (task: Task) => boolean = () => false
+  is_in_my_day: (task: Task) => boolean = () => false,
+  ranges: ShownRange[] = []
 ): boolean {
   const title_text = filters.title.trim().toLocaleLowerCase()
   if (title_text && !task.title.toLocaleLowerCase().includes(title_text)) return false
   for (const [column, filter] of Object.entries(filters.dates) as [DateColumn, DateFilter][]) {
     if (column === 'done' && filter === 'none' && task.recurrence) {
       if (!missed_its_due_date(task)) return false
-    } else if (!date_passes(task, column_date(task, column, date_field, last_done_of), filter, today)) return false
+    } else if (!date_passes(task, column_date(task, column, date_field, last_done_of), filter, today, ranges)) return false
   }
   if (!duration_passes(task_duration_minutes(task), filters.duration)) return false
   if (!streak_passes(streak_of(task), filters.streak)) return false
@@ -313,14 +309,17 @@ function missed_its_due_date(task: Task): boolean {
   return task.due_at !== null && is_overdue(task.due_at)
 }
 
-function date_passes(task: Task, task_date: string | null, filter: DateFilter, today: string): boolean {
+// A range nobody can pick any more, as after it was deleted, keeps every task.
+function date_passes(task: Task, task_date: string | null, filter: DateFilter, today: string, ranges: ShownRange[]): boolean {
   const task_day = task_date?.slice(0, 10) ?? null
+  if (filter.startsWith('range:')) {
+    const shown = ranges.find((each) => `range:${each.range.id}` === filter)
+    return !shown || (task_date !== null && is_in_range(task_date, shown.span))
+  }
   switch (filter) {
-    case 'any': return true
     case 'overdue': return !task.is_done && task_date !== null && is_overdue(task_date)
     case 'earlier': return task_day !== null && task_day < today
-    case 'today': return task_day === today
-    case 'upcoming': return task_day !== null && task_day > today
     case 'none': return task_day === null
+    default: return true
   }
 }

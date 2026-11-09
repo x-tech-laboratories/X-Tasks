@@ -227,6 +227,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .duration_preview { flex: 1; min-width: 0; padding-left: var(--space-3); overflow: hidden; border-left: var(--border-width) solid var(--border-hover); color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
 .relationship_names { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
 .relationship_names input { flex: 1; min-width: 100px; }
+.date_range > input:not([type]) { min-width: 140px; }
+.date_range .duration_amount input { width: 4.5em; }
 
 /* ========================================================================== */
 /* Board                                                                      */

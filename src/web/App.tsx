@@ -36,7 +36,7 @@ import { TaskDetail } from './TaskDetail'
 import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
-import { coming_repeats, group_by_date } from './dates'
+import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
 import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { next_schedule, overdue_repeat_schedule, recurrence_anchor, rescheduled, task_date_of, with_recurrence } from '@shared/schedule'
@@ -687,7 +687,10 @@ export function App() {
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
   const is_filtered = is_table && has_table_filters(table_filters)
   const is_sorted = is_table && settings.table_sort.length > 0
-  const shown_tasks = is_filtered ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of, (each) => is_in_my_day(each, shown_since))) : visible_tasks
+  const date_ranges = shown_ranges(settings.date_ranges, now)
+  const shown_tasks = is_filtered
+    ? visible_tasks.filter((task) => task_passes_filters(task, table_filters, tasks, tags, streak_of, today, settings.task_date_field, last_done_of, (each) => is_in_my_day(each, shown_since), date_ranges))
+    : visible_tasks
   const nested_tasks = nest_tasks(shown_tasks, tasks)
   const waits_on = waits_on_by_task(tasks, settings.task_relationships)
   // A completed task with an open subtask stays, and one whose parent is cleared goes with that parent.
@@ -699,26 +702,27 @@ export function App() {
   // The history column is there only while streak dots show on rows.
   const column_order = ordered_columns(settings.table_column_order, tag_groups).filter((column) => column !== 'history' || settings.show_streak_strip_on_rows)
   const sort_context: SortContext = { tags_of: task_tags_of, streak_of, is_in_my_day: (task) => is_in_my_day(task, shown_since), date_field: settings.task_date_field, last_done_of, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
-  const task_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, sort_context) : nested_tasks
+  const sorted_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, sort_context) : nested_tasks
 
-  // Upcoming always groups by date and lists the later dates of repeating tasks; other views group as picked.
+  // Upcoming always groups by date, keeps to tasks overdue or inside a date range, and lists the later dates of repeating tasks; other views group as picked.
   const is_upcoming = selected_view.kind === 'upcoming'
+  const task_tree = is_upcoming ? sorted_tree.filter((node) => is_within_ranges(task_date_of(node.task, settings.task_date_field), date_ranges, now)) : sorted_tree
   const stored_grouping = saved_grouping(settings, selected_view)
   const picked_grouping = (settings.grouping_memory === 'on_demand' ? unsaved_groupings[view_key(selected_view)] : undefined) ?? stored_grouping
   const has_unsaved_grouping = picked_grouping !== stored_grouping
   const grouped_tag_group = is_upcoming ? null : grouping_tag_group(picked_grouping, tag_groups)
   const is_grouped_by_date = is_upcoming || picked_grouping === 'date'
   const is_grouped = is_grouped_by_date || grouped_tag_group !== null
-  const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, now, settings.upcoming_repeat_days) : []
+  const repeats = is_upcoming ? coming_repeats(shown_tasks, settings.task_date_field, now, settings.upcoming_repeat_days).filter((repeat) => range_of(repeat.task_date, date_ranges)) : []
   const task_groups = grouped_tag_group
     ? group_by_tag(task_tree, grouped_tag_group, tags, task_tags_of)
-    : is_grouped_by_date ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted) : []
+    : is_grouped_by_date ? group_by_date(task_tree, repeats, settings.task_date_field, now, is_sorted, date_ranges) : []
   const shown_grouping = is_grouped ? picked_grouping : 'none'
 
   // The board puts its columns by the grouping too, and with none picked it splits open tasks from done ones.
   const board_columns = layout !== 'board' ? []
     : grouped_tag_group ? tag_columns(task_tree, grouped_tag_group, tags, task_tags_of)
-      : is_grouped_by_date ? date_columns(task_tree, settings.task_date_field, now, is_sorted) : status_columns(task_tree)
+      : is_grouped_by_date ? date_columns(task_tree, settings.task_date_field, now, is_sorted, date_ranges) : status_columns(task_tree)
 
   // Every row on screen from top to bottom, leaving out those inside collapsed tasks; only these can be picked.
   const shown_rows = is_settings_open || is_page_view(selected_view) || layout === 'calendar' ? []
@@ -1145,6 +1149,7 @@ export function App() {
           scrolls_sideways={settings.scroll_table_sideways}
           sort={settings.table_sort}
           filters={table_filters}
+          date_ranges={settings.date_ranges}
           collapsed_ids={settings.collapsed_task_ids}
           on_column_order_change={(order) => void change_setting('table_column_order', order)}
           on_show_column={show_table_column}

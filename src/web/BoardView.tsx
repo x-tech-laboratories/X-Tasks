@@ -5,7 +5,7 @@ import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { is_overdue, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import { task_date_of } from '@shared/schedule'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
-import { group_by_date } from './dates'
+import { group_by_date, type ShownRange } from './dates'
 import { in_tree_order } from '@x-tech-laboratories/x-libs/web/tree'
 import { TagChip } from './TagChip'
 import { click_task, open_task_menu, type TaskActions } from './TaskItem'
@@ -41,9 +41,9 @@ export function tag_columns(nodes: TaskNode[], tag_group: TagGroup, tags: Tag[],
   return [...columns, untagged]
 }
 
-// A card dropped on a single day moves there; overdue, month and undated columns take no drops.
-export function date_columns(nodes: TaskNode[], date_field: TaskDateField, now: string, keep_order: boolean): BoardColumn[] {
-  return group_by_date(nodes, [], date_field, now, keep_order).map((group) => ({ ...group, accepts_drop: /^\d{4}-\d{2}-\d{2}$/.test(group.key) }))
+// A card dropped on a column for one whole day moves there, so such a column is keyed by that day; the others take no drops.
+export function date_columns(nodes: TaskNode[], date_field: TaskDateField, now: string, keep_order: boolean, ranges: ShownRange[]): BoardColumn[] {
+  return group_by_date(nodes, [], date_field, now, keep_order, ranges).map((group) => ({ ...group, key: group.drop_day ?? group.key, accepts_drop: group.drop_day !== null }))
 }
 
 export function status_columns(nodes: TaskNode[]): BoardColumn[] {
