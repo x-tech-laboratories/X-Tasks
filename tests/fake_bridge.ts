@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 
 import { DEFAULT_SETTINGS, type Settings, type SettingsApi } from '../src/shared/settings.ts'
 import type { Tag, TagGroup, Task, TasksApi } from '../src/shared/tasks.ts'
+import { make_task } from './fixtures.ts'
 
 // ============================================================================
 // Fake bridge
@@ -17,6 +18,11 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     list_completions: vi.fn(async () => []),
     list_tag_groups: vi.fn(async () => data.tag_groups ?? []),
     list_tags: vi.fn(async () => data.tags ?? []),
+    add_task: vi.fn(async (title: string, parent_id: string | null, tag_ids: string[]) => {
+      const task = make_task({ id: `added-${tasks.length}`, title, parent_id, tag_ids, position: tasks.length + 1 })
+      tasks.push(task)
+      return task
+    }),
     tag_task: vi.fn(async () => undefined),
     untag_task: vi.fn(async () => undefined),
     remove_task: vi.fn(async (task_id: string) => void tasks.splice(tasks.findIndex((task) => task.id === task_id), 1)),

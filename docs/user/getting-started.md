@@ -64,7 +64,8 @@ task for its menu.
 
 ## Your first few minutes
 
-1. **Add a task.** Type in the bar at the top. An **Add task** row appears under it; press it (or Down then Enter).
+1. **Add a task.** Type in the bar at the top. An **Add task** row appears under it; press it (or Down then Enter). Enter in the bar adds it too when
+   no task matches, and otherwise opens the first match.
 2. **Add a subtask.** Right-click the task (long-press on a phone) and pick **Add subtask**, or drag one task onto
    another to put it inside.
 3. **Make a filter group.** In Settings › Tags, add a filter group such as *Area*, then add tags to it in the sidebar,

@@ -195,4 +195,25 @@ describe('shortcuts', () => {
     await screen.findByText('Buy milk')
     expect(tasks_api.remove_task).not.toHaveBeenCalled()
   })
+  test('Enter in the search bar opens the first task found', async () => {
+    const { tasks_api } = await show_app()
+
+    const search = screen.getByRole('searchbox', { name: 'Search, or type a task to add' })
+    fireEvent.input(search, { target: { value: 'report' } })
+    fireEvent.keyDown(search, { key: 'Enter' })
+
+    expect(await screen.findByRole('button', { name: 'Delete' })).toBeTruthy()
+    expect(tasks_api.add_task).not.toHaveBeenCalled()
+  })
+
+  test('Enter in the search bar adds the typed task when nothing is found', async () => {
+    const { tasks_api } = await show_app()
+
+    const search = screen.getByRole('searchbox', { name: 'Search, or type a task to add' })
+    fireEvent.input(search, { target: { value: 'Water the plants' } })
+    fireEvent.keyDown(search, { key: 'Enter' })
+
+    await waitFor(() => expect(tasks_api.add_task).toHaveBeenCalledWith('Water the plants', null, [], null))
+    expect(await screen.findByText('Water the plants')).toBeTruthy()
+  })
 })
