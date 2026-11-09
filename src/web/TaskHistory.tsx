@@ -195,7 +195,7 @@ type Comparison = 'previous' | 'current'
 interface TaskHistoryDialogProps {
   task_id: string
   // The version picked when the dialog opens; the newest one otherwise.
-  version_id: number | null
+  version_id: string | null
   context: HistoryContext
   on_restored: () => void
   on_close: () => void

@@ -244,7 +244,7 @@ export interface TasksApi {
   // The latest changes to every task, newest first.
   list_recent_versions: (limit: number) => Promise<TaskVersion[]>
   // Brings the task back as one of its versions had it, adding the restore to its history as a new version.
-  restore_task_version: (version_id: number) => Promise<void>
+  restore_task_version: (version_id: string) => Promise<void>
 
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string, is_rule: boolean) => Promise<TagGroup>

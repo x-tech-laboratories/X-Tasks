@@ -16,6 +16,7 @@
 - [x] Clear all completed tasks in a view
 - [x] Undo after removing a task
 - [x] History of every change to a task, with word-level diffs, on a History page and from a task's details, and restoring any version as a new one
+- [x] Sync history between devices, and delete history older than a set number of days, as a setting off by default
 - [x] Select several tasks and complete, reschedule, tag, drag or delete them all at once
 - [x] Board, calendar and Gantt layouts, kept per view or shared, as a setting
 - [x] Tasks that wait on other tasks, set in a task's details and drawn as arrows in the Gantt chart

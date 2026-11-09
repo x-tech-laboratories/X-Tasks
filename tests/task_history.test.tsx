@@ -28,15 +28,15 @@ const first: TaskSnapshot = {
 }
 const second: TaskSnapshot = { ...first, title: 'Buy oat milk', tag_ids: ['home'] }
 
-function version(id: number, kind: TaskVersion['kind'], snapshot: TaskSnapshot, previous: TaskSnapshot | null, restored_from: number | null = null): TaskVersion {
-  return { id, task_id: 'milk', changed_at: `2026-01-0${id}T10:00:00.000Z`, kind, origin: 'here', restored_from, snapshot, previous }
+function version(number: number, kind: TaskVersion['kind'], snapshot: TaskSnapshot, previous: TaskSnapshot | null, restored_from: string | null = null): TaskVersion {
+  return { id: `v${number}`, task_id: 'milk', changed_at: `2026-01-0${number}T10:00:00.000Z`, kind, origin: 'here', restored_from, snapshot, previous }
 }
 
 function install_versions(versions: TaskVersion[]) {
   const shown = [...versions]
   const api = {
     list_task_versions: vi.fn(async () => [...shown]),
-    restore_task_version: vi.fn(async (version_id: number) => {
+    restore_task_version: vi.fn(async (version_id: string) => {
       const restored = shown.find((each) => each.id === version_id)!
       shown.unshift(version(shown.length + 1, 'restored', restored.snapshot, shown[0]!.snapshot, version_id))
     })
@@ -64,7 +64,7 @@ describe('the history dialog', () => {
   test('restores an older version as a new one at the top', async () => {
     const api = install_versions([version(2, 'edited', second, first), version(1, 'created', first, null)])
     const on_restored = vi.fn()
-    render(<TaskHistoryDialog task_id="milk" version_id={1} context={context} on_restored={on_restored} on_close={() => undefined} />)
+    render(<TaskHistoryDialog task_id="milk" version_id="v1" context={context} on_restored={on_restored} on_close={() => undefined} />)
     await screen.findByRole('region', { name: 'Changes' })
 
     fireEvent.click(screen.getByRole('button', { name: 'Compared with now' }))
@@ -73,7 +73,7 @@ describe('the history dialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restore this version' }))
 
     await waitFor(() => expect(on_restored).toHaveBeenCalled())
-    expect(api.restore_task_version).toHaveBeenCalledWith(1)
+    expect(api.restore_task_version).toHaveBeenCalledWith('v1')
     const rows = within(screen.getByRole('list', { name: 'Versions' })).getAllByRole('button')
     expect(rows.map((row) => row.querySelector('.version_summary')?.textContent)).toEqual(['Restored', 'Changed title and tags', 'Created'])
   })

@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
   add_tag, add_tag_group, add_task, attach_task_database, close_task_database, link_tasks, list_recent_versions, list_task_versions, list_tasks, move_task, open_database,
-  remove_task, restore_task_version, set_task_notes, set_task_title, tag_task
+  remove_task, restore_task_version, set_setting, set_task_notes, set_task_title, tag_task
 } from '../src/main/task_database'
-import { apply_changes } from '../src/main/sync_engine'
+import { apply_changes, collect_unpushed_changes } from '../src/main/sync_engine'
 
 // ============================================================================
 // Setup
@@ -71,16 +71,6 @@ describe('recording versions', () => {
     expect(list_task_versions(child.id)[0]!.snapshot.title).toBe('Pack books')
   })
 
-  it('marks changes that arrive by sync as made elsewhere', () => {
-    const task = add_task('Buy milk', null, [], null)
-    apply_changes(open_database(), [{ table: 'tasks', key: task.id, column: 'title', value: 'Buy bread', ts: Date.now() + 1000, site: 'other' }])
-
-    const [latest] = list_task_versions(task.id)
-
-    expect(latest!.origin).toBe('elsewhere')
-    expect(latest!.snapshot.title).toBe('Buy bread')
-  })
-
   it('lists recent versions across every task', () => {
     const first = add_task('First', null, [], null)
     const second = add_task('Second', null, [], null)
@@ -142,5 +132,96 @@ describe('restoring a version', () => {
     restore_task_version(second_under_first.id)
 
     expect(list_tasks().find((task) => task.id === second.id)?.parent_id).toBeNull()
+  })
+})
+
+// ============================================================================
+// Syncing
+// ============================================================================
+
+describe('syncing history', () => {
+  it('brings another device its versions, marked as made elsewhere, without recording its own', () => {
+    const task = add_task('Buy milk', null, [], null)
+    set_task_title(task.id, 'Buy oat milk')
+    const { changes } = collect_unpushed_changes(open_database())
+    close_task_database()
+    attach_task_database(new DatabaseSync(':memory:'), ':memory:')
+
+    apply_changes(open_database(), changes)
+    const versions = list_task_versions(task.id)
+
+    expect(versions.map((version) => [version.kind, version.origin])).toEqual([['edited', 'elsewhere'], ['created', 'elsewhere']])
+    expect(versions[0]!.previous?.title).toBe('Buy milk')
+  })
+
+  it('records changes made here to a synced task, after the synced ones', () => {
+    const task = add_task('Buy milk', null, [], null)
+    const { changes } = collect_unpushed_changes(open_database())
+    close_task_database()
+    attach_task_database(new DatabaseSync(':memory:'), ':memory:')
+    apply_changes(open_database(), changes)
+
+    set_task_title(task.id, 'Buy bread')
+
+    expect(list_task_versions(task.id).map((version) => [version.kind, version.origin])).toEqual([['edited', 'here'], ['created', 'elsewhere']])
+  })
+
+  it('names a restore by the version id every device shares', () => {
+    const task = add_task('Buy milk', null, [], null)
+    set_task_title(task.id, 'Buy bread')
+    const created = list_task_versions(task.id).at(-1)!
+    restore_task_version(created.id)
+    const { changes } = collect_unpushed_changes(open_database())
+    close_task_database()
+    attach_task_database(new DatabaseSync(':memory:'), ':memory:')
+
+    apply_changes(open_database(), changes)
+
+    expect(list_task_versions(task.id)[0]!.restored_from).toBe(created.id)
+  })
+})
+
+// ============================================================================
+// Pruning
+// ============================================================================
+
+describe('pruning history', () => {
+  function age_versions(days: number): void {
+    open_database().prepare('UPDATE task_versions SET changed_at = ?').run(new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+  }
+
+  it('keeps the newest version of a task however old', () => {
+    const task = add_task('Buy milk', null, [], null)
+    set_task_title(task.id, 'Buy bread')
+    age_versions(400)
+
+    set_setting('prune_history', true)
+
+    expect(list_task_versions(task.id).map((version) => version.snapshot.title)).toEqual(['Buy bread'])
+  })
+
+  it('keeps every version while pruning is off', () => {
+    const task = add_task('Buy milk', null, [], null)
+    set_task_title(task.id, 'Buy bread')
+    age_versions(400)
+
+    set_setting('history_days', 30)
+
+    expect(kinds_of(task.id)).toHaveLength(2)
+  })
+
+  it('drops old versions and deleted tasks gone that long', () => {
+    const kept = add_task('Buy milk', null, [], null)
+    set_task_title(kept.id, 'Buy bread')
+    const deleted = add_task('Old idea', null, [], null)
+    remove_task(deleted.id)
+    age_versions(40)
+    set_task_notes(kept.id, 'Wholemeal')
+
+    set_setting('history_days', 30)
+    set_setting('prune_history', true)
+
+    expect(list_task_versions(kept.id).map((version) => version.snapshot.notes)).toEqual(['Wholemeal'])
+    expect(kinds_of(deleted.id)).toEqual([])
   })
 })

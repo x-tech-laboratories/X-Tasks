@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 
 import { open_task_database } from '../src/main/node_task_database'
-import { add_task, close_task_database, list_tasks, set_task_notes } from '../src/main/task_database'
+import { add_task, close_task_database, list_tasks, set_task_notes, wrap_notes_in_code_blocks } from '../src/main/task_database'
 
 // ============================================================================
 // Setup
@@ -24,7 +24,7 @@ afterEach(() => {
   rmSync(folder, { recursive: true, force: true })
 })
 
-// Writes notes the way the build before Markdown notes kept them, then opens the file with this build.
+// Writes notes the way the build before Markdown notes kept them, then runs the upgrade that wraps them.
 function upgrade_with_plain_notes(notes: string[]): string[] {
   open_task_database(path)
   const ids = notes.map((note, index) => {
@@ -34,10 +34,8 @@ function upgrade_with_plain_notes(notes: string[]): string[] {
   })
   close_task_database()
 
-  // Steps back over the last upgrade only, which is the one that wraps notes.
   const raw = new DatabaseSync(path)
-  const { user_version } = raw.prepare('PRAGMA user_version').get() as { user_version: number }
-  raw.exec(`PRAGMA user_version = ${user_version - 1}`)
+  wrap_notes_in_code_blocks(raw)
   raw.close()
 
   open_task_database(path)

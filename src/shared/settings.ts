@@ -222,6 +222,9 @@ export interface Settings {
   // When set, a backup is taken once a day, and only the newest of these are kept.
   auto_backup: boolean
   auto_backups_to_keep: number
+  // When set, task versions older than this many days are deleted on every device, keeping each task's newest.
+  prune_history: boolean
+  history_days: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -305,7 +308,9 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'by-area', kind: 'by_tag', title: 'Ticks by area', tag_ids: [], days: 30, group_id: 'area' }
   ],
   auto_backup: true,
-  auto_backups_to_keep: 14
+  auto_backups_to_keep: 14,
+  prune_history: false,
+  history_days: 365
 }
 
 // Settings that belong to one device and never sync: its window layout, its MCP endpoint and its backups.
@@ -316,6 +321,9 @@ export const DEVICE_ONLY_SETTINGS: readonly (keyof Settings)[] = [
 
 // The ports the MCP endpoint can be set to, leaving out those that need root.
 export const MCP_PORT_RANGE = { min: 1024, max: 65535 }
+
+// How long pruned history can be kept, in days.
+export const HISTORY_DAYS_RANGE = { min: 1, max: 3650 }
 
 // Whether the MCP endpoint is listening, and at which address, or why it could not start.
 export interface McpStatus {

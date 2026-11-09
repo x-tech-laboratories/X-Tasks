@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 
 import { open_task_database } from '../src/main/node_task_database'
-import { add_task, close_task_database } from '../src/main/task_database'
+import { close_task_database } from '../src/main/task_database'
 
 // ============================================================================
 // Setup
@@ -32,11 +32,11 @@ function backups(): string[] {
   }
 }
 
-// Marks the file as saved by the build before the last upgrade.
-function step_back_one_version(): void {
+// Writes a file the way the first build kept its tasks, so opening it runs every upgrade.
+function write_first_build_file(title: string): void {
   const raw = new DatabaseSync(path)
-  const { user_version } = raw.prepare('PRAGMA user_version').get() as { user_version: number }
-  raw.exec(`PRAGMA user_version = ${user_version - 1}`)
+  raw.exec('CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, is_done INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL); PRAGMA user_version = 1')
+  raw.prepare("INSERT INTO tasks (id, title, created_at) VALUES ('old', ?, '2026-01-01T00:00:00.000Z')").run(title)
   raw.close()
 }
 
@@ -45,10 +45,7 @@ function step_back_one_version(): void {
 // ============================================================================
 
 it('backs up a file from an older build before upgrading it', () => {
-  open_task_database(path)
-  add_task('Keep me', null, [], null)
-  close_task_database()
-  step_back_one_version()
+  write_first_build_file('Keep me')
 
   open_task_database(path)
 

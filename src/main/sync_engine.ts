@@ -2,7 +2,7 @@
 import { DEVICE_ONLY_SETTINGS } from '@shared/settings'
 import type { SyncChange } from '@shared/sync'
 import type { SqlDatabase, SqlValue } from './sql_database'
-import { record_task_versions } from './task_versions'
+import { forget_touched_tasks } from './task_versions'
 
 // ============================================================================
 // Synced tables
@@ -30,6 +30,7 @@ const SYNCED_TABLES: SyncedTable[] = [
   { name: 'task_tags', key_columns: ['task_id', 'tag_id'], local_columns: [], local_keys: [] },
   { name: 'task_dependencies', key_columns: ['task_id', 'depends_on_id'], local_columns: [], local_keys: [] },
   { name: 'task_completions', key_columns: ['uid'], local_columns: ['id'], local_keys: [] },
+  { name: 'task_versions', key_columns: ['uid'], local_columns: ['id'], local_keys: [] },
   { name: 'settings', key_columns: ['key'], local_columns: [], local_keys: DEVICE_ONLY_SETTINGS }
 ]
 
@@ -117,6 +118,14 @@ function backfill_cells(database: SqlDatabase): void {
         .run()
     }
   }
+}
+
+// Rows a table held before it synced are sent as this device's own changes, so the server and other devices get them too.
+export function stamp_existing_rows(database: SqlDatabase, table_name: string): void {
+  database.exec('UPDATE sync_state SET last_seq = last_seq + 1')
+  database
+    .prepare(`UPDATE sync_cells SET ts = ${NOW_MS}, site = (SELECT site FROM sync_state), seq = (SELECT last_seq FROM sync_state) WHERE table_name = ? AND site = ''`)
+    .run(table_name)
 }
 
 // ============================================================================
@@ -311,7 +320,8 @@ function in_sync_transaction<Result>(database: SqlDatabase, work: () => Result):
     database.exec('PRAGMA defer_foreign_keys = ON')
     const result = work()
     remove_orphans(database)
-    record_task_versions(database, 'elsewhere')
+    // The device that made each change sends its own version of the task, so hearing of the change records none.
+    forget_touched_tasks(database)
     database.exec('UPDATE sync_state SET is_applying = 0')
     database.exec('COMMIT')
     return result
