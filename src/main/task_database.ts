@@ -251,7 +251,10 @@ function undo_reverted_list_tree(database: SqlDatabase): void {
 }
 
 // Sync's and history's triggers name table columns, so they come off while migrations reshape tables and go back on after.
-function migrate_schema(database: SqlDatabase): void {
+function migrate_schema(database: SqlDatabase, back_up_before_upgrade?: (database: SqlDatabase) => void): void {
+  const { user_version: saved_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
+  if (saved_version > 0 && saved_version < SCHEMA_MIGRATIONS.length) back_up_before_upgrade?.(database)
+
   drop_sync_triggers(database)
   drop_version_triggers(database)
   undo_reverted_list_tree(database)
@@ -310,11 +313,11 @@ export function task_database_path(): string {
 }
 
 // Takes over a connection opened for this platform, and brings its schema up to date; the path is where it lives, for showing and backups.
-export function attach_task_database(connection: SqlDatabase, path: string): void {
+export function attach_task_database(connection: SqlDatabase, path: string, back_up_before_upgrade?: (database: SqlDatabase) => void): void {
   database_path = path
   database = connection
   database.exec('PRAGMA foreign_keys = ON')
-  migrate_schema(connection)
+  migrate_schema(connection, back_up_before_upgrade)
   in_transaction(connection, () => prune_history(connection))
   last_data_version = read_data_version(database)
 }
