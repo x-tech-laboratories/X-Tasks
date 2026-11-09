@@ -2,12 +2,13 @@ import { useState, type FormEvent } from 'react'
 
 import { ColorPicker, TreePicker } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
+import { EmojiField } from '@x-tech-laboratories/x-libs/web/react/emoji_picker'
 
 import { EMPTY_RULE, type DueCondition, type LinkDirection, type LinkTarget, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
 import type { TaskRelationship } from '@shared/settings'
 import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
 import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
-import { chain_tag_ids_of, last_character, tag_path } from './views'
+import { chain_tag_ids_of, tag_path } from './views'
 
 // ============================================================================
 // Choices
@@ -263,13 +264,6 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
     set_rule_draft({ ...rule_draft, conditions: rule_draft.conditions.filter((_each, at) => at !== index) })
   }
 
-  // Typing or pasting keeps only the newest character, so a new emoji replaces the old one.
-  function change_icon(input: HTMLInputElement): void {
-    const character = last_character(input.value)
-    set_icon_draft(character)
-    input.value = character ?? ''
-  }
-
   function save(event: FormEvent): void {
     event.preventDefault()
     const trimmed_name = name_draft.trim()
@@ -308,10 +302,10 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
           <ColorPicker label="Colour" value={color_draft} swatches={swatches} on_change={set_color_draft} />
         </div>
 
-        <label className="field">
+        <div className="field">
           <span className="field-label">Icon</span>
-          <input className="input-xs" value={icon_draft ?? ''} onChange={(event) => change_icon(event.currentTarget)} placeholder="Emoji" />
-        </label>
+          <EmojiField label="Icon" value={icon_draft} on_change={set_icon_draft} />
+        </div>
 
         <label className="check">
           <input type="checkbox" checked={shows_on_rows_draft} onChange={(event) => set_shows_on_rows_draft(event.currentTarget.checked)} />
