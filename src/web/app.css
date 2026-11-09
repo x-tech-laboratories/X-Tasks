@@ -174,7 +174,7 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .dialog_form .field { display: flex; }
 .dialog_count { margin-right: auto; align-self: center; color: var(--text-tertiary); font-size: var(--text-caption); }
 .inline_fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.inline_fields select { flex: 1; min-width: 0; }
+.inline_fields :is(select, .tree-picker) { flex: 1; min-width: 0; }
 
 .reschedule_choices { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); }
 .reschedule_choice { display: flex; justify-content: space-between; gap: var(--space-4); font-weight: 400; text-align: left; }
@@ -184,6 +184,7 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .rule_match { display: flex; align-items: center; gap: var(--space-4); font-size: var(--text-control); }
 .rule_conditions { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .rule_condition { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.rule_condition > .tree-picker { flex: 1; min-width: 160px; }
 .rule_condition > button:last-child { margin-left: auto; }
 .rule_text { flex: 1; min-width: 120px; }
 .rule_unit { color: var(--text-secondary); font-size: var(--text-control); }

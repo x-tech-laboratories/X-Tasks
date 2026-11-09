@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-import { DateTimeField, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { DateTimeField, TreePicker, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { RichText } from '@x-tech-laboratories/x-libs/web/react/rich_text'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
@@ -416,11 +416,8 @@ function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: R
   const [other_id, set_other_id] = useState('')
 
   const side = sides.find((each) => each.key === side_key)
-  const offered = side
-    ? tasks
-        .filter((each) => !each.is_done && can_link(task.id, each.id, side.relationship, side.is_inverse, tasks, relationships))
-        .sort((first, second) => first.title.localeCompare(second.title))
-    : []
+  const open_tasks = tasks.filter((each) => !each.is_done)
+  const offered = side ? open_tasks.filter((each) => can_link(task.id, each.id, side.relationship, side.is_inverse, tasks, relationships)) : []
   const other = offered.find((each) => each.id === other_id)
 
   function save(event: FormEvent): void {
@@ -452,14 +449,16 @@ function RelationshipDialog({ task, tasks, relationships, on_link, on_close }: R
               </option>
             ))}
           </select>
-          <select value={other ? other_id : ''} onChange={(event) => set_other_id(event.currentTarget.value)} aria-label="Task" autoFocus>
-            <option value="">Choose a task…</option>
-            {offered.map((each) => (
-              <option key={each.id} value={each.id}>
-                {each.title}
-              </option>
-            ))}
-          </select>
+          <TreePicker
+            label="Task"
+            items={open_tasks}
+            name_of={(each) => each.title}
+            value={other ? other_id : ''}
+            placeholder="Choose a task…"
+            disabled_ids={open_tasks.filter((each) => !offered.includes(each)).map((each) => each.id)}
+            auto_focus
+            on_change={set_other_id}
+          />
         </span>
       </form>
     </Dialog>
