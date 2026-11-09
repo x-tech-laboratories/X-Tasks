@@ -174,7 +174,7 @@ another task or onto a sidebar tag. Escape or the ✕ ends the selection.
 ## Quick add and search syntax
 
 The bar at the top searches as you type. An **Add task** row appears under it, and pressing it, or Down then Enter, adds
-what you typed as a task. The button beside it picks how it reads each, apart:
+what you typed as a task. Enter in the bar opens the first task found, or adds the typed task when nothing matches. The button beside it picks how it reads each, apart:
 **Plain** takes the text as typed, **Todoist** (which Planify follows) reads `#tag`, `@label`, `p1`, dates such as
 `tomorrow at 5pm` and filters such as `today | overdue`, **GTG** reads `tags:`, `due:`, `start:`, `every:` and
 `!today !or !tomorrow`, and **Trilium** reads `#area=Career`, `#dueDate=TODAY+7` and `NOT(#recurrence)`. Each syntax lives

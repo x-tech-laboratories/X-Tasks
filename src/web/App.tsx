@@ -89,6 +89,9 @@ export function App() {
   const pick_anchor_id = useRef<string | null>(null)
   // The rows on screen in order, for the shortcut that picks them all.
   const shown_rows_ref = useRef<Task[]>([])
+  // Enter in the multibar counts up here, and is acted on once the search has caught up with the text it was pressed on.
+  const [multibar_submits, set_multibar_submits] = useState(0)
+  const submit_multibar = useRef<() => void>(() => {})
   const [rescheduling_task_ids, set_rescheduling_task_ids] = useState<string[]>([])
   // The clock, read again every minute, so tasks turn overdue as their time passes and My Day takes in tasks as they come due.
   const now = format_local(use_now(), true)
@@ -270,7 +273,7 @@ export function App() {
     return { tags, tag_groups, date_field: settings!.task_date_field, now: new Date() }
   }
 
-  // Enter only searches; the Add task row under the bar adds what was typed. The Completed view takes no new tasks, and text that is all tags and dates adds nothing.
+  // The Add task row under the bar adds what was typed, and so does Enter when the search finds nothing. The Completed view takes no new tasks, and text that is all tags and dates adds nothing.
   async function add_typed_task(): Promise<void> {
     const text = multibar_text.trim()
     if (!text || selected_view.kind === 'completed') return
@@ -653,6 +656,10 @@ export function App() {
     if (detail_width !== undefined) document.body.style.setProperty('--side-pane-width', `${detail_width}px`)
   }, [detail_width])
 
+  useEffect(() => {
+    if (multibar_submits) submit_multibar.current()
+  }, [multibar_submits])
+
   // Nothing is drawn until the settings arrive, so the launch view never flashes past.
   if (!settings) return null
 
@@ -936,6 +943,13 @@ export function App() {
   }
 
   const can_add_task = selected_view.kind !== 'completed'
+  // Enter opens the first task the search found, or adds the typed task when it found none.
+  submit_multibar.current = () => {
+    if (!is_searching) return
+    const first_task = shown_rows[0] ?? visible_tasks[0]
+    if (first_task) task_actions.on_select(first_task)
+    else void add_typed_task()
+  }
 
   // The shown tasks that have shown subtasks, which the collapse and expand all buttons act on.
   const parent_ids = parent_ids_of(task_tree)
@@ -960,6 +974,7 @@ export function App() {
         label={can_add_task ? 'Search, or type a task to add' : settings.search_scope === 'all' ? 'Search all tasks' : 'Search completed tasks'}
         value={multibar_text}
         on_input={change_multibar_text}
+        on_submit={() => set_multibar_submits((count) => count + 1)}
       />
     </form>
   )
