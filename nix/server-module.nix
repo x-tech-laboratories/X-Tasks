@@ -18,7 +18,7 @@ in
     host = lib.mkOption {
       type = lib.types.str;
       default = "127.0.0.1";
-      description = "The address to listen on; anything but this machine needs tokenFile set.";
+      description = "The address to listen on.";
     };
 
     port = lib.mkOption {
@@ -27,11 +27,10 @@ in
       description = "The port to listen on.";
     };
 
-    tokenFile = lib.mkOption {
-      # A string, so the secret is never copied into the world-readable Nix store.
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "The path of a file holding the access token browsers sign in with, such as a sops secret.";
+    passwordHashFile = lib.mkOption {
+      # A string, so the file is never copied into the world-readable Nix store.
+      type = lib.types.str;
+      description = "The accounts file: one `name:hash` line per admin, from `npm run hash-password`, such as a sops secret. Admins add other users on the Users page.";
     };
 
     openFirewall = lib.mkOption {
@@ -53,15 +52,14 @@ in
         X_TASKS_DB = "/var/lib/x-tasks-server/tasks.db";
         X_TASKS_HOST = cfg.host;
         X_TASKS_PORT = toString cfg.port;
-      } // lib.optionalAttrs (cfg.tokenFile != null) {
-        X_TASKS_TOKEN_FILE = "%d/token";
+        X_TASKS_PASSWORD_HASH_FILE = "%d/password-hash";
       };
 
       serviceConfig = {
         ExecStart = lib.getExe cfg.package;
         DynamicUser = true;
         StateDirectory = "x-tasks-server";
-        LoadCredential = lib.optional (cfg.tokenFile != null) "token:${cfg.tokenFile}";
+        LoadCredential = [ "password-hash:${cfg.passwordHashFile}" ];
         Restart = "on-failure";
 
         NoNewPrivileges = true;

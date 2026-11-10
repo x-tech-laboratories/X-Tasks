@@ -97,14 +97,21 @@ changes something.
 
 ```sh
 npm run build:server
-X_TASKS_TOKEN_FILE=token.txt npm run server -- --database ./server-tasks.db --port 3918
+npm run hash-password -- admin password.hash   # an admin in the accounts file
+X_TASKS_PASSWORD_HASH_FILE=password.hash npm run server -- --database ./server-tasks.db --port 3918
 nix build .#server   # the packaged server, in ./result/bin/x-tasks-server
 ```
 
-Browsers sign in with the access token, read from the file named by `X_TASKS_TOKEN_FILE` or from
-`X_TASKS_TOKEN`. Without a token the server only listens on `127.0.0.1`. Other programs can send the
-token as an `Authorization: Bearer` header and call `POST /api/<call>` with the arguments as a JSON
-array, using the calls listed in `src/shared/web_api.ts`.
+Browsers sign in with a name and password, the X-Libs accounts every X-app shares. The admins come
+from the accounts file `X_TASKS_PASSWORD_HASH_FILE` names; they add other users on the Users page
+(`#/users`). Unless "Keep me signed in" is ticked, a session ends when the browser closes; ticked, it
+lasts until it is signed out from Your account (`#/account`), where each user also changes their
+password, turns on a second factor, sees where they are signed in and makes tokens.
+
+The desktop and Android apps sync by signing in from **Settings → Sync** with the same name and
+password; each device gets a token of its own, which Stop syncing gives back. Other programs send a
+token made on Your account as an `Authorization: Bearer` header and call `POST /api/<call>` with the
+arguments as a JSON array, using the calls listed in `src/shared/web_api.ts`.
 
 On NixOS, import the flake's module and put a TLS reverse proxy in front of it:
 
@@ -112,7 +119,7 @@ On NixOS, import the flake's module and put a TLS reverse proxy in front of it:
 imports = [ x-tasks.nixosModules.default ];
 services.x-tasks-server = {
   enable = true;
-  tokenFile = config.sops.secrets.x-tasks-token.path;
+  passwordHashFile = config.sops.secrets.x-tasks-password-hash.path;
 };
 ```
 
@@ -121,8 +128,7 @@ browser, which follows the system theme.
 
 A `view` in the address opens that view instead of the launch view, without changing the saved
 one: a built-in view such as `?view=my_day`, `upcoming`, `all`, `active`, `completed` or `reports`,
-or tags by name such as `?view=Work,Home`. Signing in leads to the plain address, so the view takes
-effect from the next load.
+or tags by name such as `?view=Work,Home`.
 
 ### In the Linux sidebar
 

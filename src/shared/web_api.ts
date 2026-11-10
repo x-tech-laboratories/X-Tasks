@@ -13,7 +13,6 @@ export type WebMethod = (typeof WEB_TASKS_METHODS)[number] | (typeof WEB_SETTING
 // Paths relative to the page, so the app also works when a proxy serves it under a folder.
 export const API_PATH = 'api/'
 export const EVENTS_PATH = 'api/events'
-export const LOGIN_PATH = 'login'
 
 // The header naming which open page made a call, so the server tells every other page about the change but not that one.
 export const CLIENT_ID_HEADER = 'x-client-id'

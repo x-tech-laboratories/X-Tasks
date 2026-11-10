@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { hash_password } from '@x-tech-laboratories/x-libs/server/passwords'
 import type { FastifyInstance } from 'fastify'
 import { open_task_database } from '../src/main/node_task_database'
 import { close_task_database } from '../src/main/task_database'
@@ -13,11 +14,13 @@ import { CLIENT_ID_HEADER, HELLO_EVENT } from '../src/shared/web_api'
 // Setup
 // ============================================================================
 
-const ACCESS_TOKEN = 'open-sesame'
+const PASSWORD = 'a long enough password'
 const SESSION_COOKIE = 'x_tasks_session'
 
 let folder: string
 let app: FastifyInstance
+// The token a signed-in device sends.
+let bearer: { authorization: string }
 
 beforeAll(async () => {
   folder = mkdtempSync(join(tmpdir(), 'x-tasks-web-server-'))
@@ -27,7 +30,9 @@ beforeAll(async () => {
   writeFileSync(join(web_folder, 'assets', 'index-abc123.js'), 'console.log(1)')
 
   open_task_database(join(folder, 'tasks.db'))
-  app = await build_app({ web_folder, access_token: ACCESS_TOKEN })
+  app = await build_app({ web_folder, declared: new Map([['admin', hash_password(PASSWORD)]]) })
+  const { token } = (await sign_in({ name: 'admin', password: PASSWORD, device: 'tests' })).json()
+  bearer = { authorization: `Bearer ${token}` }
 })
 
 afterAll(async () => {
@@ -36,10 +41,8 @@ afterAll(async () => {
   rmSync(folder, { recursive: true, force: true })
 })
 
-const bearer = { authorization: `Bearer ${ACCESS_TOKEN}` }
-
-async function sign_in(token: string) {
-  return app.inject({ method: 'POST', url: '/login', headers: { 'content-type': 'application/x-www-form-urlencoded' }, payload: `token=${token}` })
+async function sign_in(body: Record<string, unknown>) {
+  return app.inject({ method: 'POST', url: '/api/login', payload: body })
 }
 
 // ============================================================================
@@ -47,47 +50,40 @@ async function sign_in(token: string) {
 // ============================================================================
 
 describe('signing in', () => {
-  it('sends a browser without a session to the login page', async () => {
+  it('serves the page without a session, which signs in itself', async () => {
     const response = await app.inject({ method: 'GET', url: '/' })
-    expect(response.statusCode).toBe(303)
-    expect(response.headers.location).toBe('/login')
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toContain('X-Tasks')
   })
 
   it('refuses an API call without a session in plain words', async () => {
     const response = await app.inject({ method: 'POST', url: '/api/list_tasks' })
     expect(response.statusCode).toBe(401)
-    expect(response.body).toBe('sign in first')
+    expect(response.json()).toEqual({ error: 'Sign in first.' })
   })
 
-  it('shows the login page without a session', async () => {
-    const response = await app.inject({ method: 'GET', url: '/login' })
-    expect(response.statusCode).toBe(200)
-    expect(response.body).toContain('Access token')
-  })
-
-  it('sets the session cookie on the right token and sends the browser to the page', async () => {
-    const response = await sign_in(ACCESS_TOKEN)
-    expect(response.statusCode).toBe(303)
-    expect(response.headers.location).toBe('/')
+  it('sets a session cookie that ends with the browser on the right password', async () => {
+    const response = await sign_in({ name: 'admin', password: PASSWORD })
+    expect(response.statusCode).toBe(204)
     const cookie = response.cookies.find((candidate) => candidate.name === SESSION_COOKIE)
     expect(cookie?.httpOnly).toBe(true)
     expect(cookie?.sameSite).toBe('Strict')
+    expect(cookie?.maxAge).toBeUndefined()
 
-    const page = await app.inject({ method: 'GET', url: '/', cookies: { [SESSION_COOKIE]: cookie!.value } })
-    expect(page.statusCode).toBe(200)
-    expect(page.body).toContain('X-Tasks')
+    const me = await app.inject({ method: 'GET', url: '/api/me', cookies: { [SESSION_COOKIE]: cookie!.value } })
+    expect(me.json()).toMatchObject({ name: 'admin', role: 'admin' })
   })
 
-  it('shows the login page again with an error on a wrong token', async () => {
-    const response = await sign_in('wrong')
+  it('refuses a wrong password', async () => {
+    const response = await sign_in({ name: 'admin', password: 'wrong' })
     expect(response.statusCode).toBe(401)
-    expect(response.body).toContain('not right')
-  }, 5000)
+    expect(response.json()).toEqual({ error: 'Wrong name or password.' })
+  })
 
-  it('clears the session on logout', async () => {
-    const response = await app.inject({ method: 'GET', url: '/logout' })
-    expect(response.statusCode).toBe(303)
-    expect(response.cookies.find((candidate) => candidate.name === SESSION_COOKIE)?.maxAge).toBe(0)
+  it('ends the session on signing out', async () => {
+    const cookie = (await sign_in({ name: 'admin', password: PASSWORD })).cookies.find((candidate) => candidate.name === SESSION_COOKIE)!
+    await app.inject({ method: 'POST', url: '/api/logout', cookies: { [SESSION_COOKIE]: cookie.value } })
+    expect((await app.inject({ method: 'GET', url: '/api/me', cookies: { [SESSION_COOKIE]: cookie.value } })).statusCode).toBe(401)
   })
 })
 

@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, RowActions, SettingRow, SettingsPage as SettingsSections, Stack, moved, type SettingsCategory } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
+import { SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
 import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from 'recurrence-input'
 
 import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
-import type { SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
+import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
@@ -1084,15 +1085,10 @@ const CONFIRM_DIRECTION: Record<SyncDirection, string> = {
   upload: "Replace every task, tag and shared setting on the server with this device's? Other devices will have to choose again. The server takes a backup first."
 }
 
-function describe_sync_status(status: SyncStatus): string {
-  if (status.state === 'off') return 'Not syncing.'
-  if (status.state === 'syncing') return 'Syncing…'
-  if (status.state === 'idle') {
-    if (status.last_synced_at === '') return 'Connected.'
-    return `Up to date as of ${new Date(status.last_synced_at).toLocaleTimeString(undefined, { timeStyle: 'short' })}.`
-  }
-  if (status.state === 'offline') return `Cannot reach the server; changes are kept and sent once it is back. (${status.error})`
-  return `${status.error[0]?.toUpperCase() ?? ''}${status.error.slice(1)}.`
+// Rereads the sync status every few seconds, since syncing goes on in the background.
+function poll_sync_status(listener: () => void): () => void {
+  const timer = setInterval(listener, SYNC_STATUS_POLL_MS)
+  return () => clearInterval(timer)
 }
 
 // The bridge wraps a main-process error in its own words; only the message after the last "Error: " is meant for people.
@@ -1102,78 +1098,15 @@ function error_message(error: unknown): string {
 }
 
 function SyncEditor() {
-  const sync = use_resource(() => window.x_settings.get_sync_status(), [], { refresh_in_milliseconds: SYNC_STATUS_POLL_MS })
-  const status = sync.data
-  const [server_url, set_server_url] = useState('')
-  const [token, set_token] = useState('')
-  const [is_busy, set_is_busy] = useState(false)
-  const [error, set_error] = useState('')
-
-  // The address field starts with the saved server, once only, so typing is never overwritten by a later poll.
-  const has_prefilled = useRef(false)
-  useEffect(() => {
-    if (has_prefilled.current || !status) return
-    has_prefilled.current = true
-    if (status.server_url) set_server_url(status.server_url)
-  }, [status])
-
-  async function run(action: () => Promise<SyncStatus>): Promise<void> {
-    set_is_busy(true)
-    set_error('')
-    try {
-      await action()
-      await sync.reload(true)
-      set_token('')
-    } catch (caught) {
-      set_error(error_message(caught))
-    } finally {
-      set_is_busy(false)
-    }
-  }
-
-  function connect(direction: SyncDirection): void {
-    if (window.confirm(CONFIRM_DIRECTION[direction])) void run(() => window.x_settings.connect_sync(server_url, token, direction))
-  }
-
-  if (!status) return null
-  const is_connected = status.state !== 'off' && status.state !== 'needs_setup'
-  const has_saved_token = status.state === 'needs_setup'
-  const has_problem = status.state === 'failed' || status.state === 'needs_setup'
-
   return (
-    <>
-      {!is_connected && (
-        <>
-          <SettingRow label="Server address" hint="Where x-tasks-server is reached, such as https://tasks.example.org/" as_label>
-            <input type="url" className="sync_input" value={server_url} onChange={(event) => set_server_url(event.currentTarget.value)} aria-label="Server address" />
-          </SettingRow>
-
-          <SettingRow label="Access token" hint={`The token the server was set up with${has_saved_token ? '; leave it empty to keep the saved one' : ''}.`} as_label>
-            <input type="password" className="sync_input" value={token} onChange={(event) => set_token(event.currentTarget.value)} aria-label="Access token" />
-          </SettingRow>
-
-          <SettingRow
-            label="Start syncing"
-            hint="Choose once whose tasks to keep: a new device usually takes the server's, and the first device sends its own."
-          >
-            <button disabled={is_busy || server_url.trim() === ''} onClick={() => connect('download')}>Use the server's tasks</button>
-            <button disabled={is_busy || server_url.trim() === ''} onClick={() => connect('upload')}>Send this device's tasks</button>
-          </SettingRow>
-        </>
-      )}
-
-      {is_connected && (
-        <SettingRow label="Server" hint={<span className="path">{status.server_url}</span>}>
-          <button disabled={is_busy} onClick={() => void run(() => window.x_settings.sync_now())}>Sync now</button>
-          <button disabled={is_busy} onClick={() => void run(() => window.x_settings.disconnect_sync())}>Stop syncing</button>
-        </SettingRow>
-      )}
-
-      {status.state !== 'off' && <p className={has_problem ? 'setting-hint tone-bad' : 'setting-hint'}>{describe_sync_status(status)}</p>}
-      {error && <p className="setting-hint tone-bad">{error}</p>}
-
-      {window.x_settings.host !== 'web' && <TrustedCertificateEditor server_url={status.server_url || server_url} />}
-    </>
+    <SyncSettings
+      device={window.x_settings}
+      subscribe={poll_sync_status}
+      data_name="tasks"
+      placeholder="https://tasks.example.org/"
+      confirm_text={CONFIRM_DIRECTION}
+      extra={(server_url: string) => window.x_settings.host !== 'web' && <TrustedCertificateEditor server_url={server_url} />}
+    />
   )
 }
 

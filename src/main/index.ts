@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, shell } from 'electron'
-import { homedir } from 'node:os'
+import { homedir, hostname } from 'node:os'
 import { join } from 'node:path'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
@@ -69,7 +69,7 @@ function announce_sync_change(): void {
 }
 
 // The server and token live in sync.json beside the database, so a scratch database never syncs with the real server.
-const sync = create_task_sync_client(node_sync_storage, announce_sync_change)
+const sync = create_task_sync_client(node_sync_storage, `X-Tasks on ${hostname()}`, announce_sync_change)
 
 function restart_mcp_server(): Promise<void> {
   return apply_mcp_settings(get_settings(), announce_mcp_change)

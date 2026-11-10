@@ -2,7 +2,8 @@ import { settings_bridge, tasks_bridge } from '@shared/bridges'
 import type { SettingsApi } from '@shared/settings'
 import type { SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { TasksApi } from '@shared/tasks'
-import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT, LOGIN_PATH } from '@shared/web_api'
+import { LoginNeeded } from '@x-tech-laboratories/x-libs/web/states'
+import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } from '@shared/web_api'
 
 // ============================================================================
 // Server calls
@@ -11,17 +12,14 @@ import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT, LO
 // Given by the server when the page connects, so the page is not told about its own changes.
 let client_id = ''
 
-// A signed-out page is sent to the login page rather than left showing stale tasks.
+// A signed-out page shows the sign-in form rather than stale tasks.
 async function call_server(method: string, args: unknown[]): Promise<unknown> {
   const response = await fetch(API_PATH + method, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', [CLIENT_ID_HEADER]: client_id },
     body: JSON.stringify(args)
   })
-  if (response.status === 401) {
-    location.assign(LOGIN_PATH)
-    throw new Error('signed out')
-  }
+  if (response.status === 401) throw new LoginNeeded('Sign in first.')
   if (!response.ok) throw new Error(`${method} failed: ${await response.text()}`)
 
   const text = await response.text()
@@ -62,7 +60,7 @@ function listen_for_changes(): void {
 // Bridge
 // ============================================================================
 
-const NO_SYNC: SyncStatus = { state: 'off', server_url: '', last_synced_at: '', pending_changes: 0, error: '' }
+const NO_SYNC: SyncStatus = { state: 'off', server_url: '', user: '', last_synced_at: '', pending_changes: 0, error: '' }
 
 // Gives the page the same window.x_tasks and window.x_settings the desktop app's preload does, backed by the web server.
 export function install_web_bridge(): void {
