@@ -1,15 +1,16 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, shell } from 'electron'
 import { homedir, hostname } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
+import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
+import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
 
 import { settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
 import type { Settings } from '@shared/settings'
 import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { open_task_database } from './node_task_database'
-import { node_sync_storage } from './node_sync_storage'
 import { apply_trusted_certificates, get_trusted_certificate, inspect_server_certificate, set_trusted_certificate } from './trusted_certificate'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
@@ -68,8 +69,15 @@ function announce_sync_change(): void {
   announce_mcp_change()
 }
 
+// The database a run uses: a test database when X_TASKS_DB names one, otherwise the profile's.
+const database_path = process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db')
+
 // The server and token live in sync.json beside the database, so a scratch database never syncs with the real server.
-const sync = create_task_sync_client(node_sync_storage, `X-Tasks on ${hostname()}`, announce_sync_change)
+const sync = create_task_sync_client(
+  file_sync_storage({ file: join(dirname(database_path), 'sync.json'), back_up_before_download: () => create_backup().then(() => undefined) }),
+  `X-Tasks on ${hostname()}`,
+  announce_sync_change
+)
 
 function restart_mcp_server(): Promise<void> {
   return apply_mcp_settings(get_settings(), announce_mcp_change)
@@ -117,8 +125,8 @@ function register_bridge_handlers(): void {
     list_backups,
     create_backup: () => create_backup(),
     // The restored data brings its own settings, so its theme and MCP endpoint are applied straight away, and sync asks which copy to keep.
-    restore_backup: (name) => {
-      restore_backup(name)
+    restore_backup: async (name) => {
+      await restore_backup(name)
       nativeTheme.themeSource = get_settings().theme
       void restart_mcp_server()
       void sync.sync_now()
@@ -128,7 +136,7 @@ function register_bridge_handlers(): void {
 
     get_mcp_status,
 
-    get_sync_status: sync.get_status, connect_sync: sync.connect, disconnect_sync: sync.disconnect, sync_now: sync.sync_now,
+    ...sync_device_methods(sync),
     get_trusted_certificate, set_trusted_certificate, inspect_server_certificate
   })
 
@@ -159,7 +167,7 @@ function start_app(): void {
   launch_task_id = first_argument(process.argv, task_id_from_link)
 
   app.whenReady().then(() => {
-    open_task_database(process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db'))
+    open_task_database(database_path)
     apply_trusted_certificates()
     // The page's light and dark colours follow this, so it is set before the window opens.
     nativeTheme.themeSource = get_settings().theme

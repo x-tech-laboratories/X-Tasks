@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core'
 
-import { backups } from '@x-tech-laboratories/x-libs/backups'
+import { backups, keep_backing_up } from '@x-tech-laboratories/x-libs/backups'
 import type { WasmDatabase } from '@x-tech-laboratories/x-libs/web/sqlite_wasm'
 import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
 import { task_sync } from '../../main/task_sync'
@@ -53,8 +53,6 @@ export async function back_up_before_upgrade(database: WasmDatabase): Promise<vo
 // Backup actions
 // ============================================================================
 
-const AUTOMATIC_BACKUP_CHECK_MS = 60 * 60 * 1000
-
 export interface AndroidBackups {
   get_folder: () => Promise<string>
   choose_folder: () => Promise<string>
@@ -97,21 +95,12 @@ export function android_backups(database: WasmDatabase): AndroidBackups {
 
   const remove_backup = (name: string): Promise<void> => task_backups.remove(name)
 
-  // Takes a daily backup once a day has passed since the last one, and deletes the oldest beyond the number to keep; a failure is logged so it never stops the app.
-  const keep_automatic_backups = async (): Promise<void> => {
+  // Daily backups wait until a folder is picked; keep_backing_up checks every hour as well as at the start, since the app can stay open for days.
+  const automatic_backups = keep_backing_up(task_backups, async () => {
     const settings = get_settings()
-    if (!settings.auto_backup || !(await get_folder())) return
-
-    try {
-      await task_backups.keep_automatic(settings.auto_backups_to_keep)
-    } catch (error) {
-      console.error('automatic backup failed:', error)
-    }
-  }
-
-  // The app can stay open for days, so it checks every hour as well as at the start.
-  void keep_automatic_backups()
-  setInterval(() => void keep_automatic_backups(), AUTOMATIC_BACKUP_CHECK_MS)
+    return { automatic: settings.auto_backup && (await get_folder()) !== '', to_keep: settings.auto_backups_to_keep }
+  })
+  const keep_automatic_backups = (): Promise<void> => automatic_backups.check()
 
   return {
     get_folder,
