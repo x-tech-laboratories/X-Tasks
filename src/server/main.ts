@@ -2,6 +2,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { read_server_config } from '@x-tech-laboratories/x-libs/server/config'
+import { load_accounts } from '@x-tech-laboratories/x-libs/server/passwords'
 
 import { schedule_automatic_backups } from '../main/database_backups'
 import { stop_mcp_server } from '../main/mcp_server'
@@ -21,6 +22,7 @@ function read_config() {
     summary: 'Serves X-Tasks as a web app.',
     env_prefix: 'X_TASKS',
     default_port: 3918,
+    secret: false,
     web_folder_default: join(dirname(fileURLToPath(import.meta.url)), '../web'),
     options: { database: { variable: 'X_TASKS_DB', help: 'the task database; it is made if missing', placeholder: '<file>', required: true } }
   })
@@ -42,7 +44,7 @@ async function main(): Promise<void> {
   const database_path = config.values.database!
   open_task_database(database_path)
 
-  const app = await build_app({ web_folder: config.web_folder, access_token: config.secret })
+  const app = await build_app({ web_folder: config.web_folder, declared: load_accounts('X_TASKS_PASSWORD_HASH_FILE') })
   void restart_mcp_server({ announce_change_to_all: () => changes.announce_change() })
   watch_for_outside_changes()
   schedule_automatic_backups()

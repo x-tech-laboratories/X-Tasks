@@ -3,7 +3,10 @@ import fastify, { type FastifyInstance } from 'fastify'
 import { register_open_cors } from '@x-tech-laboratories/x-libs/server/cors'
 import { EventStream } from '@x-tech-laboratories/x-libs/server/events'
 import { register_error_replies, register_lenient_json_body, send_text } from '@x-tech-laboratories/x-libs/server/replies'
-import { register_token_sign_in } from '@x-tech-laboratories/x-libs/server/sign_in'
+import { register_accounts } from '@x-tech-laboratories/x-libs/server/account_sign_in'
+import { AccountStore } from '@x-tech-laboratories/x-libs/server/account_store'
+import type { Accounts } from '@x-tech-laboratories/x-libs/server/passwords'
+import type { SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { register_sync_routes } from '@x-tech-laboratories/x-libs/server/sync_routes'
 import { register_web_folder } from '@x-tech-laboratories/x-libs/server/web_folder'
 
@@ -20,8 +23,15 @@ import { task_sync } from '../main/task_sync'
 export interface AppOptions {
   // The folder holding the built web page.
   web_folder: string
-  // The secret a browser signs in with; empty leaves the server open, which is only allowed on this machine.
-  access_token: string
+  // The users from the accounts file, who are admins; others are added on the Users page.
+  declared: Accounts
+}
+
+// The accounts live in the task database, reached afresh each time since restoring a backup reopens it.
+const current_database: SqlDatabase = {
+  exec: (sql) => open_database().exec(sql),
+  prepare: (sql) => open_database().prepare(sql),
+  close: () => {}
 }
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024
@@ -84,7 +94,8 @@ export async function build_app(options: AppOptions): Promise<FastifyInstance> {
   const app = fastify({ bodyLimit: MAX_BODY_BYTES, forceCloseConnections: true })
   register_lenient_json_body(app)
   register_error_replies(app)
-  await register_token_sign_in(app, { secret: options.access_token, title: 'X-Tasks' })
+  const accounts = new AccountStore({ database: current_database, app_name: 'X-Tasks', declared: options.declared, token_prefix: 'xtk' })
+  await register_accounts(app, { accounts, cookie_name: 'x_tasks_session' })
 
   const context: BridgeContext = { announce_change_to_all: () => changes.announce_change() }
   const handlers = create_bridge_handlers(context)

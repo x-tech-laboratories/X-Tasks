@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { hash_password } from '@x-tech-laboratories/x-libs/server/passwords'
 import type { FastifyInstance } from 'fastify'
 import { open_task_database } from '../src/main/node_task_database'
 import { add_task, close_task_database, list_tasks, open_database } from '../src/main/task_database'
@@ -14,8 +15,9 @@ import { build_app } from '../src/server/app.ts'
 // ============================================================================
 
 // Every test runs on a database in a fresh temporary folder, never the user's own.
-const ACCESS_TOKEN = 'open-sesame'
-const json_headers = { authorization: `Bearer ${ACCESS_TOKEN}`, 'content-type': 'application/json' }
+const PASSWORD = 'a long enough password'
+// A signed-in device's token, with the body's type.
+let json_headers: Record<string, string>
 
 let folder: string
 let app: FastifyInstance
@@ -27,7 +29,9 @@ beforeAll(async () => {
   writeFileSync(join(web_folder, 'index.html'), '<!doctype html><title>X-Tasks</title>')
 
   open_task_database(join(folder, 'tasks.db'))
-  app = await build_app({ web_folder, access_token: ACCESS_TOKEN })
+  app = await build_app({ web_folder, declared: new Map([['admin', hash_password(PASSWORD)]]) })
+  const { token } = (await app.inject({ method: 'POST', url: '/api/login', payload: { name: 'admin', password: PASSWORD, device: 'tests' } })).json()
+  json_headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' }
 })
 
 afterAll(async () => {

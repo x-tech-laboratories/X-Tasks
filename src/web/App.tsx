@@ -16,6 +16,7 @@ import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type Completio
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
+import type { SignedInAccount } from './SignedIn'
 import { BACK_EVENT } from './back_navigation'
 import { BoardView, DONE_COLUMN, NO_TAG_COLUMN, OPEN_COLUMN, date_columns, status_columns, tag_columns } from './BoardView'
 import { CalendarView } from './CalendarView'
@@ -69,7 +70,8 @@ type FilterEditing = { tag: Tag } | { group_id: string; parent_id: string | null
 // Tasks taken off the screen but not yet deleted, everything under them included, and the toast that deletes them unless undone.
 type PendingRemoval = { tasks: Task[]; toast: Undoable }
 
-export function App() {
+// In a browser, who the page is signed in as; the desktop and phone apps keep their own tasks and have none.
+export function App({ account }: { account?: SignedInAccount }) {
   const [tasks, set_tasks] = useState<Task[]>([])
   const [completions, set_completions] = useState<Completion[]>([])
   const [has_loaded_tasks, set_has_loaded_tasks] = useState(false)
@@ -1193,6 +1195,9 @@ export function App() {
       brand="X-Tasks"
       brand_icon={app_icon}
       brand_href="?"
+      user={account?.name}
+      user_href="#/account"
+      on_logout={account?.sign_out}
       theme={theme}
       tools={multibar}
       sidebar={sidebar}

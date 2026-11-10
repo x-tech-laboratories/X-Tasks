@@ -74,7 +74,7 @@ export async function install_android_bridge(): Promise<void> {
   await database.save_now()
 
   const change_listeners = new Set<() => void>()
-  const sync = create_task_sync_client(android_sync_storage(database.export_bytes), () => {
+  const sync = create_task_sync_client(android_sync_storage(database.export_bytes), 'X-Tasks on Android', () => {
     for (const listener of change_listeners) listener()
   })
   const tasks_api: TasksApi = {

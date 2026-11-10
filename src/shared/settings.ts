@@ -1,6 +1,6 @@
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
 import type { RelativeRange } from '@x-tech-laboratories/x-libs/date_ranges'
-import type { SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
+import type { SyncCredentials, SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { View } from './tasks'
 
 // ============================================================================
@@ -385,8 +385,8 @@ export interface SettingsApi {
   choose_backup_folder?: () => Promise<string>
   get_mcp_status: () => Promise<McpStatus>
   get_sync_status: () => Promise<SyncStatus>
-  // An empty token keeps the one saved before, for choosing a direction again with the same server.
-  connect_sync: (server_url: string, token: string, direction: SyncDirection) => Promise<SyncStatus>
+  // Signs this device in with a name and password, takes a token given by hand, or keeps its sign-in when given null.
+  connect_sync: (server_url: string, credentials: SyncCredentials | string | null, direction: SyncDirection) => Promise<SyncStatus>
   disconnect_sync: () => Promise<SyncStatus>
   sync_now: () => Promise<SyncStatus>
   // The certificate authority, as PEM, that the app trusts for a server with a private or self-signed certificate.
