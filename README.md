@@ -236,7 +236,7 @@ later launches, so a run with `X_TASKS_DB` set never hands its link to another w
 
 - `src/main` — the Electron main process and the task database
 - `src/server` — the Fastify web server: `main.ts` starts it, `app.ts` builds the routes, `auth.ts` signs browsers in, `events.ts` tells open pages about changes; it shares the task database code with `src/main`
-- `src/main/sync_engine.ts` — change tracking and merging; `src/main/sync_client.ts` syncs a device with the server
+- `src/main/task_sync.ts` — which tables sync, on the X-Libs `sync_engine`; `src/main/task_sync_client.ts` syncs a device with the server through the X-Libs `sync_client`, and the server answers through `server/sync_routes`
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
   `src/web/web_bridge.ts` sets up the same bridge over HTTP
 - `src/web` — the React interface; `src/web/android` holds the Android app's database and bridge

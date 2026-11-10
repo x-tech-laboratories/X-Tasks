@@ -1,6 +1,6 @@
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
 import type { RelativeRange } from '@x-tech-laboratories/x-libs/date_ranges'
-import type { SyncDirection, SyncStatus } from './sync'
+import type { SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { View } from './tasks'
 
 // ============================================================================

@@ -2,7 +2,7 @@ import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path'
 
 import { create_backup } from './database_backups'
-import type { SyncConfig, SyncStorage } from './sync_client'
+import type { SyncConfig, SyncStorage } from '@x-tech-laboratories/x-libs/sync_client'
 import { task_database_path } from './task_database'
 
 // ============================================================================

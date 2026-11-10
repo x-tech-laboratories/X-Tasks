@@ -1,9 +1,9 @@
 import { DEFAULT_SETTINGS, saved_task_duration, type Settings } from '@shared/settings'
+import { in_transaction, type SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { as_code_block } from '@x-tech-laboratories/x-libs/web/markdown_text'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
 import type { TaskVersion } from '@shared/versions'
-import type { SqlDatabase } from './sql_database'
-import { drop_sync_triggers, install_sync_triggers, stamp_existing_rows } from './sync_engine'
+import { task_sync } from './task_sync'
 import { drop_version_triggers, install_version_triggers, read_recent_versions, read_task_versions, prune_task_versions, record_task_versions, restore_version } from './task_versions'
 
 // ============================================================================
@@ -114,7 +114,7 @@ const SCHEMA_MIGRATIONS: (string | ((database: SqlDatabase) => void))[] = [
      WHERE EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NOT NULL)
        AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.group_id = tag_groups.id AND tags.rule IS NULL)`,
   `ALTER TABLE tags ADD COLUMN color TEXT`,
-  // Completions get an id every device agrees on, and sync keeps the version of each value it tracks; see sync_engine.ts.
+  // Completions get an id every device agrees on, and sync keeps the version of each value it tracks; see task_sync.ts.
   `ALTER TABLE task_completions ADD COLUMN uid TEXT;
    UPDATE task_completions SET uid = lower(hex(randomblob(16)));
    CREATE UNIQUE INDEX task_completions_by_uid ON task_completions (uid);
@@ -225,19 +225,6 @@ export function wrap_notes_in_code_blocks(database: SqlDatabase): void {
   for (const task of notes) update.run(as_code_block(task.notes), task.id)
 }
 
-// Runs the work as one transaction, rolling it back if any step throws so the connection is never left mid-transaction.
-function in_transaction<Result>(database: SqlDatabase, work: () => Result): Result {
-  database.exec('BEGIN')
-  try {
-    const result = work()
-    database.exec('COMMIT')
-    return result
-  } catch (error) {
-    database.exec('ROLLBACK')
-    throw error
-  }
-}
-
 // A reverted upgrade once took version 4 and added task_lists.parent_id; take it out and redo version 4.
 function undo_reverted_list_tree(database: SqlDatabase): void {
   const columns = database.prepare('PRAGMA table_info(task_lists)').all() as { name: string }[]
@@ -260,7 +247,7 @@ export function is_upgrade_pending(database: SqlDatabase): boolean {
 function migrate_schema(database: SqlDatabase, back_up_before_upgrade?: (database: SqlDatabase) => void): void {
   if (is_upgrade_pending(database)) back_up_before_upgrade?.(database)
 
-  drop_sync_triggers(database)
+  task_sync.drop_triggers(database)
   drop_version_triggers(database)
   undo_reverted_list_tree(database)
   const { user_version } = database.prepare('PRAGMA user_version').get() as { user_version: number }
@@ -274,8 +261,8 @@ function migrate_schema(database: SqlDatabase, back_up_before_upgrade?: (databas
       database.exec(`PRAGMA user_version = ${version + 1}`)
     })
   }
-  install_sync_triggers(database)
-  if (needs_history_sent) in_transaction(database, () => stamp_existing_rows(database, 'task_versions'))
+  task_sync.install(database)
+  if (needs_history_sent) in_transaction(database, () => task_sync.stamp_existing_rows(database, 'task_versions'))
   in_transaction(database, () => install_version_triggers(database))
 }
 

@@ -10,7 +10,6 @@ import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { open_task_database } from './node_task_database'
 import { node_sync_storage } from './node_sync_storage'
-import { connect_sync, disconnect_sync, get_sync_status, start_sync, stop_sync, sync_now } from './sync_client'
 import { apply_trusted_certificates, get_trusted_certificate, inspect_server_certificate, set_trusted_certificate } from './trusted_certificate'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
@@ -19,6 +18,7 @@ import {
   set_task_done, set_task_my_day, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
   untag_task, list_task_versions, list_recent_versions, restore_task_version
 } from './task_database'
+import { create_task_sync_client } from './task_sync_client'
 
 // ============================================================================
 // Profile
@@ -67,6 +67,9 @@ function announce_sync_change(): void {
   nativeTheme.themeSource = get_settings().theme
   announce_mcp_change()
 }
+
+// The server and token live in sync.json beside the database, so a scratch database never syncs with the real server.
+const sync = create_task_sync_client(node_sync_storage, announce_sync_change)
 
 function restart_mcp_server(): Promise<void> {
   return apply_mcp_settings(get_settings(), announce_mcp_change)
@@ -118,14 +121,14 @@ function register_bridge_handlers(): void {
       restore_backup(name)
       nativeTheme.themeSource = get_settings().theme
       void restart_mcp_server()
-      void sync_now()
+      void sync.sync_now()
     },
     remove_backup,
     show_backup_folder: () => shell.openPath(backup_folder()).then(() => undefined),
 
     get_mcp_status,
 
-    get_sync_status, connect_sync, disconnect_sync, sync_now,
+    get_sync_status: sync.get_status, connect_sync: sync.connect, disconnect_sync: sync.disconnect, sync_now: sync.sync_now,
     get_trusted_certificate, set_trusted_certificate, inspect_server_certificate
   })
 
@@ -167,7 +170,7 @@ function start_app(): void {
     create_main_window()
     watch_for_outside_changes()
     schedule_automatic_backups()
-    start_sync(node_sync_storage, announce_sync_change)
+    sync.start()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) create_main_window()
@@ -175,7 +178,7 @@ function start_app(): void {
   })
 
   app.on('will-quit', () => {
-    stop_sync()
+    sync.stop()
     void stop_mcp_server()
     close_task_database()
   })

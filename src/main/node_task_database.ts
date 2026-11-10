@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import { backup_path } from '@x-tech-laboratories/x-libs/server/backup_files'
 import { task_backup_naming } from '@shared/settings'
-import type { SqlDatabase } from './sql_database'
+import type { SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { attach_task_database, task_database_path } from './task_database'
 
 // ============================================================================

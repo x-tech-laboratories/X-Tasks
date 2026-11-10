@@ -1,5 +1,5 @@
 import { is_same_snapshot, normalized_snapshot, type SnapshotLink, type TaskSnapshot, type TaskVersion, type VersionKind } from '@shared/versions'
-import type { SqlDatabase } from './sql_database'
+import type { SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 
 // ============================================================================
 // Triggers

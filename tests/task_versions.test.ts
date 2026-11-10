@@ -5,7 +5,7 @@ import {
   add_tag, add_tag_group, add_task, attach_task_database, close_task_database, link_tasks, list_recent_versions, list_task_versions, list_tasks, move_task, open_database,
   remove_task, restore_task_version, set_setting, set_task_notes, set_task_title, tag_task
 } from '../src/main/task_database'
-import { apply_changes, collect_unpushed_changes } from '../src/main/sync_engine'
+import { task_sync } from '../src/main/task_sync'
 
 // ============================================================================
 // Setup
@@ -143,11 +143,11 @@ describe('syncing history', () => {
   it('brings another device its versions, marked as made elsewhere, without recording its own', () => {
     const task = add_task('Buy milk', null, [], null)
     set_task_title(task.id, 'Buy oat milk')
-    const { changes } = collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_unpushed_changes(open_database())
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
 
-    apply_changes(open_database(), changes)
+    task_sync.apply_changes(open_database(), changes)
     const versions = list_task_versions(task.id)
 
     expect(versions.map((version) => [version.kind, version.origin])).toEqual([['edited', 'elsewhere'], ['created', 'elsewhere']])
@@ -156,10 +156,10 @@ describe('syncing history', () => {
 
   it('records changes made here to a synced task, after the synced ones', () => {
     const task = add_task('Buy milk', null, [], null)
-    const { changes } = collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_unpushed_changes(open_database())
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
-    apply_changes(open_database(), changes)
+    task_sync.apply_changes(open_database(), changes)
 
     set_task_title(task.id, 'Buy bread')
 
@@ -171,13 +171,25 @@ describe('syncing history', () => {
     set_task_title(task.id, 'Buy bread')
     const created = list_task_versions(task.id).at(-1)!
     restore_task_version(created.id)
-    const { changes } = collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_unpushed_changes(open_database())
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
 
-    apply_changes(open_database(), changes)
+    task_sync.apply_changes(open_database(), changes)
 
     expect(list_task_versions(task.id)[0]!.restored_from).toBe(created.id)
+  })
+
+  it('leaves no task waiting for a version once changes from another device are applied', () => {
+    const task = add_task('Buy milk', null, [], null)
+    const { changes } = task_sync.collect_unpushed_changes(open_database())
+    close_task_database()
+    attach_task_database(new DatabaseSync(':memory:'), ':memory:')
+
+    task_sync.apply_changes(open_database(), changes)
+
+    expect(open_database().prepare('SELECT count(*) AS count FROM task_versions_pending').get()).toEqual({ count: 0 })
+    expect(list_task_versions(task.id).map((version) => version.kind)).toEqual(['created'])
   })
 })
 

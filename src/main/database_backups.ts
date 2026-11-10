@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { backups } from '@x-tech-laboratories/x-libs/backups'
 import { backup_path, file_backup_store } from '@x-tech-laboratories/x-libs/server/backup_files'
 import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
-import { forget_sync_history } from './sync_engine'
+import { task_sync } from './task_sync'
 import { open_task_database } from './node_task_database'
 import { back_up_task_database, close_task_database, get_settings, open_database, task_database_path } from './task_database'
 
@@ -57,7 +57,7 @@ export function restore_backup(name: string): void {
   } finally {
     open_task_database()
   }
-  forget_sync_history(open_database())
+  task_sync.forget_history(open_database())
 }
 
 // ============================================================================
