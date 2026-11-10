@@ -538,7 +538,7 @@ export function restore_task_version(version_id: string): void {
   const database = open_database()
   in_transaction(database, () => {
     record_task_versions(database)
-    record_task_versions(database, restore_version(database, version_id))
+    restore_version(database, version_id)
   })
 }
 

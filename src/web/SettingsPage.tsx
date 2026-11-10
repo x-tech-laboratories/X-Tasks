@@ -1,13 +1,15 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, RowActions, SettingRow, SettingsPage as SettingsSections, Stack, moved, type SettingsCategory } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
+import { BackupSettings } from '@x-tech-laboratories/x-libs/web/react/backup_settings'
+import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from 'recurrence-input'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
@@ -1187,72 +1189,40 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
 // Backups
 // ============================================================================
 
-function format_size(size_bytes: number): string {
-  if (size_bytes < 1024 * 1024) return `${Math.max(1, Math.round(size_bytes / 1024))} KB`
-  return `${(size_bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function format_taken_at(taken_at: string): string {
-  return new Date(taken_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })
-}
-
 interface BackupsEditorProps {
   settings: Settings
   on_change: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void | Promise<void>
 }
 
-// Saved copies of the database, newest first, each of which can be restored or deleted.
+// Saved copies of the database, newest first, through the shared backups panel; the daily schedule is two of this device's settings.
 function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
-  const [backups, set_backups] = useState<DatabaseBackup[]>([])
   const [folder_name, set_folder_name] = useState('')
   const needs_folder = window.x_settings.choose_backup_folder !== undefined
-
-  async function refresh(): Promise<void> {
-    set_folder_name((await window.x_settings.get_backup_folder?.()) ?? '')
-    set_backups(await window.x_settings.list_backups())
-  }
+  const { auto_backup, auto_backups_to_keep } = settings
 
   useEffect(() => {
-    void refresh()
+    void window.x_settings.get_backup_folder?.().then(set_folder_name)
   }, [])
 
-  // Turning these on or lowering the count can take or delete automatic backups, so the list is read again after.
-  async function change_automatic<Key extends 'auto_backup' | 'auto_backups_to_keep'>(key: Key, value: Settings[Key]): Promise<void> {
-    await on_change(key, value)
-    await refresh()
-  }
+  // Made again only when the schedule changes, since the panel reads everything again for a new device.
+  const device = useMemo<BackupClient>(() => ({
+    list_backups: () => window.x_settings.list_backups(),
+    create_backup: () => window.x_settings.create_backup(),
+    restore_backup: (name) => window.x_settings.restore_backup(name),
+    remove_backup: (name) => window.x_settings.remove_backup(name),
+    get_backup_schedule: async () => ({ automatic: auto_backup, to_keep: auto_backups_to_keep }),
+    set_backup_schedule: async ({ automatic, to_keep }) => {
+      if (automatic !== auto_backup) await on_change('auto_backup', automatic)
+      if (to_keep !== auto_backups_to_keep) await on_change('auto_backups_to_keep', Math.max(1, to_keep))
+    }
+  }), [auto_backup, auto_backups_to_keep, folder_name])
 
   // A newly picked folder may already hold backups, and daily backups can start in it.
   async function choose_folder(): Promise<void> {
-    await window.x_settings.choose_backup_folder?.()
-    await refresh()
+    set_folder_name((await window.x_settings.choose_backup_folder?.()) ?? '')
   }
 
-  async function create(): Promise<void> {
-    await window.x_settings.create_backup()
-    await refresh()
-  }
-
-  // Every task, tag and setting comes from the restored copy, so the whole page is loaded again.
-  async function restore(backup: DatabaseBackup): Promise<void> {
-    const is_confirmed = window.confirm(
-      `Replace all current tasks, tags and settings with the backup from ${format_taken_at(backup.taken_at)}? ` +
-        'The current data is backed up first.'
-    )
-    if (!is_confirmed) return
-
-    await window.x_settings.restore_backup(backup.name)
-    window.location.reload()
-  }
-
-  async function remove(backup: DatabaseBackup): Promise<void> {
-    if (!window.confirm(`Delete the backup from ${format_taken_at(backup.taken_at)}?`)) return
-
-    await window.x_settings.remove_backup(backup.name)
-    await refresh()
-  }
-
-  return (
+  const folder_row = (
     <>
       {needs_folder && (
         <SettingRow
@@ -1262,45 +1232,23 @@ function BackupsEditor({ settings, on_change }: BackupsEditorProps) {
           <button onClick={() => void choose_folder()}>{folder_name ? 'Change' : 'Choose'}</button>
         </SettingRow>
       )}
-
-      <SettingRow label="Back up now" hint="Saves a copy of every task, tag and setting, named by the time it was taken.">
-        {window.x_settings.host === 'desktop' && <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>}
-        <button onClick={() => void create()} disabled={needs_folder && !folder_name}>
-          Back up
-        </button>
-      </SettingRow>
-
-      <SettingRow label="Back up daily" hint="Takes a backup once a day while the app is running. Backups made by hand are always kept." as_label>
-        <Switch label="Back up daily" checked={settings.auto_backup} on_change={(on) => change_automatic('auto_backup', on)} />
-      </SettingRow>
-
-      <SettingRow label="Daily backups to keep" hint="Older daily backups are deleted once there are more than this." as_label>
-        <CommitInput
-          type="number"
-          min="1"
-          step="1"
-          className="input-xs"
-          value={settings.auto_backups_to_keep}
-          disabled={!settings.auto_backup}
-          on_commit={(event) =>
-            void change_automatic('auto_backups_to_keep', Math.max(1, Math.round(Number(event.currentTarget.value) || 1)))
-          }
-        />
-      </SettingRow>
-
-      {backups.length === 0 && <p className="setting-hint">No backups yet.</p>}
-
-      {backups.map((backup) => (
-        <SettingRow key={backup.name} label={format_taken_at(backup.taken_at)} hint={`${backup.is_automatic ? 'Daily' : 'By hand'} · ${format_size(backup.size_bytes)}`}>
-          <button onClick={() => void restore(backup)}>Restore</button>
-          <span className="row-actions">
-            <button className="icon remove" onClick={() => void remove(backup)} aria-label={`Delete backup from ${format_taken_at(backup.taken_at)}`}>
-              ×
-            </button>
-          </span>
+      {window.x_settings.host === 'desktop' && (
+        <SettingRow label="Backup folder" hint="Beside the database, in the app's profile.">
+          <button onClick={() => void window.x_settings.show_backup_folder()}>Show folder</button>
         </SettingRow>
-      ))}
+      )}
     </>
+  )
+
+  // Every task, tag and setting comes from the restored copy, so the whole page is loaded again.
+  return (
+    <BackupSettings
+      device={device}
+      data_name="tasks, tags and settings"
+      folder_row={folder_row}
+      can_back_up={!needs_folder || folder_name !== ''}
+      on_restored={() => window.location.reload()}
+    />
   )
 }
 

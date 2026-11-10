@@ -1,7 +1,7 @@
 import { App } from '@capacitor/app'
 import { registerPlugin } from '@capacitor/core'
 
-import type { SyncConfig, SyncStorage } from '@x-tech-laboratories/x-libs/sync_client'
+import { local_sync_storage } from '@x-tech-laboratories/x-libs/web/sync_storage'
 import { indexed_db_files, open_wasm_database } from '@x-tech-laboratories/x-libs/web/sqlite_wasm'
 import type { McpStatus, ServerCertificate, Settings, SettingsApi, TrustedCertificate } from '@shared/settings'
 import type { TasksApi } from '@shared/tasks'
@@ -30,17 +30,6 @@ const BEFORE_SYNC_FILE = 'tasks-before-sync.db'
 // The server and token stay in the app's private storage; the copy taken before the server's tasks replace this device's goes beside the database.
 const SYNC_CONFIG_KEY = 'x-tasks-sync'
 
-function android_sync_storage(export_bytes: () => Uint8Array): SyncStorage {
-  return {
-    read_config: () => {
-      const saved = localStorage.getItem(SYNC_CONFIG_KEY)
-      return saved ? (JSON.parse(saved) as SyncConfig) : null
-    },
-    write_config: (config) => localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config)),
-    remove_config: () => localStorage.removeItem(SYNC_CONFIG_KEY),
-    back_up_before_download: () => files.write(BEFORE_SYNC_FILE, export_bytes())
-  }
-}
 
 // ============================================================================
 // Bridge
@@ -74,7 +63,7 @@ export async function install_android_bridge(): Promise<void> {
   await database.save_now()
 
   const change_listeners = new Set<() => void>()
-  const sync = create_task_sync_client(android_sync_storage(database.export_bytes), 'X-Tasks on Android', () => {
+  const sync = create_task_sync_client(local_sync_storage({ key: SYNC_CONFIG_KEY, back_up_before_download: () => files.write(BEFORE_SYNC_FILE, database.export_bytes()) }), 'X-Tasks on Android', () => {
     for (const listener of change_listeners) listener()
   })
   const tasks_api: TasksApi = {
