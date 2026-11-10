@@ -7,7 +7,7 @@ import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratorie
 import { describe_rule } from 'recurrence-input'
 
 import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DatabaseBackup, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
-import type { SyncDirection, SyncStatus } from '@shared/sync'
+import type { SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { CertificateDialog } from './CertificateDialog'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'

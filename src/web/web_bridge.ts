@@ -1,6 +1,6 @@
 import { settings_bridge, tasks_bridge } from '@shared/bridges'
 import type { SettingsApi } from '@shared/settings'
-import type { SyncStatus } from '@shared/sync'
+import type { SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { TasksApi } from '@shared/tasks'
 import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT, LOGIN_PATH } from '@shared/web_api'
 

@@ -158,7 +158,7 @@ describe('sync calls', () => {
       payload: JSON.stringify({ generation: snapshot.json().generation, cursor: 0, site: 'phone', changes: 'nope' })
     })
     expect(response.statusCode).toBe(400)
-    expect(response.body).toBe('changes must be a list of changes')
+    expect(response.body).toBe('send site, generation, cursor and a list of changes')
   })
 
   it('answers 409 when the device follows another generation', async () => {

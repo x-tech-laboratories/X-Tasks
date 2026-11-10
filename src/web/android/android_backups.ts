@@ -1,10 +1,10 @@
 import { registerPlugin } from '@capacitor/core'
 
 import { backups } from '@x-tech-laboratories/x-libs/backups'
+import type { WasmDatabase } from '@x-tech-laboratories/x-libs/web/sqlite_wasm'
 import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
-import { forget_sync_history } from '../../main/sync_engine'
+import { task_sync } from '../../main/task_sync'
 import { attach_task_database, get_settings, is_upgrade_pending, open_database } from '../../main/task_database'
-import type { WasmTaskDatabase } from './wasm_database'
 
 // ============================================================================
 // Native folder
@@ -37,7 +37,7 @@ function from_base64(text: string): Uint8Array {
 }
 
 // Before an older database is upgraded, its bytes go to the backup folder if one is picked; a failure is logged so the app still opens.
-export async function back_up_before_upgrade(database: WasmTaskDatabase): Promise<void> {
+export async function back_up_before_upgrade(database: WasmDatabase): Promise<void> {
   if (!is_upgrade_pending(database.connection)) return
 
   try {
@@ -66,7 +66,7 @@ export interface AndroidBackups {
 }
 
 // Backups work as on the desktop, but in a folder the user picks; until one is picked there are none, and daily ones wait.
-export function android_backups(database: WasmTaskDatabase): AndroidBackups {
+export function android_backups(database: WasmDatabase): AndroidBackups {
   const get_folder = async (): Promise<string> => (await backup_folder.get_folder()).name
 
   // The phone keeps the files on its side; each crosses the bridge as base64.
@@ -91,7 +91,7 @@ export function android_backups(database: WasmTaskDatabase): AndroidBackups {
 
     database.replace_with(from_base64(data))
     attach_task_database(database.connection, 'On this device')
-    forget_sync_history(open_database())
+    task_sync.forget_history(open_database())
     await database.save_now()
   }
 

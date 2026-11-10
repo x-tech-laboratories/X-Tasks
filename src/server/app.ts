@@ -2,13 +2,16 @@ import fastify, { type FastifyInstance } from 'fastify'
 
 import { register_open_cors } from '@x-tech-laboratories/x-libs/server/cors'
 import { EventStream } from '@x-tech-laboratories/x-libs/server/events'
-import { BAD_JSON, register_error_replies, register_lenient_json_body, send_text } from '@x-tech-laboratories/x-libs/server/replies'
+import { register_error_replies, register_lenient_json_body, send_text } from '@x-tech-laboratories/x-libs/server/replies'
 import { register_token_sign_in } from '@x-tech-laboratories/x-libs/server/sign_in'
+import { register_sync_routes } from '@x-tech-laboratories/x-libs/server/sync_routes'
 import { register_web_folder } from '@x-tech-laboratories/x-libs/server/web_folder'
 
 import { WEB_SETTINGS_METHODS, WEB_TASKS_METHODS, type WebMethod } from '@shared/web_api'
 import { create_bridge_handlers, type BridgeContext } from './bridge_handlers.ts'
-import { BadSyncRequest, exchange_changes, GenerationMismatch, read_snapshot, replace_data } from './sync_routes.ts'
+import { create_backup } from '../main/database_backups'
+import { open_database } from '../main/task_database'
+import { task_sync } from '../main/task_sync'
 
 // ============================================================================
 // Options
@@ -61,33 +64,16 @@ function register_bridge_calls(api: FastifyInstance, handlers: ReturnType<typeof
   } })
 }
 
+// Devices sync at api/sync/exchange, snapshot and replace; the server's data is backed up before a device replaces it.
 function register_sync_calls(api: FastifyInstance): void {
-  api.route<{ Params: { call: string } }>({ method: [...ANY_METHOD], url: '/sync/:call', bodyLimit: MAX_SYNC_BODY_BYTES, handler: async (request, reply) => {
-    const { call } = request.params
-    if (call === 'snapshot' && request.method === 'GET') return reply.send(read_snapshot())
-    if (request.method !== 'POST') return send_text(reply, 405, 'use POST')
-
-    const body: unknown = request.body
-    if (body === BAD_JSON || body === undefined) return send_text(reply, 400, 'the body must be JSON')
-
-    try {
-      if (call === 'exchange') {
-        const [answer, has_changed] = exchange_changes(body as Parameters<typeof exchange_changes>[0])
-        if (has_changed) changes.announce_change(changes.client_id_of(request))
-        return reply.send(answer)
-      }
-      if (call === 'replace') {
-        const answer = replace_data(body as Parameters<typeof replace_data>[0])
-        changes.announce_change(changes.client_id_of(request))
-        return reply.send(answer)
-      }
-    } catch (error) {
-      if (error instanceof GenerationMismatch) return send_text(reply, 409, error.message)
-      if (error instanceof BadSyncRequest) return send_text(reply, 400, error.message)
-      throw error
-    }
-    return send_text(reply, 404, `no sync call named ${call}`)
-  } })
+  register_sync_routes(api, {
+    engine: task_sync,
+    database: open_database,
+    back_up: () => void create_backup(),
+    on_change: (request) => changes.announce_change(changes.client_id_of(request)),
+    prefix: '/sync',
+    body_limit: MAX_SYNC_BODY_BYTES
+  })
 }
 
 // ============================================================================

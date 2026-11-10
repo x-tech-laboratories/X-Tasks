@@ -1,9 +1,10 @@
 import { App } from '@capacitor/app'
 import { registerPlugin } from '@capacitor/core'
 
+import type { SyncConfig, SyncStorage } from '@x-tech-laboratories/x-libs/sync_client'
+import { indexed_db_files, open_wasm_database } from '@x-tech-laboratories/x-libs/web/sqlite_wasm'
 import type { McpStatus, ServerCertificate, Settings, SettingsApi, TrustedCertificate } from '@shared/settings'
 import type { TasksApi } from '@shared/tasks'
-import { connect_sync, disconnect_sync, get_sync_status, start_sync, sync_now, type SyncConfig, type SyncStorage } from '../../main/sync_client'
 import {
   add_tag, add_tag_group, add_task, link_tasks, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
   move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, unlink_tasks, set_setting, set_task_done, set_task_my_day, set_task_notes,
@@ -11,7 +12,16 @@ import {
 } from '../../main/task_database'
 import { request_back } from '../back_navigation'
 import { android_backups, back_up_before_upgrade } from './android_backups'
-import { BEFORE_SYNC_FILE, open_wasm_database, write_file } from './wasm_database'
+import { create_task_sync_client } from '../../main/task_sync_client'
+
+// ============================================================================
+// Saved copies
+// ============================================================================
+
+// The database lives in memory and is saved whole to the app's IndexedDB, which Android keeps until the app's data is cleared.
+const files = indexed_db_files('x-tasks')
+const DATABASE_FILE = 'tasks.db'
+const BEFORE_SYNC_FILE = 'tasks-before-sync.db'
 
 // ============================================================================
 // Sync storage
@@ -28,7 +38,7 @@ function android_sync_storage(export_bytes: () => Uint8Array): SyncStorage {
     },
     write_config: (config) => localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config)),
     remove_config: () => localStorage.removeItem(SYNC_CONFIG_KEY),
-    back_up_before_download: () => write_file(BEFORE_SYNC_FILE, export_bytes())
+    back_up_before_download: () => files.write(BEFORE_SYNC_FILE, export_bytes())
   }
 }
 
@@ -58,12 +68,15 @@ function answer<Args extends unknown[], Result>(call: (...args: Args) => Result)
 
 // Gives the page window.x_tasks and window.x_settings backed by a database kept on the phone, synced with a server when one is set.
 export async function install_android_bridge(): Promise<void> {
-  const database = await open_wasm_database()
+  const database = await open_wasm_database({ files, file_name: DATABASE_FILE })
   await back_up_before_upgrade(database)
   attach_task_database(database.connection, 'On this device')
   await database.save_now()
 
   const change_listeners = new Set<() => void>()
+  const sync = create_task_sync_client(android_sync_storage(database.export_bytes), () => {
+    for (const listener of change_listeners) listener()
+  })
   const tasks_api: TasksApi = {
     list_tasks: answer(list_tasks),
     add_task: answer(add_task),
@@ -119,10 +132,10 @@ export async function install_android_bridge(): Promise<void> {
     get_backup_folder: backups.get_folder,
     choose_backup_folder: backups.choose_folder,
     get_mcp_status: () => Promise.resolve(MCP_OFF),
-    get_sync_status: answer(get_sync_status),
-    connect_sync,
-    disconnect_sync: answer(disconnect_sync),
-    sync_now,
+    get_sync_status: answer(sync.get_status),
+    connect_sync: sync.connect,
+    disconnect_sync: answer(sync.disconnect),
+    sync_now: sync.sync_now,
     get_trusted_certificate: () => trusted_certificate_plugin.get(),
     set_trusted_certificate: async (pem) => ({ pem: pem.trim(), subject: (await trusted_certificate_plugin.set({ pem })).subject }),
     // The plugin answers with an empty certificate when there is nothing to offer.
@@ -135,14 +148,12 @@ export async function install_android_bridge(): Promise<void> {
   window.x_tasks = tasks_api
   window.x_settings = settings_api
 
-  start_sync(android_sync_storage(database.export_bytes), () => {
-    for (const listener of change_listeners) listener()
-  })
+  sync.start()
 
   // Android can stop a paused app at any time, so the database is saved as it goes to the background, and syncs as it comes back.
   void App.addListener('pause', () => void database.save_now())
   void App.addListener('resume', () => {
-    void sync_now()
+    void sync.sync_now()
     void backups.keep_automatic_backups()
   })
 
