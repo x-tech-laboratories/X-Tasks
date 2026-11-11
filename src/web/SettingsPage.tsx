@@ -10,10 +10,9 @@ import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from 'recurrence-input'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type ServerCertificate, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
-import { CertificateDialog } from './CertificateDialog'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
 import { grouping_choices, view_of_key } from './grouping'
 import { TASK_LAYOUT_CHOICES } from './layouts'
@@ -1094,12 +1093,6 @@ function poll_sync_status(listener: () => void): () => void {
   return () => clearInterval(timer)
 }
 
-// The bridge wraps a main-process error in its own words; only the message after the last "Error: " is meant for people.
-function error_message(error: unknown): string {
-  const text = error instanceof Error ? error.message : String(error)
-  return text.split('Error: ').at(-1) ?? text
-}
-
 function SyncEditor() {
   return (
     <SyncSettings
@@ -1109,85 +1102,10 @@ function SyncEditor() {
       placeholder="https://tasks.example.org/"
       confirm_text={CONFIRM_DIRECTION}
       certificates={window.x_settings.certificates}
-      extra={(server_url: string) => window.x_settings.certificates
-        ? <TrustedCertificates certificates={window.x_settings.certificates} />
-        : window.x_settings.host === 'android' && <TrustedCertificateEditor server_url={server_url} />}
+      extra={() => window.x_settings.certificates && <TrustedCertificates certificates={window.x_settings.certificates} />}
     />
   )
 }
-
-// Takes, on Android, the certificate authority of a server the phone does not already trust, such as a home server's own.
-function TrustedCertificateEditor({ server_url }: { server_url: string }) {
-  const trusted = use_resource(() => window.x_settings.get_trusted_certificate!(), [])
-  const saved = trusted.data
-  const [pem, set_pem] = useState('')
-  const [error, set_error] = useState('')
-  const [offered, set_offered] = useState<ServerCertificate | null>(null)
-  const [is_reading, set_is_reading] = useState(false)
-
-  // Reads the authority straight from the server, so it need not be found and pasted by hand.
-  async function read_from_server(): Promise<void> {
-    set_error('')
-    set_is_reading(true)
-    try {
-      const certificate = await window.x_settings.inspect_server_certificate!(server_url.trim())
-      if (certificate) set_offered(certificate)
-      else set_error('Nothing to trust: the server is already trusted, uses http, or could not be reached.')
-    } catch (caught) {
-      set_error(error_message(caught))
-    } finally {
-      set_is_reading(false)
-    }
-  }
-
-  async function save(text: string): Promise<void> {
-    set_error('')
-    try {
-      await window.x_settings.set_trusted_certificate!(text)
-      await trusted.reload(true)
-      set_pem('')
-    } catch (caught) {
-      set_error(error_message(caught))
-    }
-  }
-
-  if (!saved) return null
-
-  return (
-    <>
-      <div className="setting-row">
-        <div className="setting-text">
-          <span className="setting-label">Trusted certificate authority</span>
-          <span className="setting-hint">
-            {saved.subject ? `Trusting ${saved.subject} for the server.` : 'For a server with a self-signed or private certificate: get its authority from the server, or paste the PEM certificate.'}
-          </span>
-          <textarea
-            value={pem}
-            onChange={(event) => set_pem(event.currentTarget.value)}
-            placeholder="-----BEGIN CERTIFICATE-----"
-            aria-label="Certificate authority in PEM form"
-            rows={4}
-          />
-        </div>
-        <button disabled={is_reading || server_url.trim() === ''} onClick={() => void read_from_server()}>Get from server</button>
-        <button disabled={pem.trim() === ''} onClick={() => void save(pem)}>Trust</button>
-        {saved.subject && <button onClick={() => void save('')}>Forget</button>}
-      </div>
-      {error && <p className="setting-hint tone-bad">{error}</p>}
-      {offered && (
-        <CertificateDialog
-          certificate={offered}
-          server_url={server_url.trim()}
-          on_close={() => {
-            set_offered(null)
-            void trusted.reload(true)
-          }}
-        />
-      )}
-    </>
-  )
-}
-
 
 // ============================================================================
 // Backups

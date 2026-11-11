@@ -24,7 +24,6 @@ import { HistoryPage } from './HistoryPage'
 import { ReportsPage } from './ReportsPage'
 import { ReschedulePopup } from './ReschedulePopup'
 import { SyncCertificatePrompt } from '@x-tech-laboratories/x-libs/web/react/certificates'
-import { UntrustedCertificatePrompt } from './CertificateDialog'
 import { FilterDialog } from './FilterDialog'
 import { GANTT_SCALE_CHOICES, GanttView } from './GanttView'
 import { TASK_LAYOUT_CHOICES, is_same_layout, saved_layout, with_view_layout } from './layouts'
@@ -1318,7 +1317,7 @@ export function App({ account }: { account?: SignedInAccount }) {
         />
       )}
 
-      {window.x_settings.certificates ? <SyncCertificatePrompt device={window.x_settings} certificates={window.x_settings.certificates} /> : <UntrustedCertificatePrompt />}
+      {window.x_settings.certificates && <SyncCertificatePrompt device={window.x_settings} certificates={window.x_settings.certificates} />}
 
       {is_picking && (
         <SelectionBar count={picked_tasks.length} total={shown_rows.length} on_clear={() => set_picked_task_ids([])} on_select_all={() => set_picked_task_ids(shown_rows.map((task) => task.id))}>
