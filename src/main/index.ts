@@ -1,17 +1,18 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, session, shell } from 'electron'
 import { homedir, hostname } from 'node:os'
 import { dirname, join } from 'node:path'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
+import { create_certificate_trust } from '@x-tech-laboratories/x-libs/certificates'
+import { trust_in_session, trusting_fetch } from '@x-tech-laboratories/x-libs/electron/certificates'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
 import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
 import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
 
-import { settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
+import { certificate_bridge, settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
 import type { Settings } from '@shared/settings'
 import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
 import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
 import { open_task_database } from './node_task_database'
-import { apply_trusted_certificates, get_trusted_certificate, inspect_server_certificate, set_trusted_certificate } from './trusted_certificate'
 import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
 import {
   add_tag, add_tag_group, add_task, link_tasks, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
@@ -72,11 +73,16 @@ function announce_sync_change(): void {
 // The database a run uses: a test database when X_TASKS_DB names one, otherwise the profile's.
 const database_path = process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db')
 
+// Trusted server certificates live beside the database too, so a scratch database never trusts the real server's.
+const certificates = create_certificate_trust({ file: join(dirname(database_path), 'trusted-certificates.json') })
+
 // The server and token live in sync.json beside the database, so a scratch database never syncs with the real server.
+// Sync goes through Chromium, which honours the trusted certificates where Node's own fetch would not.
 const sync = create_task_sync_client(
   file_sync_storage({ file: join(dirname(database_path), 'sync.json'), back_up_before_download: () => create_backup().then(() => undefined) }),
   `X-Tasks on ${hostname()}`,
-  announce_sync_change
+  announce_sync_change,
+  trusting_fetch(session, certificates)
 )
 
 function restart_mcp_server(): Promise<void> {
@@ -136,9 +142,10 @@ function register_bridge_handlers(): void {
 
     get_mcp_status,
 
-    ...sync_device_methods(sync),
-    get_trusted_certificate, set_trusted_certificate, inspect_server_certificate
+    ...sync_device_methods(sync)
   })
+  certificate_bridge.handle(ipcMain, certificates.methods)
+  trust_in_session(session.defaultSession, certificates.is_trusted)
 
   ipcMain.handle(TAKE_LAUNCH_TASK_CHANNEL, () => {
     const task_id = launch_task_id
@@ -168,7 +175,6 @@ function start_app(): void {
 
   app.whenReady().then(() => {
     open_task_database(database_path)
-    apply_trusted_certificates()
     // The page's light and dark colours follow this, so it is set before the window opens.
     nativeTheme.themeSource = get_settings().theme
     register_bridge_handlers()

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, RowActions, SettingRow, SettingsPage as SettingsSections, Stack, moved, type SettingsCategory } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
+import { TrustedCertificates } from '@x-tech-laboratories/x-libs/web/react/certificates'
 import { SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
 import { BackupSettings } from '@x-tech-laboratories/x-libs/web/react/backup_settings'
 import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
@@ -1107,14 +1108,17 @@ function SyncEditor() {
       data_name="tasks"
       placeholder="https://tasks.example.org/"
       confirm_text={CONFIRM_DIRECTION}
-      extra={(server_url: string) => window.x_settings.host !== 'web' && <TrustedCertificateEditor server_url={server_url} />}
+      certificates={window.x_settings.certificates}
+      extra={(server_url: string) => window.x_settings.certificates
+        ? <TrustedCertificates certificates={window.x_settings.certificates} />
+        : window.x_settings.host === 'android' && <TrustedCertificateEditor server_url={server_url} />}
     />
   )
 }
 
-// Takes the certificate authority of a server whose certificate this device does not already trust, such as a home server's own.
+// Takes, on Android, the certificate authority of a server the phone does not already trust, such as a home server's own.
 function TrustedCertificateEditor({ server_url }: { server_url: string }) {
-  const trusted = use_resource(() => window.x_settings.get_trusted_certificate(), [])
+  const trusted = use_resource(() => window.x_settings.get_trusted_certificate!(), [])
   const saved = trusted.data
   const [pem, set_pem] = useState('')
   const [error, set_error] = useState('')
@@ -1126,7 +1130,7 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
     set_error('')
     set_is_reading(true)
     try {
-      const certificate = await window.x_settings.inspect_server_certificate(server_url.trim())
+      const certificate = await window.x_settings.inspect_server_certificate!(server_url.trim())
       if (certificate) set_offered(certificate)
       else set_error('Nothing to trust: the server is already trusted, uses http, or could not be reached.')
     } catch (caught) {
@@ -1139,7 +1143,7 @@ function TrustedCertificateEditor({ server_url }: { server_url: string }) {
   async function save(text: string): Promise<void> {
     set_error('')
     try {
-      await window.x_settings.set_trusted_certificate(text)
+      await window.x_settings.set_trusted_certificate!(text)
       await trusted.reload(true)
       set_pem('')
     } catch (caught) {

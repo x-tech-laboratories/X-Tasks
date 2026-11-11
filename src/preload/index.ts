@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import { settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
+import { certificate_bridge, settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
 import type { SettingsApi } from '@shared/settings'
 import { TAKE_LAUNCH_TASK_CHANNEL, type TasksApi } from '@shared/tasks'
 
@@ -27,6 +27,7 @@ const tasks_api: TasksApi = {
 
 const settings_api: SettingsApi = {
   ...settings_bridge.ipc_client(ipcRenderer),
+  certificates: certificate_bridge.ipc_client(ipcRenderer),
   host: 'desktop'
 }
 

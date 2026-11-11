@@ -9,8 +9,8 @@ import { task_sync } from './task_sync'
 // ============================================================================
 
 // A device's side of sync, on the platform's storage, listed on the server under the device's name; the callback runs
-// whenever changes from elsewhere land in the database.
-export function create_task_sync_client(storage: SyncStorage, device_name: string, on_remote_change: () => void): SyncClient {
+// whenever changes from elsewhere land in the database; fetch is the platform's own when given.
+export function create_task_sync_client(storage: SyncStorage, device_name: string, on_remote_change: () => void, fetch?: typeof globalThis.fetch): SyncClient {
   return create_sync_client({
     engine: task_sync,
     database: open_database,
@@ -21,6 +21,7 @@ export function create_task_sync_client(storage: SyncStorage, device_name: strin
     changed_event: CHANGED_EVENT,
     client_id_header: CLIENT_ID_HEADER,
     data_name: 'tasks',
-    device_name
+    device_name,
+    fetch
   })
 }

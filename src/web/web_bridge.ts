@@ -82,10 +82,7 @@ export function install_web_bridge(): void {
     get_sync_status: () => Promise.resolve(NO_SYNC),
     connect_sync: () => Promise.reject(new Error('a browser page cannot sync')),
     disconnect_sync: () => Promise.resolve(NO_SYNC),
-    sync_now: () => Promise.resolve(NO_SYNC),
-    get_trusted_certificate: () => Promise.resolve({ pem: '', subject: '' }),
-    set_trusted_certificate: () => Promise.reject(new Error('a browser page uses the browser certificates')),
-    inspect_server_certificate: () => Promise.resolve(null)
+    sync_now: () => Promise.resolve(NO_SYNC)
   }
 
   window.x_tasks = tasks_api
