@@ -39,7 +39,7 @@ export const tasks_events = define_events<TasksEvents>('x_tasks')
 // ============================================================================
 
 // The settings calls the page makes and the main process answers; Android's backup folder calls never leave the phone.
-export type SettingsMethods = Answered<Omit<SettingsApi, 'host' | 'get_backup_folder' | 'choose_backup_folder' | 'certificates' | 'get_trusted_certificate' | 'set_trusted_certificate' | 'inspect_server_certificate'>>
+export type SettingsMethods = Answered<Omit<SettingsApi, 'host' | 'get_backup_folder' | 'choose_backup_folder' | 'certificates'>>
 
 // The settings calls the web server answers too.
 export const SERVED_SETTINGS_METHODS = [

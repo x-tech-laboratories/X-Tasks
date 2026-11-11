@@ -7,13 +7,10 @@ import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-    // Plugins kept in this app are registered before the bridge starts, and the WebView then checks certificates against the trusted authority.
     @Override
     public void onCreate(Bundle savedInstanceState) {
         keep_backup_folder();
-        registerPlugin(TrustedCertificatePlugin.class);
         super.onCreate(savedInstanceState);
-        bridge.setWebViewClient(new TrustingWebViewClient(bridge));
     }
 
     // Backups moved to X-Libs' backup folder plugin, which keeps its folder under its own name; the folder picked before

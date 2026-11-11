@@ -1,9 +1,9 @@
 import { App } from '@capacitor/app'
-import { registerPlugin } from '@capacitor/core'
 
+import { phone_certificates } from '@x-tech-laboratories/x-libs/phone_certificates'
 import { local_sync_storage } from '@x-tech-laboratories/x-libs/web/sync_storage'
 import { indexed_db_files, open_wasm_database } from '@x-tech-laboratories/x-libs/web/sqlite_wasm'
-import type { McpStatus, ServerCertificate, Settings, SettingsApi, TrustedCertificate } from '@shared/settings'
+import type { McpStatus, Settings, SettingsApi } from '@shared/settings'
 import type { TasksApi } from '@shared/tasks'
 import {
   add_tag, add_tag_group, add_task, link_tasks, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
@@ -36,13 +36,6 @@ const SYNC_CONFIG_KEY = 'x-tasks-sync'
 // ============================================================================
 
 const MCP_OFF: McpStatus = { state: 'off', url: '', error: '' }
-
-// The app's own native plugin, which keeps the authority where the WebView checks server certificates.
-const trusted_certificate_plugin = registerPlugin<{
-  get: () => Promise<TrustedCertificate>
-  set: (options: { pem: string }) => Promise<{ subject: string }>
-  inspect: (options: { url: string }) => Promise<ServerCertificate>
-}>('TrustedCertificate')
 
 // Each call runs straight on the database in this page; answers are promises so the page treats them as it does the desktop's.
 function answer<Args extends unknown[], Result>(call: (...args: Args) => Result): (...args: Args) => Promise<Result> {
@@ -125,13 +118,7 @@ export async function install_android_bridge(): Promise<void> {
     connect_sync: sync.connect,
     disconnect_sync: answer(sync.disconnect),
     sync_now: sync.sync_now,
-    get_trusted_certificate: () => trusted_certificate_plugin.get(),
-    set_trusted_certificate: async (pem) => ({ pem: pem.trim(), subject: (await trusted_certificate_plugin.set({ pem })).subject }),
-    // The plugin answers with an empty certificate when there is nothing to offer.
-    inspect_server_certificate: async (server_url) => {
-      const certificate = await trusted_certificate_plugin.inspect({ url: server_url }).catch(() => null)
-      return certificate?.pem ? certificate : null
-    }
+    certificates: phone_certificates()
   }
 
   window.x_tasks = tasks_api

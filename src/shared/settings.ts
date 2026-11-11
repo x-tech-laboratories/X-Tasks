@@ -390,26 +390,7 @@ export interface SettingsApi {
   connect_sync: (server_url: string, credentials: SyncCredentials | string | null, direction: SyncDirection) => Promise<SyncStatus>
   disconnect_sync: () => Promise<SyncStatus>
   sync_now: () => Promise<SyncStatus>
-  // Server certificates the desktop app trusts, such as a home server's self-signed one.
+  // Server certificates the device trusts, such as a home server's self-signed one; a browser uses its own.
   certificates?: CertificateClient
-  // Android's certificate authority, as PEM, that the app trusts for a server with a private or self-signed certificate.
-  get_trusted_certificate?: () => Promise<TrustedCertificate>
-  // Saves Android's authority, or forgets it when given an empty text, and answers with the name it was issued to.
-  set_trusted_certificate?: (pem: string) => Promise<TrustedCertificate>
-  // The authority behind a server certificate Android does not trust, or null when it is trusted or cannot be read.
-  inspect_server_certificate?: (server_url: string) => Promise<ServerCertificate | null>
 }
 
-export interface TrustedCertificate {
-  pem: string
-  // The name the certificate was issued to, such as "CN=TechNet Root CA"; empty when none is set.
-  subject: string
-}
-
-// An authority a server's certificate chain leads to, offered to the user to trust.
-export interface ServerCertificate {
-  pem: string
-  subject: string
-  // The SHA-256 fingerprint as colon-separated hex, for checking against the authority's own copy.
-  fingerprint: string
-}
