@@ -16,14 +16,15 @@ async function current_failure(): Promise<{ key: string; server_url: string }> {
   return { key: `${status.server_url} ${status.error}`, server_url: status.server_url }
 }
 
-// Asks the user to trust the server's authority whenever sync fails because this device does not know it.
+// Asks Android's user to trust the server's authority whenever sync fails because the phone does not know it.
 export function UntrustedCertificatePrompt() {
   const [offer, set_offer] = useState<{ certificate: ServerCertificate; server_url: string } | null>(null)
   const inspected_failure = useRef('')
   const declined = useRef(new Set<string>())
 
   useEffect(() => {
-    if (window.x_settings.host === 'web') return
+    const inspect = window.x_settings.inspect_server_certificate
+    if (!inspect) return
     let is_checking = false
     const check = async (): Promise<void> => {
       if (is_checking) return
@@ -34,7 +35,7 @@ export function UntrustedCertificatePrompt() {
         if (failure.key === inspected_failure.current) return
         inspected_failure.current = failure.key
         if (!failure.key) return
-        const certificate = await window.x_settings.inspect_server_certificate(failure.server_url)
+        const certificate = await inspect(failure.server_url)
         if (certificate && !declined.current.has(certificate.fingerprint)) set_offer({ certificate, server_url: failure.server_url })
       } finally {
         is_checking = false
@@ -81,7 +82,7 @@ export function CertificateDialog({ certificate, server_url, on_close }: Certifi
     set_is_busy(true)
     set_error('')
     try {
-      await window.x_settings.set_trusted_certificate(certificate.pem)
+      await window.x_settings.set_trusted_certificate?.(certificate.pem)
       void window.x_settings.sync_now()
       on_close(true)
     } catch (caught) {

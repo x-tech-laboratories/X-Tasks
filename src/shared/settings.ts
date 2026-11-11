@@ -1,3 +1,4 @@
+import type { CertificateClient } from '@x-tech-laboratories/x-libs/certificate_protocol'
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
 import type { RelativeRange } from '@x-tech-laboratories/x-libs/date_ranges'
 import type { SyncCredentials, SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
@@ -389,12 +390,14 @@ export interface SettingsApi {
   connect_sync: (server_url: string, credentials: SyncCredentials | string | null, direction: SyncDirection) => Promise<SyncStatus>
   disconnect_sync: () => Promise<SyncStatus>
   sync_now: () => Promise<SyncStatus>
-  // The certificate authority, as PEM, that the app trusts for a server with a private or self-signed certificate.
-  get_trusted_certificate: () => Promise<TrustedCertificate>
-  // Saves the authority, or forgets it when given an empty text, and answers with the name it was issued to.
-  set_trusted_certificate: (pem: string) => Promise<TrustedCertificate>
-  // The authority behind a server certificate this device does not trust, or null when it is trusted or cannot be read.
-  inspect_server_certificate: (server_url: string) => Promise<ServerCertificate | null>
+  // Server certificates the desktop app trusts, such as a home server's self-signed one.
+  certificates?: CertificateClient
+  // Android's certificate authority, as PEM, that the app trusts for a server with a private or self-signed certificate.
+  get_trusted_certificate?: () => Promise<TrustedCertificate>
+  // Saves Android's authority, or forgets it when given an empty text, and answers with the name it was issued to.
+  set_trusted_certificate?: (pem: string) => Promise<TrustedCertificate>
+  // The authority behind a server certificate Android does not trust, or null when it is trusted or cannot be read.
+  inspect_server_certificate?: (server_url: string) => Promise<ServerCertificate | null>
 }
 
 export interface TrustedCertificate {

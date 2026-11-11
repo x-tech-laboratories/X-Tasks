@@ -1,3 +1,4 @@
+import { certificate_method_names, type CertificateMethods } from '@x-tech-laboratories/x-libs/certificate_protocol'
 import { define_bridge } from '@x-tech-laboratories/x-libs/electron/bridge'
 import { define_events } from '@x-tech-laboratories/x-libs/electron/events'
 
@@ -38,7 +39,7 @@ export const tasks_events = define_events<TasksEvents>('x_tasks')
 // ============================================================================
 
 // The settings calls the page makes and the main process answers; Android's backup folder calls never leave the phone.
-export type SettingsMethods = Answered<Omit<SettingsApi, 'host' | 'get_backup_folder' | 'choose_backup_folder'>>
+export type SettingsMethods = Answered<Omit<SettingsApi, 'host' | 'get_backup_folder' | 'choose_backup_folder' | 'certificates' | 'get_trusted_certificate' | 'set_trusted_certificate' | 'inspect_server_certificate'>>
 
 // The settings calls the web server answers too.
 export const SERVED_SETTINGS_METHODS = [
@@ -47,11 +48,13 @@ export const SERVED_SETTINGS_METHODS = [
 
 // The settings calls only the desktop app answers, since they open folders or sync this device.
 export const DESKTOP_SETTINGS_METHODS = [
-  'show_database_folder', 'show_backup_folder', 'get_sync_status', 'connect_sync', 'disconnect_sync', 'sync_now',
-  'get_trusted_certificate', 'set_trusted_certificate', 'inspect_server_certificate'
+  'show_database_folder', 'show_backup_folder', 'get_sync_status', 'connect_sync', 'disconnect_sync', 'sync_now'
 ] as const satisfies readonly (keyof SettingsMethods)[]
 
 export const settings_bridge = define_bridge<SettingsMethods>('x_settings', [...SERVED_SETTINGS_METHODS, ...DESKTOP_SETTINGS_METHODS])
+
+// Server certificates the desktop app trusts, which the preload puts on the settings api.
+export const certificate_bridge = define_bridge<CertificateMethods>('x_tasks_certificates', certificate_method_names)
 
 // ============================================================================
 // Completeness checks
