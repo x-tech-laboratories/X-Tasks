@@ -10,6 +10,17 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Attach files, links and images to a task
 - [ ] Archive completed tasks out of the active list
 - [ ] Simple counters and stopwatches for habits, one click from the top bar
+- [ ] Cancel a task: close it without completing it, leaving it out of done counts and reports
+- [ ] Percent complete on a task, following its subtasks, with a progress bar on its row
+- [ ] A colour of a task's own, apart from its tags' colours
+- [ ] A Trash view that keeps deleted tasks to restore one by one or all at once, and takes tasks
+  dropped onto it
+- [ ] Show or hide completed tasks in any view, with completed tasks moved to the bottom
+- [ ] Sort the list layout by priority, date or title, as the table can
+- [ ] Choose whether new tasks go at the top or the bottom of the list
+- [ ] Clickable links in task titles
+- [ ] Copy a task's text from its right-click menu
+- [ ] A window listing every keyboard shortcut
 
 ## Time tracking
 
@@ -35,6 +46,8 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Import issues from Jira, GitHub, GitLab, Gitea, Redmine and OpenProject as tasks, sending
   status back where the service allows
 - [ ] Show CalDAV and iCal calendar events beside tasks
+- [ ] Import and export tasks as iCalendar (.ics) files, including files dropped onto the window
+- [ ] Sync tasks both ways with CalDAV servers such as Nextcloud
 
 ## Tags
 
@@ -44,6 +57,9 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 
 - [ ] Show an error when a database call fails instead of leaving the screen out of step
 - [ ] Export and import tasks as JSON
+- [ ] Keep running in the background and start at login, so reminders arrive with the window closed
+- [ ] Choose which side the details panel opens on, and whether clicking a row opens its details or
+  folds its subtasks
 - [ ] Reorder and tag tasks by touch, since dragging needs a mouse
 - [ ] Sync through WebDAV, Dropbox or a local file as well as the server, with end-to-end encryption
 - [ ] Plugins
@@ -64,3 +80,5 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Review Trilium addons for features
 - [ ] Review Super Productivity for features (a first pass added the items above; check its
   current docs for newer ones)
+- [ ] Review Errands for features (a first pass against 51.0.6 added the items above; recheck items
+  from 46.x and earlier as the C rewrite brings them back)
