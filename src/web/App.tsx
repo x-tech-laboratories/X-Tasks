@@ -1201,7 +1201,8 @@ export function App({ account }: { account?: SignedInAccount }) {
       theme={theme}
       tools={multibar}
       sidebar={sidebar}
-      sidebar_foot={<SidebarFoot theme={theme} is_settings_open={is_settings_open} on_open_settings={open_settings} />}
+      sidebar_foot={<SidebarFoot on_open_settings={open_settings} />}
+      settings={{ href: '?settings', active: is_settings_open, on_open: open_settings }}
       sidebar_width={{
         default_width: DEFAULT_SETTINGS.sidebar_width,
         min: SIDEBAR_WIDTH_RANGE.min,

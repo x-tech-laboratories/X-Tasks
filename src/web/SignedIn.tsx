@@ -62,7 +62,7 @@ export function SignedIn({ children }: { children: (account: SignedInAccount) =>
       user={me.name}
       user_href="#/account"
       on_logout={signed_in.sign_out}
-      sections={[{ id: 'tasks', label: 'Tasks', href: '#/' }, { id: 'account', label: 'Your account', href: '#/account' }, ...(is_admin ? [{ id: 'users', label: 'Users', href: '#/users' }] : [])]}
+      sections={[{ id: 'tasks', label: 'Tasks', href: '#/' }, ...(is_admin ? [{ id: 'users', label: 'Users', href: '#/users' }] : [])]}
       active={hash.slice(2)}
     >
       {page}

@@ -55,10 +55,10 @@ describe('the frame', () => {
     expect(screen.queryByText('Write report')).toBeNull()
   })
 
-  test('the theme button saves the next theme as a setting and sets it on the page', async () => {
+  test('the theme row in the sidebar foot saves the next theme as a setting and sets it on the page', async () => {
     const { settings_api } = await show_app({ theme: 'system' })
 
-    fireEvent.click(screen.getByRole('button', { name: /Theme: system/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'System theme' }))
 
     expect(settings_api.set_setting).toHaveBeenCalledWith('theme', 'light')
     expect(document.documentElement.dataset.theme).toBe('light')
