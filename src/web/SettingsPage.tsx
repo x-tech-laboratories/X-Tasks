@@ -8,7 +8,7 @@ import { SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_setting
 import { BackupSettings } from '@x-tech-laboratories/x-libs/web/react/backup_settings'
 import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratories/x-libs/date_ranges'
-import { describe_rule } from 'recurrence-input'
+import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
 import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'

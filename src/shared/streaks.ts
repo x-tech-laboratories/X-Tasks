@@ -1,4 +1,4 @@
-import { next_occurrence } from 'recurrence-input'
+import { next_occurrence } from '@x-tech-laboratories/x-libs/recurrence'
 
 import { format_local, has_time, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { recurrence_anchor, rule_format } from '@shared/schedule'
