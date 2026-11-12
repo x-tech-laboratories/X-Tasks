@@ -19,6 +19,8 @@ const FORM_ID = 'recurrence_picker_form'
 
 // Hourly rules and set times stay available for a task without a time, which gets one when the rule is saved.
 // The picker's form refuses to submit while the rule has a field it cannot read.
+// The element shows its standard features by default; a features prop would crash, since React assigns it to the
+// element's read-only features property instead of setting the attribute.
 export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: RecurrencePickerProps) {
   const input_ref = useRef<RecurrenceInputElement>(null)
 
@@ -41,7 +43,7 @@ export function RecurrencePicker({ recurrence, anchor, on_save, on_close }: Recu
       }
     >
       <form id={FORM_ID} onSubmit={save}>
-        <recurrence-input ref={input_ref} value={recurrence} features="standard" time-mode="floating" start={anchor ?? undefined} />
+        <recurrence-input ref={input_ref} value={recurrence} time-mode="floating" start={anchor ?? undefined} />
       </form>
     </Dialog>
   )

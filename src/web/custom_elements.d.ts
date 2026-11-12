@@ -8,7 +8,6 @@ declare module 'react' {
       'recurrence-input': HTMLAttributes<RecurrenceInputElement> & {
         ref?: Ref<RecurrenceInputElement>
         value?: string
-        features?: string
         start?: string
         'time-mode'?: 'utc' | 'floating'
         'all-day'?: boolean
