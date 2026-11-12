@@ -1,5 +1,4 @@
-import { next_theme, type Theme, type ThemeChoice } from '@x-tech-laboratories/x-libs/web/theme'
-import { useEffect, useState, type DragEvent, type FormEvent, type MouseEvent } from 'react'
+import { useState, type DragEvent, type FormEvent, type MouseEvent } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { ColorDot } from '@x-tech-laboratories/x-libs/web/react/badges'
@@ -301,81 +300,12 @@ export function Sidebar({
 // ============================================================================
 
 interface SidebarFootProps {
-  theme: ThemeChoice
-  is_settings_open: boolean
   on_open_settings: () => void
 }
 
-// The sync button and the way into Settings, at the foot of the sidebar.
-export function SidebarFoot({ theme, is_settings_open, on_open_settings }: SidebarFootProps) {
-  return (
-    <>
-      <SyncButton on_open_settings={on_open_settings} />
-      <ThemeRow choice={theme} />
-      <a
-        href="?settings"
-        className={cx('tree-row', is_settings_open && 'active')}
-        aria-current={is_settings_open ? 'page' : undefined}
-        onClick={(event) => {
-          event.preventDefault()
-          on_open_settings()
-        }}
-      >
-        <span className="tree-label">
-          <CogIcon />
-          <span>Settings</span>
-        </span>
-      </a>
-    </>
-  )
-}
-
-// A cogwheel for the Settings link.
-// The theme picker as a sidebar row: its icon and name, stepping to the next theme on each click.
-const THEME_NAMES: Record<Theme, string> = { system: 'System theme', light: 'Light theme', dark: 'Dark theme' }
-
-function ThemeRow({ choice }: { choice: ThemeChoice }) {
-  const [theme, set_theme] = useState(choice.get())
-  useEffect(() => choice.on_change(set_theme), [choice])
-
-  return (
-    <button className="tree-row" title="Click to change the theme" onClick={() => choice.set(next_theme(choice.get()))}>
-      <span className="tree-label">
-        <ThemeIcon theme={theme} />
-        <span>{THEME_NAMES[theme]}</span>
-      </span>
-    </button>
-  )
-}
-
-// A sun for light, a moon for dark, and a half-filled circle for following the system.
-function ThemeIcon({ theme }: { theme: Theme }) {
-  return (
-    <svg className="line-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {theme === 'light' && (
-        <>
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-        </>
-      )}
-      {theme === 'dark' && <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />}
-      {theme === 'system' && (
-        <>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
-        </>
-      )}
-    </svg>
-  )
-}
-
-function CogIcon() {
-  return (
-    <svg className="line-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
+// The sync button, at the foot of the sidebar above the Shell's own theme, account and Settings rows.
+export function SidebarFoot({ on_open_settings }: SidebarFootProps) {
+  return <SyncButton on_open_settings={on_open_settings} />
 }
 
 // Two circling arrows for the sync button; they turn while a sync runs.
