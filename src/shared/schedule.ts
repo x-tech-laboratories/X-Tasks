@@ -1,6 +1,6 @@
 import { add_days, add_months, days_between, format_local, has_time, parse_local, start_of_day } from '@x-tech-laboratories/x-libs/dates'
 import { format_duration } from '@x-tech-laboratories/x-libs/durations'
-import { describe_rule, next_from_now, next_occurrence, parse_rule, type RuleFormat } from 'recurrence-input'
+import { describe_rule, next_from_now, next_occurrence, parse_rule, type RuleFormat } from '@x-tech-laboratories/x-libs/recurrence'
 
 import { DURATION_UNITS, type OverdueRepeatReschedule, type RescheduleOption, type TaskDateField, type TaskDuration } from '@shared/settings'
 import type { Task, TaskSchedule } from '@shared/tasks'
