@@ -89,21 +89,28 @@ A rule with no conditions matches every task. The dialog shows how many tasks ma
 | Condition                 | Reads as                                                                                   |
 | :------------------------ | :----------------------------------------------------------------------------------------- |
 | **Status**                | is done · is not done                                                                      |
-| **Tag**                   | is · is not *a plain tag* (including the tags inside it)                                   |
-| **Filter group**          | has a tag from · has no tag from *a plain group*                                           |
+| **Tag**                   | is · is not *a plain tag* (including the tags inside it), *held by*                        |
+| **Filter group**          | has a tag from · has no tag from *a plain group*, *held by*                                |
 | **Due date**              | is overdue · is today · is within the next *N* days · is set · is not set                  |
 | **Start date**            | has passed · has not passed or is not set · has passed or is not set · is not set          |
 | **Completed in the last** | *N* days                                                                                   |
 | **Repeats**               | yes · no                                                                                   |
 | **Nesting**               | is a subtask · is a top-level task                                                         |
 | **Open subtasks**         | has some · has none                                                                        |
-| **Tags**                  | has a tag · has no tags                                                                    |
+| **Tags**                  | has a tag · has no tags, *held by*                                                         |
 | **Title contains**        | *some text* (not case-sensitive)                                                           |
 | **Relationship**          | has · has no *relationship* (or any) to any task · an open task · a chosen task            |
 
-Tag, Filter group and Tags conditions look at the task's own tags **and those of every task above it**, the same way
-sidebar filters do. Conditions refer to plain tags and groups, so rule tags are always built from things you set
-yourself.
+Tag, Filter group and Tags conditions end with whose tags they read:
+
+- **on the task or one above it** (the default): the task's own tags and those of every task above it, the same way
+  sidebar filters do, so a subtask of a *Work* task counts as *Work*.
+- **on the task itself**: only the tags set on the task.
+- **on a task above it**: only the tags of its parent, its parent's parent and so on.
+
+Combine them to tell the two apart: Tags *has no tags on the task itself* and Tags *has a tag on a task above it*
+finds untagged subtasks of tagged tasks. Conditions refer to plain tags and groups, so rule tags are always built from
+things you set yourself.
 
 ### Ideas
 

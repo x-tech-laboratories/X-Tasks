@@ -1,5 +1,5 @@
 import type { Settings, TagMatch, TagScope, TagSelection, TaskDateField } from '@shared/settings'
-import { type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
+import { task_and_ancestors, type Tag, type TagGroup, type Task, type View } from '@shared/tasks'
 import { has_time } from '@x-tech-laboratories/x-libs/dates'
 import { task_date_of } from '@shared/schedule'
 import { rule_matches } from './rules'
@@ -190,19 +190,6 @@ export function view_without_tags(view: View, removed_ids: Set<string>): View {
 // ============================================================================
 // Trees
 // ============================================================================
-
-function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
-  const chain = [task]
-  let parent = all_tasks.find((each) => each.id === task.parent_id)
-
-  while (parent && !chain.includes(parent)) {
-    chain.push(parent)
-    const parent_id = parent.parent_id
-    parent = all_tasks.find((each) => each.id === parent_id)
-  }
-
-  return chain
-}
 
 // Names a tag by its whole branch, such as "Work › Clients".
 export function tag_path(tag: Tag, tags: Tag[]): string {
