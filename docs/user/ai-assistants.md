@@ -17,7 +17,7 @@ The desktop app can let AI assistants on your computer read and change your task
    claude mcp add --transport http x-tasks http://127.0.0.1:3917/mcp
    ```
 
-The assistant can then list tasks and tags, add tasks and subtasks, change, complete, reopen, tag, untag, link,
+The assistant can then list tasks and tags, add tasks and subtasks, change, move, complete, reopen, tag, untag, link,
 unlink and delete them. Only programs on your own computer can reach the server.
 
 {: .warning }

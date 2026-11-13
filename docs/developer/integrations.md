@@ -21,6 +21,7 @@ MCP server** is on. It listens on loopback only.
 | `list_tags`    | Tag groups, each with its tags; rule tags are marked and cannot be given by hand      |
 | `add_task`     | Adds a task, or a subtask when `parent_id` is given                                   |
 | `update_task`  | Changes a task; fields left out stay as they are                                      |
+| `move_task`    | Moves a task and its subtasks before, after or inside another, or to the top level    |
 | `complete_task`| Completes a task and its subtasks; a repeating task moves to its next occurrence     |
 | `reopen_task`  | Marks a completed task not done                                                       |
 | `tag_task`     | Gives a tag; in a one-tag-per-task group it replaces the old one                      |

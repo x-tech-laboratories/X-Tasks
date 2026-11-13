@@ -5,11 +5,12 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod'
 
 import { format_local } from '@x-tech-laboratories/x-libs/dates'
+import { can_drop, children_of, move_for_drop } from '@x-tech-laboratories/x-libs/web/tree'
 import { next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
 import { can_link, links_of, type Task } from '@shared/tasks'
 import {
-  add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
+  add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
   set_task_title, tag_task, unlink_tasks, untag_task
 } from './task_database'
 
@@ -192,6 +193,34 @@ function create_mcp_server(on_change: () => void): McpServer {
         })
       }
       if (in_my_day !== undefined) set_task_my_day(task_id, in_my_day ? format_local(new Date(), false) : null)
+      return describe_tasks([find_task(task_id)])[0]
+    })
+  )
+
+  server.registerTool(
+    'move_task',
+    {
+      description:
+        'Moves a task, with its subtasks, before or after another task, or inside it as its last subtask. ' +
+        'Without target_id the task goes to the end of the top level. Refused when the target is the task itself or one of its subtasks.',
+      inputSchema: {
+        task_id: z.string(),
+        target_id: z.string().optional().describe('The task to move next to or into; left out, the task goes to the top level'),
+        placement: z.enum(['before', 'after', 'inside']).default('inside').describe('Where the task goes relative to the target')
+      }
+    },
+    changing(({ task_id, target_id, placement }) => {
+      const task = find_task(task_id)
+      const tasks = list_tasks()
+      if (target_id === undefined) {
+        const top_level = children_of(null, tasks).filter((each) => each.id !== task_id)
+        move_task(task_id, null, Math.max(0, ...top_level.map((each) => each.position)) + 1)
+      } else {
+        const target = find_task(target_id)
+        if (!can_drop(task_id, target_id, tasks)) throw new Error('a task cannot move next to or into itself or its own subtasks')
+        const move = move_for_drop(task, target, placement, tasks)
+        move_task(task_id, move.parent_id, move.position)
+      }
       return describe_tasks([find_task(task_id)])[0]
     })
   )
