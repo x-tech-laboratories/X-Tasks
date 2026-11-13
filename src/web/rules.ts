@@ -1,4 +1,4 @@
-import { links_of, type RuleCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import { links_of, task_and_ancestors, type RuleCondition, type Tag, type TagGroup, type TagHolder, type TagRule, type Task } from '@shared/tasks'
 import { days_between, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
 
@@ -23,6 +23,12 @@ export const CONDITION_CHOICES: { kind: ConditionKind; label: string }[] = [
   { kind: 'link', label: 'Relationship' }
 ]
 
+export const TAG_HOLDER_CHOICES: { value: TagHolder; label: string }[] = [
+  { value: 'task_or_above', label: 'on the task or one above it' },
+  { value: 'task', label: 'on the task itself' },
+  { value: 'above', label: 'on a task above it' }
+]
+
 // The condition a row starts as when its kind is picked; a tag or group condition starts on the first plain one.
 export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagGroup[]): RuleCondition {
   switch (kind) {
@@ -45,17 +51,24 @@ export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagG
 // Matching
 // ============================================================================
 
-// A tag, group or tagged condition looks at the task's own tags and those of the tasks above it, as tag filters do.
+// The tags a condition reads; by default the task's own and those of the tasks above it, as tag filters do.
+function held_tag_ids(held_by: TagHolder | undefined, task: Task, all_tasks: Task[], chain_tag_ids: Set<string>): Set<string> {
+  if (held_by === 'task') return new Set(task.tag_ids)
+  if (held_by === 'above') return new Set(task_and_ancestors(task, all_tasks).slice(1).flatMap((each) => each.tag_ids))
+  return chain_tag_ids
+}
+
 export function condition_holds(condition: RuleCondition, task: Task, all_tasks: Task[], chain_tag_ids: Set<string>, tags: Tag[], now: Date): boolean {
   switch (condition.kind) {
     case 'status': return task.is_done === condition.is_done
     case 'tag': {
-      const tag_ids = subtree_ids(condition.tag_id, tags)
-      const has_tag = [...tag_ids].some((id) => chain_tag_ids.has(id))
+      const held_ids = held_tag_ids(condition.held_by, task, all_tasks, chain_tag_ids)
+      const has_tag = [...subtree_ids(condition.tag_id, tags)].some((id) => held_ids.has(id))
       return has_tag === condition.has_tag
     }
     case 'group': {
-      const has_tag = tags.some((tag) => tag.group_id === condition.group_id && chain_tag_ids.has(tag.id))
+      const held_ids = held_tag_ids(condition.held_by, task, all_tasks, chain_tag_ids)
+      const has_tag = tags.some((tag) => tag.group_id === condition.group_id && held_ids.has(tag.id))
       return has_tag === condition.has_tag
     }
     case 'due': {
@@ -78,7 +91,7 @@ export function condition_holds(condition: RuleCondition, task: Task, all_tasks:
     case 'recurring': return (task.recurrence !== '') === condition.is_recurring
     case 'subtask': return (task.parent_id !== null) === condition.is_subtask
     case 'open_subtasks': return all_tasks.some((each) => each.parent_id === task.id && !each.is_done) === condition.has_open
-    case 'tagged': return (chain_tag_ids.size > 0) === condition.is_tagged
+    case 'tagged': return (held_tag_ids(condition.held_by, task, all_tasks, chain_tag_ids).size > 0) === condition.is_tagged
     case 'title': return task.title.toLowerCase().includes(condition.text.trim().toLowerCase())
     case 'link': {
       const has_link = links_of(task, all_tasks).some(

@@ -98,17 +98,21 @@ export type StartCondition = 'started' | 'not_started' | 'passed_or_none' | 'non
 
 export type RuleCondition =
   | { kind: 'status'; is_done: boolean }
-  | { kind: 'tag'; tag_id: string; has_tag: boolean }
-  | { kind: 'group'; group_id: string; has_tag: boolean }
+  | { kind: 'tag'; tag_id: string; has_tag: boolean; held_by?: TagHolder }
+  | { kind: 'group'; group_id: string; has_tag: boolean; held_by?: TagHolder }
   | { kind: 'due'; when: DueCondition; days: number }
   | { kind: 'start'; when: StartCondition }
   | { kind: 'completed_within'; days: number }
   | { kind: 'recurring'; is_recurring: boolean }
   | { kind: 'subtask'; is_subtask: boolean }
   | { kind: 'open_subtasks'; has_open: boolean }
-  | { kind: 'tagged'; is_tagged: boolean }
+  | { kind: 'tagged'; is_tagged: boolean; held_by?: TagHolder }
   | { kind: 'title'; text: string }
   | { kind: 'link'; relationship_id: string; direction: LinkDirection; target: LinkTarget; task_id: string; has_link: boolean }
+
+// Whose tags a tag, group or tagged condition reads: the task's and every task's above it, the task's alone, or only those above it.
+// A condition saved without one reads the task's and those above it.
+export type TagHolder = 'task_or_above' | 'task' | 'above'
 
 // Which way a link condition reads a relationship: by its name, by its inverse name, or either way; an empty relationship means any.
 export type LinkDirection = 'forward' | 'inverse' | 'either'
@@ -199,6 +203,24 @@ export function can_link(task_id: string, other_id: string, relationship: TaskRe
     waiting.push(...(waits_on.get(current_id) ?? []))
   }
   return true
+}
+
+// ============================================================================
+// Trees
+// ============================================================================
+
+// The task followed by its parent, its parent's parent and so on up to the top.
+export function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
+  const chain = [task]
+  let parent = all_tasks.find((each) => each.id === task.parent_id)
+
+  while (parent && !chain.includes(parent)) {
+    chain.push(parent)
+    const parent_id = parent.parent_id
+    parent = all_tasks.find((each) => each.id === parent_id)
+  }
+
+  return chain
 }
 
 // ============================================================================

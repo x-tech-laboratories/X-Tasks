@@ -4,9 +4,9 @@ import { ColorPicker, TreePicker } from '@x-tech-laboratories/x-libs/web/react/c
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { EmojiField } from '@x-tech-laboratories/x-libs/web/react/emoji_picker'
 
-import { EMPTY_RULE, type DueCondition, type LinkDirection, type LinkTarget, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagRule, type Task } from '@shared/tasks'
+import { EMPTY_RULE, type DueCondition, type LinkDirection, type LinkTarget, type RuleCondition, type StartCondition, type Tag, type TagGroup, type TagHolder, type TagRule, type Task } from '@shared/tasks'
 import type { TaskRelationship } from '@shared/settings'
-import { CONDITION_CHOICES, default_condition, rule_matches, type ConditionKind } from './rules'
+import { CONDITION_CHOICES, default_condition, rule_matches, TAG_HOLDER_CHOICES, type ConditionKind } from './rules'
 import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
 import { chain_tag_ids_of, tag_path } from './views'
 
@@ -49,6 +49,15 @@ function TwoWaySelect({ value, labels, on_change }: { value: boolean; labels: [s
     <select value={value ? 'yes' : 'no'} onChange={(event) => on_change(event.currentTarget.value === 'yes')}>
       <option value="yes">{labels[0]}</option>
       <option value="no">{labels[1]}</option>
+    </select>
+  )
+}
+
+// Whose tags a tag condition reads; one saved without a choice reads the task's and those above it.
+function TagHolderSelect({ value, on_change }: { value: TagHolder | undefined; on_change: (held_by: TagHolder) => void }) {
+  return (
+    <select value={value ?? 'task_or_above'} onChange={(event) => on_change(event.currentTarget.value as TagHolder)} aria-label="Held by">
+      {TAG_HOLDER_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
     </select>
   )
 }
@@ -101,6 +110,7 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
                 </option>
               ))}
             </select>
+            <TagHolderSelect value={condition.held_by} on_change={(held_by) => on_change({ ...condition, held_by })} />
           </>
         )
       case 'group':
@@ -115,6 +125,7 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
                 </option>
               ))}
             </select>
+            <TagHolderSelect value={condition.held_by} on_change={(held_by) => on_change({ ...condition, held_by })} />
           </>
         )
       case 'due':
@@ -146,7 +157,10 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
         return <TwoWaySelect value={condition.has_open} labels={['has some', 'has none']} on_change={(has_open) => on_change({ ...condition, has_open })} />
       case 'tagged':
         return (
-          <TwoWaySelect value={condition.is_tagged} labels={['has a tag', 'has no tags']} on_change={(is_tagged) => on_change({ ...condition, is_tagged })} />
+          <>
+            <TwoWaySelect value={condition.is_tagged} labels={['has a tag', 'has no tags']} on_change={(is_tagged) => on_change({ ...condition, is_tagged })} />
+            <TagHolderSelect value={condition.held_by} on_change={(held_by) => on_change({ ...condition, held_by })} />
+          </>
         )
       case 'link': {
         const link_condition = condition
