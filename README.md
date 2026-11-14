@@ -1,5 +1,7 @@
 # X-Tasks
 
+<a href="https://liberapay.com/BeatLink/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
+
 A todo manager built with Electron, React and TypeScript, on the shared X-Libs widgets and Halon styles.
 
 Documentation for users and developers: <https://x-tech-laboratories.github.io/X-Tasks/>, built from [`docs/`](docs/).
