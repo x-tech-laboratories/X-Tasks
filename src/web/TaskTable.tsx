@@ -216,7 +216,9 @@ export function TaskTable(props: TaskTableProps) {
     hideable: column !== 'title',
     movable: column !== 'title',
     filter: filter_of(column),
-    filter_active: is_column_filtered(filters, column)
+    filter_active: is_column_filtered(filters, column),
+    // The view's own Group by setting groups the tasks, so the table offers no grouping of its own.
+    groupable: false
   }))
 
   // ==========================================================================
