@@ -324,13 +324,12 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .report_editor_done { grid-column: 2; }
 
 /* The streak table is a plain list under small headings, apart from the shared table look. */
-.report_table { width: 100%; table-layout: fixed; }
+.report_table table { width: 100%; table-layout: fixed; }
 .report_table thead th { height: auto; padding: var(--space-2) var(--space-3); border: 0; background: none; color: var(--text-tertiary); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
 .report_table tbody td { height: auto; padding: var(--space-3); border-top: var(--border-width) solid var(--border-default); border-bottom: 0; color: var(--text-body); }
 .report_table tbody tr:hover td { background: transparent; }
 .report_table tr.is_subtask td { border-top-style: dashed; }
-.report_table .is_number { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
-.report_table td:first-child { padding-left: calc(var(--space-3) + var(--depth, 0) * var(--space-6)); }
+.report_table .is_number { width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
 .report_table .report_strip_cell { width: 30%; }
 @container (max-width: 440px) { .report_table .report_strip_cell { display: none; } }
 .report_strip_cell .streak_strip { display: flex; flex-wrap: nowrap; justify-content: flex-end; overflow: hidden; }
