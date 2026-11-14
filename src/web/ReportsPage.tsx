@@ -3,6 +3,7 @@ import { useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from
 import { Chip } from '@x-tech-laboratories/x-libs/web/react/badges'
 import { CommitInput, Select, Switch } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { PageHeading, Section, Stack } from '@x-tech-laboratories/x-libs/web/react/layout'
+import { DataTable, type TableColumn } from '@x-tech-laboratories/x-libs/web/react/table'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
 
 import { REPORT_DAYS_RANGE, type ReportWidget, type ReportWidgetKind, type TaskRelationship } from '@shared/settings'
@@ -11,7 +12,7 @@ import type { Completion, Tag, TagGroup, Task } from '@shared/tasks'
 import { StreakStrip } from './StreakStrip'
 import { TaskMap } from './TaskMap'
 import {
-  day_offset, first_report_day, streak_rows, task_map, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of
+  day_offset, first_report_day, streak_rows, task_map, tasks_for_widget, ticks_per_day, ticks_per_tag, ticks_per_week, week_start_of, type StreakRow
 } from './reports'
 import { tag_color_style, tag_path, with_icon } from './views'
 
@@ -241,42 +242,66 @@ interface StreakTableProps {
   on_select_task: (task: Task) => void
 }
 
+// A routine's subtasks nest under it, each row holding the rows a level below it.
+type StreakNode = StreakRow & { children: StreakNode[] }
+
+function streak_tree(rows: StreakRow[]): StreakNode[] {
+  const roots: StreakNode[] = []
+  const path: StreakNode[] = []
+  for (const row of rows) {
+    const node = { ...row, children: [] }
+    path.length = row.depth
+    ;(path[row.depth - 1]?.children ?? roots).push(node)
+    path.push(node)
+  }
+  return roots
+}
+
+const done_share = ({ record }: StreakRow) => (record.due > 0 ? Math.round((record.on_time / record.due) * 100) : null)
+
 // A subtask's streak and share count the routine's ticks it was done in, so the ones often left undone stand out.
 function StreakTable({ widget, widget_tasks, completions, tasks, today, on_select_task }: StreakTableProps) {
-  const rows = streak_rows(widget, widget_tasks, completions, tasks, today)
+  const rows = streak_tree(streak_rows(widget, widget_tasks, completions, tasks, today))
   if (rows.length === 0) return <p className="report_empty">No repeating tasks here.</p>
 
+  const columns: TableColumn<StreakNode>[] = [
+    {
+      label: 'Routine',
+      sort: ({ task }) => task.title,
+      cell: ({ task }) => <button className="report_task_link" onClick={() => on_select_task(task)}>{task.title}</button>
+    },
+    { label: 'Recent', class: 'report_strip_cell', cell: ({ history }) => <StreakStrip history={history} limit={14} /> },
+    {
+      label: 'Streak',
+      class: 'is_number',
+      sort: ({ streak }) => streak.current,
+      cell: ({ streak }) => (streak.current > 0 ? <span className="streak_badge">🔥 {streak.current}</span> : '0')
+    },
+    { label: 'Best', class: 'is_number', sort: ({ streak }) => streak.best, cell: ({ streak }) => streak.best },
+    {
+      label: 'Done',
+      header: <span title="Routines: share of occurrences done on time. Subtasks: share of the routine's ticks they were done in.">Done</span>,
+      class: 'is_number',
+      sort: done_share,
+      cell: (row) => {
+        const share = done_share(row)
+        const { record } = row
+        const title = row.depth > 0 ? `Done in ${record.on_time} of the routine's ${record.due} ticks` : `${record.on_time} of ${record.due} done on time`
+        return <span title={title}>{share === null ? '—' : `${share}%`}</span>
+      }
+    }
+  ]
+
   return (
-    <table className="report_table">
-      <thead>
-        <tr>
-          <th>Routine</th>
-          <th className="report_strip_cell">Recent</th>
-          <th className="is_number">Streak</th>
-          <th className="is_number">Best</th>
-          <th className="is_number" title="Routines: share of occurrences done on time. Subtasks: share of the routine's ticks they were done in.">
-            Done
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(({ task, depth, streak, record, history }) => (
-          <tr key={task.id} className={depth > 0 ? 'is_subtask' : ''}>
-            <td style={{ '--depth': depth } as CSSProperties}>
-              <button className="report_task_link" onClick={() => on_select_task(task)}>{task.title}</button>
-            </td>
-            <td className="report_strip_cell">
-              <StreakStrip history={history} limit={14} />
-            </td>
-            <td className="is_number">{streak.current > 0 ? <span className="streak_badge">🔥 {streak.current}</span> : '0'}</td>
-            <td className="is_number">{streak.best}</td>
-            <td className="is_number" title={depth > 0 ? `Done in ${record.on_time} of the routine's ${record.due} ticks` : `${record.on_time} of ${record.due} done on time`}>
-              {record.due > 0 ? `${Math.round((record.on_time / record.due) * 100)}%` : '—'}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable<StreakNode>
+      columns={columns}
+      rows={rows}
+      row_key={({ task }) => task.id}
+      get_children={({ children }) => children}
+      row_class={({ depth }) => (depth > 0 ? 'is_subtask' : undefined)}
+      caption="Routine streaks"
+      wrap_class="report_table"
+    />
   )
 }
 
