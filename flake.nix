@@ -95,7 +95,9 @@
           version = (builtins.fromJSON (builtins.readFile ./package.json)).version;
           src = self;
 
-          npmDepsHash = "sha256-57s5t6A3GAuYYq2gKCWckuwvrLiGN0EDoWHQPZ69vek=";
+          # Read from package-lock.json, so there is no deps hash to keep in step with it.
+          npmDeps = pkgs.importNpmLock { npmRoot = ./.; };
+          npmConfigHook = pkgs.importNpmLock.npmConfigHook;
           inherit nodejs;
 
           # The npm-downloaded Electron cannot run on NixOS and the download needs the network.
