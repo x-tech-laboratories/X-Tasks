@@ -7,6 +7,7 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- Condition groups in rule tags, each matching all or any of its own conditions, nested to any depth
 - History of every change to a task, with word-level diffs, on a History page and from a task's
   details, and restoring any version as a new one
 - Sync history between devices, and delete history older than a set number of days, as a setting

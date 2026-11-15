@@ -33,12 +33,16 @@ const START_CHOICES: { value: StartCondition; label: string }[] = [
 // Condition row
 // ============================================================================
 
-interface ConditionRowProps {
-  condition: RuleCondition
+// What every condition row reads its choices from.
+interface ConditionChoices {
   tags: Tag[]
   groups: TagGroup[]
   tasks: Task[]
   relationships: TaskRelationship[]
+}
+
+interface ConditionRowProps extends ConditionChoices {
+  condition: RuleCondition
   on_change: (condition: RuleCondition) => void
   on_remove: () => void
 }
@@ -90,7 +94,17 @@ function link_side_choices(relationships: TaskRelationship[]): { value: string; 
   )
 }
 
-function ConditionRow({ condition, tags, groups, tasks, relationships, on_change, on_remove }: ConditionRowProps) {
+function MatchSelect({ value, on_change }: { value: TagRule['match']; on_change: (match: TagRule['match']) => void }) {
+  return (
+    <select value={value} onChange={(event) => on_change(event.currentTarget.value as TagRule['match'])} aria-label="Match">
+      <option value="all">all</option>
+      <option value="any">any</option>
+    </select>
+  )
+}
+
+function ConditionRow({ condition, on_change, on_remove, ...choices }: ConditionRowProps) {
+  const { tags, groups, tasks, relationships } = choices
   const plain_tags = tags.filter((tag) => !tag.rule)
   const plain_groups = groups.filter((group) => !group.is_rule)
 
@@ -208,6 +222,14 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
             aria-label="Title text"
           />
         )
+      case 'nested':
+        return (
+          <>
+            <span className="rule_unit">matching</span>
+            <MatchSelect value={condition.match} on_change={(match) => on_change({ ...condition, match })} />
+            <span className="rule_unit">of</span>
+          </>
+        )
     }
   }
 
@@ -224,7 +246,58 @@ function ConditionRow({ condition, tags, groups, tasks, relationships, on_change
       <button type="button" className="icon remove" onClick={on_remove} aria-label="Remove condition">
         ×
       </button>
+      {condition.kind === 'nested' && (
+        <div className="rule_nested">
+          <ConditionList rule={condition} on_change={(rule) => on_change({ ...condition, ...rule })} {...choices} />
+        </div>
+      )}
     </li>
+  )
+}
+
+// ============================================================================
+// Condition list
+// ============================================================================
+
+interface ConditionListProps extends ConditionChoices {
+  rule: TagRule
+  on_change: (rule: TagRule) => void
+}
+
+// A rule's conditions, each a row, with buttons to add a condition or a nested group of them.
+function ConditionList({ rule, on_change, ...choices }: ConditionListProps) {
+  function change_condition(index: number, condition: RuleCondition): void {
+    on_change({ match: rule.match, conditions: rule.conditions.map((each, at) => (at === index ? condition : each)) })
+  }
+
+  function remove_condition(index: number): void {
+    on_change({ match: rule.match, conditions: rule.conditions.filter((_each, at) => at !== index) })
+  }
+
+  function add_condition(kind: ConditionKind): void {
+    on_change({ match: rule.match, conditions: [...rule.conditions, default_condition(kind, choices.tags, choices.groups)] })
+  }
+
+  return (
+    <>
+      <ul className="rule_conditions">
+        {rule.conditions.map((condition, index) => (
+          <ConditionRow
+            key={index}
+            condition={condition}
+            on_change={(changed) => change_condition(index, changed)}
+            on_remove={() => remove_condition(index)}
+            {...choices}
+          />
+        ))}
+      </ul>
+      {rule.conditions.length === 0 && <p className="setting-hint">With no conditions, every task matches.</p>}
+
+      <div className="rule_add">
+        <button type="button" onClick={() => add_condition('status')}>Add condition</button>
+        <button type="button" onClick={() => add_condition('nested')}>Add group</button>
+      </div>
+    </>
   )
 }
 
@@ -269,14 +342,6 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
   const condition_tags = tags.filter((tag) => !own_ids.has(tag.id))
   const hand_count = tag_id ? tasks.filter((task) => task.tag_ids.includes(tag_id)).length : 0
   const match_count = tasks.filter((task) => rule_matches(rule_draft, task, tasks, chain_tag_ids_of(task, tasks), tags)).length
-
-  function change_condition(index: number, condition: RuleCondition): void {
-    set_rule_draft({ ...rule_draft, conditions: rule_draft.conditions.map((each, at) => (at === index ? condition : each)) })
-  }
-
-  function remove_condition(index: number): void {
-    set_rule_draft({ ...rule_draft, conditions: rule_draft.conditions.filter((_each, at) => at !== index) })
-  }
 
   function save(event: FormEvent): void {
     event.preventDefault()
@@ -330,36 +395,11 @@ export function FilterDialog({ heading, name, rule, color, icon, shows_on_rows, 
           <>
             <div className="rule_match">
               Tasks matching
-              <select value={rule_draft.match} onChange={(event) => set_rule_draft({ ...rule_draft, match: event.currentTarget.value as TagRule['match'] })} aria-label="Match">
-                <option value="all">all</option>
-                <option value="any">any</option>
-              </select>
+              <MatchSelect value={rule_draft.match} on_change={(match) => set_rule_draft({ ...rule_draft, match })} />
               of these conditions
             </div>
 
-            <ul className="rule_conditions">
-              {rule_draft.conditions.map((condition, index) => (
-                <ConditionRow
-                  key={index}
-                  condition={condition}
-                  tags={condition_tags}
-                  groups={groups}
-                  tasks={tasks}
-                  relationships={relationships}
-                  on_change={(changed) => change_condition(index, changed)}
-                  on_remove={() => remove_condition(index)}
-                />
-              ))}
-            </ul>
-            {rule_draft.conditions.length === 0 && <p className="setting-hint">With no conditions, every task matches.</p>}
-
-            <button
-              type="button"
-              className="fit-content"
-              onClick={() => set_rule_draft({ ...rule_draft, conditions: [...rule_draft.conditions, default_condition('status', condition_tags, groups)] })}
-            >
-              Add condition
-            </button>
+            <ConditionList rule={rule_draft} on_change={set_rule_draft} tags={condition_tags} groups={groups} tasks={tasks} relationships={relationships} />
           </>
         )}
       </form>

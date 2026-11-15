@@ -71,7 +71,8 @@ Rule tags live in rule groups. Create a group of type **Rule tags**, then add a 
 editor.
 
 1. Choose whether tasks must match **all** of the conditions or **any** of them.
-2. Add conditions. Each one is a row: pick a kind, then fill in the rest.
+2. Add conditions. Each one is a row: pick a kind, then fill in the rest. **Add group** adds a condition group, which
+   has its own **all** or **any** and its own conditions, and can hold further groups to any depth.
 3. Save. The tag now applies itself to every matching task, and keeps doing so as tasks change.
 
 A rule with no conditions matches every task. The dialog shows how many tasks match as you edit.
@@ -94,6 +95,7 @@ A rule with no conditions matches every task. The dialog shows how many tasks ma
 | **Tags**                  | has a tag · has no tags, *held by*                                                         |
 | **Title contains**        | *some text* (not case-sensitive)                                                           |
 | **Relationship**          | has · has no *relationship* (or any) to any task · an open task · a chosen task            |
+| **Condition group**       | matching all · any of *the conditions inside it*, which may include more groups            |
 
 Tag, Filter group and Tags conditions end with whose tags they read:
 
@@ -113,5 +115,6 @@ things you set yourself.
 - **Stale someday:** Status *is not done*; Due date *is not set*; Start date *is not set*.
 - **Unprioritised work:** Tag *is* Work; Filter group *has no tag from* Priority.
 - **Routines done today:** Repeats *yes*; Completed in the last *1 day*.
+- **Urgent:** Status *is not done*, and a Condition group matching *any* of Tag *is* High and Due date *is today*.
 
 Limit a card on the [Reports](/user/reports/) page to a rule tag to chart only the tasks it matches.

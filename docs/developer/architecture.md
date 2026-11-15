@@ -61,7 +61,8 @@ The types in `src/shared/tasks.ts` describe it:
 - **TagGroup** — a named sidebar section, either plain or rule (`is_rule`), optionally single-choice.
 - **Tag** — belongs to a group, may have a `parent_id` for nesting, a colour, an icon, and, in a rule group, a
   `TagRule`.
-- **TagRule** — `match: 'all' | 'any'` and a list of `RuleCondition`s.
+- **TagRule** — `match: 'all' | 'any'` and a list of `RuleCondition`s. A `nested` condition is itself a `TagRule`,
+  so groups of all and any conditions nest to any depth.
 - **Completion** — one tick of a task, kept for streaks and reports.
 
 ### One list, nested
