@@ -1,16 +1,10 @@
 ---
 title: Tags and filters
-parent: User guide
-nav_order: 3
+sidebar:
+  order: 3
 ---
 
-# Tags and filters
-{: .no_toc }
-
-1. TOC
-{:toc}
-
-Read [Core concepts](core-concepts.html#filter-groups-and-tags) first for why tags work the way they do. This page is
+Read [Core concepts](/user/core-concepts/#filter-groups-and-tags) first for why tags work the way they do. This page is
 the how-to.
 
 ## Filter groups
@@ -43,7 +37,7 @@ Each plain group also appears as a section in a task's details, and as a column 
 - Drag a task (or several selected tasks) onto a tag in the sidebar.
 - Choose **Tags…** in a task's right-click menu.
 - Type them when adding the task, such as `#work` with the Todoist syntax (see
-  [Quick add and search](views-and-layouts.html#quick-add-and-search)).
+  [Quick add and search](/user/views-and-layouts/#quick-add-and-search)).
 
 ### Colours and icons
 
@@ -64,7 +58,7 @@ Click a tag to show its tasks; click it again to clear it. Three settings in Set
 With the defaults, clicking *Work* under Area and *P1* under Priority shows the tasks that are both Work and P1, and
 clicking *Client B* also shows tasks tagged *Client B › Website*.
 
-![The "Due this week" rule tag selected in the sidebar; rule tags show ƒ and a count, and a dashed outline on rows]({{ '/assets/screenshots/rule-tag-view.png' | relative_url }})
+![The "Due this week" rule tag selected in the sidebar; rule tags show ƒ and a count, and a dashed outline on rows](/assets/screenshots/rule-tag-view.png)
 
 **Show empty tags** can be turned off to hide tags no task has.
 
@@ -82,7 +76,7 @@ editor.
 
 A rule with no conditions matches every task. The dialog shows how many tasks match as you edit.
 
-![The rule editor: Status is not done, Filter group has no tag from Projects, Nesting is a top-level task]({{ '/assets/screenshots/rule-editor.png' | relative_url }})
+![The rule editor: Status is not done, Filter group has no tag from Projects, Nesting is a top-level task](/assets/screenshots/rule-editor.png)
 
 ### Conditions
 
@@ -120,4 +114,4 @@ things you set yourself.
 - **Unprioritised work:** Tag *is* Work; Filter group *has no tag from* Priority.
 - **Routines done today:** Repeats *yes*; Completed in the last *1 day*.
 
-Limit a card on the [Reports](reports.html) page to a rule tag to chart only the tasks it matches.
+Limit a card on the [Reports](/user/reports/) page to a rule tag to chart only the tasks it matches.

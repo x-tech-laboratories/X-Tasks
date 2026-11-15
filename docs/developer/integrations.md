@@ -1,14 +1,8 @@
 ---
 title: Integrations
-parent: Developer guide
-nav_order: 7
+sidebar:
+  order: 7
 ---
-
-# Integrations
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## MCP server
 

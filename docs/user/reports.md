@@ -1,16 +1,14 @@
 ---
 title: Reports
-parent: User guide
-nav_order: 7
+sidebar:
+  order: 7
 ---
-
-# Reports
 
 The **Reports** view is a page of cards you choose and arrange. Add cards, move them up or down, or remove them from
 each card's menu. Most cards look back a set number of days, and any card can be limited to tasks holding certain tags
-— plain or [rule tags](tags-and-filters.html#rule-tags).
+— plain or [rule tags](/user/tags-and-filters/#rule-tags).
 
-![The Reports page: routine streaks, ticks per day and ticks per week]({{ '/assets/screenshots/reports.png' | relative_url }})
+![The Reports page: routine streaks, ticks per day and ticks per week](/assets/screenshots/reports.png)
 
 | Card                | Shows                                                                                    |
 | :------------------ | :--------------------------------------------------------------------------------------- |

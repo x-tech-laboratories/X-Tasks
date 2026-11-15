@@ -1,20 +1,24 @@
 ---
-title: Home
-layout: home
-nav_order: 1
+title: X-Tasks
+description: A todo manager built on one big list of infinitely nested tasks, with tags for anything you want to track.
+template: splash
+hero:
+  tagline: A todo manager built on one big list of infinitely nested tasks, with tags for anything you want to track.
+  image: ../resources/icon.svg
+  actions:
+    - text: Read the user guide
+      link: /user/
+    - text: Read the developer guide
+      link: /developer/
+      variant: secondary
 ---
-
-# X-Tasks
 
 X-Tasks is a todo manager for the desktop, the browser and Android. Instead of splitting your work into separate
 lists and projects, it keeps every task in **one big list**, lets you **nest tasks inside each other as deeply as you
 like**, and lets you slice that list any way you want with **tags you design yourself**, including **rule tags** that
 apply themselves.
 
-[Read the user guide](user/){: .btn .btn-primary .mr-2 }
-[Read the developer guide](developer/){: .btn }
-
-![All tasks in one list, with projects nested as tasks and their subtasks, and plain and rule tags on every row]({{ '/assets/screenshots/all-tasks.png' | relative_url }})
+![All tasks in one list, with projects nested as tasks and their subtasks, and plain and rule tags on every row](/assets/screenshots/all-tasks.png)
 
 ---
 
@@ -46,7 +50,7 @@ groups and task attributes — status, start and due dates, repeats, nesting, op
 it applies itself to every task that matches, right now. *Overdue work*, *Actionable*, *Waiting on someone* or *Done
 this week* become tags you can click, combine and report on like any other.
 
-![The rule editor for a "No project" tag: open, top-level tasks with no tag from the Projects group]({{ '/assets/screenshots/rule-editor.png' | relative_url }})
+![The rule editor for a "No project" tag: open, top-level tasks with no tag from the Projects group](/assets/screenshots/rule-editor.png)
 
 ---
 
@@ -62,23 +66,23 @@ The same app runs in three places, with the same features and the same look:
 
 | Phone: sidebar drawer | Phone: task details | Dark theme |
 | :-: | :-: | :-: |
-| ![The sidebar as a drawer on a phone]({{ '/assets/screenshots/phone-drawer.png' | relative_url }}){: width="200" } | ![A task's details filling a phone screen]({{ '/assets/screenshots/phone-details.png' | relative_url }}){: width="200" } | ![Upcoming in the dark theme]({{ '/assets/screenshots/dark.png' | relative_url }}) |
+| ![The sidebar as a drawer on a phone](/assets/screenshots/phone-drawer.png) | ![A task's details filling a phone screen](/assets/screenshots/phone-details.png) | ![Upcoming in the dark theme](/assets/screenshots/dark.png) |
 
 ## Sync between all your devices
 
 The desktop and Android apps keep their own copy of your tasks and **sync** it with your X-Tasks server whenever it
 can be reached, so you can keep working offline and your changes go up once you are back online. Sync works value by
 value: edit a task's title on your phone and its notes on your laptop, and both edits are kept. Browser pages open on
-the server update by themselves the moment anything changes. See [Sync and backups](user/sync-and-backups.html).
+the server update by themselves the moment anything changes. See [Sync and backups](/user/sync-and-backups/).
 
 ## Every change is tracked
 
 X-Tasks keeps a **history** of every change to every task — titles, notes, dates, tags, done state — and shows it
 with word-level differences. Browse it across all tasks on the History page or for a single task from its details,
 and restore any earlier version, even of a deleted task. History can sync between devices too. See
-[History](user/history.html).
+[History](/user/history/).
 
-![A task's history, showing the words added to its notes in one version]({{ '/assets/screenshots/task-history.png' | relative_url }})
+![A task's history, showing the words added to its notes in one version](/assets/screenshots/task-history.png)
 
 ---
 
@@ -96,8 +100,8 @@ and restore any earlier version, even of a deleted task. History can sync betwee
 
 | You want to…                                   | Read                                               |
 | :--------------------------------------------- | :------------------------------------------------- |
-| Install X-Tasks and start using it             | [Getting started](user/getting-started.html)       |
-| Understand the one list, nesting and tags      | [Core concepts](user/core-concepts.html)           |
-| Build your own filter groups and rule tags     | [Tags and filters](user/tags-and-filters.html)     |
-| Build, run or change the code                  | [Developer guide](developer/)                      |
-| Host your own server                           | [Web server](developer/web-server.html)            |
+| Install X-Tasks and start using it             | [Getting started](/user/getting-started/)       |
+| Understand the one list, nesting and tags      | [Core concepts](/user/core-concepts/)           |
+| Build your own filter groups and rule tags     | [Tags and filters](/user/tags-and-filters/)     |
+| Build, run or change the code                  | [Developer guide](/developer/)                      |
+| Host your own server                           | [Web server](/developer/web-server/)            |

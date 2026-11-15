@@ -1,17 +1,11 @@
 ---
 title: Web server
-parent: Developer guide
-nav_order: 5
+sidebar:
+  order: 5
 ---
 
-# Web server
-{: .no_toc }
-
-1. TOC
-{:toc}
-
 `x-tasks-server` serves the X-Tasks page to browsers from a database of its own, and is the hub that desktop and
-Android apps [sync](sync.html) with. Pages that are open update by themselves when anything changes.
+Android apps [sync](/developer/sync/) with. Pages that are open update by themselves when anything changes.
 
 ## Running it
 
@@ -74,7 +68,7 @@ The calls are the ones listed in `src/shared/web_api.ts` (from `TASKS_METHODS` a
 | :---------------- | :-------------------------------------------------------------- |
 | `api/<call>`      | A bridge call                                                   |
 | `api/events`      | A server-sent event stream: `hello` with the client id, then `changed` |
-| `api/sync/<call>` | The [sync protocol](sync.html#protocol)                         |
+| `api/sync/<call>` | The [sync protocol](/developer/sync/#protocol)                         |
 | `login`           | Browser sign-in                                                 |
 
 Paths are relative, so the app also works when a proxy serves it under a sub-folder. A page sends its client id in

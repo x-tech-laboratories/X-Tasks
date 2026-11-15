@@ -1,14 +1,8 @@
 ---
 title: Development setup
-parent: Developer guide
-nav_order: 1
+sidebar:
+  order: 1
 ---
-
-# Development setup
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Requirements
 
@@ -38,7 +32,7 @@ npm install
 
 ## Databases
 
-{: .warning }
+> [!WARNING]
 > `~/.config/x-tasks/tasks.db` is the live task list of whoever uses the app on that machine. Never point tests,
 > demos or experiments at it.
 
@@ -59,5 +53,5 @@ npm run server -- --database dev-data/tasks.db   # serve it from the web server
 The seeder refuses to write to `~/.config/x-tasks/tasks.db`. Add new example data to the lists in the seeder so every
 checkout gets it.
 
-Opening a database applies any pending [migrations](database.html) to it, so opening an older file with a newer build
+Opening a database applies any pending [migrations](/developer/database/) to it, so opening an older file with a newer build
 upgrades it.

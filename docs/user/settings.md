@@ -1,16 +1,11 @@
 ---
 title: Settings reference
-parent: User guide
-nav_order: 9
+sidebar:
+  order: 9
 ---
-
-# Settings reference
-{: .no_toc }
 
 Every setting, in the order the Settings page shows them. Defaults are in **bold**.
 
-1. TOC
-{:toc}
 
 ## General
 
@@ -78,5 +73,5 @@ Every setting, in the order the Settings page shows them. Defaults are in **bold
 | Database           | Shows where your tasks are stored.                                                                   |
 | Backups            | Back up now, back up daily, how many daily backups to keep, and the list of backups.                 |
 | History            | Delete old history (**off**) and how many days to keep.                                              |
-| Sync               | Server address, access token, and whose tasks to keep. See [Sync](sync-and-backups.html#sync).       |
-| MCP server         | Desktop only. Lets AI assistants on this computer work with your tasks. See [AI assistants](ai-assistants.html). |
+| Sync               | Server address, access token, and whose tasks to keep. See [Sync](/user/sync-and-backups/#sync).       |
+| MCP server         | Desktop only. Lets AI assistants on this computer work with your tasks. See [AI assistants](/user/ai-assistants/). |

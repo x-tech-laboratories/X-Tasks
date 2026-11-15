@@ -1,14 +1,8 @@
 ---
 title: Sync
-parent: Developer guide
-nav_order: 4
+sidebar:
+  order: 4
 ---
-
-# Sync
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 Each desktop and Android install owns a full database and syncs it with one `x-tasks-server`. The server is the hub;
 devices never talk to each other.

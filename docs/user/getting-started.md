@@ -1,17 +1,11 @@
 ---
 title: Getting started
-parent: User guide
-nav_order: 1
+sidebar:
+  order: 1
 ---
 
-# Getting started
-{: .no_toc }
-
-1. TOC
-{:toc}
-
 X-Tasks runs on the **desktop** (Linux), in any **web browser** through an X-Tasks server, and on **Android**. Each
-desktop and Android install keeps its own database, so it works offline, and can [sync](sync-and-backups.html) with a
+desktop and Android install keeps its own database, so it works offline, and can [sync](/user/sync-and-backups/) with a
 server so all your devices show the same tasks.
 
 ## Desktop
@@ -31,7 +25,7 @@ On Nix, run it from the flake instead, or add the flake's package to your system
 nix run github:x-tech-laboratories/X-Tasks
 ```
 
-The Flatpak and the Nix package register `x-tasks://` links (see [Task links](tasks.html#task-links)). Every desktop
+The Flatpak and the Nix package register `x-tasks://` links (see [Task links](/user/tasks/#task-links)). Every desktop
 build keeps its tasks in `~/.config/x-tasks`, so you can move between them.
 
 Your tasks are kept in `~/.config/x-tasks/tasks.db`, together with your settings. The Settings page shows the exact
@@ -39,13 +33,13 @@ path under **Storage**.
 
 ## Web browser
 
-If you or someone you trust runs an X-Tasks server (see [Web server](../developer/web-server.html)), open its address
+If you or someone you trust runs an X-Tasks server (see [Web server](/developer/web-server/)), open its address
 in a browser and sign in with its access token. Every page open on the server updates by itself when anything
 changes, from another browser, the desktop app or a phone.
 
 In a browser the app follows your system's light or dark theme.
 
-![Upcoming in the dark theme]({{ '/assets/screenshots/dark.png' | relative_url }})
+![Upcoming in the dark theme](/assets/screenshots/dark.png)
 
 You can open a particular view straight from the address by adding `?view=`:
 
@@ -69,7 +63,7 @@ task for its menu.
 
 | Sidebar drawer | Task details |
 | :-: | :-: |
-| ![The sidebar as a drawer]({{ '/assets/screenshots/phone-drawer.png' | relative_url }}){: width="240" } | ![A task's details on a phone]({{ '/assets/screenshots/phone-details.png' | relative_url }}){: width="240" } |
+| ![The sidebar as a drawer](/assets/screenshots/phone-drawer.png) | ![A task's details on a phone](/assets/screenshots/phone-details.png) |
 
 ## Your first few minutes
 
@@ -82,4 +76,4 @@ task for its menu.
 4. **Tag your tasks.** Open a task's details and pick a tag, or drag the task onto a tag in the sidebar.
 5. **Click a tag** in the sidebar to see only its tasks. Click tags in several groups to narrow it further.
 6. **Look at the Filters group.** It comes with two rule tags, *Actionable* and *Untagged*, that apply themselves. Read
-   [Rule tags](tags-and-filters.html#rule-tags) to make your own.
+   [Rule tags](/user/tags-and-filters/#rule-tags) to make your own.

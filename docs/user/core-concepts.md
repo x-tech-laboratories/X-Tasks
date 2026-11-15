@@ -1,14 +1,8 @@
 ---
 title: Core concepts
-parent: User guide
-nav_order: 2
+sidebar:
+  order: 2
 ---
-
-# Core concepts
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 X-Tasks is built on four ideas. Everything else in the app — views, layouts, reports, search — is built on top of
 them.
@@ -28,9 +22,9 @@ Because a view is only a filter, a task can show in many places at once: a task 
 shows under *Work*, under *Urgent*, in My Day and in Upcoming — and it is still the same task. Edit it anywhere and
 the change shows everywhere.
 
-![All tasks: projects are ordinary tasks with nested subtasks, all in the one list]({{ '/assets/screenshots/all-tasks.png' | relative_url }})
+![All tasks: projects are ordinary tasks with nested subtasks, all in the one list](/assets/screenshots/all-tasks.png)
 
-{: .tip }
+> [!TIP]
 > Where another app would make you create a "Work" list and a "Home" list, X-Tasks has you create an *Area* filter
 > group with *Work* and *Home* tags. You get the same lists, plus the ability to combine them with every other tag.
 
@@ -76,9 +70,9 @@ to **one tag per task**, which suits scales like priority or size where a task s
 
 Select tags in the sidebar to filter. By default you can pick **one tag from each group** and see the tasks that match
 all of them — *Work* in Area plus *P1* in Priority shows your urgent work. See
-[Tags and filters](tags-and-filters.html) for every option.
+[Tags and filters](/user/tags-and-filters/) for every option.
 
-![The sidebar's Type, Filters and Projects groups, with nested project tags, and the "Due this week" rule tag selected]({{ '/assets/screenshots/rule-tag-view.png' | relative_url }})
+![The sidebar's Type, Filters and Projects groups, with nested project tags, and the "Due this week" rule tag selected](/assets/screenshots/rule-tag-view.png)
 
 ## Rule tags: tags that apply themselves
 
@@ -94,7 +88,7 @@ hand. Each rule tag has a **rule**: a set of conditions, matched by *all* or *an
 - what its **title** contains;
 - its **relationships** to other tasks (waits on an open task, has none, linked to one particular task).
 
-![Editing the rule of a "No project" tag]({{ '/assets/screenshots/rule-editor.png' | relative_url }})
+![Editing the rule of a "No project" tag](/assets/screenshots/rule-editor.png)
 
 The tag then applies to every task matching its rule, **automatically and immediately**. When a task stops matching —
 it gets done, its date moves, a tag comes off — the rule tag goes away by itself.
@@ -117,4 +111,4 @@ and can be counted on the Reports page. Every new database comes with a **Filter
   actually do next.
 - **Untagged** — has no tags: tasks still waiting to be sorted.
 
-See [Rule tags](tags-and-filters.html#rule-tags) for how to build them.
+See [Rule tags](/user/tags-and-filters/#rule-tags) for how to build them.
