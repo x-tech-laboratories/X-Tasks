@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, saved_task_duration, type Settings } from '@shared/settings'
+import { DEFAULT_SETTINGS, saved_date_range, saved_task_duration, type Settings } from '@shared/settings'
 import { in_transaction, type SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { as_code_block } from '@x-tech-laboratories/x-libs/web/markdown_text'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
@@ -680,6 +680,7 @@ export function get_settings(): Settings {
   const old_group_by_date = rows.find((row) => row.key === 'group_by_date')
   if (old_group_by_date?.value === 'true' && !rows.some((row) => row.key === 'task_grouping')) settings.task_grouping = 'date'
   settings.task_durations = (settings.task_durations as Parameters<typeof saved_task_duration>[0][]).map(saved_task_duration)
+  settings.date_ranges = (settings.date_ranges as Parameters<typeof saved_date_range>[0][]).map(saved_date_range)
 
   return settings as unknown as Settings
 }

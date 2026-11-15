@@ -1,6 +1,6 @@
 import type { DateRange, DateRangeSplit, TaskDateField } from '@shared/settings'
 import type { Task } from '@shared/tasks'
-import { is_in_range, resolve_range, type ResolvedRange } from '@x-tech-laboratories/x-libs/date_ranges'
+import { matches_rule, resolve_rule, type ResolvedRule } from '@x-tech-laboratories/x-libs/date_ranges'
 import { days_between, format_local, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { next_schedule, task_date_of } from '@shared/schedule'
 import { week_start_of } from './reports'
@@ -32,16 +32,16 @@ const MOST_REPEATS_PER_TASK = 50
 // A date range worked out for the current minute.
 export interface ShownRange {
   range: DateRange
-  span: ResolvedRange
+  span: ResolvedRule
 }
 
 export function shown_ranges(ranges: DateRange[], now: string): ShownRange[] {
-  return ranges.map((range) => ({ range, span: resolve_range(range, parse_local(now)) }))
+  return ranges.map((range) => ({ range, span: resolve_rule(range, parse_local(now)) }))
 }
 
 // The first range that holds the date, which is the one its task is listed under.
 export function range_of(task_date: string, ranges: ShownRange[]): ShownRange | undefined {
-  return ranges.find((shown) => is_in_range(task_date, shown.span))
+  return ranges.find((shown) => matches_rule(task_date, shown.span))
 }
 
 // Upcoming lists a task only while it is overdue or inside one of the ranges.
@@ -79,9 +79,9 @@ function group_label(key: string, today: string, ranges: ShownRange[]): string {
 
 // The range's name, then the days it covers when it has an end, such as "Next week · Nov 16 – 22".
 function span_label(shown: ShownRange): string {
-  const { first, last } = shown.span
-  if (first === null || last === null || first > last) return shown.range.name
-  const days = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).formatRange(parse_local(first.slice(0, 10)), parse_local(last.slice(0, 10)))
+  const { from, to } = shown.span
+  if (from === null || to === null || from.isAfter(to)) return shown.range.name
+  const days = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).formatRange(from.toDate(), to.toDate())
   return `${shown.range.name} · ${days}`
 }
 
@@ -102,10 +102,10 @@ function drop_day(key: string, ranges: ShownRange[]): string | null {
   const [kind, range_id, part] = key.split(':')
   if (kind !== 'range') return null
   const { range, span } = ranges.find((each) => each.range.id === range_id)!
-  const first_day = span.first?.slice(0, 10)
-  const day = range.split === 'day' ? part : range.split === 'none' && first_day === span.last?.slice(0, 10) ? first_day : undefined
+  const first_day = span.from?.format('YYYY-MM-DD')
+  const day = range.split === 'day' ? part : range.split === 'none' && first_day === span.to?.format('YYYY-MM-DD') ? first_day : undefined
   if (day === undefined) return null
-  const covers_day = (span.first === null || span.first <= `${day}T00:00`) && (span.last === null || span.last >= `${day}T23:59`)
+  const covers_day = matches_rule(`${day}T00:00`, span) && matches_rule(`${day}T23:59`, span)
   return covers_day ? day : null
 }
 
