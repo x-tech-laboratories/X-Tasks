@@ -30,6 +30,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Changed
 
+- Date ranges are rules picked from lists: before, after or between points such as now, start of today,
+  start of tomorrow or end of this week, with a choice of which ends count
 - Word a relationship's waiting choice as which task depends on the other
 - Enter in the bar opens the first task found, or adds the typed task when the search finds nothing
 - Draw the shared look from Halon 0.10 and X-Libs 0.19

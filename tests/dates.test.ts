@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { DEFAULT_SETTINGS, type DateRange } from '../src/shared/settings.ts'
+import { DEFAULT_SETTINGS, saved_date_range, type DateRange } from '../src/shared/settings.ts'
 import type { Task } from '../src/shared/tasks.ts'
 import { group_by_date, is_within_ranges, shown_ranges } from '../src/web/dates.ts'
 import type { TaskNode } from '../src/web/views.ts'
@@ -74,7 +74,7 @@ describe('group_by_date', () => {
   })
 
   test('splits a range into a heading per day', () => {
-    const by_day: DateRange[] = [{ id: 'soon', name: 'Soon', start: { offset: 0, unit: 'day' }, end: { offset: 6, unit: 'day' }, split: 'day' }]
+    const by_day: DateRange[] = [{ id: 'soon', name: 'Soon', comparison: 'is_between', from: 'start_of_this_day', to: 'end_of_next_week', inclusivity: '[]', split: 'day' }]
     const groups = group_by_date([make_task({ id: 'a', due_at: '2026-11-13' })].map(node_of), [], 'due', NOW, false, shown_ranges(by_day, NOW))
 
     expect(groups.map((group) => [group.key, group.drop_day])).toEqual([['range:soon:2026-11-13', '2026-11-13']])
@@ -100,5 +100,23 @@ describe('is_within_ranges', () => {
     expect(is_within_ranges('2026-11-11', today_only, NOW)).toBe(true)
     expect(is_within_ranges('2026-11-12', today_only, NOW)).toBe(false)
     expect(is_within_ranges(null, today_only, NOW)).toBe(false)
+  })
+})
+
+// ============================================================================
+// Saved ranges
+// ============================================================================
+
+describe('saved_date_range', () => {
+  test('turns a start and end counted from now into the nearest rule', () => {
+    const earlier_today = saved_date_range({ id: 'a', name: 'Earlier today', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'minute' }, split: 'none' })
+    const later = saved_date_range({ id: 'b', name: 'Later', start: { offset: 1, unit: 'month' }, end: null, split: 'month' })
+
+    expect(earlier_today).toEqual({ id: 'a', name: 'Earlier today', comparison: 'is_between', from: 'start_of_this_day', to: 'now', inclusivity: '[]', split: 'none' })
+    expect(later).toMatchObject({ comparison: 'is_after', from: 'start_of_next_month' })
+  })
+
+  test('keeps a rule as it is', () => {
+    expect(saved_date_range(DEFAULT_SETTINGS.date_ranges[0]!)).toBe(DEFAULT_SETTINGS.date_ranges[0])
   })
 })

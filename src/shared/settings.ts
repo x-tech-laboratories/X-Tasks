@@ -1,6 +1,6 @@
 import type { CertificateClient } from '@x-tech-laboratories/x-libs/certificate_protocol'
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
-import type { RelativeRange } from '@x-tech-laboratories/x-libs/date_ranges'
+import type { DatePoint, DateRule } from '@x-tech-laboratories/x-libs/date_ranges'
 import type { SyncCredentials, SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { View } from './tasks'
 
@@ -79,7 +79,7 @@ export interface RescheduleOption {
 }
 
 // A named span of time from now, such as Earlier today or Next week, that dated tasks are grouped and filtered by; a task goes to the first range holding it.
-export interface DateRange extends RelativeRange {
+export interface DateRange extends DateRule {
   id: string
   name: string
   // Splits the range into a heading per day, week or month, or keeps it under one.
@@ -109,6 +109,23 @@ export function task_duration(id: string, amounts: Partial<Omit<TaskDuration, 'i
 export function saved_task_duration(saved: TaskDuration | { id: string; amount: number; unit: string }): TaskDuration {
   if (!('unit' in saved)) return saved
   return task_duration(saved.id, { [`${saved.unit}s`]: saved.amount })
+}
+
+// A range side saved as so many units from now, or null for open.
+type SavedRangeEdge = { offset: number; unit: string } | null
+
+// Saved ranges can still hold a start and end counted in units from now, which this turns into the nearest rule.
+export function saved_date_range(saved: DateRange | (Omit<DateRange, keyof DateRule> & { start: SavedRangeEdge; end: SavedRangeEdge })): DateRange {
+  if (!('start' in saved)) return saved
+  const { start, end, ...rest } = saved
+  const point_of = (edge: NonNullable<SavedRangeEdge>, side: 'start' | 'end'): DatePoint => {
+    if (edge.unit === 'minute' || edge.unit === 'hour') return 'now'
+    const step = edge.offset < 0 ? 'last' : edge.offset > 0 ? 'next' : 'this'
+    return `${side}_of_${step}_${edge.unit}` as DatePoint
+  }
+  const from = start ? point_of(start, 'start') : 'start_of_last_year'
+  const to = end ? point_of(end, 'end') : 'end_of_this_day'
+  return { ...rest, comparison: start && end ? 'is_between' : end ? 'is_before' : 'is_after', from, to, inclusivity: '[]' }
 }
 
 // A card on the Reports page: routine streaks, a calendar of ticks, ticks per week, ticks split by the tags of a group, or a map of linked tasks.
@@ -273,13 +290,13 @@ export const DEFAULT_SETTINGS: Settings = {
   view_groupings: {},
   upcoming_repeat_days: 7,
   date_ranges: [
-    { id: 'earlier-today', name: 'Earlier today', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'minute' }, split: 'none' },
-    { id: 'today', name: 'Today', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'day' }, split: 'none' },
-    { id: 'tomorrow', name: 'Tomorrow', start: { offset: 1, unit: 'day' }, end: { offset: 1, unit: 'day' }, split: 'none' },
-    { id: 'this-week', name: 'This week', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'week' }, split: 'none' },
-    { id: 'next-week', name: 'Next week', start: { offset: 1, unit: 'week' }, end: { offset: 1, unit: 'week' }, split: 'none' },
-    { id: 'this-month', name: 'This month', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'month' }, split: 'none' },
-    { id: 'later', name: 'Later', start: { offset: 0, unit: 'day' }, end: null, split: 'month' }
+    { id: 'earlier-today', name: 'Earlier today', comparison: 'is_between', from: 'start_of_this_day', to: 'now', inclusivity: '[]', split: 'none' },
+    { id: 'today', name: 'Today', comparison: 'is_between', from: 'start_of_this_day', to: 'end_of_this_day', inclusivity: '[]', split: 'none' },
+    { id: 'tomorrow', name: 'Tomorrow', comparison: 'is_between', from: 'start_of_next_day', to: 'end_of_next_day', inclusivity: '[]', split: 'none' },
+    { id: 'this-week', name: 'This week', comparison: 'is_between', from: 'start_of_this_day', to: 'end_of_this_week', inclusivity: '[]', split: 'none' },
+    { id: 'next-week', name: 'Next week', comparison: 'is_between', from: 'start_of_next_week', to: 'end_of_next_week', inclusivity: '[]', split: 'none' },
+    { id: 'this-month', name: 'This month', comparison: 'is_between', from: 'start_of_this_day', to: 'end_of_this_month', inclusivity: '[]', split: 'none' },
+    { id: 'later', name: 'Later', comparison: 'is_after', from: 'start_of_this_day', to: 'end_of_this_day', inclusivity: '[]', split: 'month' }
   ],
   table_sort: [],
   table_column_order: [],

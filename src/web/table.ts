@@ -2,7 +2,7 @@ import type { DateRange, TableSortKey, TaskDateField } from '@shared/settings'
 import type { RoutineStreak } from '@shared/streaks'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { ordered_columns as ordered_column_ids, sorted_tree, type TreeRow } from '@x-tech-laboratories/x-libs/web/tables'
-import { is_in_range } from '@x-tech-laboratories/x-libs/date_ranges'
+import { matches_rule } from '@x-tech-laboratories/x-libs/date_ranges'
 import { days_between, format_local, has_time, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { format_duration } from '@x-tech-laboratories/x-libs/durations'
 import { task_date_of } from '@shared/schedule'
@@ -314,7 +314,7 @@ function date_passes(task: Task, task_date: string | null, filter: DateFilter, t
   const task_day = task_date?.slice(0, 10) ?? null
   if (filter.startsWith('range:')) {
     const shown = ranges.find((each) => `range:${each.range.id}` === filter)
-    return !shown || (task_date !== null && is_in_range(task_date, shown.span))
+    return !shown || (task_date !== null && matches_rule(task_date, shown.span))
   }
   switch (filter) {
     case 'overdue': return !task.is_done && task_date !== null && is_overdue(task_date)

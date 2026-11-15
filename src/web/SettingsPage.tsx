@@ -7,7 +7,7 @@ import { TrustedCertificates } from '@x-tech-laboratories/x-libs/web/react/certi
 import { SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
 import { BackupSettings } from '@x-tech-laboratories/x-libs/web/react/backup_settings'
 import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
-import { RANGE_UNITS, type RangeEdge, type RangeUnit } from '@x-tech-laboratories/x-libs/date_ranges'
+import { DATE_POINTS, date_point_label, type DateComparison, type DatePoint, type Inclusivity } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
 import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
@@ -37,7 +37,18 @@ const TASK_DATE_CHOICES: { value: TaskDateField; label: string }[] = [
   { value: 'start', label: 'Start date' }
 ]
 
-const RANGE_UNIT_LABELS: Record<RangeUnit, string> = { minute: 'minutes', hour: 'hours', day: 'days', week: 'weeks', month: 'months', year: 'years' }
+const RANGE_COMPARISON_CHOICES: { value: DateComparison; label: string }[] = [
+  { value: 'is_before', label: 'Before' },
+  { value: 'is_between', label: 'Between' },
+  { value: 'is_after', label: 'After' }
+]
+
+const RANGE_INCLUSIVITY_CHOICES: { value: Inclusivity; label: string }[] = [
+  { value: '[]', label: 'Both ends included' },
+  { value: '[)', label: 'Start included' },
+  { value: '(]', label: 'End included' },
+  { value: '()', label: 'Neither end included' }
+]
 
 const RANGE_SPLIT_CHOICES: { value: DateRangeSplit; label: string }[] = [
   { value: 'none', label: 'One heading' },
@@ -343,9 +354,9 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           id: 'date_ranges',
           heading: 'Date ranges',
           hint:
-            'The headings of Upcoming and of views grouped by date, and the choices of the date filters. Each side counts from now, the ' +
-            'start from the beginning of its unit and the end to the finish of its, so 0 days to 0 minutes is earlier today and 1 week ' +
-            'to 1 week is next week. A task goes under the first range that holds it, and Upcoming shows only tasks overdue or in a range.',
+            'The headings of Upcoming and of views grouped by date, and the choices of the date filters. Each range holds the dates ' +
+            'before, after or between points counted from now, so between start of today and now is earlier today, and between start ' +
+            'and end of next week is next week. A task goes under the first range that holds it, and Upcoming shows only tasks overdue or in a range.',
           content: <DateRangesEditor ranges={settings.date_ranges} on_change={(ranges) => on_change('date_ranges', ranges)} />
         },
         {
@@ -705,13 +716,13 @@ interface DateRangesEditorProps {
 }
 
 // The date ranges in the order tasks are matched against them and their headings shown.
-function DateRangesEditor({ ranges, on_change }: DateRangesEditorProps) {
+export function DateRangesEditor({ ranges, on_change }: DateRangesEditorProps) {
   function update(id: string, change: Partial<DateRange>): void {
     on_change(ranges.map((range) => (range.id === id ? { ...range, ...change } : range)))
   }
 
   function add(): void {
-    on_change([...ranges, { id: crypto.randomUUID(), name: 'New range', start: { offset: 0, unit: 'day' }, end: { offset: 0, unit: 'day' }, split: 'none' }])
+    on_change([...ranges, { id: crypto.randomUUID(), name: 'New range', comparison: 'is_between', from: 'start_of_this_day', to: 'end_of_this_day', inclusivity: '[]', split: 'none' }])
   }
 
   return (
@@ -719,8 +730,25 @@ function DateRangesEditor({ ranges, on_change }: DateRangesEditorProps) {
       {ranges.map((range, index) => (
         <div key={range.id} className="setting-row reschedule_option date_range">
           <CommitInput value={range.name} on_commit={(event) => update(range.id, { name: event.currentTarget.value.trim() || range.name })} aria-label="Range name" />
-          <RangeEdgeInput side="From" open_label="Any time before" edge={range.start} on_change={(start) => update(range.id, { start })} />
-          <RangeEdgeInput side="to" open_label="Any time after" edge={range.end} on_change={(end) => update(range.id, { end })} />
+          <select value={range.comparison} onChange={(event) => update(range.id, { comparison: event.currentTarget.value as DateComparison })} aria-label="Comparison">
+            {RANGE_COMPARISON_CHOICES.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          {range.comparison !== 'is_before' && <DatePointSelect label="From" point={range.from} on_change={(from) => update(range.id, { from })} />}
+          {range.comparison === 'is_between' && 'and'}
+          {range.comparison !== 'is_after' && <DatePointSelect label="To" point={range.to} on_change={(to) => update(range.id, { to })} />}
+          {range.comparison === 'is_between' && (
+            <select value={range.inclusivity} onChange={(event) => update(range.id, { inclusivity: event.currentTarget.value as Inclusivity })} aria-label="Ends">
+              {RANGE_INCLUSIVITY_CHOICES.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
           <select value={range.split} onChange={(event) => update(range.id, { split: event.currentTarget.value as DateRangeSplit })} aria-label="Headings">
             {RANGE_SPLIT_CHOICES.map(({ value, label }) => (
               <option key={value} value={value}>
@@ -745,44 +773,22 @@ function DateRangesEditor({ ranges, on_change }: DateRangesEditorProps) {
   )
 }
 
-interface RangeEdgeInputProps {
-  side: string
-  open_label: string
-  edge: RangeEdge | null
-  on_change: (edge: RangeEdge | null) => void
+interface DatePointSelectProps {
+  label: string
+  point: DatePoint
+  on_change: (point: DatePoint) => void
 }
 
-// One side of a range: so many units from now, or left open.
-function RangeEdgeInput({ side, open_label, edge, on_change }: RangeEdgeInputProps) {
+// One end of a range: now, or the start or end of a day, week, month or year.
+function DatePointSelect({ label, point, on_change }: DatePointSelectProps) {
   return (
-    <span className="duration_amount">
-      {side}
-      {edge && (
-        <CommitInput
-          type="number"
-          step="1"
-          className="input-xs"
-          value={edge.offset}
-          on_commit={(event) => on_change({ ...edge, offset: Math.round(Number(event.currentTarget.value) || 0) })}
-          aria-label={`${side} how many`}
-        />
-      )}
-      <select
-        value={edge?.unit ?? 'open'}
-        onChange={(event) => {
-          const unit = event.currentTarget.value
-          on_change(unit === 'open' ? null : { offset: edge?.offset ?? 0, unit: unit as RangeUnit })
-        }}
-        aria-label={`${side} unit`}
-      >
-        {RANGE_UNITS.map((unit) => (
-          <option key={unit} value={unit}>
-            {RANGE_UNIT_LABELS[unit]}
-          </option>
-        ))}
-        <option value="open">{open_label}</option>
-      </select>
-    </span>
+    <select value={point} onChange={(event) => on_change(event.currentTarget.value as DatePoint)} aria-label={label}>
+      {DATE_POINTS.map((each) => (
+        <option key={each} value={each}>
+          {date_point_label(each)}
+        </option>
+      ))}
+    </select>
   )
 }
 
