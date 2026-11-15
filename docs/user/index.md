@@ -1,8 +1,5 @@
 ---
 title: User guide
-sidebar:
-  order: 0
-  label: Overview
 ---
 
 This part of the documentation is for people **using** X-Tasks: on the desktop, in a browser or on Android. It needs
