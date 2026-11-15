@@ -1,8 +1,5 @@
 ---
 title: Developer guide
-sidebar:
-  order: 0
-  label: Overview
 ---
 
 This part of the documentation is for people who **build, host, extend or contribute to** X-Tasks. If you only want
