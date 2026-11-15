@@ -85,6 +85,7 @@ export interface Tag {
 // ============================================================================
 
 // A rule matches a task when all, or any, of its conditions hold; with no conditions it matches every task.
+// A nested condition is itself such a rule, so groups of all and any conditions nest to any depth.
 export interface TagRule {
   match: 'all' | 'any'
   conditions: RuleCondition[]
@@ -109,6 +110,7 @@ export type RuleCondition =
   | { kind: 'tagged'; is_tagged: boolean; held_by?: TagHolder }
   | { kind: 'title'; text: string }
   | { kind: 'link'; relationship_id: string; direction: LinkDirection; target: LinkTarget; task_id: string; has_link: boolean }
+  | ({ kind: 'nested' } & TagRule)
 
 // Whose tags a tag, group or tagged condition reads: the task's and every task's above it, the task's alone, or only those above it.
 // A condition saved without one reads the task's and those above it.

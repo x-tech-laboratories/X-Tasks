@@ -20,7 +20,8 @@ export const CONDITION_CHOICES: { kind: ConditionKind; label: string }[] = [
   { kind: 'open_subtasks', label: 'Open subtasks' },
   { kind: 'tagged', label: 'Tags' },
   { kind: 'title', label: 'Title contains' },
-  { kind: 'link', label: 'Relationship' }
+  { kind: 'link', label: 'Relationship' },
+  { kind: 'nested', label: 'Condition group' }
 ]
 
 export const TAG_HOLDER_CHOICES: { value: TagHolder; label: string }[] = [
@@ -44,6 +45,7 @@ export function default_condition(kind: ConditionKind, tags: Tag[], groups: TagG
     case 'tagged': return { kind, is_tagged: false }
     case 'title': return { kind, text: '' }
     case 'link': return { kind, relationship_id: '', direction: 'either', target: 'any', task_id: '', has_link: true }
+    case 'nested': return { kind, match: 'any', conditions: [] }
   }
 }
 
@@ -102,6 +104,7 @@ export function condition_holds(condition: RuleCondition, task: Task, all_tasks:
       )
       return has_link === condition.has_link
     }
+    case 'nested': return rule_matches(condition, task, all_tasks, chain_tag_ids, tags, now)
   }
 }
 

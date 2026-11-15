@@ -169,7 +169,7 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .dialog.reschedule_dialog { width: min(400px, calc(100vw - 2 * var(--space-7))); }
 .dialog.group_dialog { width: min(480px, calc(100vw - 2 * var(--space-7))); }
 .dialog.recurrence_dialog, .dialog.relationship_dialog { width: min(560px, calc(100vw - 2 * var(--space-7))); }
-.dialog.rule_dialog { width: min(640px, calc(100vw - 2 * var(--space-7))); }
+.dialog.rule_dialog { width: min(720px, calc(100vw - 2 * var(--space-7))); }
 .dialog_form { display: flex; flex-direction: column; gap: var(--space-5); }
 .dialog_form .field { display: flex; }
 .dialog_count { margin-right: auto; align-self: center; color: var(--text-tertiary); font-size: var(--text-caption); }
@@ -185,7 +185,10 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .rule_conditions { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .rule_condition { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .rule_condition > .tree-picker { flex: 1; min-width: 160px; }
-.rule_condition > button:last-child { margin-left: auto; }
+.rule_condition > button.remove { margin-left: auto; }
+/* A nested group's conditions sit on their own line below its row, indented behind a rule. */
+.rule_nested { display: flex; flex-direction: column; gap: var(--space-3); flex-basis: 100%; padding-left: var(--space-5); border-left: var(--border-width) solid var(--border-default); }
+.rule_add { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .rule_text { flex: 1; min-width: 120px; }
 .rule_unit { color: var(--text-secondary); font-size: var(--text-control); }
 

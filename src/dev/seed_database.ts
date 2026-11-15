@@ -155,12 +155,21 @@ const EXAMPLE_TASKS: ExampleTask[] = [
 const PROJECTS_GROUP = 'Projects'
 
 // Filters are rule tags: each finds the tasks its conditions match, written with tag and group names that are looked up below.
-type ExampleCondition = RuleCondition | { kind: 'tag_named'; name: string; has_tag: boolean } | { kind: 'group_named'; name: string; has_tag: boolean }
+type ExampleCondition =
+  | RuleCondition
+  | { kind: 'tag_named'; name: string; has_tag: boolean }
+  | { kind: 'group_named'; name: string; has_tag: boolean }
+  | { kind: 'nested'; match: TagRule['match']; conditions: ExampleCondition[] }
 
 const EXAMPLE_FILTERS: { name: string; color: string | null; match: TagRule['match']; conditions: ExampleCondition[] }[] = [
   { name: 'Overdue', color: '#e5484d', match: 'all', conditions: [{ kind: 'status', is_done: false }, { kind: 'due', when: 'overdue', days: 7 }] },
   { name: 'Due this week', color: '#e8a33d', match: 'all', conditions: [{ kind: 'status', is_done: false }, { kind: 'due', when: 'within_days', days: 7 }] },
-  { name: 'Urgent', color: '#e5484d', match: 'any', conditions: [{ kind: 'tag_named', name: 'High', has_tag: true }, { kind: 'due', when: 'today', days: 7 }] },
+  {
+    name: 'Urgent',
+    color: '#e5484d',
+    match: 'all',
+    conditions: [{ kind: 'status', is_done: false }, { kind: 'nested', match: 'any', conditions: [{ kind: 'tag_named', name: 'High', has_tag: true }, { kind: 'due', when: 'today', days: 7 }] }]
+  },
   { name: 'Habits and routines', color: '#3fb27f', match: 'all', conditions: [{ kind: 'recurring', is_recurring: true }] },
   { name: 'Unscheduled', color: null, match: 'all', conditions: [{ kind: 'status', is_done: false }, { kind: 'due', when: 'none', days: 7 }, { kind: 'start', when: 'none' }] },
   { name: 'No project', color: null, match: 'all', conditions: [{ kind: 'status', is_done: false }, { kind: 'group_named', name: PROJECTS_GROUP, has_tag: false }, { kind: 'subtask', is_subtask: false }] },
@@ -212,6 +221,7 @@ function add_example_task(example: ExampleTask, parent_id: string | null): void 
 function resolved_condition(condition: ExampleCondition, group_ids: Map<string, string>): RuleCondition {
   if (condition.kind === 'tag_named') return { kind: 'tag', tag_id: tag_id_named(condition.name), has_tag: condition.has_tag }
   if (condition.kind === 'group_named') return { kind: 'group', group_id: group_ids.get(condition.name)!, has_tag: condition.has_tag }
+  if (condition.kind === 'nested') return { ...condition, conditions: condition.conditions.map((each) => resolved_condition(each, group_ids)) }
   return condition
 }
 
