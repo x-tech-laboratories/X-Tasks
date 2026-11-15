@@ -30,7 +30,7 @@ test('shows the sign-in form until the browser is signed in', async () => {
 })
 
 test('shows the tasks once signed in, and the account page at #/account', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => json(me)))
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => (path.endsWith('account/sessions') ? json([]) : json(me))))
 
   render(<SignedIn>{(account) => <p>{`tasks for ${account.name}`}</p>}</SignedIn>)
   expect(await screen.findByText('tasks for ada')).toBeTruthy()
