@@ -1,14 +1,8 @@
 ---
 title: Android
-parent: Developer guide
-nav_order: 6
+sidebar:
+  order: 6
 ---
-
-# Android
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 The Android app is the same page inside a Capacitor WebView. It keeps its own database on the phone — SQLite compiled
 to WebAssembly, saved in the app's storage after each change — and syncs with the web server as the desktop app does.

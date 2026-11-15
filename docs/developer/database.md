@@ -1,14 +1,8 @@
 ---
 title: Database and migrations
-parent: Developer guide
-nav_order: 3
+sidebar:
+  order: 3
 ---
-
-# Database and migrations
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Storage
 
@@ -30,10 +24,10 @@ To change the schema:
 1. Append a new entry to `SCHEMA_MIGRATIONS`. Never edit or reorder an existing one: databases in the field have
    already run it.
 2. Keep the migration safe to run on any older database, including one that is many versions behind.
-3. Synced tables also need their columns known to the sync engine (see [Sync](sync.html)).
+3. Synced tables also need their columns known to the sync engine (see [Sync](/developer/sync/)).
 4. Add a test under `tests/` that opens an older database and checks the upgrade.
 
-{: .note }
+> [!NOTE]
 > Several branches may add migrations at the same time. Rebase onto the latest `main` before landing and move your
 > entry to the end if another one landed first.
 

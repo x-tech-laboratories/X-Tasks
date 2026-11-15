@@ -1,18 +1,12 @@
 ---
 title: Views, layouts and search
-parent: User guide
-nav_order: 5
+sidebar:
+  order: 5
 ---
-
-# Views, layouts and search
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Views
 
-Every view is a filter over the [one big list](core-concepts.html#one-big-list).
+Every view is a filter over the [one big list](/user/core-concepts/#one-big-list).
 
 | View          | Shows                                                                                         |
 | :------------ | :-------------------------------------------------------------------------------------------- |
@@ -21,15 +15,15 @@ Every view is a filter over the [one big list](core-concepts.html#one-big-list).
 | **All tasks** | Everything                                                                                    |
 | **Active**    | Tasks not done                                                                                |
 | **Completed** | Tasks done                                                                                    |
-| **Reports**   | Charts of your progress — see [Reports](reports.html)                                         |
-| **History**   | Every change to every task — see [History](history.html)                                      |
-| *Tags*        | Whatever tags you select in the sidebar — see [Tags and filters](tags-and-filters.html)       |
+| **Reports**   | Charts of your progress — see [Reports](/user/reports/)                                         |
+| **History**   | Every change to every task — see [History](/user/history/)                                      |
+| *Tags*        | Whatever tags you select in the sidebar — see [Tags and filters](/user/tags-and-filters/)       |
 
 **Open on launch** in Settings › Startup picks the view the app starts on, or the one you left it on.
 
 **Repeats in Upcoming** sets how many days ahead Upcoming lists the later dates of repeating tasks (default 7).
 
-![Upcoming: overdue tasks, then each day, with the later dates of repeating tasks in italics]({{ '/assets/screenshots/upcoming.png' | relative_url }})
+![Upcoming: overdue tasks, then each day, with the later dates of repeating tasks in italics](/assets/screenshots/upcoming.png)
 
 ## Layouts
 
@@ -46,13 +40,13 @@ The switch at the top of a view shows its tasks in one of five layouts:
 - **Gantt** — a timeline by day, week or month, with arrows for tasks that wait on others. Drag and resize bars to
   change dates.
 
-![The table layout]({{ '/assets/screenshots/table.png' | relative_url }})
+![The table layout](/assets/screenshots/table.png)
 
-![The board layout, grouped by priority]({{ '/assets/screenshots/board.png' | relative_url }})
+![The board layout, grouped by priority](/assets/screenshots/board.png)
 
-![The calendar layout, by month]({{ '/assets/screenshots/calendar.png' | relative_url }})
+![The calendar layout, by month](/assets/screenshots/calendar.png)
 
-![The Gantt layout, by day]({{ '/assets/screenshots/gantt.png' | relative_url }})
+![The Gantt layout, by day](/assets/screenshots/gantt.png)
 
 **Layout per view** chooses how layouts are remembered: each view keeps the last one picked in it (*Remembered*,
 the default), each keeps one once you press **Save layout** (*Saved by hand*), or one layout applies everywhere

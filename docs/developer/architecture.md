@@ -1,14 +1,8 @@
 ---
 title: Architecture
-parent: Developer guide
-nav_order: 2
+sidebar:
+  order: 2
 ---
-
-# Architecture
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Source layout
 

@@ -1,14 +1,8 @@
 ---
 title: Testing and contributing
-parent: Developer guide
-nav_order: 8
+sidebar:
+  order: 8
 ---
-
-# Testing and contributing
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Tests
 
@@ -23,7 +17,7 @@ They cover the views and rule helpers, the syntaxes, schedules and streaks, repo
 server, migrations and the page itself (`app.test.tsx`, against `tests/fake_bridge.ts`). `tests/fixtures.ts` builds
 tasks, tags and groups for them.
 
-{: .warning }
+> [!WARNING]
 > Tests, screenshots and experiments must use a throwaway database: set `X_TASKS_DB` to a scratch file or pass
 > `--user-data-dir` to a scratch folder. Never touch `~/.config/x-tasks/tasks.db`.
 

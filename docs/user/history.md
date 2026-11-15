@@ -1,10 +1,8 @@
 ---
 title: History
-parent: User guide
-nav_order: 6
+sidebar:
+  order: 6
 ---
-
-# History
 
 X-Tasks keeps a **version of a task every time it changes**: its title, notes, dates, repeat, tags, relationships,
 done state and place in the list. Nothing you change is lost.
@@ -18,7 +16,7 @@ done state and place in the list. Nothing you change is lost.
 Each version shows what changed from the one before it, down to the **individual words** of the title and notes.
 **Compared with now** shows how it differs from the task as it is today.
 
-![A task's history: the newest version added words to the notes]({{ '/assets/screenshots/task-history.png' | relative_url }})
+![A task's history: the newest version added words to the notes](/assets/screenshots/task-history.png)
 
 ## Restoring
 
@@ -29,7 +27,7 @@ A **deleted task** can be brought back with **Restore task as this version**, fr
 
 ## History on several devices
 
-History travels with [sync](sync-and-backups.html#sync): a change made on your phone shows in the desktop app's
+History travels with [sync](/user/sync-and-backups/#sync): a change made on your phone shows in the desktop app's
 history too, and restoring on one device restores everywhere.
 
 ## Keeping history small

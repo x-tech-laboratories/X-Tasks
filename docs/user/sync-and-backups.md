@@ -1,14 +1,8 @@
 ---
 title: Sync and backups
-parent: User guide
-nav_order: 8
+sidebar:
+  order: 8
 ---
-
-# Sync and backups
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Desktop, web and mobile
 
@@ -35,7 +29,7 @@ browser signed in to that server — shows the same tasks, tags and settings.
    Either way, the data being replaced is backed up first.
 4. Press **Start syncing**.
 
-![The Sync settings: server address, access token, whose tasks to keep, and a trusted certificate authority]({{ '/assets/screenshots/settings-sync.png' | relative_url }})
+![The Sync settings: server address, access token, whose tasks to keep, and a trusted certificate authority](/assets/screenshots/settings-sync.png)
 
 From then on, the device syncs by itself. Changes made offline are kept and sent once the server can be reached
 again.
@@ -46,7 +40,7 @@ Every value a task, tag or setting holds — a title, a set of notes, a due date
 its own**, and the **latest edit of each value wins**. So editing a task's title on your phone and its notes on your
 laptop keeps both edits. A subtask added on one device under a task deleted on another is deleted too.
 
-Your [history](history.html) syncs along with everything else.
+Your [history](/user/history/) syncs along with everything else.
 
 Some things stay with each device: window layout, the MCP server setting and backup settings.
 
@@ -74,4 +68,4 @@ In **Settings › Data › Backups**:
 On Android, pick a **Backup folder** in the phone's storage, such as Documents, where file managers and sync apps can
 reach the backups. Before taking the server's tasks, the phone also saves its old ones in the app's storage.
 
-The server keeps its own backups too; see [Web server](../developer/web-server.html).
+The server keeps its own backups too; see [Web server](/developer/web-server/).

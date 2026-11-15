@@ -1,14 +1,8 @@
 ---
 title: Working with tasks
-parent: User guide
-nav_order: 4
+sidebar:
+  order: 4
 ---
-
-# Working with tasks
-{: .no_toc }
-
-1. TOC
-{:toc}
 
 ## Adding tasks
 
@@ -17,7 +11,7 @@ Press that row, or Down then Enter, to add what you typed. The task goes into th
 selected, it gets that tag; added in My Day, it goes into My Day.
 
 The bar can read tags, dates and repeats out of what you type, such as `Pay rent tomorrow #home every month`. See
-[Quick add and search](views-and-layouts.html#quick-add-and-search).
+[Quick add and search](/user/views-and-layouts/#quick-add-and-search).
 
 To add a subtask, choose **Add subtask** from a task's right-click menu (long-press on a phone).
 
@@ -27,7 +21,7 @@ To add a subtask, choose **Add subtask** from a task's right-click menu (long-pr
 - **Details:** click a row, or choose **Open details**, to open its details panel on the right (full screen on a
   phone). Drag the panel's edge to make it wider.
 
-![A project task's details beside the list: its groups' tags, dates, repeat, relationships and notes]({{ '/assets/screenshots/overview.png' | relative_url }})
+![A project task's details beside the list: its groups' tags, dates, repeat, relationships and notes](/assets/screenshots/overview.png)
 
 The details panel holds these sections, which you can reorder or hide in Settings › Tasks › Task details:
 
@@ -76,7 +70,7 @@ done and missed occurrences beside each routine's title.
 
 My Day is today's plan. Add a task from its details, its right-click menu, or by adding it while My Day is open.
 
-![My Day with five tasks]({{ '/assets/screenshots/my-day.png' | relative_url }})
+![My Day with five tasks](/assets/screenshots/my-day.png)
 
 Subtasks come along with their parent. Settings › Tasks › My Day controls how it fills and empties itself:
 
@@ -104,7 +98,7 @@ Needed by*, in Settings › Tasks › Relationships, and choose for each which t
 shows how many open tasks it waits on, and the Gantt chart draws an arrow to it. X-Tasks refuses links that would make
 two tasks wait on each other.
 
-Rule tags can test relationships — see [Rule tags](tags-and-filters.html#conditions).
+Rule tags can test relationships — see [Rule tags](/user/tags-and-filters/#conditions).
 
 ## Selecting several tasks
 
@@ -117,7 +111,7 @@ deletes them all at once. Dragging any selected row moves them all together. Esc
 ## Undo
 
 After deleting tasks, **Ctrl+Z** (or the Undo button in the notice that appears) brings them back for a few seconds.
-For anything older, use [History](history.html).
+For anything older, use [History](/user/history/).
 
 ## Task links
 

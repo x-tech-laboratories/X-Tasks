@@ -1,0 +1,51 @@
+// The X-Tasks documentation site, built with the X-Libs site framework and published on GitHub Pages.
+import { define_site } from "@x-tech-laboratories/x-libs/site/model";
+
+export default define_site({
+  title: "X-Tasks",
+  description: "A todo manager built on one big list of infinitely nested tasks, with tags for anything you want to track.",
+  site: "https://x-tech-laboratories.github.io",
+  base: "/X-Tasks/",
+  content: ".",
+  logo: "../resources/icon.svg",
+  social: [{ icon: "github", label: "GitHub", href: "https://github.com/x-tech-laboratories/X-Tasks" }],
+  edit_link: "https://github.com/x-tech-laboratories/X-Tasks/edit/main/docs/",
+  last_updated: true,
+  theme_key: "x-tasks-docs-theme",
+  css: [
+    "@x-tech-laboratories/halon/halon-tokens.css",
+    "@x-tech-laboratories/halon/halon.css",
+    "@x-tech-laboratories/halon/site.css",
+    "@fontsource/noto-sans/400.css",
+    "@fontsource/noto-sans/500.css",
+    "@fontsource/noto-sans/600.css",
+    "@fontsource/noto-sans/700.css",
+  ],
+  sidebar: [
+    { slug: "", label: "Home" },
+    { label: "User guide", autogenerate: { directory: "user" } },
+    { label: "Developer guide", autogenerate: { directory: "developer" } },
+    { label: "Download for Android", link: "https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks.apk" },
+  ],
+  // The addresses the earlier Jekyll site used.
+  redirects: {
+    "/developer/android.html": "/developer/android/",
+    "/developer/architecture.html": "/developer/architecture/",
+    "/developer/contributing.html": "/developer/contributing/",
+    "/developer/database.html": "/developer/database/",
+    "/developer/integrations.html": "/developer/integrations/",
+    "/developer/setup.html": "/developer/setup/",
+    "/developer/sync.html": "/developer/sync/",
+    "/developer/web-server.html": "/developer/web-server/",
+    "/user/ai-assistants.html": "/user/ai-assistants/",
+    "/user/core-concepts.html": "/user/core-concepts/",
+    "/user/getting-started.html": "/user/getting-started/",
+    "/user/history.html": "/user/history/",
+    "/user/reports.html": "/user/reports/",
+    "/user/settings.html": "/user/settings/",
+    "/user/sync-and-backups.html": "/user/sync-and-backups/",
+    "/user/tags-and-filters.html": "/user/tags-and-filters/",
+    "/user/tasks.html": "/user/tasks/",
+    "/user/views-and-layouts.html": "/user/views-and-layouts/",
+  },
+});
