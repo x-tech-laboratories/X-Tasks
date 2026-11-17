@@ -210,6 +210,8 @@ export interface Settings {
   pomodoro_break_minutes: number
   pomodoro_long_break_minutes: number
   pomodoro_rounds: number
+  // Whether the desktop app shows an icon in the system tray with the running timers.
+  show_tray_icon: boolean
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
@@ -308,6 +310,7 @@ export const DEFAULT_SETTINGS: Settings = {
   pomodoro_break_minutes: 5,
   pomodoro_long_break_minutes: 15,
   pomodoro_rounds: 4,
+  show_tray_icon: true,
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',
@@ -388,7 +391,7 @@ export const DEFAULT_SETTINGS: Settings = {
 // Settings that belong to one device and never sync: its window layout, its MCP endpoint and its backups.
 export const DEVICE_ONLY_SETTINGS: readonly (keyof Settings)[] = [
   'sidebar_width', 'detail_width', 'table_column_widths', 'last_view', 'collapsed_task_ids', 'collapsed_sidebar_ids',
-  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep'
+  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep', 'show_tray_icon'
 ]
 
 // The ports the MCP endpoint can be set to, leaving out those that need root.

@@ -294,6 +294,12 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           heading: 'Time tracking',
           content: (
             <>
+              {window.x_settings.host === 'desktop' && (
+                <SettingRow label="Show tray icon" hint="An icon in the system tray lists the running timers with their times, stops them, and brings the window back." as_label>
+                  <Switch label="Show tray icon" checked={settings.show_tray_icon} on_change={(on) => on_change('show_tray_icon', on)} />
+                </SettingRow>
+              )}
+
               <SettingRow
                 label="Allow several timers at once"
                 hint="Starting a timer leaves the others running, each stopped on its own. Time that overlaps counts towards every task it was spent on."

@@ -119,6 +119,10 @@ across any tasks, and again after as many more. **Take a break** on the reminder
 **Break length** minutes, five by default, without a timer running starts the count again. While the window is out of
 sight the reminder also shows as a notification, in a browser once you allow it. It is off until you set the minutes.
 
+On the desktop, an icon in the system tray lists the running timers with their times; pick one to open its task, or
+**Stop timer** to stop them. **Show tray icon** in Settings › Tasks › Time tracking turns it off on that computer. The
+desktop needs a tray, as most Linux desktops have; GNOME shows one with the AppIndicator extension.
+
 ### Focus mode and Pomodoro
 
 **Focus** in a task's details or its right-click menu, or ⤢ beside a running timer, shows that task alone, filling
