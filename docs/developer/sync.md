@@ -15,7 +15,7 @@ its cells and bumps a sequence number.
 
 When two devices change the same cell, the **newest write wins** on every device. Different cells never conflict, so
 edits to different fields of the same task always merge. Batches are applied parents first: groups before their tags,
-tasks before their tags and completions.
+tasks before their tags, completions and time entries.
 
 ## Protocol
 
@@ -36,7 +36,7 @@ pulls other devices' changes promptly. The server address and token are kept in 
 
 ## What is synced
 
-Tasks, tags, groups, links, completions, task history and most settings. Window layout, the MCP endpoint and backup
+Tasks, tags, groups, links, completions, time entries, task history and most settings. Window layout, the MCP endpoint and backup
 settings stay with each device.
 
 A subtask added on one device under a task deleted on another is removed too, so no orphans survive a merge.

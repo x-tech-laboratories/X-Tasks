@@ -14,6 +14,7 @@ import { undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/t
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
+import { running_entry, task_entries, type TimeEntry } from '@shared/time_tracking'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
 import type { SignedInAccount } from './SignedIn'
@@ -37,6 +38,7 @@ import { TaskDetail } from './TaskDetail'
 import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
+import { TimerBar } from './TimeTracking'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
 import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
@@ -74,6 +76,8 @@ type PendingRemoval = { tasks: Task[]; toast: Undoable }
 export function App({ account }: { account?: SignedInAccount }) {
   const [tasks, set_tasks] = useState<Task[]>([])
   const [completions, set_completions] = useState<Completion[]>([])
+  const [time_entries, set_time_entries] = useState<TimeEntry[]>([])
+  const running_timer = running_entry(time_entries)
   const [has_loaded_tasks, set_has_loaded_tasks] = useState(false)
   const [tag_groups, set_tag_groups] = useState<TagGroup[]>([])
   const [tags, set_tags] = useState<Tag[]>([])
@@ -129,6 +133,7 @@ export function App({ account }: { account?: SignedInAccount }) {
       set_has_loaded_tasks(true)
     })
     void window.x_tasks.list_completions().then(set_completions)
+    void window.x_tasks.list_time_entries().then(set_time_entries)
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
@@ -144,6 +149,7 @@ export function App({ account }: { account?: SignedInAccount }) {
       window.x_tasks.on_database_changed(() => {
         void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
         void window.x_tasks.list_completions().then(set_completions)
+        void window.x_tasks.list_time_entries().then(set_time_entries)
         void window.x_tasks.list_tag_groups().then(set_tag_groups)
         void window.x_tasks.list_tags().then(set_tags)
       }),
@@ -336,8 +342,9 @@ export function App({ account }: { account?: SignedInAccount }) {
     complete_subtasks(task)
   }
 
-  // Ticks a task by hand, folding its subtasks away when that finishes its whole branch and the settings say to.
+  // Ticks a task by hand, folding its subtasks away when that finishes its whole branch and the settings say to, and stopping its timer.
   function tick_task(task: Task): void {
+    if (!task.is_done && running_timer?.task_id === task.id) stop_task_timer()
     collapse_finished_branches([task])
     toggle_task(task)
   }
@@ -372,6 +379,29 @@ export function App({ account }: { account?: SignedInAccount }) {
     const subtask_ids = subtree_ids(task.id, tasks)
     subtask_ids.delete(task.id)
     for (const each of tasks) if (subtask_ids.has(each.id) && each.is_done) save_task_done(each, false, each.done_at, { kind: 'none' })
+  }
+
+  // ==========================================================================
+  // Time tracking
+  // ==========================================================================
+
+  // Starting a timer stops the one running, at the same moment.
+  function start_task_timer(task: Task): void {
+    const started_at = new Date().toISOString()
+    const stopped = stopped_entries(time_entries, started_at)
+    set_time_entries([...stopped, { id: `starting-${task.id}`, task_id: task.id, started_at, ended_at: null }])
+    void window.x_tasks.start_timer(task.id, started_at).then((entry) => set_time_entries([...stopped, entry]))
+  }
+
+  function stop_task_timer(): void {
+    const ended_at = new Date().toISOString()
+    set_time_entries((current_entries) => stopped_entries(current_entries, ended_at))
+    void window.x_tasks.stop_timer(ended_at)
+  }
+
+  function remove_time_entry(entry: TimeEntry): void {
+    set_time_entries((current_entries) => current_entries.filter((each) => each.id !== entry.id))
+    void window.x_tasks.remove_time_entry(entry.id)
   }
 
   function set_task_my_day(task: Task, my_day_on: string | null): void {
@@ -945,7 +975,10 @@ export function App({ account }: { account?: SignedInAccount }) {
     // A sorted table ignores the dragged order, so a task dropped on a row there nests inside it instead of landing beside it.
     can_drop_on: can_drop_task_on,
     can_drop_beside: !is_sorted,
-    on_drop: drop_task
+    on_drop: drop_task,
+    timed_task_id: running_timer?.task_id ?? null,
+    on_start_timer: start_task_timer,
+    on_stop_timer: stop_task_timer
   }
 
   const can_add_task = selected_view.kind !== 'completed'
@@ -1199,7 +1232,19 @@ export function App({ account }: { account?: SignedInAccount }) {
       user_href="#/account"
       on_logout={account?.sign_out}
       theme={theme}
-      tools={multibar}
+      tools={
+        <>
+          {multibar}
+          {running_timer && (
+            <TimerBar
+              entry={running_timer}
+              task={tasks.find((task) => task.id === running_timer.task_id)}
+              on_open={task_actions.on_select}
+              on_stop={stop_task_timer}
+            />
+          )}
+        </>
+      }
       sidebar={sidebar}
       sidebar_foot={<SidebarFoot on_open_settings={open_settings} />}
       settings={{ href: '?settings', active: is_settings_open, on_open: open_settings }}
@@ -1261,6 +1306,11 @@ export function App({ account }: { account?: SignedInAccount }) {
               on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
               on_remove={remove_task}
               on_show_history={(task) => set_history_open({ task_id: task.id, version_id: null })}
+              time_entries={task_entries(time_entries, selected_task.id)}
+              is_timing={running_timer?.task_id === selected_task.id}
+              on_start_timer={start_task_timer}
+              on_stop_timer={stop_task_timer}
+              on_remove_time_entry={remove_time_entry}
               on_close={() => set_selected_task_id(null)}
             />
           </div>
@@ -1334,6 +1384,15 @@ export function App({ account }: { account?: SignedInAccount }) {
       )}
     </Shell>
   )
+}
+
+// ============================================================================
+// Time tracking
+// ============================================================================
+
+// The entries with every running one ended at the given time, as the database ends them, never before its start.
+function stopped_entries(entries: TimeEntry[], ended_at: string): TimeEntry[] {
+  return entries.map((entry) => (entry.ended_at === null ? { ...entry, ended_at: entry.started_at > ended_at ? entry.started_at : ended_at } : entry))
 }
 
 // ============================================================================

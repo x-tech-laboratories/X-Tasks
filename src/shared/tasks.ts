@@ -1,4 +1,5 @@
 import type { TaskRelationship } from './settings'
+import type { TimeEntry } from './time_tracking'
 import type { TaskVersion } from './versions'
 
 // ============================================================================
@@ -269,6 +270,11 @@ export interface TasksApi {
   list_recent_versions: (limit: number) => Promise<TaskVersion[]>
   // Brings the task back as one of its versions had it, adding the restore to its history as a new version.
   restore_task_version: (version_id: string) => Promise<void>
+  list_time_entries: () => Promise<TimeEntry[]>
+  // Stops whatever timer is running at the same moment, so only one runs at a time.
+  start_timer: (task_id: string, started_at: string) => Promise<TimeEntry>
+  stop_timer: (ended_at: string) => Promise<void>
+  remove_time_entry: (entry_id: string) => Promise<void>
 
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string, is_rule: boolean) => Promise<TagGroup>
