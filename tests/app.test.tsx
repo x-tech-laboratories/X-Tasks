@@ -171,6 +171,40 @@ describe('notes', () => {
 })
 
 // ============================================================================
+// Time tracking
+// ============================================================================
+
+describe('the timer', () => {
+  test('starts from a row, shows in the top bar and stops from there', async () => {
+    const { tasks_api } = await show_app()
+    const row = screen.getByText('Buy milk').closest('.task')! as HTMLElement
+
+    fireEvent.click(within(row).getByRole('button', { name: 'Start timer' }))
+
+    const timer = await screen.findByRole('status', { name: 'Running timer' })
+    expect(within(timer).getByText('Buy milk')).toBeTruthy()
+    expect(tasks_api.start_timer).toHaveBeenCalledWith('milk', expect.any(String))
+
+    fireEvent.click(within(timer).getByRole('button', { name: 'Stop timer' }))
+
+    expect(screen.queryByRole('status', { name: 'Running timer' })).toBeNull()
+    expect(tasks_api.stop_timer).toHaveBeenCalled()
+  })
+
+  test('stops when its task is marked done', async () => {
+    const { tasks_api } = await show_app()
+    const row = screen.getByText('Buy milk').closest('.task')! as HTMLElement
+    fireEvent.click(within(row).getByRole('button', { name: 'Start timer' }))
+    await screen.findByRole('status', { name: 'Running timer' })
+
+    fireEvent.click(within(row).getByRole('checkbox', { name: 'Mark as done' }))
+
+    expect(screen.queryByRole('status', { name: 'Running timer' })).toBeNull()
+    expect(tasks_api.stop_timer).toHaveBeenCalled()
+  })
+})
+
+// ============================================================================
 // Shortcuts
 // ============================================================================
 

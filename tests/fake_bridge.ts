@@ -16,6 +16,9 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
   const tasks_api = {
     list_tasks: vi.fn(async () => tasks.map((task) => ({ ...task }))),
     list_completions: vi.fn(async () => []),
+    list_time_entries: vi.fn(async () => []),
+    start_timer: vi.fn(async (task_id: string, started_at: string) => ({ id: `entry-${task_id}`, task_id, started_at, ended_at: null })),
+    stop_timer: vi.fn(async () => undefined),
     list_tag_groups: vi.fn(async () => data.tag_groups ?? []),
     list_tags: vi.fn(async () => data.tags ?? []),
     add_task: vi.fn(async (title: string, parent_id: string | null, tag_ids: string[]) => {

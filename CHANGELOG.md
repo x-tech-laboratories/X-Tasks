@@ -7,6 +7,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- A timer on each task, started from its row, menu or details and shown beside the search bar, keeping the time
+  spent on each day, with the entries listed and removable in the task's details and offered to AI assistants
 - Condition groups in rule tags, each matching all or any of its own conditions, nested to any depth
 - History of every change to a task, with word-level diffs, on a History page and from a task's
   details, and restoring any version as a new one

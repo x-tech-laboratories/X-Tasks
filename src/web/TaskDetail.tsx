@@ -6,9 +6,11 @@ import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { RichText } from '@x-tech-laboratories/x-libs/web/react/rich_text'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
+import type { TimeEntry } from '@shared/time_tracking'
 import { can_link, links_of, type SeenLink, type Tag, type TagGroup, type Task, type TaskSchedule } from '@shared/tasks'
 import { RecurrencePicker } from './RecurrencePicker'
 import { StreakStrip } from './StreakStrip'
+import { TimeSpentField } from './TimeTracking'
 import { TagChip } from './TagChip'
 import type { TaskDateField, TaskDuration, TaskRelationship } from '@shared/settings'
 import { format_local, has_time, parse_local } from '@x-tech-laboratories/x-libs/dates'
@@ -55,12 +57,18 @@ interface TaskDetailProps {
   on_set_my_day: (task: Task, is_added: boolean) => void
   on_remove: (task: Task) => void
   on_show_history: (task: Task) => void
+  // This task's time entries, oldest first, and whether the timer is running on it.
+  time_entries: TimeEntry[]
+  is_timing: boolean
+  on_start_timer: (task: Task) => void
+  on_stop_timer: () => void
+  on_remove_time_entry: (entry: TimeEntry) => void
   on_close: () => void
 }
 
 export function TaskDetail({
   task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
-  is_in_my_day, on_set_my_day, on_remove, on_show_history, on_close, streak, history
+  is_in_my_day, on_set_my_day, on_remove, on_show_history, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -275,6 +283,17 @@ export function TaskDetail({
               {history.length > 0 && <StreakStrip history={history} limit={28} />}
             </div>
           )
+        )
+      case 'time':
+        return (
+          <TimeSpentField
+            task={task}
+            entries={time_entries}
+            is_timing={is_timing}
+            on_start={on_start_timer}
+            on_stop={on_stop_timer}
+            on_remove_entry={on_remove_time_entry}
+          />
         )
       case 'notes':
         return (

@@ -7,7 +7,7 @@ import { format_local } from '@x-tech-laboratories/x-libs/dates'
 import { PRESET_FILTERS_GROUP_ID, type RuleCondition, type TagRule } from '@shared/tasks'
 import { open_task_database } from '../main/node_task_database'
 import {
-  add_tag, add_tag_group, add_task, close_task_database, list_tags, set_setting, set_task_done, set_task_notes, set_task_schedule
+  add_tag, add_tag_group, add_task, close_task_database, list_tags, set_setting, set_task_done, set_task_notes, set_task_schedule, start_timer, stop_timer
 } from '../main/task_database'
 
 // ============================================================================
@@ -80,6 +80,8 @@ interface ExampleTask {
   in_my_day?: boolean
   // Days ago the task was finished; a recurring task stays open and only logs these.
   done_days_ago?: number[]
+  // Stretches of work as days ago, starting hour and minutes long.
+  worked?: { days_ago: number; hour: number; minutes: number }[]
   subtasks?: ExampleTask[]
 }
 
@@ -107,7 +109,13 @@ const EXAMPLE_TASKS: ExampleTask[] = [
     tags: ['Tech', 'Goal', 'Side project'],
     due_at: day(30),
     subtasks: [
-      { title: 'Write the landing page copy', tags: ['Website'], due_at: day(1), in_my_day: true },
+      {
+        title: 'Write the landing page copy',
+        tags: ['Website'],
+        due_at: day(1),
+        in_my_day: true,
+        worked: [{ days_ago: 2, hour: 10, minutes: 50 }, { days_ago: 1, hour: 14, minutes: 35 }, { days_ago: 0, hour: 9, minutes: 25 }]
+      },
       { title: 'Set up the domain and TLS', tags: ['Website', 'High'], done_days_ago: [9] },
       { title: 'Draft the launch post', tags: ['Launch'], start_at: day(10), due_at: day(20) },
       {
@@ -135,7 +143,13 @@ const EXAMPLE_TASKS: ExampleTask[] = [
   { title: 'Renew the car insurance', tags: ['Car', 'Task', 'Medium'], due_at: day(6) },
   { title: 'Book the car service', tags: ['Car', 'Task', 'Low'], due_at: day(12) },
   { title: 'Update the CV with the last project', tags: ['Career', 'Task', 'Medium'], in_my_day: true },
-  { title: 'Prepare for the team review', tags: ['Career', 'Task', 'High'], due_at: time(0, 15, 30), in_my_day: true },
+  {
+    title: 'Prepare for the team review',
+    tags: ['Career', 'Task', 'High'],
+    due_at: time(0, 15, 30),
+    in_my_day: true,
+    worked: [{ days_ago: 1, hour: 16, minutes: 45 }]
+  },
   { title: 'Read "The Pragmatic Programmer"', tags: ['Productivity', 'Task', 'Low'] },
   { title: 'Call the dentist to move the appointment', tags: ['Health', 'Task'], due_at: day(0), in_my_day: true },
   { title: 'Buy a birthday present for Sam', tags: ['Social', 'Task', 'Medium'], due_at: day(5) },
@@ -213,6 +227,12 @@ function add_example_task(example: ExampleTask, parent_id: string | null): void 
   for (const days_ago of [...(example.done_days_ago ?? [])].sort((first, second) => second - first)) {
     const is_recurring = Boolean(example.recurrence)
     set_task_done(task.id, !is_recurring, done_moment(days_ago), { kind: 'add', occurrence_on: is_recurring ? day(-days_ago) : occurrence_day(example) })
+  }
+
+  for (const stretch of example.worked ?? []) {
+    const started_at = new Date(now.getFullYear(), now.getMonth(), now.getDate() - stretch.days_ago, stretch.hour)
+    start_timer(task.id, started_at.toISOString())
+    stop_timer(new Date(started_at.getTime() + stretch.minutes * 60 * 1000).toISOString())
   }
 
   for (const subtask of example.subtasks ?? []) add_example_task(subtask, task.id)

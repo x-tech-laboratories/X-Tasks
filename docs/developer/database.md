@@ -6,7 +6,7 @@ sidebar:
 
 ## Storage
 
-All data — tasks, tags, groups, completions, history, settings and sync state — lives in one SQLite file. The
+All data — tasks, tags, groups, completions, time entries, history, settings and sync state — lives in one SQLite file. The
 desktop app and server use Node's built-in `node:sqlite`; Android uses `@sqlite.org/sqlite-wasm`. Both sit behind the
 small interface in `src/main/sql_database.ts`, so `task_database.ts` runs unchanged on each.
 

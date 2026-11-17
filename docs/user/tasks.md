@@ -100,6 +100,17 @@ two tasks wait on each other.
 
 Rule tags can test relationships — see [Rule tags](/user/tags-and-filters/#conditions).
 
+## Time tracking
+
+Press ▶ at the end of a row, or choose **Start timer** from its right-click menu, to time the work on a task. The
+timer shows beside the search bar with the task's name and the time so far; click the name to open the task, or
+**Stop** to end it. Only one timer runs at a time, so starting another stops the first, and completing a task stops
+its timer.
+
+**Time spent** in a task's details shows its total and today's time, starts and stops its timer, and under **Show
+entries** lists each stretch of work by day, with × to remove one. Time that runs past midnight counts towards each
+day. The timer syncs, so one started on the phone shows and stops on the desktop too.
+
 ## Selecting several tasks
 
 Ctrl+click rows to select them, Shift+click to select a range, or Ctrl+A for every row on screen. On a phone,

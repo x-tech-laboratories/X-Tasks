@@ -30,7 +30,6 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 
 ## Time tracking
 
-- [ ] Start and stop a timer on a task, keeping the time spent on each day
 - [ ] Time estimates on tasks, with estimated against spent for a task and for the day
 - [ ] Ask what to do with time spent away from the computer while a timer runs
 - [ ] Remind to take a break after a stretch of continuous work

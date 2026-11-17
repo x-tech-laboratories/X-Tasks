@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS, saved_date_range, saved_task_duration, type Settings 
 import { in_transaction, type SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { as_code_block } from '@x-tech-laboratories/x-libs/web/markdown_text'
 import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
+import type { TimeEntry } from '@shared/time_tracking'
 import type { TaskVersion } from '@shared/versions'
 import { task_sync } from './task_sync'
 import { drop_version_triggers, install_version_triggers, read_recent_versions, read_task_versions, prune_task_versions, record_task_versions, restore_version } from './task_versions'
@@ -213,7 +214,15 @@ const SCHEMA_MIGRATIONS: (string | ((database: SqlDatabase) => void))[] = [
    CREATE UNIQUE INDEX task_versions_by_uid ON task_versions (uid);
    DROP INDEX task_versions_by_task;
    CREATE INDEX task_versions_by_task ON task_versions (task_id, changed_at);
-   CREATE INDEX task_versions_by_time ON task_versions (changed_at)`
+   CREATE INDEX task_versions_by_time ON task_versions (changed_at)`,
+  // Each stretch of work on a task; the one with no end is the running timer.
+  `CREATE TABLE time_entries (
+     id TEXT PRIMARY KEY,
+     task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+     started_at TEXT NOT NULL,
+     ended_at TEXT
+   );
+   CREATE INDEX time_entries_by_task ON time_entries (task_id)`
 ]
 
 // The schema version that starts syncing history; the versions kept before it are sent to the server as new.
@@ -556,6 +565,37 @@ function prune_history(database: SqlDatabase): void {
 
 function prune_history_now_and_then(database: SqlDatabase): void {
   if (Date.now() - last_pruned_at >= PRUNE_INTERVAL_MS) prune_history(database)
+}
+
+// ============================================================================
+// Time tracking
+// ============================================================================
+
+export function list_time_entries(): TimeEntry[] {
+  return open_database().prepare('SELECT id, task_id, started_at, ended_at FROM time_entries ORDER BY started_at').all() as unknown as TimeEntry[]
+}
+
+export function start_timer(task_id: string, started_at: string): TimeEntry {
+  const entry: TimeEntry = { id: crypto.randomUUID(), task_id, started_at, ended_at: null }
+  const database = open_database()
+  in_transaction(database, () => {
+    stop_running_entries(database, started_at)
+    database.prepare('INSERT INTO time_entries (id, task_id, started_at) VALUES (?, ?, ?)').run(entry.id, task_id, started_at)
+  })
+  return entry
+}
+
+export function stop_timer(ended_at: string): void {
+  stop_running_entries(open_database(), ended_at)
+}
+
+export function remove_time_entry(entry_id: string): void {
+  open_database().prepare('DELETE FROM time_entries WHERE id = ?').run(entry_id)
+}
+
+// An end before an entry's start, as another device's clock can give, ends it where it began.
+function stop_running_entries(database: SqlDatabase, ended_at: string): void {
+  database.prepare('UPDATE time_entries SET ended_at = MAX(started_at, ?) WHERE ended_at IS NULL').run(ended_at)
 }
 
 // ============================================================================

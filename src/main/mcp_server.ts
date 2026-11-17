@@ -9,9 +9,10 @@ import { can_drop, children_of, move_for_drop } from '@x-tech-laboratories/x-lib
 import { next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
 import { can_link, links_of, type Task } from '@shared/tasks'
+import { entry_seconds, running_entry, task_entries, total_seconds } from '@shared/time_tracking'
 import {
   add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
-  set_task_title, tag_task, unlink_tasks, untag_task
+  set_task_title, start_timer, stop_timer, tag_task, unlink_tasks, untag_task, list_time_entries
 } from './task_database'
 
 // ============================================================================
@@ -45,6 +46,8 @@ function describe_tasks(tasks: Task[]): object[] {
   const groups = list_tag_groups()
   const all_tasks = list_tasks()
   const relationships = get_settings().task_relationships
+  const entries = list_time_entries()
+  const now = new Date()
   return tasks.map((task) => ({
     ...task,
     tag_ids: undefined,
@@ -55,8 +58,16 @@ function describe_tasks(tasks: Task[]): object[] {
     links: links_of(task, all_tasks).map((link) => {
       const relationship = relationships.find((each) => each.id === link.relationship_id)
       return { relationship: link.is_inverse ? relationship?.inverse_name : relationship?.name, task_id: link.other.id, title: link.other.title }
-    })
+    }),
+    time_spent_seconds: Math.round(total_seconds(task_entries(entries, task.id), now))
   }))
+}
+
+// The running timer with its task's title, or null when none runs.
+function describe_timer(): object | null {
+  const entry = running_entry(list_time_entries())
+  if (!entry) return null
+  return { task_id: entry.task_id, title: find_task(entry.task_id).title, started_at: entry.started_at, elapsed_seconds: Math.round(entry_seconds(entry, new Date())) }
 }
 
 // The relationship and the way it reads for a name such as "Waits on" or its inverse "Blocks".
@@ -307,6 +318,35 @@ function create_mcp_server(on_change: () => void): McpServer {
       const task = find_task(task_id)
       remove_task(task_id)
       return { removed: task.title }
+    })
+  )
+
+  server.registerTool(
+    'get_timer',
+    { description: 'Tells which task the timer is running on, since when, and for how many seconds; null when no timer runs.', annotations: { readOnlyHint: true } },
+    () => as_text(describe_timer())
+  )
+
+  server.registerTool(
+    'start_timer',
+    {
+      description: 'Starts the timer on a task, counting time spent on it, and stops any timer already running.',
+      inputSchema: { task_id: z.string() }
+    },
+    changing(({ task_id }) => {
+      find_task(task_id)
+      start_timer(task_id, new Date().toISOString())
+      return describe_timer()
+    })
+  )
+
+  server.registerTool(
+    'stop_timer',
+    { description: 'Stops the running timer, keeping the time it counted.' },
+    changing(() => {
+      const timer = describe_timer()
+      stop_timer(new Date().toISOString())
+      return { stopped: timer }
     })
   )
 
