@@ -9,6 +9,7 @@ import { task_link, type Tag, type TagGroup, type Task } from '@shared/tasks'
 import { StreakStrip } from './StreakStrip'
 import { TagChip } from './TagChip'
 import { TimerButton } from './TimeTracking'
+import { short_time_label } from '@shared/time_tracking'
 import { is_overdue, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import { column_date, task_duration_label, task_duration_minutes, type DateColumn, type LastDoneOf } from './table'
 import type { RepeatOccurrence } from './dates'
@@ -67,6 +68,8 @@ export interface TaskActions {
   on_drop: (target: Task, placement: DropPlacement) => void
   // Whether a timer is running on the task.
   is_timing: (task: Task) => boolean
+  // The time spent on the task so far, in seconds.
+  spent_seconds_of: (task: Task) => number
   on_start_timer: (task: Task) => void
   on_stop_timer: (task: Task) => void
 }
@@ -160,6 +163,26 @@ export function DateLabel({ task, column, actions }: { task: Task; column: DateC
       {relative_day_label(date)}
     </span>
   )
+}
+
+// Time spent against the estimate, marked once it runs over; nothing for a task without an estimate.
+export function EstimateLabel({ task, actions }: { task: Task; actions: TaskActions }) {
+  if (task.estimate_minutes === null) return null
+  const spent = actions.spent_seconds_of(task)
+  const is_over = spent > task.estimate_minutes * 60
+  return (
+    <span className={cx('due_label', is_over && 'is_overdue')} title={is_over ? 'Time spent runs over the estimate' : 'Time spent of the estimate'}>
+      {short_time_label(spent)} / {short_time_label(task.estimate_minutes * 60)}
+    </span>
+  )
+}
+
+// The time spent on a task, marked once it runs over the estimate; nothing before a minute is spent.
+export function SpentLabel({ task, actions }: { task: Task; actions: TaskActions }) {
+  const spent = actions.spent_seconds_of(task)
+  if (spent < 60) return null
+  const is_over = task.estimate_minutes !== null && spent > task.estimate_minutes * 60
+  return <span className={cx('due_label', is_over && 'is_overdue')}>{short_time_label(spent)}</span>
 }
 
 export function DurationLabel({ task }: { task: Task }) {
@@ -272,6 +295,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
           <TitleMarks task={task} actions={actions} show_streak />
         </span>
         <DateLabel task={task} column="date" actions={actions} />
+        <EstimateLabel task={task} actions={actions} />
         {row_tags_of(task, actions).map((tag) => (
           <TagChip key={tag.id} tag={tag} title={tag_path(tag, actions.tags)} on_remove={() => actions.on_untag(task, tag)} />
         ))}

@@ -2,9 +2,10 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  add_task, attach_task_database, close_task_database, list_time_entries, remove_task, remove_time_entry, set_setting, start_timer, stop_timer
+  add_task, attach_task_database, close_task_database, list_task_versions, list_tasks, list_time_entries, remove_task, remove_time_entry, set_setting, set_task_estimate, start_timer, stop_timer
 } from '../src/main/task_database'
-import { entry_seconds, running_entries, seconds_by_day, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
+import { entry_seconds, estimate_left_seconds, parse_estimate, running_entries, seconds_by_day, short_time_label, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
+import { make_task } from './fixtures'
 
 // ============================================================================
 // Helpers
@@ -71,6 +72,47 @@ describe('time totals', () => {
 })
 
 // ============================================================================
+// Estimates
+// ============================================================================
+
+describe('estimates', () => {
+  it('reads hours and minutes typed in several ways', () => {
+    expect(parse_estimate('1h 30m')).toBe(90)
+    expect(parse_estimate('1.5 hours')).toBe(90)
+    expect(parse_estimate('90m')).toBe(90)
+    expect(parse_estimate('1:30')).toBe(90)
+    expect(parse_estimate('45')).toBe(45)
+    expect(parse_estimate('2H')).toBe(120)
+  })
+
+  it('clears on empty text or zero, and refuses text it cannot read', () => {
+    expect(parse_estimate('  ')).toBeNull()
+    expect(parse_estimate('0m')).toBeNull()
+    expect(parse_estimate('soon')).toBeUndefined()
+    expect(parse_estimate('1h and a bit')).toBeUndefined()
+  })
+
+  it('shortens a time to hours and minutes', () => {
+    expect(short_time_label(45 * 60)).toBe('45m')
+    expect(short_time_label(120 * 60)).toBe('2h')
+    expect(short_time_label(95 * 60 + 30)).toBe('1h 35m')
+  })
+
+  it('totals the estimate left on open tasks, never below nothing for one run over', () => {
+    const now = local(17, 12)
+    const tasks = [
+      make_task({ id: 'half', estimate_minutes: 60 }),
+      make_task({ id: 'over', estimate_minutes: 30 }),
+      make_task({ id: 'done', estimate_minutes: 60, is_done: true }),
+      make_task({ id: 'unestimated' })
+    ]
+    const entries = [entry(local(17, 9), local(17, 9, 30), 'half'), entry(local(17, 10), local(17, 11), 'over')]
+
+    expect(estimate_left_seconds(tasks, entries, now)).toBe(1800)
+  })
+})
+
+// ============================================================================
 // Database
 // ============================================================================
 
@@ -114,6 +156,15 @@ describe('timer queries', () => {
 
     expect(again.id).toBe(first.id)
     expect(list_time_entries()).toHaveLength(1)
+  })
+
+  it('saves an estimate and keeps it in the task history', () => {
+    const task = add_task('Write report', null, [], null)
+
+    set_task_estimate(task.id, 90)
+
+    expect(list_tasks()[0]!.estimate_minutes).toBe(90)
+    expect(list_task_versions(task.id)[0]!.snapshot.estimate_minutes).toBe(90)
   })
 
   it('never ends an entry before it started', () => {

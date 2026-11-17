@@ -11,13 +11,15 @@ import type { McpStatus, Settings } from '@shared/settings'
 import { can_link, links_of, type Task } from '@shared/tasks'
 import { entry_seconds, running_entries, task_entries, total_seconds } from '@shared/time_tracking'
 import {
-  add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
+  add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_estimate, set_task_notes, set_task_schedule,
   set_task_title, start_timer, stop_timer, tag_task, unlink_tasks, untag_task, list_time_entries
 } from './task_database'
 
 // ============================================================================
 // Task helpers
 // ============================================================================
+
+const estimate_minutes = z.number().int().positive().nullable().describe('How long the task should take, in minutes; null clears it')
 
 const TASK_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/
 
@@ -134,7 +136,7 @@ function create_mcp_server(on_change: () => void): McpServer {
   server.registerTool(
     'list_tasks',
     {
-      description: 'Lists tasks with their notes (Markdown), dates, recurrence, My Day day, parent and tags.',
+      description: 'Lists tasks with their notes (Markdown), dates, recurrence, My Day day, estimate and time spent, parent and tags.',
       inputSchema: { include_done: z.boolean().default(false).describe('Also list completed tasks') }
     },
     ({ include_done }) => as_text(describe_tasks(list_tasks().filter((task) => include_done || !task.is_done)))
@@ -166,15 +168,17 @@ function create_mcp_server(on_change: () => void): McpServer {
         start_at: task_date.optional(),
         due_at: task_date.optional(),
         recurrence: z.string().optional().describe('An RFC 5545 rule without the RRULE: prefix, such as FREQ=WEEKLY;BYDAY=MO'),
-        in_my_day: z.boolean().default(false)
+        in_my_day: z.boolean().default(false),
+        estimate_minutes: estimate_minutes.optional()
       }
     },
-    changing(({ title, notes, parent_id, tag_ids, start_at, due_at, recurrence, in_my_day }) => {
+    changing(({ title, notes, parent_id, tag_ids, start_at, due_at, recurrence, in_my_day, estimate_minutes }) => {
       if (parent_id) find_task(parent_id)
       tag_ids.forEach(check_plain_tag)
 
       const task = add_task(title, parent_id ?? null, tag_ids, in_my_day ? format_local(new Date(), false) : null)
       if (notes) set_task_notes(task.id, notes)
+      if (estimate_minutes) set_task_estimate(task.id, estimate_minutes)
       if (start_at || due_at || recurrence) {
         set_task_schedule(task.id, { start_at: start_at ?? null, due_at: due_at ?? null, recurrence: recurrence ?? '' })
       }
@@ -193,10 +197,11 @@ function create_mcp_server(on_change: () => void): McpServer {
         start_at: task_date.optional(),
         due_at: task_date.optional(),
         recurrence: z.string().optional().describe('An RFC 5545 rule without the RRULE: prefix; an empty string stops it repeating'),
-        in_my_day: z.boolean().optional()
+        in_my_day: z.boolean().optional(),
+        estimate_minutes: estimate_minutes.optional()
       }
     },
-    changing(({ task_id, title, notes, start_at, due_at, recurrence, in_my_day }) => {
+    changing(({ task_id, title, notes, start_at, due_at, recurrence, in_my_day, estimate_minutes }) => {
       const task = find_task(task_id)
       if (title !== undefined) set_task_title(task_id, title)
       if (notes !== undefined) set_task_notes(task_id, notes)
@@ -208,6 +213,7 @@ function create_mcp_server(on_change: () => void): McpServer {
         })
       }
       if (in_my_day !== undefined) set_task_my_day(task_id, in_my_day ? format_local(new Date(), false) : null)
+      if (estimate_minutes !== undefined) set_task_estimate(task_id, estimate_minutes)
       return describe_tasks([find_task(task_id)])[0]
     })
   )

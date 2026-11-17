@@ -17,6 +17,7 @@ interface SnapshotRow {
   recurrence: string
   are_dates_linked: number
   my_day_on: string | null
+  estimate_minutes: number | null
   parent_id: string | null
   created_at: string
 }
@@ -24,7 +25,7 @@ interface SnapshotRow {
 // The task as it is now, or nothing once it is gone.
 export function read_snapshot(database: SqlDatabase, task_id: string): TaskSnapshot | null {
   const row = database
-    .prepare('SELECT title, notes, is_done, done_at, start_at, due_at, recurrence, are_dates_linked, my_day_on, parent_id, created_at FROM tasks WHERE id = ?')
+    .prepare('SELECT title, notes, is_done, done_at, start_at, due_at, recurrence, are_dates_linked, my_day_on, estimate_minutes, parent_id, created_at FROM tasks WHERE id = ?')
     .get(task_id) as SnapshotRow | undefined
   if (!row) return null
 
@@ -76,12 +77,12 @@ function apply_snapshot(database: SqlDatabase, task_id: string, snapshot: TaskSn
   }
   database
     .prepare(
-      `UPDATE tasks SET title = ?, notes = ?, is_done = ?, done_at = ?, start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = ?, my_day_on = ?, parent_id = ?
+      `UPDATE tasks SET title = ?, notes = ?, is_done = ?, done_at = ?, start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = ?, my_day_on = ?, estimate_minutes = ?, parent_id = ?
        WHERE id = ?`
     )
     .run(
       snapshot.title, snapshot.notes, Number(snapshot.is_done), snapshot.done_at, snapshot.start_at, snapshot.due_at, snapshot.recurrence,
-      Number(snapshot.are_dates_linked), snapshot.my_day_on, parent_id, task_id
+      Number(snapshot.are_dates_linked), snapshot.my_day_on, snapshot.estimate_minutes ?? null, parent_id, task_id
     )
 
   const kept_tag_ids = new Set(snapshot.tag_ids)

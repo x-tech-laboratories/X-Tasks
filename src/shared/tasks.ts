@@ -20,6 +20,8 @@ export interface Task {
   are_dates_linked: boolean
   // The local day, as YYYY-MM-DD, the task was added to My Day; empty when it is not in My Day.
   my_day_on: string | null
+  // How long the task is expected to take, in minutes; empty when not estimated.
+  estimate_minutes: number | null
   created_at: string
   parent_id: string | null
   position: number
@@ -256,6 +258,7 @@ export interface TasksApi {
   set_task_notes: (task_id: string, notes: string) => Promise<void>
   set_task_schedule: (task_id: string, schedule: TaskSchedule) => Promise<void>
   set_task_my_day: (task_id: string, my_day_on: string | null) => Promise<void>
+  set_task_estimate: (task_id: string, estimate_minutes: number | null) => Promise<void>
   remove_task: (task_id: string) => Promise<void>
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>

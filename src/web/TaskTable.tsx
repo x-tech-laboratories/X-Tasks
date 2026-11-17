@@ -7,15 +7,16 @@ import { SearchBox } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { DataTable, type RowGroup, type Sorting, type TableColumn as DataColumn } from '@x-tech-laboratories/x-libs/web/react/table'
 import type { DateRange, TableSortKey } from '@shared/settings'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
+import { short_time_label } from '@shared/time_tracking'
 import { relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import type { RepeatOccurrence, TaskGroup } from './dates'
 import {
   COLUMN_WIDTH_RANGE, DURATION_FILTER_CHOICES, EMPTY_TABLE_FILTERS, MARK_FILTER_CHOICES, NO_TAG_FILTER, STREAK_FILTER_CHOICES, date_filter_choices, default_column_width, group_column,
-  has_table_filters, is_column_filtered, is_column_shown, is_date_column, is_mark_column, table_sort_value, tag_ranks, type MarkColumn, type SortContext, type TableColumn,
+  has_table_filters, is_column_filtered, is_column_shown, is_date_column, is_mark_column, is_time_column, table_sort_value, tag_ranks, type MarkColumn, type SortContext, type TableColumn,
   type TableFilters
 } from './table'
 import {
-  DateLabel, DurationLabel, ROW_STRIP_LENGTH, StreakBadge, SubtaskForm, click_task, open_task_menu, row_tags_of, row_tint_style, start_task_drag, type TaskActions
+  DateLabel, DurationLabel, ROW_STRIP_LENGTH, SpentLabel, StreakBadge, SubtaskForm, click_task, open_task_menu, row_tags_of, row_tint_style, start_task_drag, type TaskActions
 } from './TaskItem'
 import { StreakStrip } from './StreakStrip'
 import { TagChip } from './TagChip'
@@ -96,7 +97,7 @@ export function TaskTable(props: TaskTableProps) {
 
   const sort_context: SortContext = useMemo(
     () => ({
-      tags_of: props.tags_of, streak_of: actions.streak_of, is_in_my_day: actions.is_in_my_day, date_field: actions.date_field, last_done_of: actions.last_done_of,
+      tags_of: props.tags_of, streak_of: actions.streak_of, is_in_my_day: actions.is_in_my_day, date_field: actions.date_field, last_done_of: actions.last_done_of, spent_seconds_of: actions.spent_seconds_of,
       tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true)
     }),
     [tags, props.tags_of, actions]
@@ -109,6 +110,8 @@ export function TaskTable(props: TaskTableProps) {
     if (column === 'due') return 'Due'
     if (column === 'done') return 'Done'
     if (column === 'duration') return 'Duration'
+    if (column === 'estimate') return 'Estimate'
+    if (column === 'time_spent') return 'Time spent'
     if (column === 'my_day') return 'My Day'
     if (column === 'notes') return 'Notes'
     if (column === 'repeats') return 'Repeats'
@@ -128,7 +131,7 @@ export function TaskTable(props: TaskTableProps) {
     )
   }
 
-  // The title filters by typed text; the dates, duration, streak and each group pick one choice from a list; history does not.
+  // The title filters by typed text; the dates, duration, streak and each group pick one choice from a list; history and the time columns do not.
   function filter_of(column: TableColumn): ((close: () => void) => ReactNode) | undefined {
     const set = (change: Partial<TableFilters>) => props.on_filters_change({ ...filters, ...change })
     if (column === 'title') {
@@ -140,7 +143,7 @@ export function TaskTable(props: TaskTableProps) {
     if (column === 'duration') return choices(DURATION_FILTER_CHOICES, filters.duration, (duration) => set({ duration }))
     if (column === 'streak') return choices(STREAK_FILTER_CHOICES, filters.streak, (streak) => set({ streak }))
     if (is_mark_column(column)) return choices(MARK_FILTER_CHOICES[column], filters.marks[column] ?? 'any', (value) => set({ marks: { ...filters.marks, [column]: value } }))
-    if (column === 'history') return undefined
+    if (column === 'history' || is_time_column(column)) return undefined
 
     const group_id = column.slice('group:'.length)
     const tag_choices = [
@@ -186,6 +189,8 @@ export function TaskTable(props: TaskTableProps) {
     const task = row.node.task
     if (is_date_column(column)) return <DateLabel task={task} column={column} actions={actions} />
     if (column === 'duration') return <DurationLabel task={task} />
+    if (column === 'estimate') return task.estimate_minutes !== null && <span className="due_label">{short_time_label(task.estimate_minutes * 60)}</span>
+    if (column === 'time_spent') return <SpentLabel task={task} actions={actions} />
     if (column === 'my_day') return actions.is_in_my_day(task) && <span className="task_mark" title="In My Day">☀</span>
     if (column === 'notes') return task.notes && <span className="task_mark" title="Has notes">≡</span>
     if (column === 'repeats') return task.recurrence && <span className="task_mark" title="Repeats">↻</span>
@@ -209,7 +214,7 @@ export function TaskTable(props: TaskTableProps) {
     header: is_mark_column(column) ? MARK_ICONS[column] : undefined,
     cell: column === 'title' ? title_cell : (row) => cell(row, column),
     sort: column === 'history' ? undefined : (row) => (row.kind === 'task' ? table_sort_value(row.node.task, column, sort_context, is_descending(column)) : null),
-    class: column === 'title' ? 'title_column' : is_date_column(column) || column === 'duration' ? 'date_column' : undefined,
+    class: column === 'title' ? 'title_column' : is_date_column(column) || column === 'duration' || is_time_column(column) ? 'date_column' : undefined,
     width: column === 'title' ? undefined : default_column_width(column),
     min_width: Math.min(COLUMN_WIDTH_RANGE.min, MIN_SCALED_WIDTH),
     max_width: COLUMN_WIDTH_RANGE.max,
