@@ -40,6 +40,7 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Fixed
 
+- Later repeats of a timed task in the calendar keep its start time instead of showing one hour
 - Keep right-click menus open on Linux
 - Column resizing in the task table
 - Tables and task views fit the pane; the phone sidebar runs from the top bar to the bottom of the

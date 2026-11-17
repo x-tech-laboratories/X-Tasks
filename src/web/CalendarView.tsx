@@ -112,7 +112,7 @@ export function CalendarView(props: CalendarViewProps) {
     const repeats = coming_repeats(props.tasks, props.date_field, props.now, repeat_days)
     const events = [
       ...props.tasks.flatMap((task) => task_event(task, props.tags_of(task), props.selected_task_id)),
-      ...repeats.map((repeat) => ({ ...task_event({ ...repeat.task, start_at: null, due_at: repeat.task_date }, props.tags_of(repeat.task), null)[0], id: `${repeat.task.id}@${repeat.task_date}`, editable: false, className: 'calendar_repeat' }))
+      ...repeats.map((repeat) => ({ ...task_event({ ...repeat.task, ...repeat.schedule }, props.tags_of(repeat.task), null)[0], id: `${repeat.task.id}@${repeat.task_date}`, editable: false, className: 'calendar_repeat' }))
     ]
     calendar.current?.setOption('events', events)
   }, [props.tasks, props.selected_task_id, props.now, last_shown_day])

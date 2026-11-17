@@ -1,5 +1,5 @@
 import type { DateRange, DateRangeSplit, TaskDateField } from '@shared/settings'
-import type { Task } from '@shared/tasks'
+import type { Task, TaskSchedule } from '@shared/tasks'
 import { matches_rule, resolve_rule, type ResolvedRule } from '@x-tech-laboratories/x-libs/date_ranges'
 import { days_between, format_local, is_overdue, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { next_schedule, task_date_of } from '@shared/schedule'
@@ -14,6 +14,8 @@ import type { TaskNode } from './views'
 export interface RepeatOccurrence {
   task: Task
   task_date: string
+  // The task's dates on that repeat, start and due moved together.
+  schedule: TaskSchedule
 }
 
 // The tasks and coming repeats that share a heading, such as Today, November or a tag.
@@ -165,7 +167,7 @@ export function coming_repeats(tasks: Task[], date_field: TaskDateField, now: st
       const task_date = next && task_date_of(next, date_field)
       if (!next || !task_date || task_date.slice(0, 10) > last_day) break
       // An overdue task's next dates can still be in the past, and those are skipped.
-      if (!is_overdue(task_date, now_date)) repeats.push({ task, task_date })
+      if (!is_overdue(task_date, now_date)) repeats.push({ task, task_date, schedule: next })
       current = { ...current, ...next }
     }
   }
