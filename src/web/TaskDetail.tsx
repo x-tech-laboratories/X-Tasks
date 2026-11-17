@@ -57,6 +57,7 @@ interface TaskDetailProps {
   on_set_my_day: (task: Task, is_added: boolean) => void
   on_remove: (task: Task) => void
   on_show_history: (task: Task) => void
+  on_focus: (task: Task) => void
   // This task's time entries, oldest first, and whether the timer is running on it.
   time_entries: TimeEntry[]
   is_timing: boolean
@@ -69,7 +70,7 @@ interface TaskDetailProps {
 
 export function TaskDetail({
   task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
-  is_in_my_day, on_set_my_day, on_remove, on_show_history, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_close, streak, history
+  is_in_my_day, on_set_my_day, on_remove, on_show_history, on_focus, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -339,6 +340,7 @@ export function TaskDetail({
             {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
           </span>
           <span className="task_detail_actions">
+            <button onClick={() => on_focus(task)}>Focus</button>
             <button onClick={() => on_show_history(task)}>History</button>
             <button className="danger" onClick={() => on_remove(task)}>
               Delete

@@ -7,7 +7,7 @@ import { PageHeading, SelectionBar } from '@x-tech-laboratories/x-libs/web/react
 import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import { toggled, with_range } from '@x-tech-laboratories/x-libs/web/selection'
-import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
+import { use_countdown, use_now } from '@x-tech-laboratories/x-libs/web/react/time'
 import { Shell } from '@x-tech-laboratories/x-libs/web/react/shell'
 import { ResizeHandle } from '@x-tech-laboratories/x-libs/web/react/split'
 import { toast, undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
@@ -39,7 +39,9 @@ import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
 import { WorklogPage } from './WorklogPage'
-import { AwayDialog, TimerBar } from './TimeTracking'
+import { AwayDialog, PomodoroChip, TimerBar } from './TimeTracking'
+import { FocusView } from './FocusView'
+import { next_pomodoro, pomodoro_seconds, type Pomodoro } from './pomodoro'
 import { FRESH_IDLE_WATCH, step_idle_watch, type AwaySpan } from './idle'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
@@ -244,6 +246,11 @@ export function App({ account }: { account?: SignedInAccount }) {
     const timer = setInterval(check, BREAK_CHECK_MS)
     return () => clearInterval(timer)
   }, [reminds_breaks, reminder_minutes, break_minutes])
+
+  // The task shown alone in focus mode, and the Pomodoro running on a task, with the time left in its phase.
+  const [focus_task_id, set_focus_task_id] = useState<string | null>(null)
+  const [pomodoro, set_pomodoro] = useState<Pomodoro | null>(null)
+  const pomodoro_clock = use_countdown(finish_pomodoro_phase)
 
   // Closing the app deletes any tasks still waiting.
   useEffect(() => {
@@ -478,11 +485,66 @@ export function App({ account }: { account?: SignedInAccount }) {
     set_time_entries(await window.x_tasks.list_time_entries())
   }
 
-  // A toast whose button stops every timer, and a system notification too while the window is out of sight, where the host has them.
+  // A toast, and a system notification too while the window is out of sight, where the host has them.
+  function notify(title: string, message: string, action?: { text: string; run: () => void }): void {
+    toast(message, { tone: 'info', sticky: true, action })
+    if ((document.hidden || !document.hasFocus()) && 'Notification' in window && Notification.permission === 'granted') new Notification(title, { body: message })
+  }
+
   function remind_break(worked_seconds: number): void {
-    const message = `You have worked ${short_time_label(worked_seconds)} without a break.`
-    toast(message, { tone: 'info', sticky: true, action: { text: 'Take a break', run: stop_every_timer } })
-    if ((document.hidden || !document.hasFocus()) && 'Notification' in window && Notification.permission === 'granted') new Notification('Time for a break', { body: message })
+    notify('Time for a break', `You have worked ${short_time_label(worked_seconds)} without a break.`, { text: 'Take a break', run: stop_every_timer })
+  }
+
+  // ==========================================================================
+  // Pomodoro and focus
+  // ==========================================================================
+
+  // A round of work times the task until its countdown ends; a browser asks to show notifications while the click still counts as the user's.
+  function start_pomodoro(task: Task): void {
+    if ('Notification' in window && Notification.permission === 'default') void Notification.requestPermission()
+    start_pomodoro_round({ task_id: task.id, phase: 'work', round: 1 })
+  }
+
+  function start_pomodoro_round(round: Pomodoro): void {
+    set_pomodoro(round)
+    pomodoro_clock.start(pomodoro_seconds('work', settings!))
+    const task = tasks.find((each) => each.id === round.task_id)
+    if (task) start_task_timer(task)
+  }
+
+  // The end of a round stops its timer and starts the break; the end of a break waits for the next round to be started.
+  function finish_pomodoro_phase(): void {
+    if (!pomodoro || !settings) return
+    const next = next_pomodoro(pomodoro, settings)
+    set_pomodoro(next)
+    if (pomodoro.phase === 'work') {
+      stop_task_timer({ id: pomodoro.task_id })
+      pomodoro_clock.start(pomodoro_seconds(next.phase, settings))
+      notify('Time for a break', `Round ${pomodoro.round} done. Take ${short_time_label(pomodoro_seconds(next.phase, settings))} away from it.`)
+    } else {
+      notify('Break over', `Start round ${next.round + 1} when you are ready.`, { text: 'Start', run: () => start_pomodoro_round(next_pomodoro(next, settings)) })
+    }
+  }
+
+  function skip_pomodoro_break(): void {
+    if (!pomodoro) return
+    pomodoro_clock.stop()
+    set_pomodoro({ ...pomodoro, phase: 'ready' })
+  }
+
+  // Leaves any timer running, so the work goes on being timed without rounds.
+  function stop_pomodoro(): void {
+    pomodoro_clock.stop()
+    set_pomodoro(null)
+  }
+
+  // Completing the task in focus ends its Pomodoro and leaves focus mode; ticking a subtask there only ticks it.
+  function toggle_in_focus(task: Task): void {
+    if (task.id === focus_task_id && !task.is_done) {
+      if (pomodoro?.task_id === task.id) stop_pomodoro()
+      set_focus_task_id(null)
+    }
+    tick_task(task)
   }
 
   function stop_every_timer(): void {
@@ -1033,6 +1095,7 @@ export function App({ account }: { account?: SignedInAccount }) {
   // The detail panel stays out of the way while the settings page is open.
   const selected_task = is_settings_open ? null : (tasks.find((task) => task.id === selected_task_id) ?? null)
   const rescheduling_tasks = tasks.filter((task) => rescheduling_task_ids.includes(task.id))
+  const focus_task = tasks.find((task) => task.id === focus_task_id) ?? null
 
   const task_actions: TaskActions = {
     tags,
@@ -1076,6 +1139,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     is_timing,
     spent_seconds_of,
     on_start_timer: start_task_timer,
+    on_focus: (task) => set_focus_task_id(task.id),
     on_stop_timer: stop_task_timer
   }
 
@@ -1345,12 +1409,16 @@ export function App({ account }: { account?: SignedInAccount }) {
       tools={
         <>
           {multibar}
+          {pomodoro && focus_task_id !== pomodoro.task_id && (
+            <PomodoroChip pomodoro={pomodoro} countdown={pomodoro_clock.countdown} on_open={() => set_focus_task_id(pomodoro.task_id)} />
+          )}
           {running_timers.map((entry) => (
             <TimerBar
               key={entry.task_id}
               entry={entry}
               task={tasks.find((task) => task.id === entry.task_id)}
               on_open={task_actions.on_select}
+              on_focus={(task) => set_focus_task_id(task.id)}
               on_stop={() => stop_task_timer({ id: entry.task_id })}
             />
           ))}
@@ -1417,6 +1485,7 @@ export function App({ account }: { account?: SignedInAccount }) {
               on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
               on_remove={remove_task}
               on_show_history={(task) => set_history_open({ task_id: task.id, version_id: null })}
+              on_focus={(task) => set_focus_task_id(task.id)}
               time_entries={task_entries(time_entries, selected_task.id)}
               is_timing={is_timing(selected_task)}
               on_start_timer={start_task_timer}
@@ -1487,6 +1556,28 @@ export function App({ account }: { account?: SignedInAccount }) {
           on_keep={() => set_away(null)}
           on_discard={() => void discard_time_away(timed_away, true)}
           on_discard_and_stop={() => void discard_time_away(timed_away, false)}
+        />
+      )}
+
+      {focus_task && (
+        <FocusView
+          task={focus_task}
+          subtasks={children_of(focus_task.id, tasks).filter((each) => !each.is_done)}
+          entries={task_entries(time_entries, focus_task.id)}
+          is_timing={is_timing(focus_task)}
+          pomodoro={pomodoro?.task_id === focus_task.id ? pomodoro : null}
+          countdown={pomodoro?.task_id === focus_task.id ? pomodoro_clock.countdown : null}
+          on_toggle={toggle_in_focus}
+          on_start_timer={start_task_timer}
+          on_stop_timer={stop_task_timer}
+          on_start_pomodoro={(task) => {
+            if (pomodoro) stop_pomodoro()
+            start_pomodoro(task)
+          }}
+          on_next_round={() => pomodoro && start_pomodoro_round(next_pomodoro(pomodoro, settings))}
+          on_skip_break={skip_pomodoro_break}
+          on_stop_pomodoro={stop_pomodoro}
+          on_close={() => set_focus_task_id(null)}
         />
       )}
 

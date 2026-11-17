@@ -71,6 +71,8 @@ export interface TaskActions {
   // The time spent on the task so far, in seconds.
   spent_seconds_of: (task: Task) => number
   on_start_timer: (task: Task) => void
+  // Shows the task alone, with its clock, Pomodoro, subtasks and notes.
+  on_focus: (task: Task) => void
   on_stop_timer: (task: Task) => void
 }
 
@@ -107,6 +109,7 @@ export function open_task_menu(task: Task, actions: TaskActions, event: MouseEve
     actions.is_in_my_day(task)
       ? { label: 'Remove from My Day', run: () => actions.on_set_my_day(task, false) }
       : { label: 'Add to My Day', run: () => actions.on_set_my_day(task, true) },
+    { label: 'Focus', run: () => actions.on_focus(task) },
     { label: 'Copy link', run: () => void navigator.clipboard?.writeText(task_link(task.id)) },
     { label: 'Delete', run: () => actions.on_remove(task), danger: true, separator_before: true }
   ]
