@@ -10,7 +10,7 @@ import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { DATE_POINTS, date_point_label, type DateComparison, type DatePoint, type Inclusivity } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
@@ -293,13 +293,34 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           id: 'time-tracking',
           heading: 'Time tracking',
           content: (
-            <SettingRow
-              label="Allow several timers at once"
-              hint="Starting a timer leaves the others running, each stopped on its own. Time that overlaps counts towards every task it was spent on."
-              as_label
-            >
-              <Switch label="Allow several timers at once" checked={settings.allow_several_timers} on_change={(on) => on_change('allow_several_timers', on)} />
-            </SettingRow>
+            <>
+              <SettingRow
+                label="Allow several timers at once"
+                hint="Starting a timer leaves the others running, each stopped on its own. Time that overlaps counts towards every task it was spent on."
+                as_label
+              >
+                <Switch label="Allow several timers at once" checked={settings.allow_several_timers} on_change={(on) => on_change('allow_several_timers', on)} />
+              </SettingRow>
+
+              <SettingRow
+                label="Ask about time away"
+                hint="Minutes without keyboard or mouse input, or asleep, while a timer runs before coming back asks whether to keep that time. A browser notices only sleep, and a phone never asks. Zero never asks."
+                as_label
+              >
+                <CommitInput
+                  type="number"
+                  min={IDLE_PROMPT_MINUTES_RANGE.min}
+                  max={IDLE_PROMPT_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.idle_prompt_minutes}
+                  on_commit={(event) =>
+                    on_change('idle_prompt_minutes', Math.min(IDLE_PROMPT_MINUTES_RANGE.max, Math.max(IDLE_PROMPT_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
+                  }
+                  aria-label="Minutes away"
+                />
+              </SettingRow>
+            </>
           )
         },
         {

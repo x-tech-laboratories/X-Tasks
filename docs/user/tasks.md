@@ -108,6 +108,12 @@ timer shows beside the search bar with the task's name and the time so far; clic
 at once** is on in Settings › Tasks › Time tracking; then each running timer shows in the top bar and stops on its own,
 and time that overlaps counts towards every task it was spent on. Completing a task stops its timer.
 
+If you leave the computer while a timer runs, coming back asks what to do with the time away: **Keep** counts it,
+**Discard** takes it off and times on from when you came back, and **Discard and stop** ends the timer when you left.
+The desktop app notices five minutes without keyboard or mouse input, and both it and a browser notice the computer
+sleeping; the phone never asks. Change the minutes, or turn it off with zero, under **Ask about time away** in Settings ›
+Tasks › Time tracking.
+
 **Time spent** in a task's details shows its total and today's time, starts and stops its timer, and under **Show
 entries** lists each stretch of work by day, with × to remove one. Time that runs past midnight counts towards each
 day. The timer syncs, so one started on the phone shows and stops on the desktop too.

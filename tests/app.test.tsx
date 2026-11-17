@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, describe, expect, test } from 'vitest'
 
 import { App } from '../src/web/App.tsx'
+import { AwayDialog } from '../src/web/TimeTracking.tsx'
 import { install_fake_bridge } from './fake_bridge.ts'
 import { make_group, make_tag, make_task } from './fixtures.ts'
 
@@ -242,6 +243,27 @@ describe('the timer', () => {
 
     expect(screen.queryByRole('status', { name: 'Running timer' })).toBeNull()
     expect(tasks_api.stop_timer).toHaveBeenCalled()
+  })
+})
+
+// ============================================================================
+// Time away
+// ============================================================================
+
+describe('the time away dialog', () => {
+  const span = { from: new Date(2026, 10, 17, 10, 0).getTime(), to: new Date(2026, 10, 17, 10, 40).getTime() }
+
+  test('names the stretch and the tasks timed, and offers keep, discard, and discard and stop', () => {
+    const calls: string[] = []
+    render(<AwayDialog span={span} titles={['Write report']} on_keep={() => calls.push('keep')} on_discard={() => calls.push('discard')} on_discard_and_stop={() => calls.push('stop')} />)
+
+    const dialog = screen.getByRole('dialog', { name: 'Time away' })
+    expect(within(dialog).getByText(/40m, while timing Write report/)).toBeTruthy()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard and stop' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep' }))
+    expect(calls).toEqual(['discard', 'stop', 'keep'])
   })
 })
 

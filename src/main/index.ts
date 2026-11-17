@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, screen, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, screen, session, shell } from 'electron'
 import { writeFile } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
 import { dirname, extname, join } from 'node:path'
@@ -144,6 +144,7 @@ function register_bridge_handlers(): void {
     get_database_path: task_database_path,
     show_database_folder: () => shell.showItemInFolder(task_database_path()),
     save_text_file,
+    get_idle_seconds: () => powerMonitor.getSystemIdleTime(),
 
     list_backups,
     create_backup: () => create_backup(),
