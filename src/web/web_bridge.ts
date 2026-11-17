@@ -60,6 +60,17 @@ function listen_for_changes(): void {
 // Bridge
 // ============================================================================
 
+// Hands the text to the browser as a download, which saves it or asks where as the browser is set to.
+function download_text(file_name: string, text: string): boolean {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = file_name
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  return true
+}
+
 const NO_SYNC: SyncStatus = { state: 'off', server_url: '', user: '', last_synced_at: '', pending_changes: 0, error: '' }
 
 // Gives the page the same window.x_tasks and window.x_settings the desktop app's preload does, backed by the web server.
@@ -78,6 +89,7 @@ export function install_web_bridge(): void {
     host: 'web',
     show_database_folder: () => Promise.resolve(),
     show_backup_folder: () => Promise.resolve(),
+    save_text_file: (file_name, text) => Promise.resolve(download_text(file_name, text)),
     // A page served by the server already works on the server's tasks, so it has nothing to sync.
     get_sync_status: () => Promise.resolve(NO_SYNC),
     connect_sync: () => Promise.reject(new Error('a browser page cannot sync')),

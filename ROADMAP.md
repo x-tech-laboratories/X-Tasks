@@ -33,7 +33,6 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Ask what to do with time spent away from the computer while a timer runs
 - [ ] Remind to take a break after a stretch of continuous work
 - [ ] Pomodoro timer and a focus mode that shows only the current task
-- [ ] Worklog of time by day and week, exported as CSV timesheets
 - [ ] Tray icon showing the current task and its timer
 
 ## Planning

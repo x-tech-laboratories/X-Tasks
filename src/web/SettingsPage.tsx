@@ -71,6 +71,7 @@ const LAUNCH_VIEW_CHOICES: { value: LaunchView; label: string }[] = [
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
   { value: 'reports', label: 'Reports' },
+  { value: 'worklog', label: 'Worklog' },
   { value: 'history', label: 'History' }
 ]
 

@@ -130,8 +130,8 @@ It keeps its database and backups in `/var/lib/x-tasks-server`. The theme settin
 browser, which follows the system theme.
 
 A `view` in the address opens that view instead of the launch view, without changing the saved
-one: a built-in view such as `?view=my_day`, `upcoming`, `all`, `active`, `completed` or `reports`,
-or tags by name such as `?view=Work,Home`.
+one: a built-in view such as `?view=my_day`, `upcoming`, `all`, `active`, `completed`, `reports`,
+`worklog` or `history`, or tags by name such as `?view=Work,Home`.
 
 ### In the Linux sidebar
 

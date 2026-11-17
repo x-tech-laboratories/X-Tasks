@@ -11,7 +11,7 @@ import type { View } from './tasks'
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
 // The view the app opens on, where 'last' means the one shown when it was closed.
-export type LaunchView = 'last' | 'my_day' | 'upcoming' | 'all' | 'active' | 'completed' | 'reports' | 'history'
+export type LaunchView = 'last' | 'my_day' | 'upcoming' | 'all' | 'active' | 'completed' | 'reports' | 'worklog' | 'history'
 
 // How the center pane shows tasks: a plain list, a table with aligned columns, a board of columns, a calendar, or a Gantt chart.
 export type TaskLayout = 'list' | 'table' | 'board' | 'calendar' | 'gantt'
@@ -401,6 +401,8 @@ export interface SettingsApi {
   restore_backup: (name: string) => Promise<void>
   remove_backup: (name: string) => Promise<void>
   show_backup_folder: () => Promise<void>
+  // Asks where to save a file, such as a timesheet, and saves the text there; false when cancelled or on a phone, which saves no files.
+  save_text_file: (file_name: string, text: string) => Promise<boolean>
   // Only on Android, where backups go to a folder picked once in the phone's storage; the name is empty until one is picked.
   get_backup_folder?: () => Promise<string>
   choose_backup_folder?: () => Promise<string>
