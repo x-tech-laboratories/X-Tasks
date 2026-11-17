@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import { DEFAULT_SETTINGS, saved_date_range, type DateRange } from '../src/shared/settings.ts'
 import type { Task } from '../src/shared/tasks.ts'
-import { group_by_date, is_within_ranges, shown_ranges } from '../src/web/dates.ts'
+import { coming_repeats, group_by_date, is_within_ranges, shown_ranges } from '../src/web/dates.ts'
 import type { TaskNode } from '../src/web/views.ts'
 import { make_task } from './fixtures.ts'
 
@@ -118,5 +118,18 @@ describe('saved_date_range', () => {
 
   test('keeps a rule as it is', () => {
     expect(saved_date_range(DEFAULT_SETTINGS.date_ranges[0]!)).toBe(DEFAULT_SETTINGS.date_ranges[0])
+  })
+})
+
+describe('coming_repeats', () => {
+  test('moves a timed task\'s start along with its due date', () => {
+    const task = make_task({ id: 'a', start_at: '2026-11-12T09:00', due_at: '2026-11-12T11:00', recurrence: 'FREQ=DAILY' })
+
+    const repeats = coming_repeats([task], 'due', NOW, 3)
+
+    expect(repeats.map((repeat) => [repeat.schedule.start_at, repeat.schedule.due_at])).toEqual([
+      ['2026-11-13T09:00', '2026-11-13T11:00'],
+      ['2026-11-14T09:00', '2026-11-14T11:00']
+    ])
   })
 })
