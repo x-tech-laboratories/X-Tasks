@@ -6,6 +6,7 @@ import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-la
 import { create_certificate_trust } from '@x-tech-laboratories/x-libs/certificates'
 import { trust_in_session, trusting_fetch } from '@x-tech-laboratories/x-libs/electron/certificates'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
+import { apply_tray_setting, stop_tray, type TrayHost } from './tray'
 import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
 import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
 
@@ -86,6 +87,29 @@ const sync = create_task_sync_client(
   trusting_fetch(session, certificates)
 )
 
+// ============================================================================
+// Tray icon
+// ============================================================================
+
+// The tray brings the window forward, making one again if it was closed, and opens tasks in it as a task link does.
+const tray_host: TrayHost = {
+  icon_path: join(__dirname, '../../resources/icon.png'),
+  show_window: () => void shown_window(),
+  open_task: (task_id) => tasks_events.emit([shown_window()], 'open_task', task_id),
+  announce_change: announce_mcp_change,
+  quit: () => app.quit()
+}
+
+function shown_window(): BrowserWindow {
+  const window = BrowserWindow.getAllWindows()[0] ?? create_main_window()
+  bring_to_front(window)
+  return window
+}
+
+function apply_tray(): void {
+  apply_tray_setting(get_settings().show_tray_icon, tray_host)
+}
+
 function restart_mcp_server(): Promise<void> {
   return apply_mcp_settings(get_settings(), announce_mcp_change)
 }
@@ -140,6 +164,7 @@ function register_bridge_handlers(): void {
       if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
       if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server()
       if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
+      if (key === 'show_tray_icon') apply_tray()
     },
     get_database_path: task_database_path,
     show_database_folder: () => shell.showItemInFolder(task_database_path()),
@@ -152,6 +177,7 @@ function register_bridge_handlers(): void {
     restore_backup: async (name) => {
       await restore_backup(name)
       nativeTheme.themeSource = get_settings().theme
+      apply_tray()
       void restart_mcp_server()
       void sync.sync_now()
     },
@@ -198,6 +224,7 @@ function start_app(): void {
     register_bridge_handlers()
     void restart_mcp_server()
     create_main_window()
+    apply_tray()
     watch_for_outside_changes()
     schedule_automatic_backups()
     sync.start()
@@ -208,6 +235,7 @@ function start_app(): void {
   })
 
   app.on('will-quit', () => {
+    stop_tray()
     sync.stop()
     void stop_mcp_server()
     close_task_database()

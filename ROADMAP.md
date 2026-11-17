@@ -28,10 +28,6 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Repeats that count from the day a task is done, can be paused, preview their next date and
   carry their subtasks into each repeat
 
-## Time tracking
-
-- [ ] Tray icon showing the current task and its timer
-
 ## Planning
 
 - [ ] Schedule view that lays the day's tasks out in time blocks by their estimates, beside

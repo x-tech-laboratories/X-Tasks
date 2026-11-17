@@ -28,6 +28,7 @@ Every setting, in the order the Settings page shows them. Defaults are in **bold
 | Add due tasks to My Day                   | **Off**.                                                                         |
 | Remove completed tasks from My Day        | **On**.                                                                          |
 | Remove rescheduled tasks from My Day      | **On**.                                                                          |
+| Show tray icon                            | A tray icon with the running timers, on the desktop only. **On**.                |
 | Allow several timers at once              | Starting a timer leaves the others running. **Off**.                             |
 | Ask about time away                       | Minutes away while a timer runs before asking whether to keep that time. **5**.  |
 | Remind to take a break                    | Minutes of timed work in a row before a reminder. **0**, off.                    |
