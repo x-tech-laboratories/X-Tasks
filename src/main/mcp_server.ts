@@ -9,7 +9,7 @@ import { can_drop, children_of, move_for_drop } from '@x-tech-laboratories/x-lib
 import { next_schedule, recurrence_anchor } from '@shared/schedule'
 import type { McpStatus, Settings } from '@shared/settings'
 import { can_link, links_of, type Task } from '@shared/tasks'
-import { entry_seconds, running_entry, task_entries, total_seconds } from '@shared/time_tracking'
+import { entry_seconds, running_entries, task_entries, total_seconds } from '@shared/time_tracking'
 import {
   add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_notes, set_task_schedule,
   set_task_title, start_timer, stop_timer, tag_task, unlink_tasks, untag_task, list_time_entries
@@ -63,11 +63,15 @@ function describe_tasks(tasks: Task[]): object[] {
   }))
 }
 
-// The running timer with its task's title, or null when none runs.
-function describe_timer(): object | null {
-  const entry = running_entry(list_time_entries())
-  if (!entry) return null
-  return { task_id: entry.task_id, title: find_task(entry.task_id).title, started_at: entry.started_at, elapsed_seconds: Math.round(entry_seconds(entry, new Date())) }
+// The running timers, oldest first, each with its task's title.
+function describe_timers(): object[] {
+  const now = new Date()
+  return running_entries(list_time_entries(), get_settings().allow_several_timers).map((entry) => ({
+    task_id: entry.task_id,
+    title: find_task(entry.task_id).title,
+    started_at: entry.started_at,
+    elapsed_seconds: Math.round(entry_seconds(entry, now))
+  }))
 }
 
 // The relationship and the way it reads for a name such as "Waits on" or its inverse "Blocks".
@@ -322,31 +326,37 @@ function create_mcp_server(on_change: () => void): McpServer {
   )
 
   server.registerTool(
-    'get_timer',
-    { description: 'Tells which task the timer is running on, since when, and for how many seconds; null when no timer runs.', annotations: { readOnlyHint: true } },
-    () => as_text(describe_timer())
+    'list_timers',
+    {
+      description: 'Lists the running timers: each task timed, since when, and for how many seconds. Only one runs unless the settings allow several.',
+      annotations: { readOnlyHint: true }
+    },
+    () => as_text(describe_timers())
   )
 
   server.registerTool(
     'start_timer',
     {
-      description: 'Starts the timer on a task, counting time spent on it, and stops any timer already running.',
+      description: 'Starts a timer on a task, counting time spent on it. It stops the other running timers unless the settings allow several.',
       inputSchema: { task_id: z.string() }
     },
     changing(({ task_id }) => {
       find_task(task_id)
       start_timer(task_id, new Date().toISOString())
-      return describe_timer()
+      return describe_timers()
     })
   )
 
   server.registerTool(
     'stop_timer',
-    { description: 'Stops the running timer, keeping the time it counted.' },
-    changing(() => {
-      const timer = describe_timer()
-      stop_timer(new Date().toISOString())
-      return { stopped: timer }
+    {
+      description: "Stops one task's timer, or every running timer when no task is given, keeping the time counted.",
+      inputSchema: { task_id: z.string().optional().describe('The task whose timer to stop; left out, every timer stops') }
+    },
+    changing(({ task_id }) => {
+      if (task_id) find_task(task_id)
+      stop_timer(new Date().toISOString(), task_id ?? null)
+      return { running: describe_timers() }
     })
   )
 

@@ -576,26 +576,33 @@ export function list_time_entries(): TimeEntry[] {
 }
 
 export function start_timer(task_id: string, started_at: string): TimeEntry {
-  const entry: TimeEntry = { id: crypto.randomUUID(), task_id, started_at, ended_at: null }
   const database = open_database()
-  in_transaction(database, () => {
-    stop_running_entries(database, started_at)
+  return in_transaction(database, () => {
+    if (!get_settings().allow_several_timers) stop_running_entries(database, started_at, task_id)
+    const running = database
+      .prepare('SELECT id, task_id, started_at, ended_at FROM time_entries WHERE task_id = ? AND ended_at IS NULL ORDER BY started_at DESC')
+      .get(task_id) as TimeEntry | undefined
+    if (running) return running
+
+    const entry: TimeEntry = { id: crypto.randomUUID(), task_id, started_at, ended_at: null }
     database.prepare('INSERT INTO time_entries (id, task_id, started_at) VALUES (?, ?, ?)').run(entry.id, task_id, started_at)
+    return entry
   })
-  return entry
 }
 
-export function stop_timer(ended_at: string): void {
-  stop_running_entries(open_database(), ended_at)
+export function stop_timer(ended_at: string, task_id: string | null): void {
+  const database = open_database()
+  if (task_id === null) stop_running_entries(database, ended_at, null)
+  else database.prepare('UPDATE time_entries SET ended_at = MAX(started_at, ?) WHERE ended_at IS NULL AND task_id = ?').run(ended_at, task_id)
 }
 
 export function remove_time_entry(entry_id: string): void {
   open_database().prepare('DELETE FROM time_entries WHERE id = ?').run(entry_id)
 }
 
-// An end before an entry's start, as another device's clock can give, ends it where it began.
-function stop_running_entries(database: SqlDatabase, ended_at: string): void {
-  database.prepare('UPDATE time_entries SET ended_at = MAX(started_at, ?) WHERE ended_at IS NULL').run(ended_at)
+// Ends every running entry but those of the task kept running; an end before an entry's start, as another device's clock can give, ends it where it began.
+function stop_running_entries(database: SqlDatabase, ended_at: string, kept_task_id: string | null): void {
+  database.prepare('UPDATE time_entries SET ended_at = MAX(started_at, ?) WHERE ended_at IS NULL AND task_id IS NOT ?').run(ended_at, kept_task_id)
 }
 
 // ============================================================================

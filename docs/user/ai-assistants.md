@@ -16,7 +16,7 @@ The desktop app can let AI assistants on your computer read and change your task
    ```
 
 The assistant can then list tasks and tags, add tasks and subtasks, change, move, complete, reopen, tag, untag, link,
-unlink and delete them, and see, start and stop the timer. Only programs on your own computer can reach the server.
+unlink and delete them, and list, start and stop timers. Only programs on your own computer can reach the server.
 
 > [!WARNING]
 > An assistant works on your real tasks. Changes it makes are in [History](/user/history/) and can be restored there.

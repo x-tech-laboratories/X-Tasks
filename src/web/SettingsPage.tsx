@@ -289,6 +289,19 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
           )
         },
         {
+          id: 'time-tracking',
+          heading: 'Time tracking',
+          content: (
+            <SettingRow
+              label="Allow several timers at once"
+              hint="Starting a timer leaves the others running, each stopped on its own. Time that overlaps counts towards every task it was spent on."
+              as_label
+            >
+              <Switch label="Allow several timers at once" checked={settings.allow_several_timers} on_change={(on) => on_change('allow_several_timers', on)} />
+            </SettingRow>
+          )
+        },
+        {
           id: 'task-details',
           heading: 'Task details',
           hint: "The sections a task's details show, top to bottom. Turned off sections are left out.",

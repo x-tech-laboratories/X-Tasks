@@ -61,7 +61,7 @@ interface TaskDetailProps {
   time_entries: TimeEntry[]
   is_timing: boolean
   on_start_timer: (task: Task) => void
-  on_stop_timer: () => void
+  on_stop_timer: (task: Task) => void
   on_remove_time_entry: (entry: TimeEntry) => void
   on_close: () => void
 }

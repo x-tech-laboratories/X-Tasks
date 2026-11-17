@@ -271,9 +271,10 @@ export interface TasksApi {
   // Brings the task back as one of its versions had it, adding the restore to its history as a new version.
   restore_task_version: (version_id: string) => Promise<void>
   list_time_entries: () => Promise<TimeEntry[]>
-  // Stops whatever timer is running at the same moment, so only one runs at a time.
+  // Stops the other running timers at the same moment, unless the settings allow several; a task already timed keeps its entry.
   start_timer: (task_id: string, started_at: string) => Promise<TimeEntry>
-  stop_timer: (ended_at: string) => Promise<void>
+  // Stops one task's timer, or every running timer when given no task.
+  stop_timer: (ended_at: string, task_id: string | null) => Promise<void>
   remove_time_entry: (entry_id: string) => Promise<void>
 
   list_tag_groups: () => Promise<TagGroup[]>

@@ -2,9 +2,9 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  add_task, attach_task_database, close_task_database, list_time_entries, remove_task, remove_time_entry, start_timer, stop_timer
+  add_task, attach_task_database, close_task_database, list_time_entries, remove_task, remove_time_entry, set_setting, start_timer, stop_timer
 } from '../src/main/task_database'
-import { entry_seconds, running_entry, seconds_by_day, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
+import { entry_seconds, running_entries, seconds_by_day, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
 
 // ============================================================================
 // Helpers
@@ -42,12 +42,26 @@ describe('time totals', () => {
     expect(by_day.get('2026-11-17')).toBe(4500)
   })
 
-  it('shows the later of two running entries, as two devices can leave', () => {
+  it('shows only the later of two running entries when one timer is allowed, as two devices can leave', () => {
     const earlier = entry(local(17, 9), null, 'first')
     const later = entry(local(17, 10), null, 'second')
 
-    expect(running_entry([later, earlier])?.task_id).toBe('second')
-    expect(running_entry([entry(local(17, 9), local(17, 10))])).toBeNull()
+    expect(running_entries([later, earlier], false).map((each) => each.task_id)).toEqual(['second'])
+    expect(running_entries([entry(local(17, 9), local(17, 10))], false)).toEqual([])
+  })
+
+  it('shows every task timed, oldest first and once each, when several are allowed', () => {
+    const entries = [entry(local(17, 10), null, 'second'), entry(local(17, 9), null, 'first'), entry(local(17, 11), null, 'first')]
+
+    expect(running_entries(entries, true).map((each) => `${each.task_id}@${new Date(each.started_at).getHours()}`)).toEqual(['second@10', 'first@11'])
+  })
+
+  it("stops one task's running entries, never before they started", () => {
+    const entries = [entry(local(17, 9), null, 'first'), entry(local(17, 10), null, 'second')]
+
+    const stopped = stopped_entries(entries, local(17, 9, 30).toISOString(), 'second')
+
+    expect(stopped.map((each) => each.ended_at)).toEqual([null, local(17, 10).toISOString()])
   })
 
   it('words time to the minute from a minute on', () => {
@@ -77,11 +91,36 @@ describe('timer queries', () => {
     ])
   })
 
+  it('leaves the other timers running when several are allowed, and stops one alone', () => {
+    set_setting('allow_several_timers', true)
+    const first = add_task('Write report', null, [], null)
+    const second = add_task('Answer email', null, [], null)
+
+    start_timer(first.id, '2026-11-17T09:00:00.000Z')
+    start_timer(second.id, '2026-11-17T09:30:00.000Z')
+    stop_timer('2026-11-17T10:00:00.000Z', first.id)
+
+    expect(list_time_entries().map(({ task_id, ended_at }) => ({ task_id, ended_at }))).toEqual([
+      { task_id: first.id, ended_at: '2026-11-17T10:00:00.000Z' },
+      { task_id: second.id, ended_at: null }
+    ])
+  })
+
+  it('keeps a task\'s running entry when its timer is started again', () => {
+    const task = add_task('Write report', null, [], null)
+    const first = start_timer(task.id, '2026-11-17T09:00:00.000Z')
+
+    const again = start_timer(task.id, '2026-11-17T09:30:00.000Z')
+
+    expect(again.id).toBe(first.id)
+    expect(list_time_entries()).toHaveLength(1)
+  })
+
   it('never ends an entry before it started', () => {
     const task = add_task('Write report', null, [], null)
     start_timer(task.id, '2026-11-17T09:00:00.000Z')
 
-    stop_timer('2026-11-17T08:59:00.000Z')
+    stop_timer('2026-11-17T08:59:00.000Z', null)
 
     expect(list_time_entries()[0]!.ended_at).toBe('2026-11-17T09:00:00.000Z')
   })
@@ -90,6 +129,7 @@ describe('timer queries', () => {
     const kept = add_task('Write report', null, [], null)
     const deleted = add_task('Answer email', null, [], null)
     const removed_entry = start_timer(kept.id, '2026-11-17T09:00:00.000Z')
+    stop_timer('2026-11-17T09:30:00.000Z', kept.id)
     start_timer(kept.id, '2026-11-17T10:00:00.000Z')
     start_timer(deleted.id, '2026-11-17T11:00:00.000Z')
 

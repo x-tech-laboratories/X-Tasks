@@ -75,8 +75,8 @@ Turn on **MCP server** in Settings to let AI assistants on this computer read an
 claude mcp add --transport http x-tasks http://127.0.0.1:3917/mcp
 ```
 
-It offers tools to list tasks and tags, add, update, move, complete, reopen, tag, untag and remove tasks, and to see,
-start and stop the timer.
+It offers tools to list tasks and tags, add, update, move, complete, reopen, tag, untag and remove tasks, and to list,
+start and stop timers.
 
 ### Importing Trilium notes
 
