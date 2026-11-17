@@ -119,6 +119,17 @@ across any tasks, and again after as many more. **Take a break** on the reminder
 **Break length** minutes, five by default, without a timer running starts the count again. While the window is out of
 sight the reminder also shows as a notification, in a browser once you allow it. It is off until you set the minutes.
 
+### Focus mode and Pomodoro
+
+**Focus** in a task's details or its right-click menu, or ⤢ beside a running timer, shows that task alone, filling
+the window: a large clock, its open subtasks to tick off and its notes. **Start Pomodoro** times the task for a
+25-minute round, then stops the timer for a 5-minute break, with a 15-minute break after every fourth round; when a
+break ends, **Start round** begins the next. Each change of phase brings a reminder, as a notification while the window
+is out of sight. **Skip break** and **Stop Pomodoro** do as they say, and **Mark as done** completes the task and
+leaves focus mode. Close focus mode and the Pomodoro carries on beside the search bar, where a click opens it again.
+The lengths and the rounds before a long break are in Settings › Tasks › Time tracking. A Pomodoro belongs to the
+window it runs in, so closing or reloading the app ends it, though its timer keeps running.
+
 **Time spent** in a task's details shows its total and today's time, starts and stops its timer, and under **Show
 entries** lists each stretch of work by day, with × to remove one. Time that runs past midnight counts towards each
 day. The timer syncs, so one started on the phone shows and stops on the desktop too.

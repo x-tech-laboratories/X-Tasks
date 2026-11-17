@@ -4,10 +4,11 @@ import { format_local, relative_day_label } from '@x-tech-laboratories/x-libs/da
 import { format_clock } from '@x-tech-laboratories/x-libs/durations'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { ProgressBar } from '@x-tech-laboratories/x-libs/web/react/progress'
-import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
+import { use_now, type Countdown } from '@x-tech-laboratories/x-libs/web/react/time'
 import type { Task } from '@shared/tasks'
 import { entry_seconds, estimate_text, parse_estimate, seconds_by_day, short_time_label, time_spent_label, total_seconds, type TimeEntry } from '@shared/time_tracking'
 import type { AwaySpan } from './idle'
+import { pomodoro_label, type Pomodoro } from './pomodoro'
 
 // ============================================================================
 // Clock
@@ -30,11 +31,12 @@ interface TimerBarProps {
   entry: TimeEntry
   task: Task | undefined
   on_open: (task: Task) => void
+  on_focus: (task: Task) => void
   on_stop: () => void
 }
 
-// The running timer beside the search bar: its task, opened by a click, the time so far and a stop button.
-export function TimerBar({ entry, task, on_open, on_stop }: TimerBarProps) {
+// The running timer beside the search bar: its task, opened by a click, the time so far, focus mode and a stop button.
+export function TimerBar({ entry, task, on_open, on_focus, on_stop }: TimerBarProps) {
   const now = use_timer_clock(true)
 
   return (
@@ -43,9 +45,26 @@ export function TimerBar({ entry, task, on_open, on_stop }: TimerBarProps) {
         {task?.title ?? 'Removed task'}
       </button>
       <span className="timer_clock">{format_clock(entry_seconds(entry, now) * 1000)}</span>
+      {task && (
+        <button className="icon" onClick={() => on_focus(task)} aria-label="Focus on this task" title="Focus on this task">
+          ⤢
+        </button>
+      )}
       <button onClick={on_stop} aria-label="Stop timer">
         Stop
       </button>
+    </div>
+  )
+}
+
+// The Pomodoro's phase and time left, beside the search bar while focus mode is closed; a click opens it again.
+export function PomodoroChip({ pomodoro, countdown, on_open }: { pomodoro: Pomodoro; countdown: Countdown | null; on_open: () => void }) {
+  return (
+    <div className="timer_bar" role="status" aria-label="Pomodoro">
+      <button className="link timer_task" onClick={on_open} title="Open focus mode">
+        {pomodoro_label(pomodoro)}
+      </button>
+      {countdown && <span className="timer_clock">{format_clock(countdown.remaining * 1000)}</span>}
     </div>
   )
 }

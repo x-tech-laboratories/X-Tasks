@@ -52,6 +52,16 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
 .time_total { color: var(--text-secondary); font-size: var(--text-control); white-space: nowrap; }
 
+/* Focus mode: one task filling the window, its clock large in the middle, its controls, subtasks and notes below. */
+.focus_body { display: flex; flex-direction: column; align-items: center; gap: var(--space-7); max-width: 40rem; margin: 0 auto; padding: var(--space-7) 0; }
+.focus_clock { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); width: 100%; }
+.focus_clock_time { font-size: calc(var(--text-h1) * 2.5); font-variant-numeric: tabular-nums; line-height: 1.1; letter-spacing: var(--letter-spacing-display); }
+.focus_clock .progress { width: min(24rem, 100%); }
+.focus_controls { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.focus_subtasks, .focus_notes { width: 100%; }
+.focus_subtasks ul { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.focus_subtasks label { display: flex; align-items: center; gap: var(--space-3); }
+
 /* The worklog: a week picked above a grid of each task's time per day, its totals along the foot. */
 .worklog_stepper { margin-bottom: var(--space-6); }
 .worklog_week { min-width: 11em; text-align: center; font-variant-numeric: tabular-nums; }

@@ -10,6 +10,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 - A timer on each task, started from its row, menu or details and shown beside the search bar, keeping the time
   spent on each day, with the entries listed and removable in the task's details and offered to AI assistants
 - Several timers running at once, as a setting off by default
+- Focus mode showing one task alone with a large clock, its open subtasks and notes, and a Pomodoro of rounds and
+  breaks that times the task and reminds at each change
 - Reminders to take a break after a set stretch of timed work in a row, as a toast that stops every timer and a
   notification while the window is out of sight
 - Ask on coming back to the computer whether to keep, discard, or discard and stop the time spent away while a timer

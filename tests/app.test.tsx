@@ -2,7 +2,7 @@
 import '@x-tech-laboratories/x-libs/web/react/test_stubs'
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { App } from '../src/web/App.tsx'
 import { AwayDialog } from '../src/web/TimeTracking.tsx'
@@ -243,6 +243,59 @@ describe('the timer', () => {
 
     expect(screen.queryByRole('status', { name: 'Running timer' })).toBeNull()
     expect(tasks_api.stop_timer).toHaveBeenCalled()
+  })
+})
+
+// ============================================================================
+// Focus mode
+// ============================================================================
+
+describe('focus mode', () => {
+  test('shows one task from its details, with its subtasks, and runs a Pomodoro on it', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Write report'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Focus' }))
+
+    const focus = screen.getByRole('dialog', { name: 'Write report' })
+    expect(within(focus).getByRole('checkbox', { name: 'Outline' })).toBeTruthy()
+
+    fireEvent.click(within(focus).getByRole('button', { name: 'Start Pomodoro' }))
+    expect(within(focus).getByText('Round 1')).toBeTruthy()
+    expect(within(focus).getByText('25:00')).toBeTruthy()
+    expect(tasks_api.start_timer).toHaveBeenCalledWith('report', expect.any(String))
+
+    fireEvent.click(within(focus).getByRole('button', { name: 'Stop Pomodoro' }))
+    expect(within(focus).getByRole('button', { name: 'Start Pomodoro' })).toBeTruthy()
+  })
+
+  test('stops the timer and starts the break when a round ends', async () => {
+    const { tasks_api } = await show_app({ pomodoro_work_minutes: 1 })
+    fireEvent.click(screen.getByText('Write report'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Focus' }))
+    const focus = screen.getByRole('dialog', { name: 'Write report' })
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'Date'] })
+    try {
+      fireEvent.click(within(focus).getByRole('button', { name: 'Start Pomodoro' }))
+      await act(async () => { vi.advanceTimersByTime(61_000) })
+
+      expect(within(focus).getByText('Break')).toBeTruthy()
+      expect(tasks_api.stop_timer).toHaveBeenCalledWith(expect.any(String), 'report')
+      expect(screen.getByText(/Round 1 done\. Take 5m away from it\./)).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  test('marking the task done ends focus mode', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Buy milk'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Focus' }))
+
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Buy milk' })).getByRole('button', { name: 'Mark as done' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Buy milk' })).toBeNull()
+    expect(tasks_api.set_task_done).toHaveBeenCalledWith('milk', true, expect.any(String), expect.anything())
   })
 })
 

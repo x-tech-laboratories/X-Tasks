@@ -10,7 +10,7 @@ import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { DATE_POINTS, date_point_label, type DateComparison, type DatePoint, type Inclusivity } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, BREAK_REMINDER_MINUTES_RANGE, BREAK_MINUTES_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, BREAK_REMINDER_MINUTES_RANGE, BREAK_MINUTES_RANGE, POMODORO_MINUTES_RANGE, POMODORO_ROUNDS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
@@ -355,6 +355,66 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
                     on_change('break_minutes', Math.min(BREAK_MINUTES_RANGE.max, Math.max(BREAK_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || BREAK_MINUTES_RANGE.min))))
                   }
                   aria-label="Break minutes"
+                />
+              </SettingRow>
+
+              <SettingRow label="Pomodoro round" hint="How many minutes a round of work lasts in focus mode before a break." as_label>
+                <CommitInput
+                  type="number"
+                  min={POMODORO_MINUTES_RANGE.min}
+                  max={POMODORO_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.pomodoro_work_minutes}
+                  on_commit={(event) =>
+                    on_change('pomodoro_work_minutes', Math.min(POMODORO_MINUTES_RANGE.max, Math.max(POMODORO_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || POMODORO_MINUTES_RANGE.min))))
+                  }
+                  aria-label="Round minutes"
+                />
+              </SettingRow>
+
+              <SettingRow label="Pomodoro break" hint="How many minutes a break between rounds lasts." as_label>
+                <CommitInput
+                  type="number"
+                  min={POMODORO_MINUTES_RANGE.min}
+                  max={POMODORO_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.pomodoro_break_minutes}
+                  on_commit={(event) =>
+                    on_change('pomodoro_break_minutes', Math.min(POMODORO_MINUTES_RANGE.max, Math.max(POMODORO_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || POMODORO_MINUTES_RANGE.min))))
+                  }
+                  aria-label="Break minutes between rounds"
+                />
+              </SettingRow>
+
+              <SettingRow label="Pomodoro long break" hint="How many minutes the longer break lasts." as_label>
+                <CommitInput
+                  type="number"
+                  min={POMODORO_MINUTES_RANGE.min}
+                  max={POMODORO_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.pomodoro_long_break_minutes}
+                  on_commit={(event) =>
+                    on_change('pomodoro_long_break_minutes', Math.min(POMODORO_MINUTES_RANGE.max, Math.max(POMODORO_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || POMODORO_MINUTES_RANGE.min))))
+                  }
+                  aria-label="Long break minutes"
+                />
+              </SettingRow>
+
+              <SettingRow label="Rounds before a long break" hint="How many rounds of work come before the longer break." as_label>
+                <CommitInput
+                  type="number"
+                  min={POMODORO_ROUNDS_RANGE.min}
+                  max={POMODORO_ROUNDS_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.pomodoro_rounds}
+                  on_commit={(event) =>
+                    on_change('pomodoro_rounds', Math.min(POMODORO_ROUNDS_RANGE.max, Math.max(POMODORO_ROUNDS_RANGE.min, Math.round(Number(event.currentTarget.value) || POMODORO_ROUNDS_RANGE.min))))
+                  }
+                  aria-label="Rounds"
                 />
               </SettingRow>
             </>

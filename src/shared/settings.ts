@@ -165,6 +165,10 @@ export const IDLE_PROMPT_MINUTES_RANGE = { min: 0, max: 240 }
 export const BREAK_REMINDER_MINUTES_RANGE = { min: 0, max: 480 }
 export const BREAK_MINUTES_RANGE = { min: 1, max: 120 }
 
+// The lengths of a Pomodoro's rounds and breaks in minutes, and how many rounds come before a long break.
+export const POMODORO_MINUTES_RANGE = { min: 1, max: 180 }
+export const POMODORO_ROUNDS_RANGE = { min: 1, max: 12 }
+
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
 
 export interface Settings {
@@ -201,6 +205,11 @@ export interface Settings {
   break_reminder_minutes: number
   // How long a pause between timed work counts as a break that starts the count again.
   break_minutes: number
+  // A Pomodoro's minutes of work and of a break, a long break's minutes, and how many rounds of work come before one.
+  pomodoro_work_minutes: number
+  pomodoro_break_minutes: number
+  pomodoro_long_break_minutes: number
+  pomodoro_rounds: number
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
@@ -295,6 +304,10 @@ export const DEFAULT_SETTINGS: Settings = {
   idle_prompt_minutes: 5,
   break_reminder_minutes: 0,
   break_minutes: 5,
+  pomodoro_work_minutes: 25,
+  pomodoro_break_minutes: 5,
+  pomodoro_long_break_minutes: 15,
+  pomodoro_rounds: 4,
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',
