@@ -38,6 +38,7 @@ import { TaskDetail } from './TaskDetail'
 import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
+import { WorklogPage } from './WorklogPage'
 import { TimerBar } from './TimeTracking'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
@@ -49,7 +50,7 @@ import {
 } from './table'
 import { by_position, children_of, in_tree_order, moves_for_drop, subtree_ids, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/tree'
 import {
-  comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, my_day_for_new_task, my_day_since, nest_tasks, rule_tags_of, tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type TaskNode, type View
+  chain_tag_ids_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, my_day_for_new_task, my_day_since, nest_tasks, rule_tags_of, tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type TaskNode, type View
 } from './views'
 
 // ============================================================================
@@ -708,6 +709,7 @@ export function App({ account }: { account?: SignedInAccount }) {
 
   const is_reports = selected_view.kind === 'reports'
   const is_history = selected_view.kind === 'history'
+  const is_worklog = selected_view.kind === 'worklog'
   // Each view shows the layout saved for it, or one picked there and not yet saved when layouts are saved by hand.
   const stored_layout = saved_layout(settings, selected_view)
   const view_layout = (settings.layout_memory === 'on_demand' ? unsaved_layouts[view_key(selected_view)] : undefined) ?? stored_layout
@@ -1073,6 +1075,16 @@ export function App({ account }: { account?: SignedInAccount }) {
     />
   ) : is_history ? (
     <HistoryPage tasks={tasks} on_open_history={(task_id, version_id) => set_history_open({ task_id, version_id })} />
+  ) : is_worklog ? (
+    <WorklogPage
+      tasks={tasks}
+      time_entries={time_entries}
+      today={today}
+      now={parse_local(now)}
+      tag_names_of={(task) => tags.filter((tag) => !tag.rule && chain_tag_ids_of(task, tasks).has(tag.id)).map((tag) => tag_path(tag, tags))}
+      can_save_files={window.x_settings.host !== 'android'}
+      on_select_task={(task) => set_selected_task_id(task.id)}
+    />
   ) : is_reports ? (
     <ReportsPage
       widgets={settings.report_widgets}
@@ -1412,7 +1424,7 @@ export function App({ account }: { account?: SignedInAccount }) {
 
 // The views that show a page of their own in place of tasks.
 function is_page_view(view: View): boolean {
-  return view.kind === 'reports' || view.kind === 'history'
+  return view.kind === 'reports' || view.kind === 'history' || view.kind === 'worklog'
 }
 
 // ============================================================================

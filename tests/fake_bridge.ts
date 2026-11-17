@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 
 import { DEFAULT_SETTINGS, type Settings, type SettingsApi } from '../src/shared/settings.ts'
 import type { Tag, TagGroup, Task, TasksApi } from '../src/shared/tasks.ts'
+import type { TimeEntry } from '../src/shared/time_tracking.ts'
 import { make_task } from './fixtures.ts'
 
 // ============================================================================
@@ -16,7 +17,7 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
   const tasks_api = {
     list_tasks: vi.fn(async () => tasks.map((task) => ({ ...task }))),
     list_completions: vi.fn(async () => []),
-    list_time_entries: vi.fn(async () => []),
+    list_time_entries: vi.fn(async (): Promise<TimeEntry[]> => []),
     start_timer: vi.fn(async (task_id: string, started_at: string) => ({ id: `entry-${task_id}`, task_id, started_at, ended_at: null })),
     stop_timer: vi.fn(async () => undefined),
     list_tag_groups: vi.fn(async () => data.tag_groups ?? []),

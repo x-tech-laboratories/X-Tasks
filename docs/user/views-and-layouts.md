@@ -16,6 +16,7 @@ Every view is a filter over the [one big list](/user/core-concepts/#one-big-list
 | **Active**    | Tasks not done                                                                                |
 | **Completed** | Tasks done                                                                                    |
 | **Reports**   | Charts of your progress — see [Reports](/user/reports/)                                         |
+| **Worklog**   | Time spent on each task per day of a week, saved as a timesheet — see [Time tracking](/user/tasks/#time-tracking) |
 | **History**   | Every change to every task — see [History](/user/history/)                                      |
 | *Tags*        | Whatever tags you select in the sidebar — see [Tags and filters](/user/tags-and-filters/)       |
 

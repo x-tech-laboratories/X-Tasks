@@ -10,6 +10,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 - A timer on each task, started from its row, menu or details and shown beside the search bar, keeping the time
   spent on each day, with the entries listed and removable in the task's details and offered to AI assistants
 - Several timers running at once, as a setting off by default
+- A Worklog page of the time spent on each task per day of a week, with daily and weekly totals, exported or copied
+  as a CSV timesheet
 - Time estimates on tasks, shown against the time spent in a task's details and on its row, totalled in a view's
   heading with My Day's time spent today, and as Estimate and Time spent columns in the table
 - Condition groups in rule tags, each matching all or any of its own conditions, nested to any depth

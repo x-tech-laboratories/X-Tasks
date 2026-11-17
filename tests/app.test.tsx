@@ -246,6 +246,32 @@ describe('the timer', () => {
 })
 
 // ============================================================================
+// Worklog
+// ============================================================================
+
+describe('the worklog', () => {
+  test("shows this week's time per task and day from the sidebar, opening a task from its row", async () => {
+    const started_at = new Date()
+    started_at.setHours(9, 0, 0, 0)
+    const ended_at = new Date(started_at.getTime() + 90 * 60_000)
+    const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all' } })
+    bridge.tasks_api.list_time_entries.mockResolvedValue([{ id: 'entry', task_id: 'report', started_at: started_at.toISOString(), ended_at: ended_at.toISOString() }])
+    render(<App />)
+    await screen.findByRole('heading', { name: 'All tasks' })
+
+    fireEvent.click(screen.getByRole('link', { name: /Worklog/ }))
+
+    const table = await screen.findByRole('table')
+    const row = within(table).getByRole('button', { name: 'Write report' }).closest('tr')!
+    expect(within(row).getAllByText('1h 30m')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Copy CSV' })).toBeTruthy()
+
+    fireEvent.click(within(table).getByRole('button', { name: 'Write report' }))
+    expect(await screen.findByRole('complementary', { name: 'Task details' })).toBeTruthy()
+  })
+})
+
+// ============================================================================
 // Shortcuts
 // ============================================================================
 

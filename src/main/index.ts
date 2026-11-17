@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, screen, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, screen, session, shell } from 'electron'
+import { writeFile } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, extname, join } from 'node:path'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
 import { create_certificate_trust } from '@x-tech-laboratories/x-libs/certificates'
 import { trust_in_session, trusting_fetch } from '@x-tech-laboratories/x-libs/electron/certificates'
@@ -106,6 +107,21 @@ function open_from_second_launch(argv: string[]): void {
 }
 
 // ============================================================================
+// Saving files
+// ============================================================================
+
+// The save dialog starts in the Downloads folder with the suggested name, offering files of its kind.
+async function save_text_file(file_name: string, text: string): Promise<boolean> {
+  const extension = extname(file_name).slice(1)
+  const options = { defaultPath: join(app.getPath('downloads'), file_name), filters: extension ? [{ name: extension.toUpperCase(), extensions: [extension] }] : [] }
+  const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const { canceled, filePath } = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options)
+  if (canceled || !filePath) return false
+  await writeFile(filePath, text)
+  return true
+}
+
+// ============================================================================
 // Bridge handlers
 // ============================================================================
 
@@ -127,6 +143,7 @@ function register_bridge_handlers(): void {
     },
     get_database_path: task_database_path,
     show_database_folder: () => shell.showItemInFolder(task_database_path()),
+    save_text_file,
 
     list_backups,
     create_backup: () => create_backup(),

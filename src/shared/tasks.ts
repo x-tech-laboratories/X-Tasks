@@ -137,6 +137,7 @@ export type View =
   | { kind: 'completed' }
   | { kind: 'reports' }
   | { kind: 'history' }
+  | { kind: 'worklog' }
   | { kind: 'tag'; tag_ids: string[] }
 
 // ============================================================================

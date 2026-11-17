@@ -118,6 +118,11 @@ or how far it ran over, and the task's row shows the time spent against the esti
 once it runs over. A view's heading adds up the estimated time not yet spent on its open tasks, and My Day also shows
 the time spent today on every task.
 
+**Worklog** in the sidebar shows a week at a time: a row per task worked on, with the tasks above it, its time on each
+day and its total, and each day's total along the foot. ‹ and › step through the weeks and **This week** comes back.
+Click a task to open it. **Export CSV** saves the week as a timesheet, one line per task and day with its date, title,
+parent tasks, tags, minutes and hours; **Copy CSV** copies the same text, which is how a phone exports it.
+
 ## Selecting several tasks
 
 Ctrl+click rows to select them, Shift+click to select a range, or Ctrl+A for every row on screen. On a phone,

@@ -48,7 +48,7 @@ export const SERVED_SETTINGS_METHODS = [
 
 // The settings calls only the desktop app answers, since they open folders or sync this device.
 export const DESKTOP_SETTINGS_METHODS = [
-  'show_database_folder', 'show_backup_folder', 'get_sync_status', 'connect_sync', 'disconnect_sync', 'sync_now'
+  'show_database_folder', 'show_backup_folder', 'save_text_file', 'get_sync_status', 'connect_sync', 'disconnect_sync', 'sync_now'
 ] as const satisfies readonly (keyof SettingsMethods)[]
 
 export const settings_bridge = define_bridge<SettingsMethods>('x_settings', [...SERVED_SETTINGS_METHODS, ...DESKTOP_SETTINGS_METHODS])
