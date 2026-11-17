@@ -10,7 +10,7 @@ import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { DATE_POINTS, date_point_label, type DateComparison, type DatePoint, type Inclusivity } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, BREAK_REMINDER_MINUTES_RANGE, BREAK_MINUTES_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
@@ -318,6 +318,43 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
                     on_change('idle_prompt_minutes', Math.min(IDLE_PROMPT_MINUTES_RANGE.max, Math.max(IDLE_PROMPT_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
                   }
                   aria-label="Minutes away"
+                />
+              </SettingRow>
+
+              <SettingRow
+                label="Remind to take a break"
+                hint="Minutes of timed work in a row before a reminder to take a break, and again after as many more. The reminder's button stops every timer. Zero never reminds."
+                as_label
+              >
+                <CommitInput
+                  type="number"
+                  min={BREAK_REMINDER_MINUTES_RANGE.min}
+                  max={BREAK_REMINDER_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.break_reminder_minutes}
+                  on_commit={(event) => {
+                    const minutes = Math.min(BREAK_REMINDER_MINUTES_RANGE.max, Math.max(BREAK_REMINDER_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || 0)))
+                    // A browser shows the reminder as a notification too once allowed, asked here while the click still counts as the user's.
+                    if (minutes > 0 && 'Notification' in window && Notification.permission === 'default') void Notification.requestPermission()
+                    on_change('break_reminder_minutes', minutes)
+                  }}
+                  aria-label="Minutes of work"
+                />
+              </SettingRow>
+
+              <SettingRow label="Break length" hint="How many minutes without a timer running count as a break, which starts the count of work in a row again." as_label>
+                <CommitInput
+                  type="number"
+                  min={BREAK_MINUTES_RANGE.min}
+                  max={BREAK_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.break_minutes}
+                  on_commit={(event) =>
+                    on_change('break_minutes', Math.min(BREAK_MINUTES_RANGE.max, Math.max(BREAK_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || BREAK_MINUTES_RANGE.min))))
+                  }
+                  aria-label="Break minutes"
                 />
               </SettingRow>
             </>

@@ -10,11 +10,11 @@ import { toggled, with_range } from '@x-tech-laboratories/x-libs/web/selection'
 import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
 import { Shell } from '@x-tech-laboratories/x-libs/web/react/shell'
 import { ResizeHandle } from '@x-tech-laboratories/x-libs/web/react/split'
-import { undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
+import { toast, undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
-import { estimate_left_seconds, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
+import { estimate_left_seconds, work_stretch_start, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
 import type { SignedInAccount } from './SignedIn'
@@ -63,6 +63,9 @@ const IS_TOUCH_SCREEN = window.matchMedia('(pointer: coarse)').matches
 
 // How often a running timer checks whether the computer has been left alone.
 const IDLE_POLL_MS = 15_000
+
+// How often a running timer checks whether a break is due.
+const BREAK_CHECK_MS = 30_000
 
 // Removed tasks wait this long before the database deletes them, so the removal can be undone.
 const UNDO_DELAY_MS = 8000
@@ -217,6 +220,30 @@ export function App({ account }: { account?: SignedInAccount }) {
   useEffect(() => {
     if (away && !asks_about_away) set_away(null)
   }, [away, asks_about_away])
+
+  // Reminds to take a break after the set minutes of timed work in a row, and again after as many more, until a long enough pause starts the count again.
+  const entries_ref = useRef(time_entries)
+  entries_ref.current = time_entries
+  const break_reminders = useRef({ stretch_start: 0, count: 0 })
+  const reminder_minutes = settings?.break_reminder_minutes ?? 0
+  const break_minutes = settings?.break_minutes ?? 5
+  const reminds_breaks = running_timers.length > 0 && reminder_minutes > 0
+  useEffect(() => {
+    if (!reminds_breaks) return
+    const check = (): void => {
+      const now = new Date()
+      const stretch_start = work_stretch_start(entries_ref.current, now, break_minutes)
+      if (!stretch_start) return
+      if (break_reminders.current.stretch_start !== stretch_start.getTime()) break_reminders.current = { stretch_start: stretch_start.getTime(), count: 0 }
+      const due_count = Math.floor((now.getTime() - stretch_start.getTime()) / (reminder_minutes * 60_000))
+      if (due_count <= break_reminders.current.count) return
+      break_reminders.current.count = due_count
+      remind_break((now.getTime() - stretch_start.getTime()) / 1000)
+    }
+    check()
+    const timer = setInterval(check, BREAK_CHECK_MS)
+    return () => clearInterval(timer)
+  }, [reminds_breaks, reminder_minutes, break_minutes])
 
   // Closing the app deletes any tasks still waiting.
   useEffect(() => {
@@ -449,6 +476,19 @@ export function App({ account }: { account?: SignedInAccount }) {
       if (keeps_timing) await window.x_tasks.start_timer(entry.task_id, new Date(span.to).toISOString())
     }
     set_time_entries(await window.x_tasks.list_time_entries())
+  }
+
+  // A toast whose button stops every timer, and a system notification too while the window is out of sight, where the host has them.
+  function remind_break(worked_seconds: number): void {
+    const message = `You have worked ${short_time_label(worked_seconds)} without a break.`
+    toast(message, { tone: 'info', sticky: true, action: { text: 'Take a break', run: stop_every_timer } })
+    if ((document.hidden || !document.hasFocus()) && 'Notification' in window && Notification.permission === 'granted') new Notification('Time for a break', { body: message })
+  }
+
+  function stop_every_timer(): void {
+    const ended_at = new Date().toISOString()
+    set_time_entries((current_entries) => stopped_entries(current_entries, ended_at, null))
+    void window.x_tasks.stop_timer(ended_at, null)
   }
 
   function remove_time_entry(entry: TimeEntry): void {

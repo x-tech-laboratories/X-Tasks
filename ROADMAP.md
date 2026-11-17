@@ -30,7 +30,6 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 
 ## Time tracking
 
-- [ ] Remind to take a break after a stretch of continuous work
 - [ ] Pomodoro timer and a focus mode that shows only the current task
 - [ ] Tray icon showing the current task and its timer
 

@@ -42,6 +42,26 @@ export function entry_seconds(entry: TimeEntry, now: Date): number {
 }
 
 // ============================================================================
+// Breaks
+// ============================================================================
+
+// When the run of work going on now began: entries of any task joined across pauses shorter than a break; empty when no timer runs.
+export function work_stretch_start(entries: TimeEntry[], now: Date, break_minutes: number): Date | null {
+  if (!entries.some((entry) => entry.ended_at === null)) return null
+  const spans = entries
+    .map((entry) => ({ start: Date.parse(entry.started_at), end: entry.ended_at === null ? now.getTime() : Date.parse(entry.ended_at) }))
+    .sort((first, second) => second.end - first.end)
+
+  // Walks back from the latest work, taking in each entry that ends less than a break before the stretch so far begins.
+  let stretch_start = spans[0]!.start
+  for (const span of spans) {
+    if (span.end <= stretch_start - break_minutes * 60_000) break
+    stretch_start = Math.min(stretch_start, span.start)
+  }
+  return new Date(stretch_start)
+}
+
+// ============================================================================
 // Totals
 // ============================================================================
 

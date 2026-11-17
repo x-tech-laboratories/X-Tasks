@@ -30,6 +30,8 @@ Every setting, in the order the Settings page shows them. Defaults are in **bold
 | Remove rescheduled tasks from My Day      | **On**.                                                                          |
 | Allow several timers at once              | Starting a timer leaves the others running. **Off**.                             |
 | Ask about time away                       | Minutes away while a timer runs before asking whether to keep that time. **5**.  |
+| Remind to take a break                    | Minutes of timed work in a row before a reminder. **0**, off.                    |
+| Break length                              | Minutes without a timer that count as a break. **5**.                            |
 | Task details                              | Reorder or hide the sections of a task's details.                                |
 | Relationships                             | Name each relationship both ways and choose which task depends on the other.     |
 

@@ -114,6 +114,11 @@ The desktop app notices five minutes without keyboard or mouse input, and both i
 sleeping; the phone never asks. Change the minutes, or turn it off with zero, under **Ask about time away** in Settings ›
 Tasks › Time tracking.
 
+**Remind to take a break**, in the same settings, reminds you once timers have run for that many minutes in a row,
+across any tasks, and again after as many more. **Take a break** on the reminder stops every timer. A pause of
+**Break length** minutes, five by default, without a timer running starts the count again. While the window is out of
+sight the reminder also shows as a notification, in a browser once you allow it. It is off until you set the minutes.
+
 **Time spent** in a task's details shows its total and today's time, starts and stops its timer, and under **Show
 entries** lists each stretch of work by day, with × to remove one. Time that runs past midnight counts towards each
 day. The timer syncs, so one started on the phone shows and stops on the desktop too.
