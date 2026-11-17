@@ -161,6 +161,10 @@ export const UPCOMING_REPEAT_DAYS_RANGE = { min: 0, max: 90 }
 // How many minutes away from the computer, while a timer runs, before coming back asks what to do with that time; zero never asks.
 export const IDLE_PROMPT_MINUTES_RANGE = { min: 0, max: 240 }
 
+// How many minutes of work in a row before a reminder to take a break, zero for none, and how short a pause still counts as one.
+export const BREAK_REMINDER_MINUTES_RANGE = { min: 0, max: 480 }
+export const BREAK_MINUTES_RANGE = { min: 1, max: 120 }
+
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
 
 export interface Settings {
@@ -193,6 +197,10 @@ export interface Settings {
   allow_several_timers: boolean
   // Minutes away from the computer while a timer runs before coming back asks whether to keep that time; zero never asks.
   idle_prompt_minutes: number
+  // Minutes of timed work with no break before a reminder to take one, and again after as many more; zero never reminds.
+  break_reminder_minutes: number
+  // How long a pause between timed work counts as a break that starts the count again.
+  break_minutes: number
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
@@ -285,6 +293,8 @@ export const DEFAULT_SETTINGS: Settings = {
   subtasks_inherit_tags: false,
   allow_several_timers: false,
   idle_prompt_minutes: 5,
+  break_reminder_minutes: 0,
+  break_minutes: 5,
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',

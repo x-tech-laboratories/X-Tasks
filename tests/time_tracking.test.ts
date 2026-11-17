@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   add_task, attach_task_database, close_task_database, list_task_versions, list_tasks, list_time_entries, remove_task, remove_time_entry, set_setting, set_task_estimate, start_timer, stop_timer
 } from '../src/main/task_database'
-import { entry_seconds, estimate_left_seconds, parse_estimate, running_entries, seconds_by_day, short_time_label, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
+import { entry_seconds, estimate_left_seconds, work_stretch_start, parse_estimate, running_entries, seconds_by_day, short_time_label, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
 import { make_task } from './fixtures'
 
 // ============================================================================
@@ -68,6 +68,36 @@ describe('time totals', () => {
   it('words time to the minute from a minute on', () => {
     expect(time_spent_label(45)).toBe('45 seconds')
     expect(time_spent_label(3959)).toBe('1 hour, 5 minutes')
+  })
+})
+
+// ============================================================================
+// Breaks
+// ============================================================================
+
+describe('work in a row', () => {
+  const now = local(17, 12)
+
+  it('joins entries of any task across pauses shorter than a break', () => {
+    const entries = [entry(local(17, 9), local(17, 10), 'first'), entry(local(17, 10, 3), local(17, 11), 'second'), entry(local(17, 11, 4), null, 'first')]
+
+    expect(work_stretch_start(entries, now, 5)).toEqual(local(17, 9))
+  })
+
+  it('starts again after a pause as long as a break', () => {
+    const entries = [entry(local(17, 9), local(17, 10)), entry(local(17, 10, 5), null)]
+
+    expect(work_stretch_start(entries, now, 5)).toEqual(local(17, 10, 5))
+  })
+
+  it('takes in an entry that ran through the others, whatever it overlaps', () => {
+    const entries = [entry(local(17, 8), local(17, 11, 30), 'long'), entry(local(17, 11), null, 'short')]
+
+    expect(work_stretch_start(entries, now, 5)).toEqual(local(17, 8))
+  })
+
+  it('has no stretch while no timer runs', () => {
+    expect(work_stretch_start([entry(local(17, 9), local(17, 10))], now, 5)).toBeNull()
   })
 })
 

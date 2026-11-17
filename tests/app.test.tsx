@@ -247,6 +247,35 @@ describe('the timer', () => {
 })
 
 // ============================================================================
+// Break reminders
+// ============================================================================
+
+describe('break reminders', () => {
+  test('remind after the set minutes of work in a row, and stop every timer from the reminder', async () => {
+    const started_at = new Date(Date.now() - 70 * 60_000).toISOString()
+    const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', break_reminder_minutes: 60 } })
+    bridge.tasks_api.list_time_entries.mockResolvedValue([{ id: 'entry', task_id: 'report', started_at, ended_at: null }])
+    render(<App />)
+
+    expect(await screen.findByText('You have worked 1h 10m without a break.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Take a break' }))
+
+    expect(bridge.tasks_api.stop_timer).toHaveBeenCalledWith(expect.any(String), null)
+    expect(screen.queryByRole('status', { name: 'Running timer' })).toBeNull()
+  })
+
+  test('stay quiet while turned off', async () => {
+    const started_at = new Date(Date.now() - 70 * 60_000).toISOString()
+    const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all' } })
+    bridge.tasks_api.list_time_entries.mockResolvedValue([{ id: 'entry', task_id: 'report', started_at, ended_at: null }])
+    render(<App />)
+
+    await screen.findByRole('status', { name: 'Running timer' })
+    expect(screen.queryByText(/without a break/)).toBeNull()
+  })
+})
+
+// ============================================================================
 // Time away
 // ============================================================================
 
