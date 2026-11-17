@@ -39,7 +39,8 @@ import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
 import { WorklogPage } from './WorklogPage'
-import { TimerBar } from './TimeTracking'
+import { AwayDialog, TimerBar } from './TimeTracking'
+import { FRESH_IDLE_WATCH, step_idle_watch, type AwaySpan } from './idle'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
 import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
@@ -59,6 +60,9 @@ import {
 
 // A phone's keyboard covers half the screen, so the search box only takes focus at launch where there is a mouse.
 const IS_TOUCH_SCREEN = window.matchMedia('(pointer: coarse)').matches
+
+// How often a running timer checks whether the computer has been left alone.
+const IDLE_POLL_MS = 15_000
 
 // Removed tasks wait this long before the database deletes them, so the removal can be undone.
 const UNDO_DELAY_MS = 8000
@@ -188,6 +192,31 @@ export function App({ account }: { account?: SignedInAccount }) {
     }
   }, [has_loaded_tasks, settings?.reschedule_overdue_repeats, settings?.task_date_field, today])
 
+
+  // While a timer runs, notices time away from the computer, and on coming back asks what to do with it; a phone never asks, as timing away from it is usual.
+  const idle_watch = useRef(FRESH_IDLE_WATCH)
+  const [away, set_away] = useState<AwaySpan | null>(null)
+  const idle_minutes = settings?.idle_prompt_minutes ?? 0
+  const watches_idle = running_timers.length > 0 && idle_minutes > 0 && window.x_settings.host !== 'android'
+  useEffect(() => {
+    idle_watch.current = FRESH_IDLE_WATCH
+    if (!watches_idle) return
+    const look = async (): Promise<void> => {
+      const step = step_idle_watch(idle_watch.current, Date.now(), await window.x_settings.get_idle_seconds(), idle_minutes * 60, IDLE_POLL_MS)
+      idle_watch.current = step.watch
+      if (step.away) set_away((current) => current ?? step.away)
+    }
+    void look()
+    const timer = setInterval(() => void look(), IDLE_POLL_MS)
+    return () => clearInterval(timer)
+  }, [watches_idle, idle_minutes])
+
+  // Only time away since the first running timer started counts, and a stretch that leaves too little of it asks nothing.
+  const timed_away = away && running_timers.length > 0 ? { from: Math.max(away.from, Math.min(...running_timers.map((entry) => Date.parse(entry.started_at)))), to: away.to } : null
+  const asks_about_away = timed_away !== null && timed_away.to - timed_away.from >= idle_minutes * 60_000
+  useEffect(() => {
+    if (away && !asks_about_away) set_away(null)
+  }, [away, asks_about_away])
 
   // Closing the app deletes any tasks still waiting.
   useEffect(() => {
@@ -409,6 +438,17 @@ export function App({ account }: { account?: SignedInAccount }) {
   function set_task_estimate(task: Task, estimate_minutes: number | null): void {
     set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, estimate_minutes } : each)))
     void window.x_tasks.set_task_estimate(task.id, estimate_minutes)
+  }
+
+  // Takes the time away off each running timer, which then runs on from the moment of coming back or stops when its owner left; an entry started while away goes.
+  async function discard_time_away(span: AwaySpan, keeps_timing: boolean): Promise<void> {
+    set_away(null)
+    for (const entry of running_timers) {
+      if (span.from <= Date.parse(entry.started_at)) await window.x_tasks.remove_time_entry(entry.id)
+      else await window.x_tasks.stop_timer(new Date(span.from).toISOString(), entry.task_id)
+      if (keeps_timing) await window.x_tasks.start_timer(entry.task_id, new Date(span.to).toISOString())
+    }
+    set_time_entries(await window.x_tasks.list_time_entries())
   }
 
   function remove_time_entry(entry: TimeEntry): void {
@@ -1397,6 +1437,16 @@ export function App({ account }: { account?: SignedInAccount }) {
           context={{ tasks, tags, relationships: settings.task_relationships, date_field: settings.task_date_field }}
           on_restored={reload_tasks}
           on_close={() => set_history_open(null)}
+        />
+      )}
+
+      {timed_away && asks_about_away && (
+        <AwayDialog
+          span={timed_away}
+          titles={running_timers.map((entry) => tasks.find((task) => task.id === entry.task_id)?.title ?? 'a removed task')}
+          on_keep={() => set_away(null)}
+          on_discard={() => void discard_time_away(timed_away, true)}
+          on_discard_and_stop={() => void discard_time_away(timed_away, false)}
         />
       )}
 

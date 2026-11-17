@@ -158,6 +158,9 @@ export interface TaskRelationship {
 
 export const UPCOMING_REPEAT_DAYS_RANGE = { min: 0, max: 90 }
 
+// How many minutes away from the computer, while a timer runs, before coming back asks what to do with that time; zero never asks.
+export const IDLE_PROMPT_MINUTES_RANGE = { min: 0, max: 240 }
+
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
 
 export interface Settings {
@@ -188,6 +191,8 @@ export interface Settings {
   subtasks_inherit_tags: boolean
   // When set, starting a timer leaves the others running; otherwise only one runs at a time.
   allow_several_timers: boolean
+  // Minutes away from the computer while a timer runs before coming back asks whether to keep that time; zero never asks.
+  idle_prompt_minutes: number
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
@@ -279,6 +284,7 @@ export const DEFAULT_SETTINGS: Settings = {
   search_scope: 'view',
   subtasks_inherit_tags: false,
   allow_several_timers: false,
+  idle_prompt_minutes: 5,
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',
@@ -403,6 +409,8 @@ export interface SettingsApi {
   show_backup_folder: () => Promise<void>
   // Asks where to save a file, such as a timesheet, and saves the text there; false when cancelled or on a phone, which saves no files.
   save_text_file: (file_name: string, text: string) => Promise<boolean>
+  // How many seconds the computer has had no keyboard or mouse input; zero where the host cannot tell, as in a browser or on a phone.
+  get_idle_seconds: () => Promise<number>
   // Only on Android, where backups go to a folder picked once in the phone's storage; the name is empty until one is picked.
   get_backup_folder?: () => Promise<string>
   choose_backup_folder?: () => Promise<string>

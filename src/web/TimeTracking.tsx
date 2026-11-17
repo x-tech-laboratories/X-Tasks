@@ -2,10 +2,12 @@ import { useState } from 'react'
 
 import { format_local, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import { format_clock } from '@x-tech-laboratories/x-libs/durations'
+import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { ProgressBar } from '@x-tech-laboratories/x-libs/web/react/progress'
 import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
 import type { Task } from '@shared/tasks'
 import { entry_seconds, estimate_text, parse_estimate, seconds_by_day, short_time_label, time_spent_label, total_seconds, type TimeEntry } from '@shared/time_tracking'
+import type { AwaySpan } from './idle'
 
 // ============================================================================
 // Clock
@@ -163,5 +165,41 @@ export function TimeSpentField({ task, entries, is_timing, on_start, on_stop, on
         </ul>
       )}
     </div>
+  )
+}
+
+// ============================================================================
+// Time away
+// ============================================================================
+
+interface AwayDialogProps {
+  span: AwaySpan
+  // The titles of the tasks being timed.
+  titles: string[]
+  on_keep: () => void
+  on_discard: () => void
+  on_discard_and_stop: () => void
+}
+
+// Asks, on coming back to the computer, whether the time away counts towards the running timers.
+export function AwayDialog({ span, titles, on_keep, on_discard, on_discard_and_stop }: AwayDialogProps) {
+  const clock = (milliseconds: number) => new Date(milliseconds).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return (
+    <Dialog
+      title="Time away"
+      on_close={on_keep}
+      buttons={
+        <>
+          <button onClick={on_discard_and_stop}>Discard and stop</button>
+          <button onClick={on_discard}>Discard</button>
+          <button className="accent solid" onClick={on_keep} autoFocus>Keep</button>
+        </>
+      }
+    >
+      <p>
+        You were away from {clock(span.from)} to {clock(span.to)}, {short_time_label((span.to - span.from) / 1000)}, while timing {titles.join(', ')}.
+      </p>
+      <p className="setting-hint">Keep counts that time. Discard takes it off and keeps timing from when you came back; Discard and stop ends the timer when you left.</p>
+    </Dialog>
   )
 }

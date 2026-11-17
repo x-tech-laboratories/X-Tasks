@@ -90,6 +90,7 @@ export function install_web_bridge(): void {
     show_database_folder: () => Promise.resolve(),
     show_backup_folder: () => Promise.resolve(),
     save_text_file: (file_name, text) => Promise.resolve(download_text(file_name, text)),
+    get_idle_seconds: () => Promise.resolve(0),
     // A page served by the server already works on the server's tasks, so it has nothing to sync.
     get_sync_status: () => Promise.resolve(NO_SYNC),
     connect_sync: () => Promise.reject(new Error('a browser page cannot sync')),

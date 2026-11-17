@@ -118,6 +118,7 @@ export async function install_android_bridge(): Promise<void> {
     remove_backup: backups.remove_backup,
     show_backup_folder: () => Promise.resolve(),
     save_text_file: () => Promise.resolve(false),
+    get_idle_seconds: () => Promise.resolve(0),
     get_backup_folder: backups.get_folder,
     choose_backup_folder: backups.choose_folder,
     get_mcp_status: () => Promise.resolve(MCP_OFF),
