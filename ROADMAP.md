@@ -21,6 +21,12 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Clickable links in task titles
 - [ ] Copy a task's text from its right-click menu
 - [ ] A window listing every keyboard shortcut
+- [ ] Duplicate a task with its subtasks, links and files
+- [ ] Copy a task and its subtasks as a Markdown checklist
+- [ ] A deadline apart from the planned date, with overdue tasks that have no planned date shown in
+  My Day
+- [ ] Repeats that count from the day a task is done, can be paused, preview their next date and
+  carry their subtasks into each repeat
 
 ## Time tracking
 
@@ -39,15 +45,21 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Reminders at a set time, with desktop and phone notifications
 - [ ] End-of-day review of what was done and how long it took, moving what is left on
 - [ ] Rate each day's focus, productivity and mood, with charts on the Reports page
+- [ ] Weekly wrap-up of the week's done tasks and time, and a daily summary table by tag
+- [ ] An Eisenhower matrix board, and boards of columns made from any filters
 - [ ] A notes page for each tag, apart from its tasks
+- [ ] Bookmarks on a tag for links, files and commands, opened from its view
 
 ## Integrations
 
-- [ ] Import issues from Jira, GitHub, GitLab, Gitea, Redmine and OpenProject as tasks, sending
-  status back where the service allows
+- [ ] Import issues from Jira, GitHub, GitLab, Gitea, Forgejo, Redmine, OpenProject, Trello, Linear,
+  ClickUp, Azure DevOps and Nextcloud Deck as tasks, sending status back where the service allows
 - [ ] Show CalDAV and iCal calendar events beside tasks
 - [ ] Import and export tasks as iCalendar (.ics) files, including files dropped onto the window
 - [ ] Sync tasks both ways with CalDAV servers such as Nextcloud
+- [ ] Show Google Calendar events beside tasks, from several accounts
+- [ ] Write scheduled task blocks and tracked work sessions to a CalDAV or Google calendar
+- [ ] Import tasks from Todoist and TickTick
 
 ## Tags
 
@@ -64,6 +76,11 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Sync through WebDAV, Dropbox or a local file as well as the server, with end-to-end encryption
 - [ ] Plugins
 - [ ] Translations
+- [ ] Share tasks or a tag's tasks with other users on the server, and hand a task to one of them
+- [ ] `x-tasks://` links that add and complete tasks, not only open them
+- [ ] Launcher shortcuts for adding a task and opening My Day, and starting minimised to the tray
+- [ ] A count of due tasks on the app icon
+- [ ] An Android home-screen widget, and adding tasks from text shared to the app
 - [ ] Choose how sync settles an edit made on two devices: the newest edit wins, as now, or a ranked
   list of devices decides which one takes precedence
 - [ ] Installable desktop packages beyond Nix (in progress on `worktree-desktop-packages`)
@@ -78,7 +95,5 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Review Task Coach for features
 - [ ] Review Planner for features
 - [ ] Review Trilium addons for features
-- [ ] Review Super Productivity for features (a first pass added the items above; check its
-  current docs for newer ones)
 - [ ] Review Errands for features (a first pass against 51.0.6 added the items above; recheck items
   from 46.x and earlier as the C rewrite brings them back)
