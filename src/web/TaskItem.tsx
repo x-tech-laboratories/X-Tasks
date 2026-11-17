@@ -65,10 +65,10 @@ export interface TaskActions {
   // False in a sorted table, where a drop on a row can only nest the task inside it.
   can_drop_beside: boolean
   on_drop: (target: Task, placement: DropPlacement) => void
-  // The task the timer is running on, if any.
-  timed_task_id: string | null
+  // Whether a timer is running on the task.
+  is_timing: (task: Task) => boolean
   on_start_timer: (task: Task) => void
-  on_stop_timer: () => void
+  on_stop_timer: (task: Task) => void
 }
 
 // The tags a row shows: the task's own, then the rule tags that match it, leaving out tags hidden from rows.
@@ -100,7 +100,7 @@ export function open_task_menu(task: Task, actions: TaskActions, event: MouseEve
     ...(on_add_subtask && actions.can_add_subtasks ? [{ label: 'Add subtask', run: on_add_subtask }] : []),
     { label: task.is_done ? 'Mark as not done' : 'Mark as done', run: () => actions.on_toggle(task) },
     { label: 'Reschedule…', run: () => actions.on_reschedule(task) },
-    actions.timed_task_id === task.id ? { label: 'Stop timer', run: actions.on_stop_timer } : { label: 'Start timer', run: () => actions.on_start_timer(task) },
+    actions.is_timing(task) ? { label: 'Stop timer', run: () => actions.on_stop_timer(task) } : { label: 'Start timer', run: () => actions.on_start_timer(task) },
     actions.is_in_my_day(task)
       ? { label: 'Remove from My Day', run: () => actions.on_set_my_day(task, false) }
       : { label: 'Add to My Day', run: () => actions.on_set_my_day(task, true) },
@@ -279,7 +279,7 @@ export function TaskItem({ node, actions }: TaskItemProps) {
         <span className="task_row_end">
           {is_collapsed && <span className="tree-count">{children.length}</span>}
           {!task.is_done && (
-            <TimerButton task={task} is_timing={actions.timed_task_id === task.id} on_start={actions.on_start_timer} on_stop={actions.on_stop_timer} />
+            <TimerButton task={task} is_timing={actions.is_timing(task)} on_start={actions.on_start_timer} on_stop={actions.on_stop_timer} />
           )}
           {actions.can_add_subtasks && (
             <button className="icon hover-reveal" onClick={() => set_is_adding_subtask(true)} aria-label="Add subtask">

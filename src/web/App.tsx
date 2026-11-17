@@ -14,7 +14,7 @@ import { undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/t
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
-import { running_entry, task_entries, type TimeEntry } from '@shared/time_tracking'
+import { running_entries, stopped_entries, task_entries, type TimeEntry } from '@shared/time_tracking'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
 import type { SignedInAccount } from './SignedIn'
@@ -77,11 +77,12 @@ export function App({ account }: { account?: SignedInAccount }) {
   const [tasks, set_tasks] = useState<Task[]>([])
   const [completions, set_completions] = useState<Completion[]>([])
   const [time_entries, set_time_entries] = useState<TimeEntry[]>([])
-  const running_timer = running_entry(time_entries)
   const [has_loaded_tasks, set_has_loaded_tasks] = useState(false)
   const [tag_groups, set_tag_groups] = useState<TagGroup[]>([])
   const [tags, set_tags] = useState<Tag[]>([])
   const [settings, set_settings] = useState<Settings | null>(null)
+  const running_timers = running_entries(time_entries, settings?.allow_several_timers ?? false)
+  const is_timing = (task: Task): boolean => running_timers.some((entry) => entry.task_id === task.id)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
   const [is_settings_open, set_is_settings_open] = useState(false)
   // On a phone the sidebar is a drawer over the tasks, open only while this is set.
@@ -344,7 +345,7 @@ export function App({ account }: { account?: SignedInAccount }) {
 
   // Ticks a task by hand, folding its subtasks away when that finishes its whole branch and the settings say to, and stopping its timer.
   function tick_task(task: Task): void {
-    if (!task.is_done && running_timer?.task_id === task.id) stop_task_timer()
+    if (!task.is_done && is_timing(task)) stop_task_timer(task)
     collapse_finished_branches([task])
     toggle_task(task)
   }
@@ -385,18 +386,23 @@ export function App({ account }: { account?: SignedInAccount }) {
   // Time tracking
   // ==========================================================================
 
-  // Starting a timer stops the one running, at the same moment.
+  // Starting a timer stops the others at the same moment, unless the settings allow several.
   function start_task_timer(task: Task): void {
+    if (is_timing(task)) return
     const started_at = new Date().toISOString()
-    const stopped = stopped_entries(time_entries, started_at)
-    set_time_entries([...stopped, { id: `starting-${task.id}`, task_id: task.id, started_at, ended_at: null }])
-    void window.x_tasks.start_timer(task.id, started_at).then((entry) => set_time_entries([...stopped, entry]))
+    const kept = settings?.allow_several_timers ? time_entries : stopped_entries(time_entries, started_at, null)
+    const starting_id = `starting-${task.id}`
+    set_time_entries([...kept, { id: starting_id, task_id: task.id, started_at, ended_at: null }])
+    // The saved entry takes the place of the one shown, keeping an end given while it was being saved.
+    void window.x_tasks.start_timer(task.id, started_at).then((entry) =>
+      set_time_entries((current_entries) => current_entries.map((each) => (each.id === starting_id ? { ...entry, ended_at: each.ended_at } : each)))
+    )
   }
 
-  function stop_task_timer(): void {
+  function stop_task_timer(task: Pick<Task, 'id'>): void {
     const ended_at = new Date().toISOString()
-    set_time_entries((current_entries) => stopped_entries(current_entries, ended_at))
-    void window.x_tasks.stop_timer(ended_at)
+    set_time_entries((current_entries) => stopped_entries(current_entries, ended_at, task.id))
+    void window.x_tasks.stop_timer(ended_at, task.id)
   }
 
   function remove_time_entry(entry: TimeEntry): void {
@@ -976,7 +982,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     can_drop_on: can_drop_task_on,
     can_drop_beside: !is_sorted,
     on_drop: drop_task,
-    timed_task_id: running_timer?.task_id ?? null,
+    is_timing,
     on_start_timer: start_task_timer,
     on_stop_timer: stop_task_timer
   }
@@ -1235,14 +1241,15 @@ export function App({ account }: { account?: SignedInAccount }) {
       tools={
         <>
           {multibar}
-          {running_timer && (
+          {running_timers.map((entry) => (
             <TimerBar
-              entry={running_timer}
-              task={tasks.find((task) => task.id === running_timer.task_id)}
+              key={entry.task_id}
+              entry={entry}
+              task={tasks.find((task) => task.id === entry.task_id)}
               on_open={task_actions.on_select}
-              on_stop={stop_task_timer}
+              on_stop={() => stop_task_timer({ id: entry.task_id })}
             />
-          )}
+          ))}
         </>
       }
       sidebar={sidebar}
@@ -1307,7 +1314,7 @@ export function App({ account }: { account?: SignedInAccount }) {
               on_remove={remove_task}
               on_show_history={(task) => set_history_open({ task_id: task.id, version_id: null })}
               time_entries={task_entries(time_entries, selected_task.id)}
-              is_timing={running_timer?.task_id === selected_task.id}
+              is_timing={is_timing(selected_task)}
               on_start_timer={start_task_timer}
               on_stop_timer={stop_task_timer}
               on_remove_time_entry={remove_time_entry}
@@ -1384,15 +1391,6 @@ export function App({ account }: { account?: SignedInAccount }) {
       )}
     </Shell>
   )
-}
-
-// ============================================================================
-// Time tracking
-// ============================================================================
-
-// The entries with every running one ended at the given time, as the database ends them, never before its start.
-function stopped_entries(entries: TimeEntry[], ended_at: string): TimeEntry[] {
-  return entries.map((entry) => (entry.ended_at === null ? { ...entry, ended_at: entry.started_at > ended_at ? entry.started_at : ended_at } : entry))
 }
 
 // ============================================================================

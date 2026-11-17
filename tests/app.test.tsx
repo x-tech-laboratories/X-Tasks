@@ -191,6 +191,22 @@ describe('the timer', () => {
     expect(tasks_api.stop_timer).toHaveBeenCalled()
   })
 
+  test('keeps the first timer running when several are allowed, each stopped on its own', async () => {
+    const { tasks_api } = await show_app({ allow_several_timers: true })
+    const row_of = (title: string) => screen.getAllByText(title).map((each) => each.closest('.task')).find(Boolean) as HTMLElement
+
+    fireEvent.click(within(row_of('Buy milk')).getByRole('button', { name: 'Start timer' }))
+    fireEvent.click(within(row_of('Write report')).getByRole('button', { name: 'Start timer' }))
+
+    await waitFor(() => expect(screen.getAllByRole('status', { name: 'Running timer' })).toHaveLength(2))
+    fireEvent.click(within(row_of('Buy milk')).getByRole('button', { name: 'Stop timer' }))
+
+    const timers = screen.getAllByRole('status', { name: 'Running timer' })
+    expect(timers).toHaveLength(1)
+    expect(within(timers[0]!).getByText('Write report')).toBeTruthy()
+    expect(tasks_api.stop_timer).toHaveBeenCalledWith(expect.any(String), 'milk')
+  })
+
   test('stops when its task is marked done', async () => {
     const { tasks_api } = await show_app()
     const row = screen.getByText('Buy milk').closest('.task')! as HTMLElement

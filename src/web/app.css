@@ -7,13 +7,14 @@
 /* The theme button sits in the sidebar's foot instead. */
 .topbar > #theme { display: none; }
 
-/* The bar takes the rest of the top bar. */
-.multibar { display: flex; flex: 1; align-items: center; gap: var(--space-4); min-width: 0; }
+/* The bar takes the rest of the top bar, keeping room to type beside running timers. */
+.multibar { display: flex; flex: 1; align-items: center; gap: var(--space-4); min-width: min(16em, 40%); }
 .multibar input.filter { flex: 1; min-width: 0; }
 
-/* The running timer sits after the bar: its task, the time so far and a stop button. */
-.timer_bar { display: flex; flex: none; align-items: center; gap: var(--space-2); max-width: 40%; color: var(--accent); }
-.timer_bar .timer_task { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
+/* Each running timer sits after the bar: its task, the time so far and a stop button. */
+.timer_bar { display: flex; flex: 0 1 auto; align-items: center; gap: var(--space-2); min-width: 0; color: var(--accent); }
+.timer_bar .timer_task { flex: 0 1 auto; overflow: hidden; min-width: 3em; max-width: 16em; text-overflow: ellipsis; white-space: nowrap; }
+.timer_bar > :not(.timer_task) { flex: none; }
 .timer_clock { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* What the bar could not read shows in a band across the top of the pane. */

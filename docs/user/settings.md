@@ -28,6 +28,7 @@ Every setting, in the order the Settings page shows them. Defaults are in **bold
 | Add due tasks to My Day                   | **Off**.                                                                         |
 | Remove completed tasks from My Day        | **On**.                                                                          |
 | Remove rescheduled tasks from My Day      | **On**.                                                                          |
+| Allow several timers at once              | Starting a timer leaves the others running. **Off**.                             |
 | Task details                              | Reorder or hide the sections of a task's details.                                |
 | Relationships                             | Name each relationship both ways and choose which task depends on the other.     |
 

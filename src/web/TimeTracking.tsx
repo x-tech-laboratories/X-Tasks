@@ -52,10 +52,10 @@ export function TimerBar({ entry, task, on_open, on_stop }: TimerBarProps) {
 // ============================================================================
 
 // Starts the timer on a row's task, or stops it on the task it runs on, which keeps the button in sight.
-export function TimerButton({ task, is_timing, on_start, on_stop }: { task: Task; is_timing: boolean; on_start: (task: Task) => void; on_stop: () => void }) {
+export function TimerButton({ task, is_timing, on_start, on_stop }: { task: Task; is_timing: boolean; on_start: (task: Task) => void; on_stop: (task: Task) => void }) {
   if (is_timing) {
     return (
-      <button className="icon timer_button is_timing" onClick={on_stop} aria-label="Stop timer" title="Stop timer">
+      <button className="icon timer_button is_timing" onClick={() => on_stop(task)} aria-label="Stop timer" title="Stop timer">
         ■
       </button>
     )
@@ -77,7 +77,7 @@ interface TimeSpentFieldProps {
   entries: TimeEntry[]
   is_timing: boolean
   on_start: (task: Task) => void
-  on_stop: () => void
+  on_stop: (task: Task) => void
   on_remove_entry: (entry: TimeEntry) => void
 }
 
@@ -97,7 +97,7 @@ export function TimeSpentField({ task, entries, is_timing, on_start, on_stop, on
         {entries.length === 0 ? 'None yet' : `${time_spent_label(total)} · today ${time_spent_label(today_seconds)}`}
       </span>
       <span className="inline_fields">
-        {is_timing ? <button onClick={on_stop}>■ Stop timer</button> : <button onClick={() => on_start(task)}>▶ Start timer</button>}
+        {is_timing ? <button onClick={() => on_stop(task)}>■ Stop timer</button> : <button onClick={() => on_start(task)}>▶ Start timer</button>}
         {entries.length > 0 && (
           <button aria-expanded={is_listing} onClick={() => set_is_listing(!is_listing)}>
             {is_listing ? 'Hide entries' : 'Show entries'}

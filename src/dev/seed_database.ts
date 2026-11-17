@@ -232,7 +232,7 @@ function add_example_task(example: ExampleTask, parent_id: string | null): void 
   for (const stretch of example.worked ?? []) {
     const started_at = new Date(now.getFullYear(), now.getMonth(), now.getDate() - stretch.days_ago, stretch.hour)
     start_timer(task.id, started_at.toISOString())
-    stop_timer(new Date(started_at.getTime() + stretch.minutes * 60 * 1000).toISOString())
+    stop_timer(new Date(started_at.getTime() + stretch.minutes * 60 * 1000).toISOString(), task.id)
   }
 
   for (const subtask of example.subtasks ?? []) add_example_task(subtask, task.id)

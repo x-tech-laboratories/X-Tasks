@@ -13,10 +13,24 @@ export interface TimeEntry {
   ended_at: string | null
 }
 
-// The entry the timer is running on; two devices that started one apart show the later.
-export function running_entry(entries: TimeEntry[]): TimeEntry | null {
-  const running = entries.filter((entry) => entry.ended_at === null)
-  return running.reduce<TimeEntry | null>((latest, entry) => (latest === null || entry.started_at > latest.started_at ? entry : latest), null)
+// The running timers, oldest first, one per task: two devices that started one on the same task apart show the later.
+// With only one timer allowed, the latest started alone, as two devices can leave two running.
+export function running_entries(entries: TimeEntry[], allow_several: boolean): TimeEntry[] {
+  const latest_by_task = new Map<string, TimeEntry>()
+  for (const entry of entries) {
+    if (entry.ended_at !== null) continue
+    const latest = latest_by_task.get(entry.task_id)
+    if (!latest || entry.started_at > latest.started_at) latest_by_task.set(entry.task_id, entry)
+  }
+  const running = [...latest_by_task.values()].sort((first, second) => first.started_at.localeCompare(second.started_at))
+  return allow_several ? running : running.slice(-1)
+}
+
+// The entries with the running ones ended at the given time, those of one task or every one, never before their start.
+export function stopped_entries(entries: TimeEntry[], ended_at: string, task_id: string | null): TimeEntry[] {
+  return entries.map((entry) =>
+    entry.ended_at === null && (task_id === null || entry.task_id === task_id) ? { ...entry, ended_at: entry.started_at > ended_at ? entry.started_at : ended_at } : entry
+  )
 }
 
 // A running entry counts up to now.
