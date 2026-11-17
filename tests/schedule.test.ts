@@ -92,6 +92,12 @@ describe('recurrence', () => {
     expect(next_schedule(task)?.due_at).toBe('2026-03-12T09:00')
   })
 
+  test('next_schedule keeps the length of a timed task repeating within the day', () => {
+    const task = make_task({ id: 'r', start_at: '2026-03-11T15:00', due_at: '2026-03-11T15:15', recurrence: 'FREQ=HOURLY;INTERVAL=3;BYMINUTE=0' })
+    expect(next_schedule(task, 'start')).toMatchObject({ start_at: '2026-03-11T18:00', due_at: '2026-03-11T18:15' })
+    expect(next_schedule({ ...task, start_at: '2026-03-11T21:00', due_at: '2026-03-11T21:15' }, 'start')).toMatchObject({ start_at: '2026-03-12T00:00', due_at: '2026-03-12T00:15' })
+  })
+
   test('next_schedule is empty for a one-off task, an ended rule or an unreadable one', () => {
     expect(next_schedule(make_task({ id: 'o', due_at: '2026-03-11' }))).toBeNull()
     expect(next_schedule(make_task({ id: 'e', due_at: '2026-03-11', recurrence: 'FREQ=DAILY;COUNT=1' }))).toBeNull()

@@ -138,16 +138,29 @@ function moved_dates(schedule: TaskSchedule, new_anchor: Date, field: TaskDateFi
   }
 
   const anchor_date = parse_local(anchor)
+  const is_anchor_timed = has_time(anchor)
   function moved(task_date: string | null): string | null {
     if (task_date === null) return null
     if (task_date === anchor) return format_local(new_anchor, has_time(task_date))
     const date = parse_local(task_date)
+    // Two timed dates keep their exact gap, so a task repeating every few hours keeps its length.
+    if (is_anchor_timed && has_time(task_date)) {
+      const moved_date = new Date(new_anchor)
+      moved_date.setMinutes(moved_date.getMinutes() + clock_minutes_between(anchor_date, date))
+      return format_local(moved_date, true)
+    }
     const moved_date = new Date(new_anchor.getFullYear(), new_anchor.getMonth(), new_anchor.getDate() + days_between(anchor_date, date))
     moved_date.setHours(date.getHours(), date.getMinutes())
     return format_local(moved_date, has_time(task_date))
   }
 
   return { start_at: moved(schedule.start_at), due_at: moved(schedule.due_at) }
+}
+
+// Minutes from one local time to another as the clock reads them, so a daylight saving change does not shift the gap.
+function clock_minutes_between(from: Date, to: Date): number {
+  const clock = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes())
+  return (clock(to) - clock(from)) / 60_000
 }
 
 // Moves a recurring task's dates to its next occurrence, keeping the gap between start and due; null once the rule has ended.
