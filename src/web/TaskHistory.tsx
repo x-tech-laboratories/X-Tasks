@@ -7,6 +7,7 @@ import { has_time, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { describe_recurrence } from '@shared/schedule'
 import type { TaskDateField, TaskRelationship } from '@shared/settings'
 import type { Tag, Task } from '@shared/tasks'
+import { time_spent_label } from '@shared/time_tracking'
 import { changed_fields, is_same_snapshot, SNAPSHOT_FIELDS, type SnapshotField, type SnapshotLink, type TaskSnapshot, type TaskVersion, type VersionKind } from '@shared/versions'
 import { tag_path } from './views'
 
@@ -24,6 +25,7 @@ const FIELD_LABELS: Record<SnapshotField, string> = {
   are_dates_linked: 'Dates move together',
   recurrence: 'Repeat',
   my_day_on: 'My Day',
+  estimate_minutes: 'Estimate',
   parent_id: 'Parent task',
   tag_ids: 'Tags',
   links: 'Relationships'
@@ -95,6 +97,7 @@ function value_text(field: SnapshotField, snapshot: TaskSnapshot, context: Histo
     case 'are_dates_linked': return snapshot.are_dates_linked ? 'Yes' : 'No'
     case 'recurrence': return snapshot.recurrence ? describe_recurrence(snapshot, context.date_field) : ''
     case 'my_day_on': return snapshot.my_day_on ? local_date(snapshot.my_day_on) : ''
+    case 'estimate_minutes': return snapshot.estimate_minutes === null ? '' : time_spent_label(snapshot.estimate_minutes * 60)
     case 'parent_id': return snapshot.parent_id ? task_title(snapshot.parent_id, context) : ''
     case 'tag_ids': return snapshot.tag_ids.map((tag_id) => tag_name(tag_id, context)).join(', ')
     case 'links': return snapshot.links.map((link) => link_name(link, context)).join(', ')

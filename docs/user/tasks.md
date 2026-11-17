@@ -112,6 +112,12 @@ and time that overlaps counts towards every task it was spent on. Completing a t
 entries** lists each stretch of work by day, with × to remove one. Time that runs past midnight counts towards each
 day. The timer syncs, so one started on the phone shows and stops on the desktop too.
 
+**Estimate** in the same section takes how long a task should take, typed as `1h 30m`, `1.5h`, `90m`, `1:30` or plain
+minutes such as `45`; clear it to remove the estimate. A bar then fills with the time spent and says how much is left
+or how far it ran over, and the task's row shows the time spent against the estimate, such as *1h 50m / 2h*, in red
+once it runs over. A view's heading adds up the estimated time not yet spent on its open tasks, and My Day also shows
+the time spent today on every task.
+
 ## Selecting several tasks
 
 Ctrl+click rows to select them, Shift+click to select a range, or Ctrl+A for every row on screen. On a phone,

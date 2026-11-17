@@ -7,7 +7,7 @@ import { format_local } from '@x-tech-laboratories/x-libs/dates'
 import { PRESET_FILTERS_GROUP_ID, type RuleCondition, type TagRule } from '@shared/tasks'
 import { open_task_database } from '../main/node_task_database'
 import {
-  add_tag, add_tag_group, add_task, close_task_database, list_tags, set_setting, set_task_done, set_task_notes, set_task_schedule, start_timer, stop_timer
+  add_tag, add_tag_group, add_task, close_task_database, list_tags, set_setting, set_task_done, set_task_estimate, set_task_notes, set_task_schedule, start_timer, stop_timer
 } from '../main/task_database'
 
 // ============================================================================
@@ -80,6 +80,8 @@ interface ExampleTask {
   in_my_day?: boolean
   // Days ago the task was finished; a recurring task stays open and only logs these.
   done_days_ago?: number[]
+  // How long the task should take, in minutes.
+  estimate?: number
   // Stretches of work as days ago, starting hour and minutes long.
   worked?: { days_ago: number; hour: number; minutes: number }[]
   subtasks?: ExampleTask[]
@@ -114,10 +116,11 @@ const EXAMPLE_TASKS: ExampleTask[] = [
         tags: ['Website'],
         due_at: day(1),
         in_my_day: true,
+        estimate: 120,
         worked: [{ days_ago: 2, hour: 10, minutes: 50 }, { days_ago: 1, hour: 14, minutes: 35 }, { days_ago: 0, hour: 9, minutes: 25 }]
       },
       { title: 'Set up the domain and TLS', tags: ['Website', 'High'], done_days_ago: [9] },
-      { title: 'Draft the launch post', tags: ['Launch'], start_at: day(10), due_at: day(20) },
+      { title: 'Draft the launch post', tags: ['Launch'], start_at: day(10), due_at: day(20), estimate: 180 },
       {
         title: 'Collect feedback from beta testers',
         tags: ['Launch'],
@@ -148,10 +151,11 @@ const EXAMPLE_TASKS: ExampleTask[] = [
     tags: ['Career', 'Task', 'High'],
     due_at: time(0, 15, 30),
     in_my_day: true,
+    estimate: 30,
     worked: [{ days_ago: 1, hour: 16, minutes: 45 }]
   },
   { title: 'Read "The Pragmatic Programmer"', tags: ['Productivity', 'Task', 'Low'] },
-  { title: 'Call the dentist to move the appointment', tags: ['Health', 'Task'], due_at: day(0), in_my_day: true },
+  { title: 'Call the dentist to move the appointment', tags: ['Health', 'Task'], due_at: day(0), in_my_day: true, estimate: 10 },
   { title: 'Buy a birthday present for Sam', tags: ['Social', 'Task', 'Medium'], due_at: day(5) },
   { title: 'Back up the laptop', tags: ['Tech', 'Routine'], due_at: day(-3), recurrence: 'FREQ=WEEKLY;BYDAY=SU', done_days_ago: [10, 17, 24] },
   { title: 'Pay the rent', tags: ['Finances', 'Routine', 'High'], due_at: day(8), recurrence: 'FREQ=MONTHLY;BYMONTHDAY=1', done_days_ago: [23, 53] },
@@ -219,6 +223,7 @@ function add_example_task(example: ExampleTask, parent_id: string | null): void 
   const task = add_task(example.title, parent_id, tag_ids, example.in_my_day ? day(0) : null)
 
   if (example.notes) set_task_notes(task.id, example.notes)
+  if (example.estimate) set_task_estimate(task.id, example.estimate)
   if (example.start_at || example.due_at || example.recurrence) {
     set_task_schedule(task.id, { start_at: example.start_at ?? null, due_at: example.due_at ?? null, recurrence: example.recurrence ?? '' })
   }

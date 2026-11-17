@@ -15,6 +15,7 @@ export function make_task(fields: Partial<Task> & { id: string }): Task {
     recurrence: '',
     are_dates_linked: true,
     my_day_on: null,
+    estimate_minutes: null,
     created_at: '2026-01-01T00:00:00.000Z',
     parent_id: null,
     position: 0,

@@ -222,7 +222,8 @@ const SCHEMA_MIGRATIONS: (string | ((database: SqlDatabase) => void))[] = [
      started_at TEXT NOT NULL,
      ended_at TEXT
    );
-   CREATE INDEX time_entries_by_task ON time_entries (task_id)`
+   CREATE INDEX time_entries_by_task ON time_entries (task_id)`,
+  `ALTER TABLE tasks ADD COLUMN estimate_minutes INTEGER`
 ]
 
 // The schema version that starts syncing history; the versions kept before it are sent to the server as new.
@@ -301,6 +302,7 @@ interface TaskRow {
   recurrence: string
   are_dates_linked: number
   my_day_on: string | null
+  estimate_minutes: number | null
   created_at: string
   parent_id: string | null
   position: number
@@ -371,6 +373,7 @@ function row_to_task(row: TaskRow, tag_ids: string[], links: TaskLink[]): Task {
     recurrence: row.recurrence,
     are_dates_linked: row.are_dates_linked === 1,
     my_day_on: row.my_day_on,
+    estimate_minutes: row.estimate_minutes,
     created_at: row.created_at,
     parent_id: row.parent_id,
     position: row.position,
@@ -416,6 +419,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     recurrence: '',
     are_dates_linked: true,
     my_day_on,
+    estimate_minutes: null,
     created_at: new Date().toISOString(),
     parent_id,
     position: next_position('tasks'),
@@ -477,6 +481,10 @@ export function set_task_schedule(task_id: string, schedule: TaskSchedule): void
 
 export function set_task_my_day(task_id: string, my_day_on: string | null): void {
   write((database) => database.prepare('UPDATE tasks SET my_day_on = ? WHERE id = ?').run(my_day_on, task_id))
+}
+
+export function set_task_estimate(task_id: string, estimate_minutes: number | null): void {
+  write((database) => database.prepare('UPDATE tasks SET estimate_minutes = ? WHERE id = ?').run(estimate_minutes, task_id))
 }
 
 export function remove_task(task_id: string): void {

@@ -22,7 +22,7 @@ type Answered<Api> = {
 export type TasksMethods = Answered<Omit<TasksApi, 'on_database_changed' | 'on_open_task'>>
 
 export const TASKS_METHODS = [
-  'list_tasks', 'add_task', 'set_task_done', 'set_task_title', 'set_task_notes', 'set_task_schedule', 'set_task_my_day', 'remove_task', 'move_task',
+  'list_tasks', 'add_task', 'set_task_done', 'set_task_title', 'set_task_notes', 'set_task_schedule', 'set_task_my_day', 'set_task_estimate', 'remove_task', 'move_task',
   'tag_task', 'untag_task', 'link_tasks', 'unlink_tasks', 'list_completions', 'list_task_versions', 'list_recent_versions', 'restore_task_version', 'list_time_entries', 'start_timer', 'stop_timer', 'remove_time_entry', 'list_tag_groups', 'add_tag_group', 'update_tag_group', 'remove_tag_group', 'move_tag_group',
   'list_tags', 'add_tag', 'update_tag', 'remove_tag', 'move_tag'
 ] as const satisfies readonly (keyof TasksMethods)[]

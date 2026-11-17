@@ -1,6 +1,8 @@
 import { format_local } from '@x-tech-laboratories/x-libs/dates'
 import { format_duration } from '@x-tech-laboratories/x-libs/durations'
 
+import type { Task } from './tasks'
+
 // ============================================================================
 // Time entries
 // ============================================================================
@@ -74,4 +76,54 @@ export function total_seconds(entries: TimeEntry[], now: Date): number {
 export function time_spent_label(seconds: number): string {
   if (seconds < 60) return format_duration(seconds)
   return format_duration(Math.floor(seconds / 60) * 60, { largest_unit: 'hours' })
+}
+
+// A time in hours and minutes, such as "1h 30m" or "45m", for rows and headings.
+export function short_time_label(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  if (hours === 0) return `${minutes}m`
+  return minutes % 60 === 0 ? `${hours}h` : `${hours}h ${minutes % 60}m`
+}
+
+// ============================================================================
+// Estimates
+// ============================================================================
+
+const ESTIMATE_PART = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)/g
+
+// An estimate in minutes typed as "1h 30m", "1.5h", "90m", "1:30" or plain minutes such as "45"; empty text or zero clears it, and text it cannot read gives undefined.
+export function parse_estimate(text: string): number | null | undefined {
+  const typed = text.trim().toLowerCase()
+  if (typed === '') return null
+
+  const clock = /^(\d+):(\d{1,2})$/.exec(typed)
+  const minutes = clock
+    ? Number(clock[1]) * 60 + Number(clock[2])
+    : /^\d+(\.\d+)?$/.test(typed)
+      ? Number(typed)
+      : parts_in_minutes(typed)
+  if (minutes === undefined) return undefined
+  return Math.round(minutes) === 0 ? null : Math.round(minutes)
+}
+
+// The minutes in text made only of hour and minute parts, or undefined when anything else is in it.
+function parts_in_minutes(typed: string): number | undefined {
+  if (typed.replace(ESTIMATE_PART, '').trim() !== '') return undefined
+  let minutes = 0
+  for (const [, amount, unit] of typed.matchAll(ESTIMATE_PART)) minutes += Number(amount) * (unit!.startsWith('h') ? 60 : 1)
+  return minutes
+}
+
+// An estimate as it is typed back into its field.
+export function estimate_text(estimate_minutes: number | null): string {
+  return estimate_minutes === null ? '' : short_time_label(estimate_minutes * 60)
+}
+
+// The estimated time not yet spent on open tasks: each task's estimate less what was spent on it, never below nothing.
+export function estimate_left_seconds(tasks: Task[], entries: TimeEntry[], now: Date): number {
+  return tasks.reduce((left, task) => {
+    if (task.is_done || task.estimate_minutes === null) return left
+    return left + Math.max(0, task.estimate_minutes * 60 - total_seconds(task_entries(entries, task.id), now))
+  }, 0)
 }

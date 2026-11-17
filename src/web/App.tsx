@@ -14,7 +14,7 @@ import { undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/t
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
-import { running_entries, stopped_entries, task_entries, type TimeEntry } from '@shared/time_tracking'
+import { estimate_left_seconds, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
 import type { SignedInAccount } from './SignedIn'
@@ -405,6 +405,11 @@ export function App({ account }: { account?: SignedInAccount }) {
     void window.x_tasks.stop_timer(ended_at, task.id)
   }
 
+  function set_task_estimate(task: Task, estimate_minutes: number | null): void {
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, estimate_minutes } : each)))
+    void window.x_tasks.set_task_estimate(task.id, estimate_minutes)
+  }
+
   function remove_time_entry(entry: TimeEntry): void {
     set_time_entries((current_entries) => current_entries.filter((each) => each.id !== entry.id))
     void window.x_tasks.remove_time_entry(entry.id)
@@ -721,6 +726,10 @@ export function App({ account }: { account?: SignedInAccount }) {
   const searched_tasks = settings.search_scope === 'all' ? tasks : view_tasks
   const visible_tasks = search ? searched_tasks.filter((task) => query_matches(search.query, task, search_context)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
+  const spent_seconds_of = (task: Task): number => total_seconds(task_entries(time_entries, task.id), parse_local(now))
+  // Estimated time left on the open tasks shown, and in My Day the time spent today on any task.
+  const estimate_left = estimate_left_seconds(visible_tasks, time_entries, parse_local(now))
+  const spent_today = selected_view.kind === 'my_day' ? (seconds_by_day(time_entries, parse_local(now)).get(today) ?? 0) : 0
 
   // The table's filters and sort apply only to the table layout; the list keeps every task in its dragged order.
   const is_filtered = is_table && has_table_filters(table_filters)
@@ -739,7 +748,7 @@ export function App({ account }: { account?: SignedInAccount }) {
   const clearable_tasks = shown_tasks.filter((task) => fully_done_ids.has(task.id) && (task.parent_id === null || !fully_done_ids.has(task.parent_id)))
   // The history column is there only while streak dots show on rows.
   const column_order = ordered_columns(settings.table_column_order, tag_groups).filter((column) => column !== 'history' || settings.show_streak_strip_on_rows)
-  const sort_context: SortContext = { tags_of: task_tags_of, streak_of, is_in_my_day: (task) => is_in_my_day(task, shown_since), date_field: settings.task_date_field, last_done_of, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
+  const sort_context: SortContext = { tags_of: task_tags_of, streak_of, is_in_my_day: (task) => is_in_my_day(task, shown_since), date_field: settings.task_date_field, last_done_of, spent_seconds_of, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
   const sorted_tree = is_sorted ? sort_task_tree(nested_tasks, settings.table_sort, sort_context) : nested_tasks
 
   // Upcoming always groups by date, keeps to tasks overdue or inside a date range, and lists the later dates of repeating tasks; other views group as picked.
@@ -983,6 +992,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     can_drop_beside: !is_sorted,
     on_drop: drop_task,
     is_timing,
+    spent_seconds_of,
     on_start_timer: start_task_timer,
     on_stop_timer: stop_task_timer
   }
@@ -1084,6 +1094,8 @@ export function App({ account }: { account?: SignedInAccount }) {
           <>
             {selected_view.kind === 'my_day' && <span className="my_day_date">{parse_local(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>}
             <span className="remaining_count">{remaining_count} left</span>
+            {estimate_left > 0 && <span className="time_total" title="Estimated time not yet spent on the open tasks shown">{short_time_label(estimate_left)} estimated</span>}
+            {spent_today >= 60 && <span className="time_total" title="Time spent today on every task">{short_time_label(spent_today)} spent today</span>}
           </>
         }
         actions={
@@ -1318,6 +1330,7 @@ export function App({ account }: { account?: SignedInAccount }) {
               on_start_timer={start_task_timer}
               on_stop_timer={stop_task_timer}
               on_remove_time_entry={remove_time_entry}
+              on_set_estimate={set_task_estimate}
               on_close={() => set_selected_task_id(null)}
             />
           </div>

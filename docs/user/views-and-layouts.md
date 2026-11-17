@@ -30,8 +30,8 @@ Every view is a filter over the [one big list](/user/core-concepts/#one-big-list
 The switch at the top of a view shows its tasks in one of five layouts:
 
 - **List** — the nested task list, with subtasks under their parents.
-- **Table** — aligned columns for the title, task date, each filter group, and optionally start, due, done and
-  duration. Filter by title, date and tag, sort by several columns at once, and show, hide, reorder and resize
+- **Table** — aligned columns for the title, task date, each filter group, and optionally start, due, done,
+  duration, estimate and time spent. Filter by title, date and tag, sort by several columns at once, and show, hide, reorder and resize
   columns. **Scroll the table sideways** keeps column widths instead of shrinking them.
 - **Board** — a column per heading of the view's grouping, or *To do* and *Done* without one. Dragging a card between
   columns changes its tag, date or done state.

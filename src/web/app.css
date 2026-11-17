@@ -50,6 +50,7 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .task_pane > .page-head { margin-bottom: var(--space-6); }
 .my_day_date { color: var(--text-secondary); font-size: var(--text-control); }
 .remaining_count { margin-left: auto; color: var(--text-secondary); font-size: var(--text-control); }
+.time_total { color: var(--text-secondary); font-size: var(--text-control); white-space: nowrap; }
 
 /* On a phone the task list runs edge to edge, a row's date and tags wrap under its title, and a table card's title wraps instead of cutting off. */
 @media (max-width: 700px) {
@@ -89,7 +90,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .task.is_repeat .task_title, .task_row.is_repeat .task_title { font-style: italic; }
 .task .tree-toggle, .task .tree-spacer { width: var(--space-7); height: var(--space-7); }
 
-.task_title_cell { display: flex; flex: 1; align-items: center; gap: var(--space-3); min-width: 0; }
+/* The title keeps some room, so a crowded row cuts off its last chips rather than the title. */
+.task_title_cell { display: flex; flex: 1; align-items: center; gap: var(--space-3); min-width: min(8em, 40%); }
 .task_title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task_row_end { display: flex; flex: none; align-items: center; gap: var(--space-2); }
 .task_mark { flex: none; color: var(--text-tertiary); font-size: var(--text-caption); }
@@ -175,6 +177,10 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .time_entries { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .time_entries ul { margin: 0; padding: 0; list-style: none; }
 .time_entry { display: flex; align-items: center; gap: var(--space-3); font-variant-numeric: tabular-nums; }
+.estimate_field { align-items: center; }
+.estimate_field input { width: 9em; }
+/* A task run over its estimate fills its bar in the danger colour. */
+.progress.is_over .progress-fill { background-color: var(--status-danger); }
 
 /* ========================================================================== */
 /* Dialogs                                                                    */

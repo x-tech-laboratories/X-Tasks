@@ -23,7 +23,7 @@ const context: HistoryContext = {
 }
 
 const first: TaskSnapshot = {
-  title: 'Buy milk', notes: '', is_done: false, done_at: null, start_at: null, due_at: null, recurrence: '', are_dates_linked: true, my_day_on: null,
+  title: 'Buy milk', notes: '', is_done: false, done_at: null, start_at: null, due_at: null, recurrence: '', are_dates_linked: true, my_day_on: null, estimate_minutes: null,
   parent_id: null, created_at: '2026-01-01T00:00:00.000Z', tag_ids: [], links: []
 }
 const second: TaskSnapshot = { ...first, title: 'Buy oat milk', tag_ids: ['home'] }

@@ -207,6 +207,31 @@ describe('the timer', () => {
     expect(tasks_api.stop_timer).toHaveBeenCalledWith(expect.any(String), 'milk')
   })
 
+  test('saves an estimate typed in the details, shown against the time spent on the row', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Buy milk'))
+
+    const estimate = await screen.findByRole('textbox', { name: 'Estimate' })
+    fireEvent.change(estimate, { target: { value: '1h 30m' } })
+    fireEvent.blur(estimate)
+
+    expect(tasks_api.set_task_estimate).toHaveBeenCalledWith('milk', 90)
+    expect((estimate as HTMLInputElement).value).toBe('1h 30m')
+    expect(screen.getByText('0m / 1h 30m')).toBeTruthy()
+  })
+
+  test('puts back the saved estimate when the typed one cannot be read', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Buy milk'))
+
+    const estimate = await screen.findByRole('textbox', { name: 'Estimate' })
+    fireEvent.change(estimate, { target: { value: 'soon' } })
+    fireEvent.blur(estimate)
+
+    expect(tasks_api.set_task_estimate).not.toHaveBeenCalled()
+    expect((estimate as HTMLInputElement).value).toBe('')
+  })
+
   test('stops when its task is marked done', async () => {
     const { tasks_api } = await show_app()
     const row = screen.getByText('Buy milk').closest('.task')! as HTMLElement

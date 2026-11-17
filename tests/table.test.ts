@@ -23,9 +23,9 @@ const RANGES = shown_ranges(DEFAULT_SETTINGS.date_ranges, '2026-03-11T10:00')
 const no_streak = (): RoutineStreak | null => null
 const never_done = (): string | null => null
 
-// What sorting needs besides the tasks: their tags, no streaks and no completions.
+// What sorting needs besides the tasks: their tags, no streaks, no completions and no time spent.
 function context_for(tags: Tag[], tags_of: (task: Task) => Tag[]): SortContext {
-  return { tags_of, streak_of: no_streak, is_in_my_day: () => false, date_field: 'due', last_done_of: never_done, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
+  return { tags_of, streak_of: no_streak, is_in_my_day: () => false, date_field: 'due', last_done_of: never_done, spent_seconds_of: () => 0, tag_rank: tag_ranks(tags, false), reversed_tag_rank: tag_ranks(tags, true) }
 }
 
 function titles(nodes: TaskNode[]): unknown[] {
@@ -96,7 +96,7 @@ describe('sort_task_tree', () => {
 describe('columns', () => {
   test('ordered_columns drops removed groups and slots new columns in after their neighbour', () => {
     const groups = [make_group({ id: 'area' })]
-    expect(ordered_columns(['streak', 'date', 'group:gone'], groups)).toEqual(['streak', 'history', 'group:area', 'date', 'start', 'due', 'done', 'duration', 'my_day', 'notes', 'repeats'])
+    expect(ordered_columns(['streak', 'date', 'group:gone'], groups)).toEqual(['streak', 'history', 'group:area', 'date', 'start', 'due', 'done', 'duration', 'estimate', 'time_spent', 'my_day', 'notes', 'repeats'])
   })
 
   test('widths fall back to a default per kind and saved widths are not clamped here', () => {

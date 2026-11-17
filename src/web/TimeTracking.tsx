@@ -2,9 +2,10 @@ import { useState } from 'react'
 
 import { format_local, relative_day_label } from '@x-tech-laboratories/x-libs/dates'
 import { format_clock } from '@x-tech-laboratories/x-libs/durations'
+import { ProgressBar } from '@x-tech-laboratories/x-libs/web/react/progress'
 import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
 import type { Task } from '@shared/tasks'
-import { entry_seconds, seconds_by_day, time_spent_label, total_seconds, type TimeEntry } from '@shared/time_tracking'
+import { entry_seconds, estimate_text, parse_estimate, seconds_by_day, short_time_label, time_spent_label, total_seconds, type TimeEntry } from '@shared/time_tracking'
 
 // ============================================================================
 // Clock
@@ -79,23 +80,55 @@ interface TimeSpentFieldProps {
   on_start: (task: Task) => void
   on_stop: (task: Task) => void
   on_remove_entry: (entry: TimeEntry) => void
+  on_set_estimate: (task: Task, estimate_minutes: number | null) => void
 }
 
-// The time spent on a task in all and today, a button to time it, and each day's entries, newest first.
-export function TimeSpentField({ task, entries, is_timing, on_start, on_stop, on_remove_entry }: TimeSpentFieldProps) {
+// The time spent on a task in all and today against its estimate, a button to time it, and each day's entries, newest first.
+export function TimeSpentField({ task, entries, is_timing, on_start, on_stop, on_remove_entry, on_set_estimate }: TimeSpentFieldProps) {
   const now = use_timer_clock(is_timing)
   const [is_listing, set_is_listing] = useState(false)
+  const [estimate_draft, set_estimate_draft] = useState(estimate_text(task.estimate_minutes))
+  const typed_estimate = parse_estimate(estimate_draft)
   const by_day = seconds_by_day(entries, now)
   const today_seconds = by_day.get(format_local(now, false)) ?? 0
   const days = [...by_day.keys()].sort().reverse()
   const total = total_seconds(entries, now)
+  const estimate_seconds = task.estimate_minutes === null ? null : task.estimate_minutes * 60
+
+  // Text it cannot read goes back to the saved estimate.
+  function commit_estimate(): void {
+    if (typed_estimate === undefined) return set_estimate_draft(estimate_text(task.estimate_minutes))
+    set_estimate_draft(estimate_text(typed_estimate))
+    if (typed_estimate !== task.estimate_minutes) on_set_estimate(task, typed_estimate)
+  }
 
   return (
     <div className="field time_spent">
       <span className="field-label">Time spent</span>
       <span>
-        {entries.length === 0 ? 'None yet' : `${time_spent_label(total)} · today ${time_spent_label(today_seconds)}`}
+        {entries.length === 0 ? 'None yet' : today_seconds > 0 ? `${time_spent_label(total)} · today ${time_spent_label(today_seconds)}` : time_spent_label(total)}
       </span>
+      <label className="inline_fields estimate_field">
+        <span>Estimate</span>
+        <input
+          value={estimate_draft}
+          onChange={(event) => set_estimate_draft(event.currentTarget.value)}
+          onBlur={commit_estimate}
+          onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
+          placeholder="Such as 1h 30m"
+          aria-invalid={typed_estimate === undefined}
+          aria-label="Estimate"
+        />
+      </label>
+      {estimate_seconds !== null && (
+        <ProgressBar
+          value={Math.min(total, estimate_seconds)}
+          max={estimate_seconds}
+          label="Time spent against the estimate"
+          detail={total > estimate_seconds ? `${short_time_label(total - estimate_seconds)} over` : `${short_time_label(estimate_seconds - total)} left`}
+          class_name={total > estimate_seconds ? 'is_over' : undefined}
+        />
+      )}
       <span className="inline_fields">
         {is_timing ? <button onClick={() => on_stop(task)}>■ Stop timer</button> : <button onClick={() => on_start(task)}>▶ Start timer</button>}
         {entries.length > 0 && (

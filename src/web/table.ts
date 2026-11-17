@@ -14,8 +14,15 @@ import { task_is_in_view, type TaskNode } from './views'
 // Columns
 // ============================================================================
 
-// A table column is the title, a date, the duration, a mark, the streak, the history strip, or one filter group, named by "group:" and the group's id.
-export type TableColumn = 'title' | DateColumn | 'duration' | MarkColumn | 'streak' | 'history' | `group:${string}`
+// A table column is the title, a date, the duration, the estimate, the time spent, a mark, the streak, the history strip, or one filter group, named by "group:" and the group's id.
+export type TableColumn = 'title' | DateColumn | 'duration' | TimeColumn | MarkColumn | 'streak' | 'history' | `group:${string}`
+
+// The columns of a task's estimate and the time spent on it, which sort but take no filter.
+export type TimeColumn = 'estimate' | 'time_spent'
+
+export function is_time_column(column: string): column is TimeColumn {
+  return column === 'estimate' || column === 'time_spent'
+}
 
 // The columns that each show one mark: the task is in My Day, has notes, or repeats.
 export type MarkColumn = 'my_day' | 'notes' | 'repeats'
@@ -32,7 +39,7 @@ export function is_date_column(column: string): column is DateColumn {
 }
 
 // The columns that stay hidden until turned on in the columns menu.
-const OPTIONAL_COLUMNS: TableColumn[] = ['start', 'due', 'done', 'duration']
+const OPTIONAL_COLUMNS: TableColumn[] = ['start', 'due', 'done', 'duration', 'estimate', 'time_spent']
 
 export function is_column_shown(column: TableColumn, hidden: string[], shown: string[]): boolean {
   return OPTIONAL_COLUMNS.includes(column) ? shown.includes(column) : !hidden.includes(column)
@@ -100,6 +107,7 @@ export function default_column_width(column: TableColumn): number {
   if (is_mark_column(column)) return 64
   if (column === 'streak') return 84
   if (column === 'duration') return 112
+  if (is_time_column(column)) return 104
   return 124
 }
 
@@ -118,6 +126,7 @@ export interface SortContext {
   is_in_my_day: (task: Task) => boolean
   date_field: TaskDateField
   last_done_of: LastDoneOf
+  spent_seconds_of: (task: Task) => number
   // Every tag numbered in its sidebar order, and in that order with each set of siblings reversed.
   tag_rank: Map<string, number>
   reversed_tag_rank: Map<string, number>
@@ -134,6 +143,8 @@ export function table_sort_value(task: Task, column: TableColumn, context: SortC
   if (column === 'title') return task.title
   if (is_date_column(column)) return column_date(task, column, context.date_field, context.last_done_of)
   if (column === 'duration') return task_duration_minutes(task)
+  if (column === 'estimate') return task.estimate_minutes
+  if (column === 'time_spent') return context.spent_seconds_of(task) || null
   if (column === 'my_day') return context.is_in_my_day(task) ? 1 : null
   if (column === 'notes') return task.notes ? 1 : null
   if (column === 'repeats') return task.recurrence ? 1 : null
@@ -232,7 +243,7 @@ export function is_column_filtered(filters: TableFilters, column: TableColumn): 
   if (column === 'duration') return filters.duration !== 'any'
   if (column === 'streak') return filters.streak !== 'any'
   if (is_mark_column(column)) return (filters.marks[column] ?? 'any') !== 'any'
-  if (column === 'history') return false
+  if (column === 'history' || is_time_column(column)) return false
   return Boolean(filters.group_tag_ids[group_id_of(column)!])
 }
 
@@ -243,7 +254,7 @@ export function without_column_filter(filters: TableFilters, column: TableColumn
   if (column === 'duration') return { ...filters, duration: 'any' }
   if (column === 'streak') return { ...filters, streak: 'any' }
   if (is_mark_column(column)) return { ...filters, marks: { ...filters.marks, [column]: 'any' } }
-  if (column === 'history') return filters
+  if (column === 'history' || is_time_column(column)) return filters
   return { ...filters, group_tag_ids: { ...filters.group_tag_ids, [group_id_of(column)!]: '' } }
 }
 

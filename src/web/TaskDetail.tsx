@@ -63,12 +63,13 @@ interface TaskDetailProps {
   on_start_timer: (task: Task) => void
   on_stop_timer: (task: Task) => void
   on_remove_time_entry: (entry: TimeEntry) => void
+  on_set_estimate: (task: Task, estimate_minutes: number | null) => void
   on_close: () => void
 }
 
 export function TaskDetail({
   task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
-  is_in_my_day, on_set_my_day, on_remove, on_show_history, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_close, streak, history
+  is_in_my_day, on_set_my_day, on_remove, on_show_history, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -293,6 +294,7 @@ export function TaskDetail({
             on_start={on_start_timer}
             on_stop={on_stop_timer}
             on_remove_entry={on_remove_time_entry}
+            on_set_estimate={on_set_estimate}
           />
         )
       case 'notes':
