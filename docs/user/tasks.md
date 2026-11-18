@@ -77,6 +77,17 @@ The desktop app shows reminders even while its window is minimised, and on its n
 due while it was closed, up to half a day back. A browser shows them while the page is open, once you choose **Allow**
 in the same settings. The phone app does not show reminders yet.
 
+## Reminders
+
+A task due at a time brings a notification at that time, or a set number of minutes before it, while **Notify when tasks
+come due** is on in Settings. **Reminders** in a task's details adds times of the task's own, apart from its dates:
+**Add reminder** adds one at the next full hour, each can be changed, and × removes it. A task can have any number, and
+they come whether or not notifications for dates are on. When a repeating task moves to its next date, its reminders
+move by the same amount, so a reminder the evening before keeps coming the evening before.
+
+Notifications come from the desktop app with its window closed, from a browser while the page is open and allowed to
+notify, and on Android with the app closed. Clicking one opens its task. Done tasks never remind.
+
 ## My Day
 
 My Day is today's plan. Add a task from its details, its right-click menu, or by adding it while My Day is open.
@@ -142,8 +153,8 @@ the window: a large clock, its open subtasks to tick off and its notes. **Start 
 break ends, **Start round** begins the next. Each change of phase brings a reminder, as a notification while the window
 is out of sight. **Skip break** and **Stop Pomodoro** do as they say, and **Mark as done** completes the task and
 leaves focus mode. Close focus mode and the Pomodoro carries on beside the search bar, where a click opens it again.
-The lengths and the rounds before a long break are in Settings › Tasks › Time tracking. A Pomodoro belongs to the
-window it runs in, so closing or reloading the app ends it, though its timer keeps running.
+The lengths and the rounds before a long break are in Settings › Tasks › Time tracking. A Pomodoro carries on through
+a reload, and on the desktop with the window closed; each phase's end still stops the timer and brings its notification.
 
 **Time spent** in a task's details shows its total and today's time, starts and stops its timer, and under **Show
 entries** lists each stretch of work by day, with × to remove one. Time that runs past midnight counts towards each

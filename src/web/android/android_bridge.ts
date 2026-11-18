@@ -7,7 +7,7 @@ import type { McpStatus, Settings, SettingsApi } from '@shared/settings'
 import type { TasksApi } from '@shared/tasks'
 import {
   add_tag, add_tag_group, add_task, link_tasks, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
-  move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, unlink_tasks, set_setting, set_task_done, set_task_my_day, set_task_estimate, set_task_notes,
+  move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, unlink_tasks, set_setting, set_task_done, set_task_my_day, set_task_estimate, set_task_reminders, set_task_notes,
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group, list_task_versions, list_recent_versions, restore_task_version,
   list_time_entries, start_timer, stop_timer, remove_time_entry, get_pomodoro, start_pomodoro, next_pomodoro_round, skip_pomodoro_break, stop_pomodoro, tick_pomodoro
 } from '@shared/task_database'
@@ -82,6 +82,7 @@ export async function install_android_bridge(): Promise<void> {
     set_task_schedule: answer(set_task_schedule),
     set_task_my_day: answer(set_task_my_day),
     set_task_estimate: answer(set_task_estimate),
+    set_task_reminders: answer(set_task_reminders),
     remove_task: answer(remove_task),
     move_task: answer(move_task),
     tag_task: answer(tag_task),

@@ -6,7 +6,7 @@ import { ordered_columns } from '@x-tech-laboratories/x-libs/web/tables'
 // ============================================================================
 
 // A section of a task's details: one of the fixed ones, or "group:" and a filter group's id for that group's tags.
-export type TaskDetailSection = 'my_day' | 'start' | 'duration' | 'due' | 'done' | 'reschedule' | 'repeat' | 'relationships' | 'streak' | 'time' | 'notes' | `group:${string}`
+export type TaskDetailSection = 'my_day' | 'start' | 'duration' | 'due' | 'done' | 'reschedule' | 'repeat' | 'reminders' | 'relationships' | 'streak' | 'time' | 'notes' | `group:${string}`
 
 const SECTION_NAMES: Record<string, string> = {
   my_day: 'My Day',
@@ -16,6 +16,7 @@ const SECTION_NAMES: Record<string, string> = {
   done: 'Done',
   reschedule: 'Reschedule',
   repeat: 'Repeat',
+  reminders: 'Reminders',
   relationships: 'Relationships',
   streak: 'Streak',
   time: 'Time spent',
@@ -25,7 +26,7 @@ const SECTION_NAMES: Record<string, string> = {
 // Every section in its default order, with the tag groups just after My Day.
 export function all_detail_sections(tag_groups: TagGroup[]): TaskDetailSection[] {
   const group_sections = tag_groups.map((group): TaskDetailSection => `group:${group.id}`)
-  return ['my_day', ...group_sections, 'start', 'duration', 'due', 'done', 'reschedule', 'repeat', 'relationships', 'streak', 'time', 'notes']
+  return ['my_day', ...group_sections, 'start', 'duration', 'due', 'done', 'reschedule', 'repeat', 'reminders', 'relationships', 'streak', 'time', 'notes']
 }
 
 // Every section in its saved order, leaving out ones gone since and placing a new one just after the section before it.

@@ -443,3 +443,6 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .history_title { color: var(--text-body); font-weight: 600; }
 .history_title.is_gone { color: var(--text-tertiary); text-decoration: line-through; }
 .history_summary { flex: 1; color: var(--text-secondary); }
+
+/* A reminder in a task's details: its time, then a button removing it. */
+.reminder_row { display: flex; align-items: center; gap: var(--space-3); }

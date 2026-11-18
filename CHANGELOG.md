@@ -7,6 +7,7 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- Reminders at times of a task's own, any number of them, set in its details or by AI assistants, moving with a repeat
 - Phone notifications for due tasks and the end of each Pomodoro phase, handed to Android ahead of time so they come
   with the app closed, opening the task when tapped
 - The desktop app runs as a window and a daemon: reminders, timers, the Pomodoro, sync, backups and the MCP endpoint

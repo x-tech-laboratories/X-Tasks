@@ -247,6 +247,22 @@ describe('the timer', () => {
 })
 
 // ============================================================================
+// Reminders
+// ============================================================================
+
+describe('reminders of a task\'s own', () => {
+  test('adds one from the task\'s details and removes it again', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Write report'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add reminder' }))
+
+    expect(tasks_api.set_task_reminders).toHaveBeenCalledWith('report', [expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:00$/)])
+    fireEvent.click(screen.getByRole('button', { name: 'Remove reminder 1' }))
+    expect(tasks_api.set_task_reminders).toHaveBeenLastCalledWith('report', [])
+  })
+})
+
+// ============================================================================
 // Focus mode
 // ============================================================================
 

@@ -262,10 +262,11 @@ export function App({ account }: { account?: SignedInAccount }) {
     return () => clearTimeout(timer)
   }, [pomodoro_ends_at])
 
-  // In a browser, a notification when a timed task comes due, while the page is open and notifications are allowed; clicking one opens the task.
+  // In a browser, a notification when a timed task comes due or one of its own reminders falls, while the page is open and notifications are allowed; clicking one opens the task.
   const tasks_ref = useRef(tasks)
   tasks_ref.current = tasks
-  const reminds_in_page = window.x_settings.host === 'web' && Boolean(settings?.remind_due_tasks)
+  const reminds_in_page = window.x_settings.host === 'web'
+  const reminds_of_dates = Boolean(settings?.remind_due_tasks)
   const date_field = settings?.task_date_field ?? 'due'
   const lead_minutes = settings?.reminder_lead_minutes ?? 0
   useEffect(() => {
@@ -276,8 +277,8 @@ export function App({ account }: { account?: SignedInAccount }) {
       const after = checked_until
       checked_until = now
       if (Notification.permission !== 'granted') return
-      for (const reminder of due_reminders(tasks_ref.current, date_field, after, now, lead_minutes)) {
-        const notification = new Notification(reminder.task.title, { body: reminder_body(reminder, date_field, now), tag: `due:${reminder.task.id}` })
+      for (const reminder of due_reminders(tasks_ref.current, date_field, after, now, lead_minutes, reminds_of_dates)) {
+        const notification = new Notification(reminder.task.title, { body: reminder_body(reminder, date_field, now), tag: reminder.key })
         notification.onclick = () => {
           window.focus()
           set_selected_task_id(reminder.task.id)
@@ -286,7 +287,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     }
     const timer = setInterval(check, REMINDER_CHECK_MS)
     return () => clearInterval(timer)
-  }, [reminds_in_page, date_field, lead_minutes])
+  }, [reminds_in_page, reminds_of_dates, date_field, lead_minutes])
 
   // Closing the app deletes any tasks still waiting.
   useEffect(() => {
@@ -503,6 +504,12 @@ export function App({ account }: { account?: SignedInAccount }) {
     const ended_at = new Date().toISOString()
     set_time_entries((current_entries) => stopped_entries(current_entries, ended_at, task.id))
     void window.x_tasks.stop_timer(ended_at, task.id)
+  }
+
+  function set_task_reminders(task: Task, reminders: string[]): void {
+    const sorted = [...new Set(reminders)].sort()
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, reminders: sorted } : each)))
+    void window.x_tasks.set_task_reminders(task.id, sorted)
   }
 
   function set_task_estimate(task: Task, estimate_minutes: number | null): void {
@@ -1523,6 +1530,7 @@ export function App({ account }: { account?: SignedInAccount }) {
               on_stop_timer={stop_task_timer}
               on_remove_time_entry={remove_time_entry}
               on_set_estimate={set_task_estimate}
+              on_set_reminders={set_task_reminders}
               on_close={() => set_selected_task_id(null)}
             />
           </div>

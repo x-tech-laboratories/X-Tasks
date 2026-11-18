@@ -64,11 +64,10 @@ function remind_due_tasks(show: Show): () => void {
     const settings = get_settings()
     const after = checked_until
     checked_until = now
-    if (!settings.remind_due_tasks) return
 
-    const reminders = due_reminders(list_tasks(), settings.task_date_field, after, now, settings.reminder_lead_minutes)
+    const reminders = due_reminders(list_tasks(), settings.task_date_field, after, now, settings.reminder_lead_minutes, settings.remind_due_tasks)
     for (const reminder of reminders) {
-      show({ title: reminder.task.title, body: reminder_body(reminder, settings.task_date_field, now), key: `due:${reminder.task.id}`, url: task_link(reminder.task.id) })
+      show({ title: reminder.task.title, body: reminder_body(reminder, settings.task_date_field, now), key: reminder.key, url: task_link(reminder.task.id) })
     }
     if (reminders.length > 0) set_setting('reminded_until', new Date(now).toISOString())
   }

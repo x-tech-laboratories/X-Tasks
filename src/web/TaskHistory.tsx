@@ -26,6 +26,7 @@ const FIELD_LABELS: Record<SnapshotField, string> = {
   recurrence: 'Repeat',
   my_day_on: 'My Day',
   estimate_minutes: 'Estimate',
+  reminders: 'Reminders',
   parent_id: 'Parent task',
   tag_ids: 'Tags',
   links: 'Relationships'
@@ -98,6 +99,7 @@ function value_text(field: SnapshotField, snapshot: TaskSnapshot, context: Histo
     case 'recurrence': return snapshot.recurrence ? describe_recurrence(snapshot, context.date_field) : ''
     case 'my_day_on': return snapshot.my_day_on ? local_date(snapshot.my_day_on) : ''
     case 'estimate_minutes': return snapshot.estimate_minutes === null ? '' : time_spent_label(snapshot.estimate_minutes * 60)
+    case 'reminders': return snapshot.reminders.map(local_date).join(', ')
     case 'parent_id': return snapshot.parent_id ? task_title(snapshot.parent_id, context) : ''
     case 'tag_ids': return snapshot.tag_ids.map((tag_id) => tag_name(tag_id, context)).join(', ')
     case 'links': return snapshot.links.map((link) => link_name(link, context)).join(', ')

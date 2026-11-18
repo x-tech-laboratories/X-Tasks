@@ -65,12 +65,14 @@ interface TaskDetailProps {
   on_stop_timer: (task: Task) => void
   on_remove_time_entry: (entry: TimeEntry) => void
   on_set_estimate: (task: Task, estimate_minutes: number | null) => void
+  // The task's reminders of its own, as local times.
+  on_set_reminders: (task: Task, reminders: string[]) => void
   on_close: () => void
 }
 
 export function TaskDetail({
   task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
-  is_in_my_day, on_set_my_day, on_remove, on_show_history, on_focus, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_close, streak, history
+  is_in_my_day, on_set_my_day, on_remove, on_show_history, on_focus, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_set_reminders, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
@@ -257,6 +259,8 @@ export function TaskDetail({
             </button>
           </div>
         )
+      case 'reminders':
+        return <RemindersField task={task} on_change={(reminders) => on_set_reminders(task, reminders)} />
       case 'relationships':
         return (
           <RelationshipsField
@@ -349,6 +353,38 @@ export function TaskDetail({
         </footer>
       </div>
     </aside>
+  )
+}
+
+// ============================================================================
+// Reminders
+// ============================================================================
+
+// A task's reminders of its own, each a time that can be changed or removed, and a button adding one an hour from now.
+function RemindersField({ task, on_change }: { task: Task; on_change: (reminders: string[]) => void }) {
+  const reminders = task.reminders ?? []
+  function in_an_hour(): string {
+    const time = new Date(Date.now() + 60 * 60_000)
+    time.setMinutes(0, 0, 0)
+    return format_local(time, true)
+  }
+  return (
+    <div className="field">
+      <span className="field-label">Reminders</span>
+      {reminders.map((reminder, index) => (
+        <div key={reminder} className="reminder_row">
+          <DateTimeField
+            label={`Reminder ${index + 1}`}
+            value={reminder}
+            on_change={(value) => on_change(value ? reminders.map((each) => (each === reminder ? value : each)) : reminders.filter((each) => each !== reminder))}
+          />
+          <button className="icon remove" onClick={() => on_change(reminders.filter((each) => each !== reminder))} aria-label={`Remove reminder ${index + 1}`}>
+            ×
+          </button>
+        </div>
+      ))}
+      <button onClick={() => on_change([...reminders, in_an_hour()])}>Add reminder</button>
+    </div>
   )
 }
 
