@@ -22,7 +22,7 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     list_completions: vi.fn(async () => []),
     list_time_entries: vi.fn(async (): Promise<TimeEntry[]> => []),
     start_timer: vi.fn(async (task_id: string, started_at: string) => ({ id: `entry-${task_id}`, task_id, started_at, ended_at: null })),
-    stop_timer: vi.fn(async () => undefined),
+    stop_timer: vi.fn(async (_ended_at: string, _task_id: string | null) => undefined),
     get_pomodoro: vi.fn(async () => pomodoro),
     start_pomodoro: vi.fn(async (task_id: string, started_at: string) => {
       pomodoro = pomodoro_in_phase({ task_id, phase: 'work', round: 1 }, new Date(started_at), settings)
