@@ -55,6 +55,7 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     set_task_done: vi.fn(async () => undefined),
     set_task_my_day: vi.fn(async () => undefined),
     set_task_estimate: vi.fn(async () => undefined),
+    set_task_reminders: vi.fn(async () => undefined),
     set_task_notes: vi.fn(async () => undefined),
     set_task_schedule: vi.fn(async () => undefined),
     move_task: vi.fn(async () => undefined),

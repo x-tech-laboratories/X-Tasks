@@ -23,6 +23,8 @@ export interface Task {
   my_day_on: string | null
   // How long the task is expected to take, in minutes; empty when not estimated.
   estimate_minutes: number | null
+  // Times of the task's own to be reminded at, as local YYYY-MM-DDTHH:MM, apart from its dates; they move with a repeat.
+  reminders: string[]
   created_at: string
   parent_id: string | null
   position: number
@@ -39,7 +41,7 @@ export interface TaskLink {
 
 // Dates are local clock times, as YYYY-MM-DD or YYYY-MM-DDTHH:MM; recurrence is an RFC 5545 rule without the RRULE: prefix.
 // A schedule without are_dates_linked leaves the task's own setting as it is.
-export type TaskSchedule = Pick<Task, 'start_at' | 'due_at' | 'recurrence'> & Partial<Pick<Task, 'are_dates_linked'>>
+export type TaskSchedule = Pick<Task, 'start_at' | 'due_at' | 'recurrence'> & Partial<Pick<Task, 'are_dates_linked' | 'reminders'>>
 
 // One tick of a task, kept so streaks and reports can look back over every time it was done.
 export interface Completion {
@@ -261,6 +263,8 @@ export interface TasksApi {
   set_task_schedule: (task_id: string, schedule: TaskSchedule) => Promise<void>
   set_task_my_day: (task_id: string, my_day_on: string | null) => Promise<void>
   set_task_estimate: (task_id: string, estimate_minutes: number | null) => Promise<void>
+  // Each a local time as YYYY-MM-DDTHH:MM; kept in time order.
+  set_task_reminders: (task_id: string, reminders: string[]) => Promise<void>
   remove_task: (task_id: string) => Promise<void>
   move_task: (task_id: string, parent_id: string | null, position: number) => Promise<void>
   tag_task: (task_id: string, tag_id: string) => Promise<void>

@@ -31,16 +31,14 @@ export interface PhoneNotice {
 // Every notice due after now and within the horizon, soonest first.
 export function phone_notices(tasks: Task[], settings: Settings, pomodoro: PomodoroState | null, now: number): PhoneNotice[] {
   const notices: PhoneNotice[] = []
-  if (settings.remind_due_tasks) {
-    for (const reminder of reminders_between(tasks, settings.task_date_field, now, now + NOTICE_HORIZON_MS, settings.reminder_lead_minutes)) {
-      notices.push({
-        id: notice_id(`due:${reminder.task.id}`),
-        title: reminder.task.title,
-        body: reminder_body(reminder, settings.task_date_field, reminder.remind_at),
-        at: reminder.remind_at,
-        task_id: reminder.task.id
-      })
-    }
+  for (const reminder of reminders_between(tasks, settings.task_date_field, now, now + NOTICE_HORIZON_MS, settings.reminder_lead_minutes, settings.remind_due_tasks)) {
+    notices.push({
+      id: notice_id(reminder.key),
+      title: reminder.task.title,
+      body: reminder_body(reminder, settings.task_date_field, reminder.remind_at),
+      at: reminder.remind_at,
+      task_id: reminder.task.id
+    })
   }
   const ends_at = pomodoro?.phase_ends_at ? Date.parse(pomodoro.phase_ends_at) : null
   if (pomodoro && ends_at !== null && ends_at > now) {

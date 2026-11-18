@@ -137,9 +137,15 @@ function moved_dates(schedule: TaskSchedule, new_anchor: Date, field: TaskDateFi
     return field === 'start' ? { start_at: day, due_at: null } : { start_at: null, due_at: day }
   }
 
+  const moved = date_mover(anchor, new_anchor)
+  return { start_at: moved(schedule.start_at), due_at: moved(schedule.due_at) }
+}
+
+// Moves any of a task's times along with its anchor, as its other date and its reminders go with it.
+function date_mover(anchor: string, new_anchor: Date): (task_date: string | null) => string | null {
   const anchor_date = parse_local(anchor)
   const is_anchor_timed = has_time(anchor)
-  function moved(task_date: string | null): string | null {
+  return (task_date) => {
     if (task_date === null) return null
     if (task_date === anchor) return format_local(new_anchor, has_time(task_date))
     const date = parse_local(task_date)
@@ -153,8 +159,6 @@ function moved_dates(schedule: TaskSchedule, new_anchor: Date, field: TaskDateFi
     moved_date.setHours(date.getHours(), date.getMinutes())
     return format_local(moved_date, has_time(task_date))
   }
-
-  return { start_at: moved(schedule.start_at), due_at: moved(schedule.due_at) }
 }
 
 // Minutes from one local time to another as the clock reads them, so a daylight saving change does not shift the gap.
@@ -163,7 +167,8 @@ function clock_minutes_between(from: Date, to: Date): number {
   return (clock(to) - clock(from)) / 60_000
 }
 
-// Moves a recurring task's dates to its next occurrence, keeping the gap between start and due; null once the rule has ended.
+// Moves a recurring task's dates to its next occurrence, keeping the gap between start and due, and its reminders with them;
+// null once the rule has ended.
 export function next_schedule(task: Task, field: TaskDateField = 'due'): TaskSchedule | null {
   if (!task.recurrence) return null
 
@@ -177,7 +182,12 @@ export function next_schedule(task: Task, field: TaskDateField = 'due'): TaskSch
   }
   if (!next) return null
 
-  return { ...moved_dates(task, next.next_date, field), recurrence: next.rule }
+  const moved_schedule: TaskSchedule = { ...moved_dates(task, next.next_date, field), recurrence: next.rule }
+  if (anchor && task.reminders?.length) {
+    const moved = date_mover(anchor, next.next_date)
+    moved_schedule.reminders = task.reminders.map((reminder) => moved(reminder)!)
+  }
+  return moved_schedule
 }
 
 // ============================================================================

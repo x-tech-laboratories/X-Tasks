@@ -27,6 +27,8 @@ async function show_app(settings: Parameters<typeof install_fake_bridge>[0]['set
   const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', ...settings }, host })
   render(<App />)
   await screen.findByRole('heading', { name: 'All tasks' })
+  // The page draws once its settings arrive, outside act, so its effects, such as the Shell setting the saved theme, settle before a test clicks.
+  await act(async () => {})
   return bridge
 }
 
@@ -243,6 +245,22 @@ describe('the timer', () => {
 
     expect(screen.queryByRole('status', { name: 'Running timer' })).toBeNull()
     expect(tasks_api.stop_timer).toHaveBeenCalled()
+  })
+})
+
+// ============================================================================
+// Reminders
+// ============================================================================
+
+describe('reminders of a task\'s own', () => {
+  test('adds one from the task\'s details and removes it again', async () => {
+    const { tasks_api } = await show_app()
+    fireEvent.click(screen.getByText('Write report'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add reminder' }))
+
+    expect(tasks_api.set_task_reminders).toHaveBeenCalledWith('report', [expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:00$/)])
+    fireEvent.click(screen.getByRole('button', { name: 'Remove reminder 1' }))
+    expect(tasks_api.set_task_reminders).toHaveBeenLastCalledWith('report', [])
   })
 })
 

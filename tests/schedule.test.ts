@@ -87,6 +87,12 @@ describe('recurrence', () => {
     expect(next_schedule(task)).toEqual({ start_at: '2026-03-16', due_at: '2026-03-18', recurrence: 'FREQ=WEEKLY' })
   })
 
+  test('next_schedule moves the reminders of its own along with the dates', () => {
+    const task = make_task({ id: 'r', due_at: '2026-03-11', recurrence: 'FREQ=WEEKLY', reminders: ['2026-03-10T18:00', '2026-03-11T08:30'] })
+    expect(next_schedule(task)?.reminders).toEqual(['2026-03-17T18:00', '2026-03-18T08:30'])
+    expect(next_schedule({ ...task, reminders: [] })).not.toHaveProperty('reminders')
+  })
+
   test('next_schedule keeps the time of a timed anchor', () => {
     const task = make_task({ id: 'r', due_at: '2026-03-11T09:00', recurrence: 'FREQ=DAILY' })
     expect(next_schedule(task)?.due_at).toBe('2026-03-12T09:00')

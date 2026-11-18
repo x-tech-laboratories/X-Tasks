@@ -224,7 +224,9 @@ const SCHEMA_MIGRATIONS: (string | ((database: SqlDatabase) => void))[] = [
      ended_at TEXT
    );
    CREATE INDEX time_entries_by_task ON time_entries (task_id)`,
-  `ALTER TABLE tasks ADD COLUMN estimate_minutes INTEGER`
+  `ALTER TABLE tasks ADD COLUMN estimate_minutes INTEGER`,
+  // Reminders at times of the task's own, a JSON list of local times.
+  `ALTER TABLE tasks ADD COLUMN reminders TEXT NOT NULL DEFAULT '[]'`
 ]
 
 // The schema version that starts syncing history; the versions kept before it are sent to the server as new.
@@ -304,6 +306,7 @@ interface TaskRow {
   are_dates_linked: number
   my_day_on: string | null
   estimate_minutes: number | null
+  reminders: string
   created_at: string
   parent_id: string | null
   position: number
@@ -375,6 +378,7 @@ function row_to_task(row: TaskRow, tag_ids: string[], links: TaskLink[]): Task {
     are_dates_linked: row.are_dates_linked === 1,
     my_day_on: row.my_day_on,
     estimate_minutes: row.estimate_minutes,
+    reminders: parse_reminders(row.reminders),
     created_at: row.created_at,
     parent_id: row.parent_id,
     position: row.position,
@@ -421,6 +425,7 @@ export function add_task(title: string, parent_id: string | null, tag_ids: strin
     are_dates_linked: true,
     my_day_on,
     estimate_minutes: null,
+    reminders: [],
     created_at: new Date().toISOString(),
     parent_id,
     position: next_position('tasks'),
@@ -472,12 +477,35 @@ export function set_task_notes(task_id: string, notes: string): void {
   write((database) => database.prepare('UPDATE tasks SET notes = ? WHERE id = ?').run(notes, task_id))
 }
 
+// A schedule that carries reminders, as a repeat's next one does, moves them too.
 export function set_task_schedule(task_id: string, schedule: TaskSchedule): void {
   write((database) =>
     database
-      .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = COALESCE(?, are_dates_linked) WHERE id = ?')
-      .run(schedule.start_at, schedule.due_at, schedule.recurrence, schedule.are_dates_linked === undefined ? null : Number(schedule.are_dates_linked), task_id)
+      .prepare('UPDATE tasks SET start_at = ?, due_at = ?, recurrence = ?, are_dates_linked = COALESCE(?, are_dates_linked), reminders = COALESCE(?, reminders) WHERE id = ?')
+      .run(
+        schedule.start_at, schedule.due_at, schedule.recurrence, schedule.are_dates_linked === undefined ? null : Number(schedule.are_dates_linked),
+        schedule.reminders === undefined ? null : JSON.stringify(sorted_reminders(schedule.reminders)), task_id
+      )
   )
+}
+
+export function set_task_reminders(task_id: string, reminders: string[]): void {
+  write((database) => database.prepare('UPDATE tasks SET reminders = ? WHERE id = ?').run(JSON.stringify(sorted_reminders(reminders)), task_id))
+}
+
+// Earliest first, each once.
+function sorted_reminders(reminders: string[]): string[] {
+  return [...new Set(reminders)].sort()
+}
+
+// A list some other program wrote unreadably counts as none.
+function parse_reminders(text: string | undefined): string[] {
+  try {
+    const parsed: unknown = JSON.parse(text ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((each): each is string => typeof each === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 export function set_task_my_day(task_id: string, my_day_on: string | null): void {

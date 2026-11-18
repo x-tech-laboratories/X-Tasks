@@ -21,6 +21,7 @@ export interface TaskSnapshot {
   are_dates_linked: boolean
   my_day_on: string | null
   estimate_minutes: number | null
+  reminders: string[]
   parent_id: string | null
   created_at: string
   tag_ids: string[]
@@ -55,7 +56,7 @@ export interface TaskVersion {
 export type SnapshotField = Exclude<keyof TaskSnapshot, 'created_at'>
 
 export const SNAPSHOT_FIELDS: SnapshotField[] = [
-  'title', 'is_done', 'done_at', 'start_at', 'due_at', 'are_dates_linked', 'recurrence', 'my_day_on', 'estimate_minutes', 'parent_id', 'tag_ids', 'links', 'notes'
+  'title', 'is_done', 'done_at', 'start_at', 'due_at', 'are_dates_linked', 'recurrence', 'my_day_on', 'estimate_minutes', 'reminders', 'parent_id', 'tag_ids', 'links', 'notes'
 ]
 
 // Tags and links in a fixed order, so two snapshots of the same task compare equal whatever order they were read in.
@@ -64,6 +65,8 @@ export function normalized_snapshot(snapshot: TaskSnapshot): TaskSnapshot {
     ...snapshot,
     // Versions saved before estimates existed have none.
     estimate_minutes: snapshot.estimate_minutes ?? null,
+    // And versions saved before reminders of their own have none.
+    reminders: snapshot.reminders ?? [],
     tag_ids: [...snapshot.tag_ids].sort(),
     links: [...snapshot.links].sort((first, second) => link_key(first).localeCompare(link_key(second)))
   }
