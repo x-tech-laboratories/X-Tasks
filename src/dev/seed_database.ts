@@ -5,10 +5,10 @@ import { parseArgs } from 'node:util'
 
 import { format_local } from '@x-tech-laboratories/x-libs/dates'
 import { PRESET_FILTERS_GROUP_ID, type RuleCondition, type TagRule } from '@shared/tasks'
-import { open_task_database } from '../main/node_task_database'
+import { open_task_database } from '../daemon/node_task_database'
 import {
   add_tag, add_tag_group, add_task, close_task_database, list_tags, set_setting, set_task_done, set_task_estimate, set_task_notes, set_task_schedule, start_timer, stop_timer
-} from '../main/task_database'
+} from '@shared/task_database'
 
 // ============================================================================
 // Configuration

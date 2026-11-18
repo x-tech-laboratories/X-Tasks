@@ -28,6 +28,9 @@ Every setting, in the order the Settings page shows them. Defaults are in **bold
 | Add due tasks to My Day                   | **Off**.                                                                         |
 | Remove completed tasks from My Day        | **On**.                                                                          |
 | Remove rescheduled tasks from My Day      | **On**.                                                                          |
+| Keep running in the background           | Desktop only: reminders, timers, the Pomodoro, sync and backups carry on with the window closed. **On**. |
+| Start at login                            | Desktop only: starts X-Tasks in the background when you log in, without its window. **On**. |
+| Quit completely                           | Desktop only: closes the window and stops X-Tasks in the background until it is opened again. |
 | Notify when tasks come due                | A notification when a timed task's date arrives. **On**.                         |
 | Notify ahead                              | Minutes before the time the reminder comes. **0**.                               |
 | Show tray icon                            | A tray icon with the running timers, on the desktop only. **On**.                |

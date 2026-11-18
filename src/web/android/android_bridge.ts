@@ -9,11 +9,11 @@ import {
   add_tag, add_tag_group, add_task, link_tasks, attach_task_database, get_settings, list_completions, list_tag_groups, list_tags, list_tasks,
   move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, unlink_tasks, set_setting, set_task_done, set_task_my_day, set_task_estimate, set_task_notes,
   set_task_schedule, set_task_title, tag_task, untag_task, update_tag, update_tag_group, list_task_versions, list_recent_versions, restore_task_version,
-  list_time_entries, start_timer, stop_timer, remove_time_entry
-} from '../../main/task_database'
+  list_time_entries, start_timer, stop_timer, remove_time_entry, get_pomodoro, start_pomodoro, next_pomodoro_round, skip_pomodoro_break, stop_pomodoro, tick_pomodoro
+} from '@shared/task_database'
 import { request_back } from '../back_navigation'
 import { android_backups, back_up_before_upgrade } from './android_backups'
-import { create_task_sync_client } from '../../main/task_sync_client'
+import { create_task_sync_client } from '@shared/task_sync_client'
 
 // ============================================================================
 // Saved copies
@@ -83,6 +83,12 @@ export async function install_android_bridge(): Promise<void> {
     start_timer: answer(start_timer),
     stop_timer: answer(stop_timer),
     remove_time_entry: answer(remove_time_entry),
+    get_pomodoro: answer(get_pomodoro),
+    start_pomodoro: answer(start_pomodoro),
+    next_pomodoro_round: answer(next_pomodoro_round),
+    skip_pomodoro_break: answer(skip_pomodoro_break),
+    stop_pomodoro: answer(stop_pomodoro),
+    tick_pomodoro: answer(tick_pomodoro),
     list_tag_groups: answer(list_tag_groups),
     add_tag_group: answer(add_tag_group),
     update_tag_group: answer(update_tag_group),

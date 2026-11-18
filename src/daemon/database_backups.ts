@@ -3,9 +3,9 @@ import { dirname, join } from 'node:path'
 import { keep_backing_up } from '@x-tech-laboratories/x-libs/backups'
 import { sqlite_backups } from '@x-tech-laboratories/x-libs/server/sqlite_backups'
 import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
-import { task_sync } from './task_sync'
+import { task_sync } from '@shared/task_sync'
 import { open_task_database } from './node_task_database'
-import { close_task_database, get_settings, open_database, task_database_path } from './task_database'
+import { close_task_database, get_settings, open_database, task_database_path } from '@shared/task_database'
 
 // ============================================================================
 // Backup files

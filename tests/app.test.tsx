@@ -23,8 +23,8 @@ const tasks = [
   make_task({ id: 'outline', title: 'Outline', parent_id: 'report', position: 1 })
 ]
 
-async function show_app(settings: Parameters<typeof install_fake_bridge>[0]['settings'] = {}) {
-  const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', ...settings } })
+async function show_app(settings: Parameters<typeof install_fake_bridge>[0]['settings'] = {}, host: Parameters<typeof install_fake_bridge>[0]['host'] = 'desktop') {
+  const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', ...settings }, host })
   render(<App />)
   await screen.findByRole('heading', { name: 'All tasks' })
   return bridge
@@ -260,24 +260,27 @@ describe('focus mode', () => {
     expect(within(focus).getByRole('checkbox', { name: 'Outline' })).toBeTruthy()
 
     fireEvent.click(within(focus).getByRole('button', { name: 'Start Pomodoro' }))
-    expect(within(focus).getByText('Round 1')).toBeTruthy()
+    expect(await within(focus).findByText('Round 1')).toBeTruthy()
     expect(within(focus).getByText('25:00')).toBeTruthy()
     expect(tasks_api.start_timer).toHaveBeenCalledWith('report', expect.any(String))
 
     fireEvent.click(within(focus).getByRole('button', { name: 'Stop Pomodoro' }))
-    expect(within(focus).getByRole('button', { name: 'Start Pomodoro' })).toBeTruthy()
+    expect(await within(focus).findByRole('button', { name: 'Start Pomodoro' })).toBeTruthy()
+    expect(tasks_api.stop_pomodoro).toHaveBeenCalled()
   })
 
-  test('stops the timer and starts the break when a round ends', async () => {
-    const { tasks_api } = await show_app({ pomodoro_work_minutes: 1 })
+  test('in a browser, stops the timer and starts the break when a round ends', async () => {
+    const { tasks_api } = await show_app({ pomodoro_work_minutes: 1 }, 'web')
     fireEvent.click(screen.getByText('Write report'))
     fireEvent.click(await screen.findByRole('button', { name: 'Focus' }))
     const focus = screen.getByRole('dialog', { name: 'Write report' })
 
-    vi.useFakeTimers({ toFake: ['setInterval', 'Date'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'setTimeout', 'Date'] })
     try {
       fireEvent.click(within(focus).getByRole('button', { name: 'Start Pomodoro' }))
-      await act(async () => { vi.advanceTimersByTime(61_000) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+      expect(within(focus).getByText('Round 1')).toBeTruthy()
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000) })
 
       expect(within(focus).getByText('Break')).toBeTruthy()
       expect(tasks_api.stop_timer).toHaveBeenCalledWith(expect.any(String), 'report')
@@ -304,9 +307,9 @@ describe('focus mode', () => {
 // ============================================================================
 
 describe('break reminders', () => {
-  test('remind after the set minutes of work in a row, and stop every timer from the reminder', async () => {
+  test('in a browser, remind after the set minutes of work in a row, and stop every timer from the reminder', async () => {
     const started_at = new Date(Date.now() - 70 * 60_000).toISOString()
-    const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', break_reminder_minutes: 60 } })
+    const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', break_reminder_minutes: 60 }, host: 'web' })
     bridge.tasks_api.list_time_entries.mockResolvedValue([{ id: 'entry', task_id: 'report', started_at, ended_at: null }])
     render(<App />)
 

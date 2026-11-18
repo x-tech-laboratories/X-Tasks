@@ -7,7 +7,7 @@ import { PageHeading, SelectionBar } from '@x-tech-laboratories/x-libs/web/react
 import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/web/react/menus'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import { toggled, with_range } from '@x-tech-laboratories/x-libs/web/selection'
-import { use_countdown, use_now } from '@x-tech-laboratories/x-libs/web/react/time'
+import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
 import { Shell } from '@x-tech-laboratories/x-libs/web/react/shell'
 import { ResizeHandle } from '@x-tech-laboratories/x-libs/web/react/split'
 import { toast, undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
@@ -15,7 +15,7 @@ import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Setting
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { due_reminders, reminder_body } from '@shared/reminders'
-import { estimate_left_seconds, work_stretch_start, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
+import { break_message, estimate_left_seconds, FRESH_BREAK_COUNT, step_break_reminder, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
 import type { SignedInAccount } from './SignedIn'
@@ -42,7 +42,7 @@ import { TaskTable } from './TaskTable'
 import { WorklogPage } from './WorklogPage'
 import { AwayDialog, PomodoroChip, TimerBar } from './TimeTracking'
 import { FocusView } from './FocusView'
-import { next_pomodoro, pomodoro_seconds, type Pomodoro } from './pomodoro'
+import { pomodoro_ended_message, pomodoro_seconds, type PomodoroState } from '@shared/pomodoro'
 import { FRESH_IDLE_WATCH, step_idle_watch, type AwaySpan } from './idle'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
 import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
@@ -149,6 +149,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     })
     void window.x_tasks.list_completions().then(set_completions)
     void window.x_tasks.list_time_entries().then(set_time_entries)
+    void window.x_tasks.get_pomodoro().then(set_pomodoro)
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
@@ -165,6 +166,7 @@ export function App({ account }: { account?: SignedInAccount }) {
         void window.x_tasks.list_tasks().then((loaded_tasks) => set_tasks(without_pending(loaded_tasks)))
         void window.x_tasks.list_completions().then(set_completions)
         void window.x_tasks.list_time_entries().then(set_time_entries)
+        void window.x_tasks.get_pomodoro().then(set_pomodoro)
         void window.x_tasks.list_tag_groups().then(set_tag_groups)
         void window.x_tasks.list_tags().then(set_tags)
       }),
@@ -230,31 +232,35 @@ export function App({ account }: { account?: SignedInAccount }) {
   // Reminds to take a break after the set minutes of timed work in a row, and again after as many more, until a long enough pause starts the count again.
   const entries_ref = useRef(time_entries)
   entries_ref.current = time_entries
-  const break_reminders = useRef({ stretch_start: 0, count: 0 })
+  const break_reminders = useRef(FRESH_BREAK_COUNT)
   const reminder_minutes = settings?.break_reminder_minutes ?? 0
   const break_minutes = settings?.break_minutes ?? 5
-  const reminds_breaks = running_timers.length > 0 && reminder_minutes > 0
+  // The desktop app's daemon reminds by itself, with the window open or not.
+  const reminds_breaks = running_timers.length > 0 && reminder_minutes > 0 && window.x_settings.host !== 'desktop'
   useEffect(() => {
     if (!reminds_breaks) return
     const check = (): void => {
-      const now = new Date()
-      const stretch_start = work_stretch_start(entries_ref.current, now, break_minutes)
-      if (!stretch_start) return
-      if (break_reminders.current.stretch_start !== stretch_start.getTime()) break_reminders.current = { stretch_start: stretch_start.getTime(), count: 0 }
-      const due_count = Math.floor((now.getTime() - stretch_start.getTime()) / (reminder_minutes * 60_000))
-      if (due_count <= break_reminders.current.count) return
-      break_reminders.current.count = due_count
-      remind_break((now.getTime() - stretch_start.getTime()) / 1000)
+      const step = step_break_reminder(break_reminders.current, entries_ref.current, new Date(), reminder_minutes, break_minutes)
+      break_reminders.current = step.count
+      if (step.worked_seconds !== null) remind_break(step.worked_seconds)
     }
     check()
     const timer = setInterval(check, BREAK_CHECK_MS)
     return () => clearInterval(timer)
   }, [reminds_breaks, reminder_minutes, break_minutes])
 
-  // The task shown alone in focus mode, and the Pomodoro running on a task, with the time left in its phase.
+  // The task shown alone in focus mode, and the Pomodoro running on a task, as the store keeps it so it outlasts a reload.
   const [focus_task_id, set_focus_task_id] = useState<string | null>(null)
-  const [pomodoro, set_pomodoro] = useState<Pomodoro | null>(null)
-  const pomodoro_clock = use_countdown(finish_pomodoro_phase)
+  const [pomodoro, set_pomodoro] = useState<PomodoroState | null>(null)
+  const pomodoro_phase_seconds = pomodoro && settings ? pomodoro_seconds(pomodoro.phase, settings) : 0
+
+  // Where no daemon moves the Pomodoro on, as in a browser or on a phone, the page does when a phase ends, and says what comes next.
+  const pomodoro_ends_at = pomodoro?.phase_ends_at ?? null
+  useEffect(() => {
+    if (!pomodoro_ends_at || window.x_settings.host === 'desktop') return
+    const timer = setTimeout(() => void tick_pomodoro(), Math.max(0, Date.parse(pomodoro_ends_at) - Date.now()))
+    return () => clearTimeout(timer)
+  }, [pomodoro_ends_at])
 
   // In a browser, a notification when a timed task comes due, while the page is open and notifications are allowed; clicking one opens the task.
   const tasks_ref = useRef(tasks)
@@ -522,7 +528,7 @@ export function App({ account }: { account?: SignedInAccount }) {
   }
 
   function remind_break(worked_seconds: number): void {
-    notify('Time for a break', `You have worked ${short_time_label(worked_seconds)} without a break.`, { text: 'Take a break', run: stop_every_timer })
+    notify('Time for a break', break_message(worked_seconds), { text: 'Take a break', run: stop_every_timer })
   }
 
   // ==========================================================================
@@ -530,42 +536,37 @@ export function App({ account }: { account?: SignedInAccount }) {
   // ==========================================================================
 
   // A round of work times the task until its countdown ends; a browser asks to show notifications while the click still counts as the user's.
-  function start_pomodoro(task: Task): void {
+  async function start_pomodoro(task: Task): Promise<void> {
     if ('Notification' in window && Notification.permission === 'default') void Notification.requestPermission()
-    start_pomodoro_round({ task_id: task.id, phase: 'work', round: 1 })
+    set_pomodoro(await window.x_tasks.start_pomodoro(task.id, new Date().toISOString()))
+    set_time_entries(await window.x_tasks.list_time_entries())
   }
 
-  function start_pomodoro_round(round: Pomodoro): void {
-    set_pomodoro(round)
-    pomodoro_clock.start(pomodoro_seconds('work', settings!))
-    const task = tasks.find((each) => each.id === round.task_id)
-    if (task) start_task_timer(task)
+  async function next_pomodoro_round(): Promise<void> {
+    set_pomodoro(await window.x_tasks.next_pomodoro_round(new Date().toISOString()))
+    set_time_entries(await window.x_tasks.list_time_entries())
   }
 
   // The end of a round stops its timer and starts the break; the end of a break waits for the next round to be started.
-  function finish_pomodoro_phase(): void {
-    if (!pomodoro || !settings) return
-    const next = next_pomodoro(pomodoro, settings)
-    set_pomodoro(next)
-    if (pomodoro.phase === 'work') {
-      stop_task_timer({ id: pomodoro.task_id })
-      pomodoro_clock.start(pomodoro_seconds(next.phase, settings))
-      notify('Time for a break', `Round ${pomodoro.round} done. Take ${short_time_label(pomodoro_seconds(next.phase, settings))} away from it.`)
-    } else {
-      notify('Break over', `Start round ${next.round + 1} when you are ready.`, { text: 'Start', run: () => start_pomodoro_round(next_pomodoro(next, settings)) })
-    }
+  async function tick_pomodoro(): Promise<void> {
+    const ended = await window.x_tasks.tick_pomodoro(new Date().toISOString())
+    if (ended.length === 0) return
+    set_pomodoro(await window.x_tasks.get_pomodoro())
+    set_time_entries(await window.x_tasks.list_time_entries())
+    const last = ended[ended.length - 1]!
+    if (!settings) return
+    const { title, message } = pomodoro_ended_message(last, settings)
+    notify(title, message, last.phase === 'work' ? undefined : { text: 'Start', run: () => void next_pomodoro_round() })
   }
 
-  function skip_pomodoro_break(): void {
-    if (!pomodoro) return
-    pomodoro_clock.stop()
-    set_pomodoro({ ...pomodoro, phase: 'ready' })
+  async function skip_pomodoro_break(): Promise<void> {
+    set_pomodoro(await window.x_tasks.skip_pomodoro_break())
   }
 
   // Leaves any timer running, so the work goes on being timed without rounds.
   function stop_pomodoro(): void {
-    pomodoro_clock.stop()
     set_pomodoro(null)
+    void window.x_tasks.stop_pomodoro()
   }
 
   // Completing the task in focus ends its Pomodoro and leaves focus mode; ticking a subtask there only ticks it.
@@ -1440,7 +1441,7 @@ export function App({ account }: { account?: SignedInAccount }) {
         <>
           {multibar}
           {pomodoro && focus_task_id !== pomodoro.task_id && (
-            <PomodoroChip pomodoro={pomodoro} countdown={pomodoro_clock.countdown} on_open={() => set_focus_task_id(pomodoro.task_id)} />
+            <PomodoroChip pomodoro={pomodoro} phase_seconds={pomodoro_phase_seconds} on_open={() => set_focus_task_id(pomodoro.task_id)} />
           )}
           {running_timers.map((entry) => (
             <TimerBar
@@ -1596,16 +1597,13 @@ export function App({ account }: { account?: SignedInAccount }) {
           entries={task_entries(time_entries, focus_task.id)}
           is_timing={is_timing(focus_task)}
           pomodoro={pomodoro?.task_id === focus_task.id ? pomodoro : null}
-          countdown={pomodoro?.task_id === focus_task.id ? pomodoro_clock.countdown : null}
+          phase_seconds={pomodoro_phase_seconds}
           on_toggle={toggle_in_focus}
           on_start_timer={start_task_timer}
           on_stop_timer={stop_task_timer}
-          on_start_pomodoro={(task) => {
-            if (pomodoro) stop_pomodoro()
-            start_pomodoro(task)
-          }}
-          on_next_round={() => pomodoro && start_pomodoro_round(next_pomodoro(pomodoro, settings))}
-          on_skip_break={skip_pomodoro_break}
+          on_start_pomodoro={(task) => void start_pomodoro(task)}
+          on_next_round={() => void next_pomodoro_round()}
+          on_skip_break={() => void skip_pomodoro_break()}
           on_stop_pomodoro={stop_pomodoro}
           on_close={() => set_focus_task_id(null)}
         />

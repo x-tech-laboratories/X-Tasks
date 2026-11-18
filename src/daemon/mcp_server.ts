@@ -13,7 +13,7 @@ import { entry_seconds, running_entries, task_entries, total_seconds } from '@sh
 import {
   add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_estimate, set_task_notes, set_task_schedule,
   set_task_title, start_timer, stop_timer, tag_task, unlink_tasks, untag_task, list_time_entries
-} from './task_database'
+} from '@shared/task_database'
 
 // ============================================================================
 // Task helpers

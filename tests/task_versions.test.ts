@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   add_tag, add_tag_group, add_task, attach_task_database, close_task_database, link_tasks, list_recent_versions, list_task_versions, list_tasks, move_task, open_database,
   remove_task, restore_task_version, set_setting, set_task_notes, set_task_title, tag_task
-} from '../src/main/task_database'
-import { task_sync } from '../src/main/task_sync'
+} from '../src/shared/task_database'
+import { task_sync } from '../src/shared/task_sync'
 
 // ============================================================================
 // Setup

@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
   add_task, attach_task_database, close_task_database, list_task_versions, list_tasks, list_time_entries, remove_task, remove_time_entry, set_setting, set_task_estimate, start_timer, stop_timer
-} from '../src/main/task_database'
-import { entry_seconds, estimate_left_seconds, work_stretch_start, parse_estimate, running_entries, seconds_by_day, short_time_label, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
+} from '../src/shared/task_database'
+import { break_message, entry_seconds, estimate_left_seconds, FRESH_BREAK_COUNT, step_break_reminder, work_stretch_start, parse_estimate, running_entries, seconds_by_day, short_time_label, stopped_entries, time_spent_label, total_seconds, type TimeEntry } from '../src/shared/time_tracking'
 import { make_task } from './fixtures'
 
 // ============================================================================
@@ -104,6 +104,26 @@ describe('work in a row', () => {
 // ============================================================================
 // Estimates
 // ============================================================================
+
+describe('break reminders', () => {
+  it('reminds once per set stretch of work, and starts the count again after a break', () => {
+    const entries = [entry(local(17, 9), null)]
+    const first = step_break_reminder(FRESH_BREAK_COUNT, entries, local(17, 9, 50), 50, 5)
+    expect(first.worked_seconds).toBe(50 * 60)
+    expect(break_message(first.worked_seconds!)).toBe('You have worked 50m without a break.')
+
+    expect(step_break_reminder(first.count, entries, local(17, 9, 55), 50, 5).worked_seconds).toBeNull()
+    expect(step_break_reminder(first.count, entries, local(17, 10, 40), 50, 5).worked_seconds).toBe(100 * 60)
+
+    const after_break = [entry(local(17, 9), local(17, 10)), entry(local(17, 10, 10), null)]
+    expect(step_break_reminder(first.count, after_break, local(17, 10, 20), 50, 5).worked_seconds).toBeNull()
+  })
+
+  it('never reminds when turned off or while nothing is timed', () => {
+    expect(step_break_reminder(FRESH_BREAK_COUNT, [entry(local(17, 9), null)], local(17, 12), 0, 5).worked_seconds).toBeNull()
+    expect(step_break_reminder(FRESH_BREAK_COUNT, [entry(local(17, 9), local(17, 12))], local(17, 12), 50, 5).worked_seconds).toBeNull()
+  })
+})
 
 describe('estimates', () => {
   it('reads hours and minutes typed in several ways', () => {

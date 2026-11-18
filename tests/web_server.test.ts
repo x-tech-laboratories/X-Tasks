@@ -5,8 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hash_password } from '@x-tech-laboratories/x-libs/server/passwords'
 import type { FastifyInstance } from 'fastify'
-import { open_task_database } from '../src/main/node_task_database'
-import { close_task_database } from '../src/main/task_database'
+import { open_task_database } from '../src/daemon/node_task_database'
+import { close_task_database } from '../src/shared/task_database'
 import { build_app } from '../src/server/app.ts'
 import { CLIENT_ID_HEADER, HELLO_EVENT } from '../src/shared/web_api'
 

@@ -8,12 +8,12 @@ sidebar:
 
 | Path                 | Holds                                                                                          |
 | :------------------- | :--------------------------------------------------------------------------------------------- |
-| `src/main`           | The Electron main process and the task database code shared with the server                    |
-| `src/main/task_database.ts` | Schema migrations and every task, tag and group query, over a small SQL interface       |
-| `src/main/sync_engine.ts`   | Change tracking and merging                                                             |
-| `src/main/sync_client.ts`   | Syncs a device with the server                                                          |
-| `src/main/task_versions.ts` | Task history: triggers, snapshots, pruning                                              |
-| `src/main/mcp_server.ts`    | The MCP server for AI assistants                                                        |
+| `src/daemon`         | The desktop app's daemon: the database, sync, backups, the MCP endpoint, reminders and the Pomodoro |
+| `src/daemon/mcp_server.ts`  | The MCP server for AI assistants                                                        |
+| `src/main`           | The Electron main process: the window and tray, passing the page's calls to the daemon          |
+| `src/shared/task_database.ts` | Schema migrations and every task, tag and group query, over a small SQL interface     |
+| `src/shared/task_sync.ts`   | Which tables sync, on the X-Libs sync engine                                            |
+| `src/shared/task_versions.ts` | Task history: triggers, snapshots, pruning                                            |
 | `src/server`         | The Fastify web server: `main.ts` starts it, `app.ts` builds the routes, `auth.ts` signs browsers in, `events.ts` tells open pages about changes |
 | `src/preload`        | The Electron bridge that exposes `window.x_tasks` to the page                                  |
 | `src/web`            | The React interface                                                                            |
@@ -37,12 +37,14 @@ The React page never touches a database directly. It calls `window.x_tasks` (tas
           Electron IPC  │        HTTP POST   │        in-process  │
                  ┌──────▼──────┐   ┌────────▼───────┐   ┌────────▼────────┐
                  │  preload +  │   │  x-tasks-server │   │ android_bridge  │
-                 │ main process│   │    (Fastify)    │   │  + SQLite WASM  │
+                 │ main → daemon│  │    (Fastify)    │   │  + SQLite WASM  │
                  └──────┬──────┘   └────────┬───────┘   └────────┬────────┘
                         └────────── task_database.ts ────────────┘
 ```
 
-- **Desktop:** `src/preload` forwards each call over Electron IPC to `src/main`, which runs it against `node:sqlite`.
+- **Desktop:** `src/preload` forwards each call over Electron IPC to `src/main`, which posts it to the daemon in
+  `src/daemon` over a Unix socket, the same way a browser posts to the server; the daemon runs it against `node:sqlite`.
+  The daemon keeps running with the window closed, for reminders, timers, the Pomodoro, sync and backups.
 - **Browser:** `src/web/web_bridge.ts` posts each call to the server's `api/<call>`, and listens on `api/events` for
   changes made elsewhere.
 - **Android:** `src/web/android/android_bridge.ts` runs the same database code against SQLite compiled to

@@ -15,7 +15,7 @@ reload.
 
 ## Migrations
 
-The schema is versioned with `PRAGMA user_version`. `SCHEMA_MIGRATIONS` in `src/main/task_database.ts` is an ordered
+The schema is versioned with `PRAGMA user_version`. `SCHEMA_MIGRATIONS` in `src/shared/task_database.ts` is an ordered
 list; entry *n* upgrades a database from version *n* to *n + 1*, as SQL or as a function. Opening a database runs every
 entry from its current version to the end.
 
@@ -36,7 +36,7 @@ migration can be undone.
 
 ## Backups
 
-`src/main/database_backups.ts` writes backups with `VACUUM INTO`, which produces a complete, consistent copy while
+`src/daemon/database_backups.ts` writes backups with `VACUUM INTO`, which produces a complete, consistent copy while
 the database is open. Backups are named by the time they were taken and marked as daily or by hand. Daily backups are
 checked for every hour and pruned to the number the settings ask for.
 
@@ -45,7 +45,7 @@ again which copy to keep.
 
 ## History
 
-`src/main/task_versions.ts` records task history. SQLite triggers note every task a write touches, cascades included;
+`src/shared/task_versions.ts` records task history. SQLite triggers note every task a write touches, cascades included;
 after each change, one version per touched task is saved as a full snapshot, skipping tasks that ended up unchanged.
 Versions that arrive by sync keep the id and time of the device that made them, so every device shows the same
 history. Pruning deletes versions older than the cutoff but always keeps each task's newest one.

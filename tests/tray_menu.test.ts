@@ -8,7 +8,7 @@ import { tray_items, tray_tooltip } from '../src/main/tray_menu'
 
 describe('the tray menu', () => {
   it('offers only the window and quitting while no timer runs', () => {
-    expect(tray_items([]).map((item) => (item.kind === 'separator' ? '—' : item.label))).toEqual(['Show X-Tasks', 'Quit'])
+    expect(tray_items([]).map((item) => (item.kind === 'separator' ? '—' : item.label))).toEqual(['Show X-Tasks', 'Quit', 'Quit completely'])
     expect(tray_tooltip([])).toBe('X-Tasks')
   })
 
@@ -17,7 +17,7 @@ describe('the tray menu', () => {
 
     const items = tray_items(timers)
 
-    expect(items.map((item) => (item.kind === 'separator' ? '—' : item.label))).toEqual(['Write report — 12:34', 'Answer mail — 1:02:05', 'Stop every timer', '—', 'Show X-Tasks', 'Quit'])
+    expect(items.map((item) => (item.kind === 'separator' ? '—' : item.label))).toEqual(['Write report — 12:34', 'Answer mail — 1:02:05', 'Stop every timer', '—', 'Show X-Tasks', 'Quit', 'Quit completely'])
     expect(items[0]).toEqual({ kind: 'timer', label: 'Write report — 12:34', task_id: 'report' })
     expect(tray_tooltip(timers)).toBe('X-Tasks\nWrite report — 12:34\nAnswer mail — 1:02:05')
   })

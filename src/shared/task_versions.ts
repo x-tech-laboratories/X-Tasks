@@ -1,6 +1,6 @@
 import { create_history, type Version } from '@x-tech-laboratories/x-libs/history'
 
-import { is_same_snapshot, normalized_snapshot, type SnapshotLink, type TaskSnapshot, type TaskVersion } from '@shared/versions'
+import { is_same_snapshot, normalized_snapshot, type SnapshotLink, type TaskSnapshot, type TaskVersion } from './versions'
 import type { SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 
 // ============================================================================

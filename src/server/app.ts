@@ -10,11 +10,10 @@ import type { SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { register_sync_routes } from '@x-tech-laboratories/x-libs/server/sync_routes'
 import { register_web_folder } from '@x-tech-laboratories/x-libs/server/web_folder'
 
-import { WEB_SETTINGS_METHODS, WEB_TASKS_METHODS, type WebMethod } from '@shared/web_api'
 import { create_bridge_handlers, type BridgeContext } from './bridge_handlers.ts'
-import { create_backup } from '../main/database_backups'
-import { open_database } from '../main/task_database'
-import { task_sync } from '../main/task_sync'
+import { create_backup } from '../daemon/database_backups'
+import { open_database } from '@shared/task_database'
+import { task_sync } from '@shared/task_sync'
 
 // ============================================================================
 // Options
@@ -38,8 +37,6 @@ const MAX_BODY_BYTES = 4 * 1024 * 1024
 // A device sending its whole database to replace the server's needs more room.
 const MAX_SYNC_BODY_BYTES = 256 * 1024 * 1024
 
-const WEB_METHODS = new Set<string>([...WEB_TASKS_METHODS, ...WEB_SETTINGS_METHODS])
-
 // Every method a route answers itself; OPTIONS is left to the CORS preflight.
 const ANY_METHOD = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 
@@ -47,7 +44,7 @@ const ANY_METHOD = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const changes = new EventStream()
 
 // Calls that only read never change what other pages show.
-function is_read_only(method: WebMethod): boolean {
+function is_read_only(method: string): boolean {
   return method.startsWith('list_') || method.startsWith('get_')
 }
 
@@ -55,22 +52,25 @@ function is_read_only(method: WebMethod): boolean {
 // Bridge and sync routes
 // ============================================================================
 
-function register_bridge_calls(api: FastifyInstance, handlers: ReturnType<typeof create_bridge_handlers>): void {
+// Each handler answers a POST to its name, with its arguments as a JSON array; a call that changes anything tells every other open page or window.
+// The desktop app's daemon answers its window the same way.
+export function register_bridge_calls(api: FastifyInstance, handlers: object, stream: EventStream): void {
   api.route<{ Params: { method: string } }>({ method: [...ANY_METHOD], url: '/:method', handler: async (request, reply) => {
     const { method } = request.params
     if (request.method !== 'POST') return send_text(reply, 405, 'use POST')
-    if (!WEB_METHODS.has(method)) return send_text(reply, 404, `no bridge call named ${method}`)
+    if (!Object.hasOwn(handlers, method)) return send_text(reply, 404, `no bridge call named ${method}`)
 
     // An empty body means no arguments; anything other than a JSON array is refused.
     const args: unknown = request.body ?? []
     if (!Array.isArray(args)) return send_text(reply, 400, 'the body must be a JSON array of arguments')
 
-    const handler = handlers[method as WebMethod] as (...args: unknown[]) => unknown
+    const handler = (handlers as Record<string, (...args: unknown[]) => unknown>)[method]!
     const result = await handler(...args)
-    if (!is_read_only(method as WebMethod)) changes.announce_change(changes.client_id_of(request))
+    if (!is_read_only(method)) stream.announce_change(stream.client_id_of(request))
 
     if (result === undefined) return reply.code(204).send()
-    return reply.send(result)
+    // Fastify would send a string as bare text, which the caller could not tell from JSON.
+    return reply.type('application/json').send(JSON.stringify(result))
   } })
 }
 
@@ -109,7 +109,7 @@ export async function build_app(options: AppOptions): Promise<FastifyInstance> {
       })
       changes.register(api, '/events')
       register_sync_calls(api)
-      register_bridge_calls(api, handlers)
+      register_bridge_calls(api, handlers, changes)
     },
     { prefix: '/api' }
   )

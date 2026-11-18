@@ -9,7 +9,7 @@ devices never talk to each other.
 
 ## Cells
 
-`src/main/sync_engine.ts` tracks every synced value as a **cell**: one column of one row, with the time it was last
+X-Libs' `sync_engine`, set up in `src/shared/task_sync.ts`, tracks every synced value as a **cell**: one column of one row, with the time it was last
 written and the device that wrote it. A row's existence is a cell of its own. Every write to a synced table updates
 its cells and bumps a sequence number.
 
@@ -30,7 +30,7 @@ The server answers under `api/sync/`:
 The **generation** changes whenever a server's data is replaced or restored. A device that sees a new generation stops
 syncing until its user chooses again whose tasks to keep; either choice backs up the data it replaces first.
 
-`src/main/sync_client.ts` drives the device side: it exchanges changes on a timer and after local writes, keeps
+X-Libs' `sync_client`, set up in `src/shared/task_sync_client.ts` and run by the desktop daemon and the phone, drives the device side: it exchanges changes on a timer and after local writes, keeps
 working offline and catches up when the server is reachable again. It also listens on the server's event stream, so it
 pulls other devices' changes promptly. The server address and token are kept in `sync.json` beside the database.
 

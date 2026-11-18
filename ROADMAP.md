@@ -60,7 +60,6 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 
 - [ ] Show an error when a database call fails instead of leaving the screen out of step
 - [ ] Export and import tasks as JSON
-- [ ] Keep running in the background and start at login, so reminders arrive with the window closed
 - [ ] Choose which side the details panel opens on, and whether clicking a row opens its details or
   folds its subtasks
 - [ ] Reorder and tag tasks by touch, since dragging needs a mouse

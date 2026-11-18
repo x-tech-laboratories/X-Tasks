@@ -14,10 +14,10 @@ export interface TrayTimer {
 // One row of the tray's menu: a running timer that opens its task, a command, or a line between groups.
 export type TrayItem =
   | { kind: 'timer'; label: string; task_id: string }
-  | { kind: 'command'; label: string; command: 'stop_timers' | 'show' | 'quit' }
+  | { kind: 'command'; label: string; command: 'stop_timers' | 'show' | 'quit' | 'quit_completely' }
   | { kind: 'separator' }
 
-// Each running timer with its time, Stop when any runs, then showing the window and quitting.
+// Each running timer with its time, Stop when any runs, then showing the window, quitting the window and tray, and quitting the daemon too.
 export function tray_items(timers: TrayTimer[]): TrayItem[] {
   const timer_items = timers.map((timer): TrayItem => ({ kind: 'timer', label: `${timer.title} — ${format_clock(timer.seconds * 1000)}`, task_id: timer.task_id }))
   const stop_items: TrayItem[] = timers.length === 0 ? [] : [{ kind: 'command', label: timers.length === 1 ? 'Stop timer' : 'Stop every timer', command: 'stop_timers' }, { kind: 'separator' }]
@@ -25,7 +25,8 @@ export function tray_items(timers: TrayTimer[]): TrayItem[] {
     ...timer_items,
     ...stop_items,
     { kind: 'command', label: 'Show X-Tasks', command: 'show' },
-    { kind: 'command', label: 'Quit', command: 'quit' }
+    { kind: 'command', label: 'Quit', command: 'quit' },
+    { kind: 'command', label: 'Quit completely', command: 'quit_completely' }
   ]
 }
 

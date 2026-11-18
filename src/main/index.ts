@@ -1,38 +1,120 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, screen, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, screen, shell } from 'electron'
 import { writeFile } from 'node:fs/promises'
-import { homedir, hostname } from 'node:os'
+import { homedir } from 'node:os'
 import { dirname, extname, join } from 'node:path'
+import { launch_command, set_autostart } from '@x-tech-laboratories/x-libs/autostart'
+import { certificate_method_names } from '@x-tech-laboratories/x-libs/certificate_protocol'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
-import { create_certificate_trust } from '@x-tech-laboratories/x-libs/certificates'
-import { trust_in_session, trusting_fetch } from '@x-tech-laboratories/x-libs/electron/certificates'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
-import { apply_tray_setting, stop_tray, type TrayHost } from './tray'
-import { keep_reminding } from './reminders'
-import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
-import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
+import { call_daemon, daemon_log_path, daemon_socket_path, follow_daemon_events, start_daemon } from '@x-tech-laboratories/x-libs/local_daemon'
 
-import { certificate_bridge, settings_bridge, tasks_bridge, tasks_events } from '@shared/bridges'
+import { certificate_bridge, DESKTOP_SETTINGS_METHODS, SERVED_SETTINGS_METHODS, settings_bridge, TASKS_METHODS, tasks_bridge, tasks_events } from '@shared/bridges'
 import type { Settings } from '@shared/settings'
-import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link } from '@shared/tasks'
-import { apply_mcp_settings, get_mcp_status, stop_mcp_server } from './mcp_server'
-import { open_task_database } from './node_task_database'
-import { backup_folder, create_backup, keep_automatic_backups, list_backups, remove_backup, restore_backup, schedule_automatic_backups } from './database_backups'
-import {
-  add_tag, add_tag_group, add_task, link_tasks, close_task_database, get_settings, has_changed_elsewhere, list_completions, list_tag_groups, list_tags,
-  list_tasks, move_tag, move_tag_group, move_task, remove_tag, remove_tag_group, remove_task, unlink_tasks, set_setting, update_tag, update_tag_group,
-  set_task_done, set_task_my_day, set_task_estimate, set_task_notes, set_task_schedule, set_task_title, tag_task, task_database_path,
-  untag_task, list_task_versions, list_recent_versions, restore_task_version, list_time_entries, start_timer, stop_timer, remove_time_entry
-} from './task_database'
-import { create_task_sync_client } from './task_sync_client'
+import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link, type Task } from '@shared/tasks'
+import { entry_seconds, running_entries, type TimeEntry } from '@shared/time_tracking'
+import { CHANGED_EVENT, CLIENT_ID_HEADER, HELLO_EVENT } from '@shared/web_api'
+import { apply_tray_setting, is_tray_shown, refresh_tray, stop_tray, type TrayHost } from './tray'
 
 // ============================================================================
 // Profile
 // ============================================================================
 
+// The window: Electron's main process, which shows X-Tasks and leaves the work to the daemon in src/daemon, reached over a Unix socket.
+
 // Dev runs set this so Electron's own profile stays apart from the installed app's.
 if (process.env.X_TASKS_USER_DATA) app.setPath('userData', process.env.X_TASKS_USER_DATA)
 // Flatpak moves the config folder into its sandbox; the Flatpak may write ~/.config/x-tasks, so it keeps the profile the other builds use.
 else if (process.env.FLATPAK_ID) app.setPath('userData', join(homedir(), '.config', 'x-tasks'))
+
+// The database a run uses: a test database when X_TASKS_DB names one, otherwise the profile's.
+const is_own_database = process.env.X_TASKS_DB === undefined
+const database_path = process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db')
+
+// A test database gets a daemon, socket and log of its own, so a test run never reaches the user's daemon.
+const socket_path = daemon_socket_path({ app: 'x-tasks', data_file: is_own_database ? null : database_path })
+const log_file = is_own_database ? daemon_log_path('x-tasks') : join(dirname(database_path), 'daemon.log')
+
+// The built app sits in out/main, and resources/ beside out/ both in the source tree and in the package.
+const icon_path = join(__dirname, '../../resources/icon.png')
+
+// The command that starts this app again, which the login entry runs and the daemon runs to open a task from a notification.
+const own_command = (args: string[]): string[] =>
+  launch_command({ launcher: process.env.X_TASKS_LAUNCHER, is_packaged: app.isPackaged, app_path: app.getAppPath(), args })
+
+// ============================================================================
+// Daemon
+// ============================================================================
+
+function ensure_daemon(): Promise<unknown> {
+  return start_daemon({
+    socket_path,
+    script: join(__dirname, 'daemon.js'),
+    env: { X_TASKS_DB: database_path, X_TASKS_SOCKET: socket_path, X_TASKS_ICON: icon_path },
+    log_file
+  })
+}
+
+// Given by the daemon when this process connects, so the window is not told about its own changes.
+let client_id = ''
+
+// One call to the daemon, as the page made it.
+function call(method: string, args: unknown[]): Promise<unknown> {
+  return call_daemon(socket_path, `/api/${method}`, args, { [CLIENT_ID_HEADER]: client_id })
+}
+
+// Every call in a table, passed on to the daemon under a path of its own.
+function forwarded(names: readonly string[], prefix = ''): Record<string, (...args: unknown[]) => Promise<unknown>> {
+  return Object.fromEntries(names.map((name) => [name, (...args: unknown[]) => call(`${prefix}${name}`, args)]))
+}
+
+function get_settings(): Promise<Settings> {
+  return call('get_settings', []) as Promise<Settings>
+}
+
+// Settings the window itself acts on: the colours, the tray, and starting at login.
+async function apply_window_settings(): Promise<void> {
+  const settings = await get_settings()
+  nativeTheme.themeSource = settings.theme
+  apply_tray_setting(settings.show_tray_icon, tray_host)
+  apply_autostart(settings)
+}
+
+// Only the user's own database starts at login; a test run never writes the login entry.
+function apply_autostart(settings: Settings): void {
+  if (!is_own_database) return
+  set_autostart(
+    { id: 'x-tasks-daemon', name: 'X-Tasks in the background', comment: 'Reminders, sync and backups for X-Tasks', icon: icon_path, command: own_command(['--daemon']) },
+    settings.start_at_login && settings.keep_running_in_background
+  )
+}
+
+// Every window hears of the daemon's changes, and comes back to a daemon that stopped, such as one quit from another window.
+let is_quitting = false
+let stop_following = (): void => {}
+
+function follow_daemon(): void {
+  stop_following = follow_daemon_events(
+    socket_path,
+    '/api/events',
+    (event, data) => {
+      if (event === HELLO_EVENT) client_id = data
+      if (event === CHANGED_EVENT) announce_change()
+    },
+    {
+      // A reconnect may have missed changes, so the windows fetch again.
+      on_connect: announce_change,
+      on_disconnect: () => {
+        if (!is_quitting) void ensure_daemon().catch((error: unknown) => console.error(error))
+      }
+    }
+  )
+}
+
+function announce_change(): void {
+  tasks_events.emit(BrowserWindow.getAllWindows(), 'database_changed', null)
+  void apply_window_settings().catch(() => undefined)
+  void refresh_tray(tray_host)
+}
 
 // ============================================================================
 // Window
@@ -42,8 +124,7 @@ else if (process.env.FLATPAK_ID) app.setPath('userData', join(homedir(), '.confi
 function create_main_window(): BrowserWindow {
   return create_window(BrowserWindow, {
     title: 'X-Tasks',
-    // The built app sits in out/main, and resources/ beside out/ both in the source tree and in the package.
-    icon: join(__dirname, '../../resources/icon.png'),
+    icon: icon_path,
     // electron-vite emits an ESM preload as .mjs; loading .js here silently yields no bridge.
     preload: join(__dirname, '../preload/index.mjs'),
     dev_url: !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined,
@@ -58,61 +139,46 @@ function create_main_window(): BrowserWindow {
   })
 }
 
-// ============================================================================
-// MCP endpoint
-// ============================================================================
-
-// The MCP endpoint and sync write through the app's own connection, which the outside-change check never sees, so they tell the windows themselves.
-function announce_mcp_change(): void {
-  tasks_events.emit(BrowserWindow.getAllWindows(), 'database_changed', null)
-}
-
-// Changes from other devices can include the theme, which the window's colours follow.
-function announce_sync_change(): void {
-  nativeTheme.themeSource = get_settings().theme
-  announce_mcp_change()
-}
-
-// The database a run uses: a test database when X_TASKS_DB names one, otherwise the profile's.
-const database_path = process.env.X_TASKS_DB ?? join(app.getPath('userData'), 'tasks.db')
-
-// Trusted server certificates live beside the database too, so a scratch database never trusts the real server's.
-const certificates = create_certificate_trust({ file: join(dirname(database_path), 'trusted-certificates.json') })
-
-// The server and token live in sync.json beside the database, so a scratch database never syncs with the real server.
-// Sync goes through Chromium, which honours the trusted certificates where Node's own fetch would not.
-const sync = create_task_sync_client(
-  file_sync_storage({ file: join(dirname(database_path), 'sync.json'), back_up_before_download: () => create_backup().then(() => undefined) }),
-  `X-Tasks on ${hostname()}`,
-  announce_sync_change,
-  trusting_fetch(session, certificates)
-)
-
-// ============================================================================
-// Tray icon
-// ============================================================================
-
-// The tray brings the window forward, making one again if it was closed, and opens tasks in it as a task link does.
-const tray_host: TrayHost = {
-  icon_path: join(__dirname, '../../resources/icon.png'),
-  show_window: () => void shown_window(),
-  open_task: (task_id) => tasks_events.emit([shown_window()], 'open_task', task_id),
-  announce_change: announce_mcp_change,
-  quit: () => app.quit()
-}
-
 function shown_window(): BrowserWindow {
   const window = BrowserWindow.getAllWindows()[0] ?? create_main_window()
   bring_to_front(window)
   return window
 }
 
-function apply_tray(): void {
-  apply_tray_setting(get_settings().show_tray_icon, tray_host)
+// Stops the daemon as well, so nothing runs until the app is opened again.
+async function quit_completely(): Promise<void> {
+  is_quitting = true
+  await call('stop_daemon', []).catch(() => undefined)
+  app.quit()
 }
 
-function restart_mcp_server(): Promise<void> {
-  return apply_mcp_settings(get_settings(), announce_mcp_change)
+// ============================================================================
+// Tray icon
+// ============================================================================
+
+async function list_tray_timers() {
+  const [tasks, entries, settings] = (await Promise.all([call('list_tasks', []), call('list_time_entries', []), get_settings()])) as [Task[], TimeEntry[], Settings]
+  const now = new Date()
+  return running_entries(entries, settings.allow_several_timers).map((entry) => ({
+    task_id: entry.task_id,
+    title: tasks.find((task) => task.id === entry.task_id)?.title ?? 'Removed task',
+    seconds: entry_seconds(entry, now)
+  }))
+}
+
+// The tray brings the window forward, making one again if it was closed, and opens tasks in it as a task link does.
+// Its own changes go without a client id, so the window hears of them.
+const tray_host: TrayHost = {
+  icon_path,
+  list_timers: list_tray_timers,
+  stop_timers: () => call_daemon(socket_path, '/api/stop_timer', [new Date().toISOString(), null]).then(() => undefined),
+  show_window: () => void shown_window(),
+  open_task: (task_id) => tasks_events.emit([shown_window()], 'open_task', task_id),
+  quit: () => {
+    is_quitting = true
+    app.quit()
+  },
+  quit_completely: () => void quit_completely()
 }
 
 // ============================================================================
@@ -122,11 +188,10 @@ function restart_mcp_server(): Promise<void> {
 // The task a link at launch asked for, kept until the page is ready to take it.
 let launch_task_id: string | null = null
 
-// A second launch, such as a clicked task link, brings this window forward and opens the task it names.
+// A second launch, such as a clicked task link or a reminder, brings the window forward, making one if it was closed, and opens the task it names.
 function open_from_second_launch(argv: string[]): void {
-  const main_window = BrowserWindow.getAllWindows()[0]
-  if (!main_window) return
-  bring_to_front(main_window)
+  if (argv.includes('--daemon')) return
+  const main_window = shown_window()
   const task_id = first_argument(argv, task_id_from_link)
   if (task_id) tasks_events.emit([main_window], 'open_task', task_id)
 }
@@ -150,47 +215,29 @@ async function save_text_file(file_name: string, text: string): Promise<boolean>
 // Bridge handlers
 // ============================================================================
 
+// The page's calls go to the daemon, but for those that need the screen: folders, dialogs, the idle time and quitting.
 function register_bridge_handlers(): void {
-  tasks_bridge.handle(ipcMain, {
-    list_tasks, add_task, set_task_done, set_task_title, set_task_notes, set_task_schedule, set_task_my_day, set_task_estimate, remove_task, move_task, tag_task, untag_task,
-    link_tasks, unlink_tasks, list_completions, list_task_versions, list_recent_versions, restore_task_version, list_time_entries, start_timer, stop_timer, remove_time_entry,
-    list_tag_groups, add_tag_group, update_tag_group, remove_tag_group, move_tag_group,
-    list_tags, add_tag, update_tag, remove_tag, move_tag
-  })
+  tasks_bridge.handle(ipcMain, forwarded(TASKS_METHODS) as never)
 
-  settings_bridge.handle(ipcMain, {
-    get_settings,
-    set_setting: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
-      set_setting(key, value)
-      if (key === 'theme') nativeTheme.themeSource = value as Settings['theme']
-      if (key === 'mcp_enabled' || key === 'mcp_port') void restart_mcp_server()
-      if (key === 'auto_backup' || key === 'auto_backups_to_keep') keep_automatic_backups()
-      if (key === 'show_tray_icon') apply_tray()
+  const window_methods = ['show_database_folder', 'show_backup_folder', 'save_text_file', 'get_idle_seconds', 'quit_completely']
+  const settings_handlers = {
+    ...forwarded([...SERVED_SETTINGS_METHODS, ...DESKTOP_SETTINGS_METHODS.filter((name) => !window_methods.includes(name))]),
+    set_setting: async <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
+      await call('set_setting', [key, value])
+      await apply_window_settings()
     },
-    get_database_path: task_database_path,
-    show_database_folder: () => shell.showItemInFolder(task_database_path()),
+    restore_backup: async (name: string) => {
+      await call('restore_backup', [name])
+      await apply_window_settings()
+    },
+    show_database_folder: () => shell.showItemInFolder(database_path),
+    show_backup_folder: () => shell.openPath(join(dirname(database_path), 'backups')).then(() => undefined),
     save_text_file,
     get_idle_seconds: () => powerMonitor.getSystemIdleTime(),
-
-    list_backups,
-    create_backup: () => create_backup(),
-    // The restored data brings its own settings, so its theme and MCP endpoint are applied straight away, and sync asks which copy to keep.
-    restore_backup: async (name) => {
-      await restore_backup(name)
-      nativeTheme.themeSource = get_settings().theme
-      apply_tray()
-      void restart_mcp_server()
-      void sync.sync_now()
-    },
-    remove_backup,
-    show_backup_folder: () => shell.openPath(backup_folder()).then(() => undefined),
-
-    get_mcp_status,
-
-    ...sync_device_methods(sync)
-  })
-  certificate_bridge.handle(ipcMain, certificates.methods)
-  trust_in_session(session.defaultSession, certificates.is_trusted)
+    quit_completely
+  }
+  settings_bridge.handle(ipcMain, settings_handlers as unknown as Parameters<typeof settings_bridge.handle>[1])
+  certificate_bridge.handle(ipcMain, forwarded(certificate_method_names, 'certificates/') as never)
 
   ipcMain.handle(TAKE_LAUNCH_TASK_CHANNEL, () => {
     const task_id = launch_task_id
@@ -200,36 +247,25 @@ function register_bridge_handlers(): void {
 }
 
 // ============================================================================
-// Outside changes
-// ============================================================================
-
-// Checks the database every second and tells each window when another program has changed it.
-function watch_for_outside_changes(): void {
-  setInterval(() => {
-    if (!has_changed_elsewhere()) return
-    tasks_events.emit(BrowserWindow.getAllWindows(), 'database_changed', null)
-  }, 1000)
-}
-
-// ============================================================================
 // Lifecycle
 // ============================================================================
 
 function start_app(): void {
   launch_task_id = first_argument(process.argv, task_id_from_link)
 
-  app.whenReady().then(() => {
-    open_task_database(database_path)
-    // The page's light and dark colours follow this, so it is set before the window opens.
-    nativeTheme.themeSource = get_settings().theme
+  app.whenReady().then(async () => {
+    try {
+      await ensure_daemon()
+    } catch (error) {
+      dialog.showErrorBox('X-Tasks could not start', `${error instanceof Error ? error.message : String(error)}\n\nSee ${log_file}.`)
+      app.exit(1)
+      return
+    }
     register_bridge_handlers()
-    void restart_mcp_server()
+    follow_daemon()
+    // The page's light and dark colours follow the theme, so it is set before the window opens.
+    await apply_window_settings().catch(() => undefined)
     create_main_window()
-    apply_tray()
-    keep_reminding(tray_host)
-    watch_for_outside_changes()
-    schedule_automatic_backups()
-    sync.start()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) create_main_window()
@@ -237,18 +273,28 @@ function start_app(): void {
   })
 
   app.on('will-quit', () => {
+    is_quitting = true
+    stop_following()
     stop_tray()
-    sync.stop()
-    void stop_mcp_server()
-    close_task_database()
   })
 
+  // Closing the window ends only the window, or leaves the app in the tray; the daemon runs on either way.
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
+    if (!is_tray_shown()) app.quit()
   })
 }
 
-// Only the app on the default database takes task links from later launches, so a run on a test database never hands off to it.
-const takes_task_links = process.env.X_TASKS_DB === undefined
+// `x-tasks --daemon`, as the login entry runs it, starts only the daemon.
+async function start_daemon_alone(): Promise<void> {
+  try {
+    await ensure_daemon()
+    app.exit(0)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error)
+    app.exit(1)
+  }
+}
 
-if (!takes_task_links || hold_single_instance(app, open_from_second_launch)) start_app()
+// Only the app on the default database takes task links from later launches, so a run on a test database never hands off to it.
+if (process.argv.includes('--daemon')) void start_daemon_alone()
+else if (!is_own_database || hold_single_instance(app, open_from_second_launch)) start_app()

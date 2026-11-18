@@ -34,6 +34,24 @@ Tasks are stored in an SQLite database at `~/.config/x-tasks/tasks.db` on Linux,
 built-in `node:sqlite`, together with the choices made on the Settings page. Set `X_TASKS_DB` to use a
 different file.
 
+### Window and daemon
+
+The desktop app runs as two processes, as the [Application Standard](https://x-tech-laboratories.github.io/standards/application/#desktop-apps-a-window-and-a-daemon)
+sets out. The daemon (`src/daemon`, plain Node on Electron's own binary) owns the database, sync, backups, history, the
+MCP endpoint, due-task reminders, break reminders and the Pomodoro. The window (`src/main`) passes the page's calls to it
+over HTTP on `$XDG_RUNTIME_DIR/x-tasks/daemon.sock`, the same calls the web server answers, and keeps only what needs the
+screen: the window, the tray, file dialogs and the idle time.
+
+- Opening the app starts the daemon when none is running; its output goes to `~/.local/state/x-tasks/daemon.log`.
+  A run with `X_TASKS_DB` set gets a socket and log of its own beside that database, so it never reaches your daemon.
+- Closing the window leaves the daemon running, so reminders, timers and the Pomodoro carry on. **Keep running in the
+  background** in Settings, on by default, turns that off, and the daemon then stops 30 seconds after the last window.
+- **Start at login**, on by default, writes `~/.config/autostart/x-tasks-daemon.desktop`, which runs `x-tasks --daemon`.
+- **Quit completely**, in Settings and the tray, stops the daemon too.
+- The daemon's notifications go through `notify-send`, and a click opens the task's `x-tasks://` link with `xdg-open`.
+  The Nix package puts both on the daemon's path; an AppImage or Flatpak uses the system's, and shows no notifications
+  without `notify-send`.
+
 ### AppImage and Flatpak
 
 `npm run dist` builds both with electron-builder, set up in `electron-builder.yml`. The Flatpak needs
@@ -243,9 +261,11 @@ later launches, so a run with `X_TASKS_DB` set never hands its link to another w
 
 ## Layout
 
-- `src/main` — the Electron main process and the task database
-- `src/server` — the Fastify web server: `main.ts` starts it, `app.ts` builds the routes, `auth.ts` signs browsers in, `events.ts` tells open pages about changes; it shares the task database code with `src/main`
-- `src/main/task_sync.ts` — which tables sync, on the X-Libs `sync_engine`; `src/main/task_sync_client.ts` syncs a device with the server through the X-Libs `sync_client`, and the server answers through `server/sync_routes`
+- `src/daemon` — the desktop app's daemon: `main.ts` serves the calls on its socket, `notices.ts` sends reminders and the Pomodoro's notices, with the backups, the MCP endpoint and the Node database beside them
+- `src/main` — the Electron main process: the window, the tray, and passing the page's calls to the daemon
+- `src/server` — the Fastify web server: `main.ts` starts it, `app.ts` builds the routes, which the daemon reuses
+- `src/shared/task_database.ts` — the task database, run unchanged by the daemon, the server and the phone
+- `src/shared/task_sync.ts` — which tables sync, on the X-Libs `sync_engine`; `src/shared/task_sync_client.ts` syncs a device with the server through the X-Libs `sync_client`, and the server answers through `server/sync_routes`
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
   `src/web/web_bridge.ts` sets up the same bridge over HTTP
 - `src/web` — the React interface; `src/web/android` holds the Android app's database and bridge

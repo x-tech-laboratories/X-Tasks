@@ -1,5 +1,6 @@
 import type { TaskRelationship } from './settings'
 import type { TimeEntry } from './time_tracking'
+import type { PomodoroState } from './pomodoro'
 import type { TaskVersion } from './versions'
 
 // ============================================================================
@@ -280,6 +281,16 @@ export interface TasksApi {
   // Stops one task's timer, or every running timer when given no task.
   stop_timer: (ended_at: string, task_id: string | null) => Promise<void>
   remove_time_entry: (entry_id: string) => Promise<void>
+
+  // The Pomodoro running on this device: a round of work times its task until the round ends, a break follows, then it waits for the next round.
+  get_pomodoro: () => Promise<PomodoroState | null>
+  start_pomodoro: (task_id: string, started_at: string) => Promise<PomodoroState>
+  next_pomodoro_round: (started_at: string) => Promise<PomodoroState | null>
+  skip_pomodoro_break: () => Promise<PomodoroState | null>
+  // Leaves the task's timer running, so the work goes on being timed without rounds.
+  stop_pomodoro: () => Promise<void>
+  // Moves past the phases that have ended by the time given, stopping the timer of each round of work at its end, and answers with the ones that ended.
+  tick_pomodoro: (now: string) => Promise<PomodoroState[]>
 
   list_tag_groups: () => Promise<TagGroup[]>
   add_tag_group: (name: string, is_rule: boolean) => Promise<TagGroup>
