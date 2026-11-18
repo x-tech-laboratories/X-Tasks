@@ -27,6 +27,8 @@ async function show_app(settings: Parameters<typeof install_fake_bridge>[0]['set
   const bridge = install_fake_bridge({ tasks, tags, tag_groups: [group], settings: { launch_view: 'all', ...settings }, host })
   render(<App />)
   await screen.findByRole('heading', { name: 'All tasks' })
+  // The page draws once its settings arrive, outside act, so its effects, such as the Shell setting the saved theme, settle before a test clicks.
+  await act(async () => {})
   return bridge
 }
 
