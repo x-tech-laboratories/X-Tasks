@@ -19,9 +19,14 @@ export interface DueReminder {
   remind_at: number
 }
 
-// The open, timed tasks whose reminder falls after one moment and by another, oldest first; tasks dated without a time have none.
+// The open, timed tasks whose reminder falls after one moment and by another, oldest first, leaving out any missed by more than
+// MISSED_REMINDER_LIMIT_MS; tasks dated without a time have none.
 export function due_reminders(tasks: Task[], date_field: TaskDateField, after: number, until: number, lead_minutes: number): DueReminder[] {
-  const earliest = Math.max(after, until - MISSED_REMINDER_LIMIT_MS)
+  return reminders_between(tasks, date_field, Math.max(after, until - MISSED_REMINDER_LIMIT_MS), until, lead_minutes)
+}
+
+// Every reminder falling after one moment and by another, however far apart, as when they are handed to a phone ahead of time.
+export function reminders_between(tasks: Task[], date_field: TaskDateField, earliest: number, until: number, lead_minutes: number): DueReminder[] {
   return tasks
     .flatMap((task): DueReminder[] => {
       const date = task_date_of(task, date_field)

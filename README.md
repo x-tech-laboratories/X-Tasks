@@ -180,6 +180,12 @@ phone, SQLite compiled to WebAssembly and saved in the app's storage after each 
 with the web server under **Sync** in Settings, as the desktop app does. On a narrow screen the
 sidebar becomes a drawer behind the menu button, and a task's details fill the screen.
 
+A phone has no daemon, so the app hands Android its notices ahead of time through Capacitor's local notifications
+(`src/web/android/phone_notices.ts`): the next two weeks of due-task reminders, up to 64, and the end of the running
+Pomodoro phase. They are set again whenever tasks or settings change, sync brings changes, or the app comes back, and
+Android shows them with the app closed. Tapping one opens its task. The app asks for permission to notify when it opens
+with reminders on, and when they are turned on.
+
 ```sh
 nix develop .#android   # node, a JDK and the Android SDK, whose license this shell accepts
 npm install
