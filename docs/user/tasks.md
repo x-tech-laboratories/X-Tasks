@@ -66,6 +66,17 @@ A repeating task is a **routine**. X-Tasks logs every time it is done and shows 
 row it was done before its next occurrence came round. Turn on **Streak dots on task rows** to see the last week of
 done and missed occurrences beside each routine's title.
 
+### Reminders
+
+When an open task's date arrives, and that date has a time, a notification names the task and says it is due; click it
+to open the task. The date is the due date, or the start date if Settings › Dates makes that the task's date.
+**Notify ahead** in Settings › Tasks › Reminders brings it that many minutes early, and **Notify when tasks come due**
+turns reminders off. Tasks dated without a time bring no reminder.
+
+The desktop app shows reminders even while its window is minimised, and on its next start it shows the ones that came
+due while it was closed, up to half a day back. A browser shows them while the page is open, once you choose **Allow**
+in the same settings. The phone app does not show reminders yet.
+
 ## My Day
 
 My Day is today's plan. Add a task from its details, its right-click menu, or by adding it while My Day is open.

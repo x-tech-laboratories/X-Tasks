@@ -10,7 +10,7 @@ import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { DATE_POINTS, date_point_label, type DateComparison, type DatePoint, type Inclusivity } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
-import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, BREAK_REMINDER_MINUTES_RANGE, BREAK_MINUTES_RANGE, POMODORO_MINUTES_RANGE, POMODORO_ROUNDS_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
+import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, BREAK_REMINDER_MINUTES_RANGE, BREAK_MINUTES_RANGE, POMODORO_MINUTES_RANGE, POMODORO_ROUNDS_RANGE, REMINDER_LEAD_MINUTES_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
 import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
@@ -151,6 +151,15 @@ function SyntaxSetting({ label, hint, value, on_change, examples_of }: SyntaxSet
 }
 
 // ============================================================================
+// Notifications
+// ============================================================================
+
+// A browser asks once whether this site may show notifications; the desktop app needs no leave.
+function ask_to_notify(): void {
+  if ('Notification' in window && Notification.permission === 'default') void Notification.requestPermission()
+}
+
+// ============================================================================
 // Settings page
 // ============================================================================
 
@@ -285,6 +294,52 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
 
               <SettingRow label="Remove rescheduled tasks from My Day" hint="Moving a task's task date past today takes it out of My Day." as_label>
                 <Switch label="Remove rescheduled tasks from My Day" checked={settings.remove_future_from_my_day} on_change={(on) => on_change('remove_future_from_my_day', on)} />
+              </SettingRow>
+            </>
+          )
+        },
+        {
+          id: 'reminders',
+          heading: 'Reminders',
+          content: (
+            <>
+              <SettingRow
+                label="Notify when tasks come due"
+                hint={
+                  'A notification when an open task\'s date and time arrive, for tasks dated with a time; clicking it opens the task. ' +
+                  'The desktop app shows it even when minimised and catches up on ones missed while closed; a browser shows it while the page is open. The phone app does not yet.'
+                }
+                as_label
+              >
+                <Switch
+                  label="Notify when tasks come due"
+                  checked={settings.remind_due_tasks}
+                  on_change={(on) => {
+                    if (on) ask_to_notify()
+                    on_change('remind_due_tasks', on)
+                  }}
+                />
+              </SettingRow>
+              {window.x_settings.host === 'web' && 'Notification' in window && Notification.permission !== 'granted' && (
+                <SettingRow label="Allow notifications" hint="This browser shows reminders only once it is allowed to; a browser that has blocked them changes that in its own site settings." as_label>
+                  <button onClick={ask_to_notify} disabled={Notification.permission === 'denied'}>
+                    {Notification.permission === 'denied' ? 'Blocked' : 'Allow'}
+                  </button>
+                </SettingRow>
+              )}
+              <SettingRow label="Notify ahead" hint="How many minutes before a task's time its reminder comes. Zero notifies at the time itself." as_label>
+                <CommitInput
+                  type="number"
+                  min={REMINDER_LEAD_MINUTES_RANGE.min}
+                  max={REMINDER_LEAD_MINUTES_RANGE.max}
+                  step="1"
+                  className="input-xs"
+                  value={settings.reminder_lead_minutes}
+                  on_commit={(event) =>
+                    on_change('reminder_lead_minutes', Math.min(REMINDER_LEAD_MINUTES_RANGE.max, Math.max(REMINDER_LEAD_MINUTES_RANGE.min, Math.round(Number(event.currentTarget.value) || 0))))
+                  }
+                  aria-label="Minutes ahead"
+                />
               </SettingRow>
             </>
           )

@@ -14,6 +14,7 @@ import { toast, undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
+import { due_reminders, reminder_body } from '@shared/reminders'
 import { estimate_left_seconds, work_stretch_start, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
 // A file of its own rather than inlined, since the page's policy allows no data: images.
 import app_icon from '../../resources/icon.svg?no-inline'
@@ -65,6 +66,9 @@ const IS_TOUCH_SCREEN = window.matchMedia('(pointer: coarse)').matches
 
 // How often a running timer checks whether the computer has been left alone.
 const IDLE_POLL_MS = 15_000
+
+// How often a browser looks for tasks coming due; the desktop app's main process looks for itself.
+const REMINDER_CHECK_MS = 30_000
 
 // How often a running timer checks whether a break is due.
 const BREAK_CHECK_MS = 30_000
@@ -251,6 +255,32 @@ export function App({ account }: { account?: SignedInAccount }) {
   const [focus_task_id, set_focus_task_id] = useState<string | null>(null)
   const [pomodoro, set_pomodoro] = useState<Pomodoro | null>(null)
   const pomodoro_clock = use_countdown(finish_pomodoro_phase)
+
+  // In a browser, a notification when a timed task comes due, while the page is open and notifications are allowed; clicking one opens the task.
+  const tasks_ref = useRef(tasks)
+  tasks_ref.current = tasks
+  const reminds_in_page = window.x_settings.host === 'web' && Boolean(settings?.remind_due_tasks)
+  const date_field = settings?.task_date_field ?? 'due'
+  const lead_minutes = settings?.reminder_lead_minutes ?? 0
+  useEffect(() => {
+    if (!reminds_in_page || !('Notification' in window)) return
+    let checked_until = Date.now()
+    const check = (): void => {
+      const now = Date.now()
+      const after = checked_until
+      checked_until = now
+      if (Notification.permission !== 'granted') return
+      for (const reminder of due_reminders(tasks_ref.current, date_field, after, now, lead_minutes)) {
+        const notification = new Notification(reminder.task.title, { body: reminder_body(reminder, date_field, now), tag: `due:${reminder.task.id}` })
+        notification.onclick = () => {
+          window.focus()
+          set_selected_task_id(reminder.task.id)
+        }
+      }
+    }
+    const timer = setInterval(check, REMINDER_CHECK_MS)
+    return () => clearInterval(timer)
+  }, [reminds_in_page, date_field, lead_minutes])
 
   // Closing the app deletes any tasks still waiting.
   useEffect(() => {
