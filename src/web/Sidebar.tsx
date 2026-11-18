@@ -3,9 +3,8 @@ import { useState, type DragEvent, type FormEvent, type MouseEvent } from 'react
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { ColorDot } from '@x-tech-laboratories/x-libs/web/react/badges'
 import { open_context_menu } from '@x-tech-laboratories/x-libs/web/react/menus'
-import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
+import { SyncButton } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
 import { Tree, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/react/tree'
-import type { SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import type { TagScope, TaskDateField } from '@shared/settings'
 import { children_of } from '@x-tech-laboratories/x-libs/web/tree'
@@ -305,74 +304,5 @@ interface SidebarFootProps {
 
 // The sync button, at the foot of the sidebar above the Shell's own theme, account and Settings rows.
 export function SidebarFoot({ on_open_settings }: SidebarFootProps) {
-  return <SyncButton on_open_settings={on_open_settings} />
-}
-
-// Two circling arrows for the sync button; they turn while a sync runs.
-function SyncIcon({ is_spinning }: { is_spinning: boolean }) {
-  return (
-    <svg className={cx('line-icon', is_spinning && 'spinning')} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
-      <path d="M3 21v-5h5" />
-      <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
-      <path d="M21 3v5h-5" />
-    </svg>
-  )
-}
-
-// ============================================================================
-// Sync button
-// ============================================================================
-
-const SYNC_STATUS_POLL_MS = 2000
-
-// Today's syncs show only the time; older ones show the day too.
-function format_synced_at(iso_time: string): string {
-  if (iso_time === '') return 'Not synced yet'
-  const time = new Date(iso_time)
-  const is_today = time.toDateString() === new Date().toDateString()
-  return `Last synced ${is_today ? time.toLocaleTimeString(undefined, { timeStyle: 'short' }) : time.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`
-}
-
-function sync_label(status: SyncStatus): string {
-  if (status.state === 'syncing') return 'Syncing…'
-  if (status.state === 'offline') return 'Offline'
-  if (status.state === 'failed') return 'Sync failed'
-  if (status.state === 'needs_setup') return 'Sync needs setup'
-  return 'Synced'
-}
-
-// The last sync time, then the problem if there is one.
-function sync_tooltip(status: SyncStatus): string {
-  return [format_synced_at(status.last_synced_at), status.error || `with ${status.server_url}`].join('\n')
-}
-
-// Shows when this device last synced and how many changes wait to go out; a click syncs now, or opens settings when sync needs the user.
-function SyncButton({ on_open_settings }: { on_open_settings: () => void }) {
-  const sync = use_resource(() => window.x_settings.get_sync_status(), [], { refresh_in_milliseconds: SYNC_STATUS_POLL_MS })
-  // Set while a sync asked for here runs, so the button spins before the next status arrives.
-  const [is_syncing, set_is_syncing] = useState(false)
-
-  const status: SyncStatus | null = sync.data && is_syncing ? { ...sync.data, state: 'syncing' } : sync.data
-  if (!status || status.state === 'off') return null
-  const needs_user = status.state === 'failed' || status.state === 'needs_setup'
-
-  function click(): void {
-    if (needs_user) return on_open_settings()
-    set_is_syncing(true)
-    void window.x_settings
-      .sync_now()
-      .then(() => sync.reload(true))
-      .finally(() => set_is_syncing(false))
-  }
-
-  return (
-    <button className={cx('tree-row', needs_user && 'tone-bad')} title={sync_tooltip(status)} disabled={status.state === 'syncing'} onClick={click}>
-      <span className="tree-label">
-        <SyncIcon is_spinning={status.state === 'syncing'} />
-        <span>{sync_label(status)}</span>
-      </span>
-      {status.pending_changes > 0 && <span className="tree-extra">{status.pending_changes} pending</span>}
-    </button>
-  )
+  return <SyncButton device={window.x_settings} on_open_settings={on_open_settings} />
 }
