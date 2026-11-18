@@ -33,7 +33,6 @@ What is still to do. Finished work moves to [CHANGELOG.md](CHANGELOG.md).
 - [ ] Schedule view that lays the day's tasks out in time blocks by their estimates, beside
   calendar events
 - [ ] Reminders at a time of a task's own, apart from its dates, and several per task
-- [ ] Phone notifications for reminders, through Capacitor's local notifications
 - [ ] End-of-day review of what was done and how long it took, moving what is left on
 - [ ] Rate each day's focus, productivity and mood, with charts on the Reports page
 - [ ] Weekly wrap-up of the week's done tasks and time, and a daily summary table by tag

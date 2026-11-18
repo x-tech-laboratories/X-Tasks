@@ -7,6 +7,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- Phone notifications for due tasks and the end of each Pomodoro phase, handed to Android ahead of time so they come
+  with the app closed, opening the task when tapped
 - The desktop app runs as a window and a daemon: reminders, timers, the Pomodoro, sync, backups and the MCP endpoint
   carry on with the window closed, the daemon starts at login, and Settings and the tray can quit it completely
 - A Pomodoro outlasts reloading or closing the window, and its round stops the task's timer when it ends

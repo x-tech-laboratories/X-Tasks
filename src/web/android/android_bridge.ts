@@ -14,6 +14,7 @@ import {
 import { request_back } from '../back_navigation'
 import { android_backups, back_up_before_upgrade } from './android_backups'
 import { create_task_sync_client } from '@shared/task_sync_client'
+import { keep_phone_notices } from './phone_notices'
 
 // ============================================================================
 // Saved copies
@@ -56,9 +57,21 @@ export async function install_android_bridge(): Promise<void> {
   attach_task_database(database.connection, 'On this device')
   await database.save_now()
 
+  // A tapped notice opens its task, held until the page listens when the tap is what started the app.
+  const open_task_listeners = new Set<(task_id: string) => void>()
+  let waiting_task_id: string | null = null
+  const notices = keep_phone_notices({
+    read: () => ({ tasks: list_tasks(), settings: get_settings(), pomodoro: get_pomodoro() }),
+    open_task: (task_id) => {
+      if (open_task_listeners.size === 0) waiting_task_id = task_id
+      for (const listener of open_task_listeners) listener(task_id)
+    }
+  })
+
   const change_listeners = new Set<() => void>()
   const sync = create_task_sync_client(local_sync_storage({ key: SYNC_CONFIG_KEY, back_up_before_download: () => files.write(BEFORE_SYNC_FILE, database.export_bytes()) }), 'X-Tasks on Android', () => {
     for (const listener of change_listeners) listener()
+    notices.refresh()
   })
   const tasks_api: TasksApi = {
     list_tasks: answer(list_tasks),
@@ -102,7 +115,20 @@ export async function install_android_bridge(): Promise<void> {
     on_database_changed: (listener) => {
       change_listeners.add(listener)
       return () => change_listeners.delete(listener)
+    },
+    on_open_task: (listener) => {
+      open_task_listeners.add(listener)
+      if (waiting_task_id) listener(waiting_task_id)
+      waiting_task_id = null
+      return () => open_task_listeners.delete(listener)
     }
+  }
+
+  // Every call that changes anything may move a reminder, so the notices are set again after it.
+  for (const name of Object.keys(tasks_api) as (keyof TasksApi)[]) {
+    if (/^(list_|get_|on_)/.test(name)) continue
+    const call = tasks_api[name] as (...args: unknown[]) => Promise<unknown>
+    ;(tasks_api as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => call(...args).finally(notices.refresh)
   }
 
   const backups = android_backups(database)
@@ -115,12 +141,14 @@ export async function install_android_bridge(): Promise<void> {
     set_setting: async <Key extends keyof Settings>(key: Key, value: Settings[Key]) => {
       set_setting(key, value)
       if (key === 'auto_backup' || key === 'auto_backups_to_keep') await backups.keep_automatic_backups()
+      if (key === 'remind_due_tasks' && value) await notices.ask_permission()
+      notices.refresh()
     },
     get_database_path: answer(() => 'On this device'),
     show_database_folder: () => Promise.resolve(),
     list_backups: backups.list_backups,
     create_backup: backups.create_backup,
-    restore_backup: backups.restore_backup,
+    restore_backup: (name) => backups.restore_backup(name).finally(notices.refresh),
     remove_backup: backups.remove_backup,
     show_backup_folder: () => Promise.resolve(),
     save_text_file: () => Promise.resolve(false),
@@ -139,10 +167,12 @@ export async function install_android_bridge(): Promise<void> {
   window.x_settings = settings_api
 
   sync.start()
+  void (get_settings().remind_due_tasks ? notices.ask_permission() : Promise.resolve()).finally(notices.refresh)
 
   // Android can stop a paused app at any time, so the database is saved as it goes to the background, and syncs as it comes back.
   void App.addListener('pause', () => void database.save_now())
   void App.addListener('resume', () => {
+    notices.refresh()
     void sync.sync_now()
     void backups.keep_automatic_backups()
   })
