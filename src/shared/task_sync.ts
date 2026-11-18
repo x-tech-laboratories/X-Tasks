@@ -1,6 +1,6 @@
 import { create_sync_engine, type SyncedTable } from '@x-tech-laboratories/x-libs/sync_engine'
 
-import { DEVICE_ONLY_SETTINGS } from '@shared/settings'
+import { DEVICE_ONLY_SETTINGS } from './settings'
 import { forget_touched_tasks } from './task_versions'
 
 // ============================================================================

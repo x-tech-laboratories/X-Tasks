@@ -2,8 +2,8 @@ import { keep_backing_up } from '@x-tech-laboratories/x-libs/backups'
 import { backup_folder_plugin, phone_backups, to_base64 } from '@x-tech-laboratories/x-libs/phone_backups'
 import type { WasmDatabase } from '@x-tech-laboratories/x-libs/web/sqlite_wasm'
 import { task_backup_naming, type DatabaseBackup } from '@shared/settings'
-import { task_sync } from '../../main/task_sync'
-import { attach_task_database, get_settings, is_upgrade_pending, open_database } from '../../main/task_database'
+import { task_sync } from '@shared/task_sync'
+import { attach_task_database, get_settings, is_upgrade_pending, open_database } from '@shared/task_database'
 
 // ============================================================================
 // Before an upgrade

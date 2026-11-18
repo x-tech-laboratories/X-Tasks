@@ -8,7 +8,7 @@ import { use_now, type Countdown } from '@x-tech-laboratories/x-libs/web/react/t
 import type { Task } from '@shared/tasks'
 import { entry_seconds, estimate_text, parse_estimate, seconds_by_day, short_time_label, time_spent_label, total_seconds, type TimeEntry } from '@shared/time_tracking'
 import type { AwaySpan } from './idle'
-import { pomodoro_label, type Pomodoro } from './pomodoro'
+import { pomodoro_label, type PomodoroState } from '@shared/pomodoro'
 
 // ============================================================================
 // Clock
@@ -57,8 +57,18 @@ export function TimerBar({ entry, task, on_open, on_focus, on_stop }: TimerBarPr
   )
 }
 
+// The time left in the Pomodoro's phase, counted down each second from when the store says it ends; null while it waits for the next round.
+export function use_pomodoro_countdown(pomodoro: PomodoroState | null, phase_seconds: number): Countdown | null {
+  const now = use_now(1000)
+  if (!pomodoro?.phase_ends_at) return null
+  const ends_at = Date.parse(pomodoro.phase_ends_at)
+  // The clock read just before a phase began would count more than the phase holds.
+  return { total: phase_seconds, remaining: Math.min(phase_seconds, Math.max(0, Math.ceil((ends_at - now.getTime()) / 1000))), ends_at }
+}
+
 // The Pomodoro's phase and time left, beside the search bar while focus mode is closed; a click opens it again.
-export function PomodoroChip({ pomodoro, countdown, on_open }: { pomodoro: Pomodoro; countdown: Countdown | null; on_open: () => void }) {
+export function PomodoroChip({ pomodoro, phase_seconds, on_open }: { pomodoro: PomodoroState; phase_seconds: number; on_open: () => void }) {
+  const countdown = use_pomodoro_countdown(pomodoro, phase_seconds)
   return (
     <div className="timer_bar" role="status" aria-label="Pomodoro">
       <button className="link timer_task" onClick={on_open} title="Open focus mode">

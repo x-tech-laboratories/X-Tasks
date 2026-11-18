@@ -11,7 +11,7 @@ import type { TasksApi } from './tasks'
 
 // The methods with their answers unwrapped, so the main process may answer at once or later.
 type Answered<Api> = {
-  [Name in keyof Api]: Api[Name] extends (...args: infer Args) => Promise<infer Result> ? (...args: Args) => Result : never
+  [Name in keyof Api]-?: NonNullable<Api[Name]> extends (...args: infer Args) => Promise<infer Result> ? (...args: Args) => Result : never
 }
 
 // ============================================================================
@@ -23,7 +23,8 @@ export type TasksMethods = Answered<Omit<TasksApi, 'on_database_changed' | 'on_o
 
 export const TASKS_METHODS = [
   'list_tasks', 'add_task', 'set_task_done', 'set_task_title', 'set_task_notes', 'set_task_schedule', 'set_task_my_day', 'set_task_estimate', 'remove_task', 'move_task',
-  'tag_task', 'untag_task', 'link_tasks', 'unlink_tasks', 'list_completions', 'list_task_versions', 'list_recent_versions', 'restore_task_version', 'list_time_entries', 'start_timer', 'stop_timer', 'remove_time_entry', 'list_tag_groups', 'add_tag_group', 'update_tag_group', 'remove_tag_group', 'move_tag_group',
+  'tag_task', 'untag_task', 'link_tasks', 'unlink_tasks', 'list_completions', 'list_task_versions', 'list_recent_versions', 'restore_task_version', 'list_time_entries', 'start_timer', 'stop_timer', 'remove_time_entry',
+  'get_pomodoro', 'start_pomodoro', 'next_pomodoro_round', 'skip_pomodoro_break', 'stop_pomodoro', 'tick_pomodoro', 'list_tag_groups', 'add_tag_group', 'update_tag_group', 'remove_tag_group', 'move_tag_group',
   'list_tags', 'add_tag', 'update_tag', 'remove_tag', 'move_tag'
 ] as const satisfies readonly (keyof TasksMethods)[]
 
@@ -48,7 +49,7 @@ export const SERVED_SETTINGS_METHODS = [
 
 // The settings calls only the desktop app answers, since they open folders or sync this device.
 export const DESKTOP_SETTINGS_METHODS = [
-  'show_database_folder', 'show_backup_folder', 'save_text_file', 'get_idle_seconds', 'get_sync_status', 'connect_sync', 'disconnect_sync', 'sync_now'
+  'show_database_folder', 'show_backup_folder', 'save_text_file', 'get_idle_seconds', 'get_sync_status', 'connect_sync', 'disconnect_sync', 'sync_now', 'quit_completely'
 ] as const satisfies readonly (keyof SettingsMethods)[]
 
 export const settings_bridge = define_bridge<SettingsMethods>('x_settings', [...SERVED_SETTINGS_METHODS, ...DESKTOP_SETTINGS_METHODS])

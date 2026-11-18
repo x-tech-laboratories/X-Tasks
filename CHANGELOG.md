@@ -7,6 +7,9 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- The desktop app runs as a window and a daemon: reminders, timers, the Pomodoro, sync, backups and the MCP endpoint
+  carry on with the window closed, the daemon starts at login, and Settings and the tray can quit it completely
+- A Pomodoro outlasts reloading or closing the window, and its round stops the task's timer when it ends
 - A timer on each task, started from its row, menu or details and shown beside the search bar, keeping the time
   spent on each day, with the entries listed and removable in the task's details and offered to AI assistants
 - Several timers running at once, as a setting off by default

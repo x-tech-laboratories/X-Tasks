@@ -2,6 +2,7 @@ import type { CertificateClient } from '@x-tech-laboratories/x-libs/certificate_
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
 import type { DatePoint, DateRule } from '@x-tech-laboratories/x-libs/date_ranges'
 import type { SyncCredentials, SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
+import type { PomodoroState } from './pomodoro'
 import type { View } from './tasks'
 
 // ============================================================================
@@ -213,6 +214,11 @@ export interface Settings {
   pomodoro_break_minutes: number
   pomodoro_long_break_minutes: number
   pomodoro_rounds: number
+  // The Pomodoro running on this device, or null.
+  pomodoro: PomodoroState | null
+  // Whether the desktop app starts in the background when the user logs in, and keeps running there once its window has closed.
+  start_at_login: boolean
+  keep_running_in_background: boolean
   // Whether the desktop app shows an icon in the system tray with the running timers.
   show_tray_icon: boolean
   // Whether a notification comes when an open task's date and time arrive, and how many minutes ahead.
@@ -318,6 +324,9 @@ export const DEFAULT_SETTINGS: Settings = {
   pomodoro_break_minutes: 5,
   pomodoro_long_break_minutes: 15,
   pomodoro_rounds: 4,
+  pomodoro: null,
+  start_at_login: true,
+  keep_running_in_background: true,
   show_tray_icon: true,
   remind_due_tasks: true,
   reminder_lead_minutes: 0,
@@ -399,10 +408,11 @@ export const DEFAULT_SETTINGS: Settings = {
   history_days: 365
 }
 
-// Settings that belong to one device and never sync: its window layout, its MCP endpoint and its backups.
+// Settings that belong to one device and never sync: its window layout, its MCP endpoint, its backups, its Pomodoro and how it runs in the background.
 export const DEVICE_ONLY_SETTINGS: readonly (keyof Settings)[] = [
   'sidebar_width', 'detail_width', 'table_column_widths', 'last_view', 'collapsed_task_ids', 'collapsed_sidebar_ids',
-  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep', 'show_tray_icon', 'reminded_until'
+  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep', 'show_tray_icon', 'reminded_until',
+  'pomodoro', 'start_at_login', 'keep_running_in_background'
 ]
 
 // The ports the MCP endpoint can be set to, leaving out those that need root.
@@ -459,5 +469,7 @@ export interface SettingsApi {
   sync_now: () => Promise<SyncStatus>
   // Server certificates the device trusts, such as a home server's self-signed one; a browser uses its own.
   certificates?: CertificateClient
+  // Only on the desktop: closes the window and stops the app running in the background too, until it is opened again.
+  quit_completely?: () => Promise<void>
 }
 

@@ -8,7 +8,7 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     resolve: { alias: { '@shared': shared_directory } },
-    build: { rollupOptions: { input: { index: resolve('src/main/index.ts') } } }
+    build: { rollupOptions: { input: { index: resolve('src/main/index.ts'), daemon: resolve('src/daemon/main.ts') } } }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

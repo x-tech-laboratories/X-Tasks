@@ -41,3 +41,5 @@ flatpak:
     - --unset-env=ELECTRON_RUN_AS_NODE
     # The same tasks.db the other builds use, so switching between them keeps the tasks.
     - --filesystem=xdg-config/x-tasks:create
+    # The login entry that starts X-Tasks in the background.
+    - --filesystem=xdg-config/autostart:create

@@ -6,7 +6,7 @@ sidebar:
 
 ## MCP server
 
-`src/main/mcp_server.ts` serves a Streamable HTTP MCP endpoint, by default `http://127.0.0.1:3917/mcp`, when **Enable
+`src/daemon/mcp_server.ts` serves a Streamable HTTP MCP endpoint, by default `http://127.0.0.1:3917/mcp`, when **Enable
 MCP server** is on. It listens on loopback only.
 
 | Tool           | Does                                                                                  |

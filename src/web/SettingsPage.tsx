@@ -298,6 +298,36 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
             </>
           )
         },
+        ...(window.x_settings.host === 'desktop'
+          ? [
+              {
+                id: 'background',
+                heading: 'Background',
+                content: (
+                  <>
+                    <SettingRow
+                      label="Keep running in the background"
+                      hint="Reminders, timers, the Pomodoro, sync and backups carry on with the window closed. Turned off, they stop shortly after the last window closes."
+                      as_label
+                    >
+                      <Switch label="Keep running in the background" checked={settings.keep_running_in_background} on_change={(on) => on_change('keep_running_in_background', on)} />
+                    </SettingRow>
+                    <SettingRow label="Start at login" hint="Starts X-Tasks in the background when you log in, without opening its window." as_label>
+                      <Switch
+                        label="Start at login"
+                        checked={settings.start_at_login}
+                        disabled={!settings.keep_running_in_background}
+                        on_change={(on) => on_change('start_at_login', on)}
+                      />
+                    </SettingRow>
+                    <SettingRow label="Quit completely" hint="Closes the window and stops X-Tasks in the background too, until you open it again.">
+                      <button onClick={() => void window.x_settings.quit_completely?.()}>Quit completely</button>
+                    </SettingRow>
+                  </>
+                )
+              }
+            ]
+          : []),
         {
           id: 'reminders',
           heading: 'Reminders',
@@ -307,7 +337,7 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
                 label="Notify when tasks come due"
                 hint={
                   'A notification when an open task\'s date and time arrive, for tasks dated with a time; clicking it opens the task. ' +
-                  'The desktop app shows it even when minimised and catches up on ones missed while closed; a browser shows it while the page is open. The phone app does not yet.'
+                  'The desktop app shows it with its window closed too, while it runs in the background, and catches up on ones missed while it was not running; a browser shows it while the page is open. The phone app does not yet.'
                 }
                 as_label
               >

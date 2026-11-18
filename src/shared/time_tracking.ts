@@ -61,6 +61,31 @@ export function work_stretch_start(entries: TimeEntry[], now: Date, break_minute
   return new Date(stretch_start)
 }
 
+// Which stretch of work break reminders last counted, and how many reminders it has had.
+export interface BreakCount {
+  stretch_start: number
+  count: number
+}
+
+export const FRESH_BREAK_COUNT: BreakCount = { stretch_start: 0, count: 0 }
+
+// A reminder after the set minutes of timed work in a row, and again after as many more, until a long enough pause starts the count again;
+// worked_seconds is set when one is due.
+export function step_break_reminder(count: BreakCount, entries: TimeEntry[], now: Date, reminder_minutes: number, break_minutes: number): { count: BreakCount; worked_seconds: number | null } {
+  const stretch_start = work_stretch_start(entries, now, break_minutes)
+  if (!stretch_start || reminder_minutes <= 0) return { count, worked_seconds: null }
+  const current = count.stretch_start === stretch_start.getTime() ? count : { stretch_start: stretch_start.getTime(), count: 0 }
+  const worked_ms = now.getTime() - stretch_start.getTime()
+  const due_count = Math.floor(worked_ms / (reminder_minutes * 60_000))
+  if (due_count <= current.count) return { count: current, worked_seconds: null }
+  return { count: { ...current, count: due_count }, worked_seconds: worked_ms / 1000 }
+}
+
+// What a break reminder says.
+export function break_message(worked_seconds: number): string {
+  return `You have worked ${short_time_label(worked_seconds)} without a break.`
+}
+
 // ============================================================================
 // Totals
 // ============================================================================

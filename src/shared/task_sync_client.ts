@@ -1,6 +1,6 @@
 import { create_sync_client, type SyncClient, type SyncStorage } from '@x-tech-laboratories/x-libs/sync_client'
 
-import { CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } from '@shared/web_api'
+import { CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } from './web_api'
 import { open_database } from './task_database'
 import { task_sync } from './task_sync'
 

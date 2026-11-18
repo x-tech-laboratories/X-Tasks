@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 
-import { create_backup, list_backups, restore_backup } from '../src/main/database_backups'
-import { open_task_database } from '../src/main/node_task_database'
-import { add_task, close_task_database, list_tasks, open_database } from '../src/main/task_database'
-import { task_sync } from '../src/main/task_sync'
+import { create_backup, list_backups, restore_backup } from '../src/daemon/database_backups'
+import { open_task_database } from '../src/daemon/node_task_database'
+import { add_task, close_task_database, list_tasks, open_database } from '../src/shared/task_database'
+import { task_sync } from '../src/shared/task_sync'
 
 // ============================================================================
 // Setup

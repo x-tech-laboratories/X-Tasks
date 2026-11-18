@@ -1,9 +1,10 @@
-import { DEFAULT_SETTINGS, saved_date_range, saved_task_duration, type Settings } from '@shared/settings'
+import { DEFAULT_SETTINGS, saved_date_range, saved_task_duration, type Settings } from './settings'
 import { in_transaction, type SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
 import { as_code_block } from '@x-tech-laboratories/x-libs/web/markdown_text'
-import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from '@shared/tasks'
-import type { TimeEntry } from '@shared/time_tracking'
-import type { TaskVersion } from '@shared/versions'
+import { EMPTY_RULE, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskLink, type TaskSchedule } from './tasks'
+import type { TimeEntry } from './time_tracking'
+import { advance_pomodoro, pomodoro_in_phase, type PomodoroState } from './pomodoro'
+import type { TaskVersion } from './versions'
 import { task_sync } from './task_sync'
 import { drop_version_triggers, install_version_triggers, read_recent_versions, read_task_versions, prune_task_versions, record_task_versions, restore_version } from './task_versions'
 
@@ -611,6 +612,55 @@ export function remove_time_entry(entry_id: string): void {
 // Ends every running entry but those of the task kept running; an end before an entry's start, as another device's clock can give, ends it where it began.
 function stop_running_entries(database: SqlDatabase, ended_at: string, kept_task_id: string | null): void {
   database.prepare('UPDATE time_entries SET ended_at = MAX(started_at, ?) WHERE ended_at IS NULL AND task_id IS NOT ?').run(ended_at, kept_task_id)
+}
+
+// ============================================================================
+// Pomodoro queries
+// ============================================================================
+
+export function get_pomodoro(): PomodoroState | null {
+  return get_settings().pomodoro
+}
+
+// A first round of work on the task, timing it from the start.
+export function start_pomodoro(task_id: string, started_at: string): PomodoroState {
+  const state = pomodoro_in_phase({ task_id, phase: 'work', round: 1 }, new Date(started_at), get_settings())
+  set_setting('pomodoro', state)
+  start_timer(task_id, started_at)
+  return state
+}
+
+// The next round of work, after a break or skipping what is left of one.
+export function next_pomodoro_round(started_at: string): PomodoroState | null {
+  const current = get_pomodoro()
+  if (!current) return null
+  const state = pomodoro_in_phase({ task_id: current.task_id, phase: 'work', round: current.phase === 'work' ? current.round : current.round + 1 }, new Date(started_at), get_settings())
+  set_setting('pomodoro', state)
+  start_timer(state.task_id, started_at)
+  return state
+}
+
+export function skip_pomodoro_break(): PomodoroState | null {
+  const current = get_pomodoro()
+  if (!current || current.phase === 'work') return current
+  const state: PomodoroState = { ...current, phase: 'ready', phase_ends_at: null }
+  set_setting('pomodoro', state)
+  return state
+}
+
+export function stop_pomodoro(): void {
+  set_setting('pomodoro', null)
+}
+
+// A round of work that ended stops its task's timer at the moment it ended, even when this runs later, as after a restart.
+export function tick_pomodoro(now: string): PomodoroState[] {
+  const current = get_pomodoro()
+  if (!current) return []
+  const { state, ended } = advance_pomodoro(current, new Date(now), get_settings())
+  if (ended.length === 0) return []
+  for (const phase of ended) if (phase.phase === 'work' && phase.phase_ends_at) stop_timer(phase.phase_ends_at, phase.task_id)
+  set_setting('pomodoro', state)
+  return ended
 }
 
 // ============================================================================

@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 
-import { open_task_database } from '../src/main/node_task_database'
-import { close_task_database } from '../src/main/task_database'
+import { open_task_database } from '../src/daemon/node_task_database'
+import { close_task_database } from '../src/shared/task_database'
 
 // ============================================================================
 // Setup

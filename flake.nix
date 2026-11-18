@@ -122,9 +122,13 @@
             mkdir -p $out/lib/x-tasks
             cp -r out resources package.json node_modules $out/lib/x-tasks/
             install -Dm644 resources/icon.svg $out/share/icons/hicolor/scalable/apps/x-tasks.svg
+            # The daemon shows notifications with notify-send and opens a clicked task with xdg-open. The login entry
+            # starts the daemon by the name on the PATH, so it outlives this store path.
             makeWrapper ${electron}/bin/electron $out/bin/x-tasks \
               --add-flags $out/lib/x-tasks \
-              --unset ELECTRON_RUN_AS_NODE
+              --unset ELECTRON_RUN_AS_NODE \
+              --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.libnotify pkgs.xdg-utils ]} \
+              --set X_TASKS_LAUNCHER x-tasks
             runHook postInstall
           '';
 

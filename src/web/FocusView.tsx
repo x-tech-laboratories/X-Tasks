@@ -3,10 +3,11 @@ import { format_clock } from '@x-tech-laboratories/x-libs/durations'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
 import { Markdown } from '@x-tech-laboratories/x-libs/web/react/markdown'
 import { ProgressBar } from '@x-tech-laboratories/x-libs/web/react/progress'
-import { use_now, type Countdown } from '@x-tech-laboratories/x-libs/web/react/time'
+import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
 import type { Task } from '@shared/tasks'
 import { entry_seconds, seconds_by_day, short_time_label, type TimeEntry } from '@shared/time_tracking'
-import { pomodoro_label, type Pomodoro } from './pomodoro'
+import { pomodoro_label, type PomodoroState } from '@shared/pomodoro'
+import { use_pomodoro_countdown } from './TimeTracking'
 
 // ============================================================================
 // Focus view
@@ -19,9 +20,9 @@ interface FocusViewProps {
   // This task's time entries, oldest first.
   entries: TimeEntry[]
   is_timing: boolean
-  // The Pomodoro running on this task, if any, and the time left in its phase.
-  pomodoro: Pomodoro | null
-  countdown: Countdown | null
+  // The Pomodoro running on this task, if any, and how many seconds its phase lasts.
+  pomodoro: PomodoroState | null
+  phase_seconds: number
   on_toggle: (task: Task) => void
   on_start_timer: (task: Task) => void
   on_stop_timer: (task: Task) => void
@@ -34,8 +35,9 @@ interface FocusViewProps {
 
 // The one task worked on, filling the window: a large clock, the Pomodoro or timer controls, its open subtasks and its notes.
 export function FocusView(props: FocusViewProps) {
-  const { task, subtasks, entries, is_timing, pomodoro, countdown } = props
+  const { task, subtasks, entries, is_timing, pomodoro } = props
   const now = use_now(1000)
+  const countdown = use_pomodoro_countdown(pomodoro, props.phase_seconds)
   const running = entries.find((entry) => entry.ended_at === null)
   const today_seconds = seconds_by_day(entries, now).get(format_local(now, false)) ?? 0
 
