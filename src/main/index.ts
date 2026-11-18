@@ -7,6 +7,7 @@ import { create_certificate_trust } from '@x-tech-laboratories/x-libs/certificat
 import { trust_in_session, trusting_fetch } from '@x-tech-laboratories/x-libs/electron/certificates'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
 import { apply_tray_setting, stop_tray, type TrayHost } from './tray'
+import { keep_reminding } from './reminders'
 import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
 import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
 
@@ -225,6 +226,7 @@ function start_app(): void {
     void restart_mcp_server()
     create_main_window()
     apply_tray()
+    keep_reminding(tray_host)
     watch_for_outside_changes()
     schedule_automatic_backups()
     sync.start()

@@ -169,6 +169,9 @@ export const BREAK_MINUTES_RANGE = { min: 1, max: 120 }
 export const POMODORO_MINUTES_RANGE = { min: 1, max: 180 }
 export const POMODORO_ROUNDS_RANGE = { min: 1, max: 12 }
 
+// How many minutes before a task's time its reminder can come, up to a day.
+export const REMINDER_LEAD_MINUTES_RANGE = { min: 0, max: 1440 }
+
 export const REPORT_DAYS_RANGE = { min: 7, max: 730 }
 
 export interface Settings {
@@ -212,6 +215,11 @@ export interface Settings {
   pomodoro_rounds: number
   // Whether the desktop app shows an icon in the system tray with the running timers.
   show_tray_icon: boolean
+  // Whether a notification comes when an open task's date and time arrive, and how many minutes ahead.
+  remind_due_tasks: boolean
+  reminder_lead_minutes: number
+  // When this device last showed reminders, as an ISO time, so the next start shows the ones it missed.
+  reminded_until: string
   // How the multibar reads a new task's tags, dates and repeat, and how it reads a search; each can follow a different app.
   quick_add_syntax: SyntaxId
   search_syntax: SyntaxId
@@ -311,6 +319,9 @@ export const DEFAULT_SETTINGS: Settings = {
   pomodoro_long_break_minutes: 15,
   pomodoro_rounds: 4,
   show_tray_icon: true,
+  remind_due_tasks: true,
+  reminder_lead_minutes: 0,
+  reminded_until: '',
   quick_add_syntax: 'todoist',
   search_syntax: 'todoist',
   task_layout: 'list',
@@ -391,7 +402,7 @@ export const DEFAULT_SETTINGS: Settings = {
 // Settings that belong to one device and never sync: its window layout, its MCP endpoint and its backups.
 export const DEVICE_ONLY_SETTINGS: readonly (keyof Settings)[] = [
   'sidebar_width', 'detail_width', 'table_column_widths', 'last_view', 'collapsed_task_ids', 'collapsed_sidebar_ids',
-  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep', 'show_tray_icon'
+  'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep', 'show_tray_icon', 'reminded_until'
 ]
 
 // The ports the MCP endpoint can be set to, leaving out those that need root.
