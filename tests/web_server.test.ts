@@ -116,14 +116,14 @@ describe('bridge calls', () => {
   it('refuses a body that is not a JSON array', async () => {
     const response = await app.inject({ method: 'POST', url: '/api/list_tasks', headers: { ...bearer, 'content-type': 'application/json' }, payload: '{"a":1}' })
     expect(response.statusCode).toBe(400)
-    expect(response.body).toBe('the body must be a JSON array of arguments')
+    expect(response.body).toBe('send the arguments as a JSON list')
   })
 
   it('refuses a call that is not POST and a call that does not exist', async () => {
-    expect((await app.inject({ method: 'GET', url: '/api/list_tasks', headers: bearer })).statusCode).toBe(405)
+    expect((await app.inject({ method: 'GET', url: '/api/list_tasks', headers: bearer })).statusCode).toBe(404)
     const missing = await app.inject({ method: 'POST', url: '/api/drop_everything', headers: bearer })
     expect(missing.statusCode).toBe(404)
-    expect(missing.body).toBe('no bridge call named drop_everything')
+    expect(missing.body).toBe('no call named drop_everything')
   })
 
   it('answers a preflight check from another origin without a token', async () => {

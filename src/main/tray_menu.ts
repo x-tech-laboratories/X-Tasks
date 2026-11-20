@@ -1,4 +1,5 @@
 import { format_clock } from '@x-tech-laboratories/x-libs/durations'
+import { app_rows, tray_groups, type TrayRow, type TrayView } from '@x-tech-laboratories/x-libs/electron/tray'
 
 // ============================================================================
 // Tray menu
@@ -11,27 +12,26 @@ export interface TrayTimer {
   seconds: number
 }
 
-// One row of the tray's menu: a running timer that opens its task, a command, or a line between groups.
-export type TrayItem =
-  | { kind: 'timer'; label: string; task_id: string }
-  | { kind: 'command'; label: string; command: 'stop_timers' | 'show' | 'quit' | 'quit_completely' }
-  | { kind: 'separator' }
-
-// Each running timer with its time, Stop when any runs, then showing the window, quitting the window and tray, and quitting the daemon too.
-export function tray_items(timers: TrayTimer[]): TrayItem[] {
-  const timer_items = timers.map((timer): TrayItem => ({ kind: 'timer', label: `${timer.title} — ${format_clock(timer.seconds * 1000)}`, task_id: timer.task_id }))
-  const stop_items: TrayItem[] = timers.length === 0 ? [] : [{ kind: 'command', label: timers.length === 1 ? 'Stop timer' : 'Stop every timer', command: 'stop_timers' }, { kind: 'separator' }]
-  return [
-    ...timer_items,
-    ...stop_items,
-    { kind: 'command', label: 'Show X-Tasks', command: 'show' },
-    { kind: 'command', label: 'Quit', command: 'quit' },
-    { kind: 'command', label: 'Quit completely', command: 'quit_completely' }
-  ]
+// What the tray's rows do.
+export interface TrayActions {
+  open_task: (task_id: string) => void
+  stop_timers: () => unknown
+  show: () => void
+  quit: () => void
+  quit_completely: () => void
 }
 
+function timer_label(timer: TrayTimer): string {
+  return `${timer.title} — ${format_clock(timer.seconds * 1000)}`
+}
+
+// Each running timer with its time, Stop when any runs, then showing the window, quitting the window and tray, and quitting the daemon too.
 // The tooltip names the timed tasks and their times, or the app alone when none runs.
-export function tray_tooltip(timers: TrayTimer[]): string {
-  if (timers.length === 0) return 'X-Tasks'
-  return ['X-Tasks', ...timers.map((timer) => `${timer.title} — ${format_clock(timer.seconds * 1000)}`)].join('\n')
+export function tray_view(timers: TrayTimer[], actions: TrayActions): TrayView {
+  const timer_rows = timers.map((timer): TrayRow => ({ kind: 'item', label: timer_label(timer), run: () => actions.open_task(timer.task_id) }))
+  const stop_rows: TrayRow[] = timers.length === 0 ? [] : [{ kind: 'item', label: timers.length === 1 ? 'Stop timer' : 'Stop every timer', run: actions.stop_timers }]
+  return {
+    tooltip: ['X-Tasks', ...timers.map(timer_label)].join('\n'),
+    rows: tray_groups([...timer_rows, ...stop_rows], app_rows({ app_name: 'X-Tasks', show: actions.show, quit: actions.quit, quit_completely: actions.quit_completely }))
+  }
 }
