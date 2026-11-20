@@ -263,10 +263,9 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 /* Board                                                                      */
 /* ========================================================================== */
 
-/* Halon draws the board; X-Tasks lines it up with the header and puts each card's checkbox beside its title. */
-.task_pane > .board { padding: 0 0 var(--space-4); }
+/* Halon draws the board; X-Tasks keeps room under it for the scrollbar and puts each card's checkbox beside its title. */
+.task_pane > .board { padding-bottom: var(--space-4); }
 .task_card_title { display: flex; align-items: flex-start; gap: var(--space-4); }
-.task_card_title:has(+ .board-card-meta:empty) { margin-bottom: 0; }
 .task_card_title input { flex: none; margin: 0; }
 .subtask_count { color: var(--text-secondary); font-size: var(--text-caption); }
 
