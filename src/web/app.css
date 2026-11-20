@@ -38,11 +38,11 @@
 .task_pane { min-width: 0; }
 /* Every layout takes the whole pane; the wide ones scroll inside it. */
 /* A task view fills the main pane without scrolling it; its list, table, board, calendar or chart scrolls instead. */
-body.contained main.task_main:not(.with-side-pane):has(> .main-pane > .task_pane > :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view)) { display: flex; flex-direction: column; padding-bottom: 0; overflow: hidden; }
-body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; padding-bottom: var(--space-7); overflow: hidden; }
-.main-pane > .task_pane:has(> :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+body.contained main.task_main:not(.with-side-pane):has(> .main-pane > .task_pane > :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view)) { display: flex; flex-direction: column; padding-bottom: 0; overflow: hidden; }
+body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; padding-bottom: var(--space-7); overflow: hidden; }
+.main-pane > .task_pane:has(> :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; }
 .task_pane > * { flex: none; }
-.task_pane > :is(.task_list, .table-wrap, .board_view, .calendar_view, .gantt_view) { flex: 1 1 auto; min-height: 0; }
+.task_pane > :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view) { flex: 1 1 auto; min-height: 0; }
 .task_pane > .task_list { flex: 0 1 auto; overflow-y: auto; }
 .task_pane.is_wide.is_table > .table-wrap { flex: 0 1 auto; }
 
@@ -124,8 +124,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .group_heading.is_overdue, tr.group-row.is_overdue th { color: var(--status-danger); }
 
 /* Done and opened rows, the same in the list, the table and the board; Halon tints and picks them. */
-.task.is_done .task_title, .task_row.is_done .task_title, .board_card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
-:where(.task, .board_card).selected:not(.has-tint, .picked) { background: var(--surface-navigation-hover); }
+.task.is_done .task_title, .task_row.is_done .task_title, .board-card.is_done .task_title { color: var(--text-tertiary); text-decoration: line-through; }
+:where(.task, .board-card).selected:not(.has-tint, .picked) { background: var(--surface-navigation-hover); }
 .task.is_dragged, .task_row.is_dragged { opacity: 0.5; }
 
 /* The row that adds the typed task sits above the list, drawn like a task that is not there yet. */
@@ -263,18 +263,10 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 /* Board                                                                      */
 /* ========================================================================== */
 
-.board_view { display: flex; align-items: flex-start; gap: var(--space-5); overflow: auto; padding-bottom: var(--space-4); }
-.board_column { display: flex; flex: none; flex-direction: column; width: 272px; max-height: 100%; border: var(--border-width) solid var(--border-default); border-radius: var(--radius-default); background: var(--surface-secondary); }
-.board_column.is_drop_target { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring); }
-.board_column_heading { display: flex; align-items: baseline; gap: var(--space-4); margin: 0; padding: var(--space-5) var(--space-5) var(--space-4); color: var(--text-heading); font-size: var(--text-control); font-weight: 600; line-height: inherit; }
-.board_column_heading.is_overdue { color: var(--status-danger); }
-.board_cards { display: flex; flex-direction: column; gap: var(--space-4); min-height: var(--row-height); margin: 0; padding: 0 var(--space-4) var(--space-4); overflow-y: auto; list-style: none; }
-.board_card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-small); background: var(--surface-default); box-shadow: var(--shadow-item); cursor: pointer; }
-.board_card:hover { border-color: var(--border-hover); }
-.board_card_title { display: flex; align-items: flex-start; gap: var(--space-4); font-size: var(--text-control); line-height: var(--line-height-ui); }
-.board_card_title input { flex: none; margin: 0; }
-.board_card_details { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.board_card_details:empty { display: none; }
+/* Halon draws the board; X-Tasks keeps room under it for the scrollbar and puts each card's checkbox beside its title. */
+.task_pane > .board { padding-bottom: var(--space-4); }
+.task_card_title { display: flex; align-items: flex-start; gap: var(--space-4); }
+.task_card_title input { flex: none; margin: 0; }
 .subtask_count { color: var(--text-secondary); font-size: var(--text-caption); }
 
 /* ========================================================================== */

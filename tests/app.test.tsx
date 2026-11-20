@@ -114,6 +114,107 @@ describe('the table layout', () => {
 })
 
 // ============================================================================
+// Board
+// ============================================================================
+
+describe('the board layout', () => {
+  const board_card = (title: string) => within(screen.getByRole('grid', { name: 'Board' })).getByText(title).closest('li')!
+  const board_cells = () => within(screen.getByRole('grid', { name: 'Board' })).getAllByRole('gridcell')
+
+  // Starts a drag and lets the board take it up once the browser has pictured the card.
+  async function drag_card(title: string): Promise<void> {
+    fireEvent.dragStart(board_card(title), { dataTransfer: { setData: () => {} } })
+    await act(() => new Promise((resolve) => setTimeout(resolve)))
+  }
+
+  test('moves every picked card dragged together into Done', async () => {
+    const { tasks_api } = await show_app({ task_layout: 'board' })
+
+    fireEvent.click(board_card('Buy milk'), { ctrlKey: true })
+    fireEvent.click(board_card('Write report'), { ctrlKey: true })
+    await drag_card('Buy milk')
+    fireEvent.dragOver(board_cells()[1]!)
+    fireEvent.drop(board_cells()[1]!)
+
+    expect(tasks_api.set_task_done).toHaveBeenCalledWith('milk', true, expect.any(String), expect.anything())
+    expect(tasks_api.set_task_done).toHaveBeenCalledWith('report', true, expect.any(String), expect.anything())
+  })
+
+  test('swaps the tag of a card moved between tag columns', async () => {
+    const { tasks_api } = await show_app({ task_layout: 'board', task_grouping: 'group:context' })
+
+    await drag_card('Buy milk')
+    fireEvent.drop(board_cells()[1]!)
+
+    expect(tasks_api.untag_task).toHaveBeenCalledWith('milk', 'home')
+    expect(tasks_api.tag_task).toHaveBeenCalledWith('milk', 'work')
+  })
+
+  test('tags a card dropped on a tag in the sidebar', async () => {
+    const { tasks_api } = await show_app({ task_layout: 'board' })
+
+    await drag_card('Buy milk')
+    const work_row = within(screen.getByRole('tree', { name: 'Tags' })).getByText('Work').closest('.tree-row')!
+    fireEvent.dragOver(work_row, { dataTransfer: {} })
+    fireEvent.drop(work_row, { dataTransfer: {} })
+
+    expect(tasks_api.tag_task).toHaveBeenCalledWith('milk', 'work')
+  })
+
+  describe('on a phone-sized page', () => {
+    const phone_query = (query: string) =>
+      ({ matches: query.includes('max-width'), media: query, onchange: null, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false }) as MediaQueryList
+    const phone_board = () => screen.getByRole('region', { name: 'Board' })
+    const phone_card = (title: string) => within(phone_board()).getByText(title).closest('li')!
+    const phone_column = (name: string) => within(phone_board()).getByRole('region', { name })
+
+    afterEach(() => vi.restoreAllMocks())
+
+    async function show_phone_board(settings: Parameters<typeof show_app>[0] = {}) {
+      vi.spyOn(window, 'matchMedia').mockImplementation(phone_query)
+      return show_app({ task_layout: 'board', ...settings })
+    }
+
+    async function drag_phone_card(title: string): Promise<void> {
+      fireEvent.dragStart(phone_card(title), { dataTransfer: { setData: () => {} } })
+      await act(() => new Promise((resolve) => setTimeout(resolve)))
+    }
+
+    test('stacks the columns and moves a card dragged onto another one', async () => {
+      const { tasks_api } = await show_phone_board()
+
+      expect(phone_card('Buy milk').draggable).toBe(true)
+      await drag_phone_card('Buy milk')
+      fireEvent.dragOver(phone_column('Done'))
+      expect(phone_column('Done').className).toContain('drop-inside')
+      fireEvent.drop(phone_column('Done'))
+
+      expect(tasks_api.set_task_done).toHaveBeenCalledWith('milk', true, expect.any(String), expect.anything())
+    })
+
+    test('moves a card to the next column with Alt and the down arrow', async () => {
+      const { tasks_api } = await show_phone_board({ task_grouping: 'group:context' })
+
+      fireEvent.keyDown(phone_card('Buy milk'), { key: 'ArrowDown', altKey: true })
+
+      expect(tasks_api.untag_task).toHaveBeenCalledWith('milk', 'home')
+      expect(tasks_api.tag_task).toHaveBeenCalledWith('milk', 'work')
+    })
+
+    test('tags a card dropped on a tag in the sidebar', async () => {
+      const { tasks_api } = await show_phone_board()
+
+      await drag_phone_card('Buy milk')
+      const work_row = within(screen.getByRole('tree', { name: 'Tags' })).getByText('Work').closest('.tree-row')!
+      fireEvent.dragOver(work_row, { dataTransfer: {} })
+      fireEvent.drop(work_row, { dataTransfer: {} })
+
+      expect(tasks_api.tag_task).toHaveBeenCalledWith('milk', 'work')
+    })
+  })
+})
+
+// ============================================================================
 // Removing
 // ============================================================================
 
