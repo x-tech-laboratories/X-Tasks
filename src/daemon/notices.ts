@@ -1,4 +1,5 @@
 import { Notifier } from '@x-tech-laboratories/x-libs/agent/desktop_notify'
+import { keep_giving_scheduled_notices } from '@x-tech-laboratories/x-libs/agent/scheduled_notices'
 
 import { pomodoro_ended_message } from '@shared/pomodoro'
 import { due_reminders, reminder_body } from '@shared/reminders'
@@ -31,8 +32,8 @@ export function keep_giving_notices(host: NoticeHost): () => void {
   const notifier = new Notifier({ app_name: 'X-Tasks', icons: { app: host.icon_path }, on_error: host.on_error })
   const show = (frame: { title: string; body: string; key: string; url?: string }): void => void notifier.show({ ...frame, icon: 'app' })
 
+  const stop_reminders = remind_due_tasks(notifier, host.on_error)
   const timers = [
-    every(REMINDER_CHECK_MS, remind_due_tasks(show)),
     every(BREAK_CHECK_MS, remind_breaks(show)),
     every(POMODORO_CHECK_MS, () => {
       const ended = tick_pomodoro(new Date().toISOString())
@@ -44,6 +45,7 @@ export function keep_giving_notices(host: NoticeHost): () => void {
   ]
   return () => {
     for (const timer of timers) clearInterval(timer)
+    stop_reminders()
     notifier.cancel_all()
   }
 }
@@ -56,21 +58,27 @@ function every(milliseconds: number, check: () => void): ReturnType<typeof setIn
 type Show = (frame: { title: string; body: string; key: string; url?: string }) => void
 
 // Picks up from the last reminder shown, so reminders that fell while the daemon was not running show when it starts, up to half a day late.
-function remind_due_tasks(show: Show): () => void {
-  const saved = Date.parse(get_settings().reminded_until)
-  let checked_until = Number.isNaN(saved) ? Date.now() : saved
-  return () => {
-    const now = Date.now()
-    const settings = get_settings()
-    const after = checked_until
-    checked_until = now
-
-    const reminders = due_reminders(list_tasks(), settings.task_date_field, after, now, settings.reminder_lead_minutes, settings.remind_due_tasks)
-    for (const reminder of reminders) {
-      show({ title: reminder.task.title, body: reminder_body(reminder, settings.task_date_field, now), key: reminder.key, url: task_link(reminder.task.id) })
-    }
-    if (reminders.length > 0) set_setting('reminded_until', new Date(now).toISOString())
-  }
+function remind_due_tasks(notifier: Notifier, on_error: (message: string) => void): () => void {
+  return keep_giving_scheduled_notices({
+    notifier,
+    check_ms: REMINDER_CHECK_MS,
+    due: (after, until) => {
+      const settings = get_settings()
+      return due_reminders(list_tasks(), settings.task_date_field, after, until, settings.reminder_lead_minutes, settings.remind_due_tasks).map((reminder) => ({
+        key: reminder.key,
+        title: reminder.task.title,
+        body: reminder_body(reminder, settings.task_date_field, until),
+        url: task_link(reminder.task.id),
+        icon: 'app'
+      }))
+    },
+    read_checked_until: () => {
+      const saved = Date.parse(get_settings().reminded_until)
+      return Number.isNaN(saved) ? null : saved
+    },
+    write_checked_until: (moment) => set_setting('reminded_until', new Date(moment).toISOString()),
+    on_error: (error) => on_error(error instanceof Error ? error.message : String(error))
+  })
 }
 
 function remind_breaks(show: Show): () => void {

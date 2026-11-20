@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, screen, shell, Tray } from 'electron'
 import { writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, extname, join } from 'node:path'
 import { launch_command, set_autostart } from '@x-tech-laboratories/x-libs/autostart'
 import { certificate_method_names } from '@x-tech-laboratories/x-libs/certificate_protocol'
 import { bring_to_front, first_argument, hold_single_instance } from '@x-tech-laboratories/x-libs/electron/app'
+import { create_app_tray, type AppTray } from '@x-tech-laboratories/x-libs/electron/tray'
 import { create_window } from '@x-tech-laboratories/x-libs/electron/window'
 import { call_daemon, daemon_log_path, daemon_socket_path, follow_daemon_events, start_daemon } from '@x-tech-laboratories/x-libs/local_daemon'
 
@@ -13,7 +14,7 @@ import type { Settings } from '@shared/settings'
 import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link, type Task } from '@shared/tasks'
 import { entry_seconds, running_entries, type TimeEntry } from '@shared/time_tracking'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, HELLO_EVENT } from '@shared/web_api'
-import { apply_tray_setting, is_tray_shown, refresh_tray, stop_tray, type TrayHost } from './tray'
+import { tray_view } from './tray_menu'
 
 // ============================================================================
 // Profile
@@ -75,7 +76,7 @@ function get_settings(): Promise<Settings> {
 async function apply_window_settings(): Promise<void> {
   const settings = await get_settings()
   nativeTheme.themeSource = settings.theme
-  apply_tray_setting(settings.show_tray_icon, tray_host)
+  tray.set_shown(settings.show_tray_icon)
   apply_autostart(settings)
 }
 
@@ -113,7 +114,7 @@ function follow_daemon(): void {
 function announce_change(): void {
   tasks_events.emit(BrowserWindow.getAllWindows(), 'database_changed', null)
   void apply_window_settings().catch(() => undefined)
-  void refresh_tray(tray_host)
+  void tray.refresh()
 }
 
 // ============================================================================
@@ -168,18 +169,23 @@ async function list_tray_timers() {
 
 // The tray brings the window forward, making one again if it was closed, and opens tasks in it as a task link does.
 // Its own changes go without a client id, so the window hears of them.
-const tray_host: TrayHost = {
+const tray: AppTray = create_app_tray({
+  electron: { Tray, Menu, nativeImage },
   icon_path,
-  list_timers: list_tray_timers,
-  stop_timers: () => call_daemon(socket_path, '/api/stop_timer', [new Date().toISOString(), null]).then(() => undefined),
-  show_window: () => void shown_window(),
-  open_task: (task_id) => tasks_events.emit([shown_window()], 'open_task', task_id),
-  quit: () => {
-    is_quitting = true
-    app.quit()
-  },
-  quit_completely: () => void quit_completely()
-}
+  on_click: () => void shown_window(),
+  on_error: (error) => console.error(error),
+  read: async () =>
+    tray_view(await list_tray_timers(), {
+      open_task: (task_id) => tasks_events.emit([shown_window()], 'open_task', task_id),
+      stop_timers: () => call_daemon(socket_path, '/api/stop_timer', [new Date().toISOString(), null]).then(() => tray.refresh()),
+      show: () => void shown_window(),
+      quit: () => {
+        is_quitting = true
+        app.quit()
+      },
+      quit_completely: () => void quit_completely()
+    })
+})
 
 // ============================================================================
 // Task links
@@ -275,12 +281,12 @@ function start_app(): void {
   app.on('will-quit', () => {
     is_quitting = true
     stop_following()
-    stop_tray()
+    tray.stop()
   })
 
   // Closing the window ends only the window, or leaves the app in the tray; the daemon runs on either way.
   app.on('window-all-closed', () => {
-    if (!is_tray_shown()) app.quit()
+    if (!tray.is_shown()) app.quit()
   })
 }
 

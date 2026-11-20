@@ -1,8 +1,9 @@
 import fastify, { type FastifyInstance } from 'fastify'
 
+import { register_call_table } from '@x-tech-laboratories/x-libs/server/call_table'
 import { register_open_cors } from '@x-tech-laboratories/x-libs/server/cors'
 import { EventStream } from '@x-tech-laboratories/x-libs/server/events'
-import { register_error_replies, register_lenient_json_body, send_text } from '@x-tech-laboratories/x-libs/server/replies'
+import { register_error_replies, register_lenient_json_body } from '@x-tech-laboratories/x-libs/server/replies'
 import { register_accounts } from '@x-tech-laboratories/x-libs/server/account_sign_in'
 import { AccountStore } from '@x-tech-laboratories/x-libs/server/account_store'
 import type { Accounts } from '@x-tech-laboratories/x-libs/server/passwords'
@@ -37,9 +38,6 @@ const MAX_BODY_BYTES = 4 * 1024 * 1024
 // A device sending its whole database to replace the server's needs more room.
 const MAX_SYNC_BODY_BYTES = 256 * 1024 * 1024
 
-// Every method a route answers itself; OPTIONS is left to the CORS preflight.
-const ANY_METHOD = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
-
 // Every open page's event stream, told when the data changed.
 export const changes = new EventStream()
 
@@ -55,23 +53,7 @@ function is_read_only(method: string): boolean {
 // Each handler answers a POST to its name, with its arguments as a JSON array; a call that changes anything tells every other open page or window.
 // The desktop app's daemon answers its window the same way.
 export function register_bridge_calls(api: FastifyInstance, handlers: object, stream: EventStream): void {
-  api.route<{ Params: { method: string } }>({ method: [...ANY_METHOD], url: '/:method', handler: async (request, reply) => {
-    const { method } = request.params
-    if (request.method !== 'POST') return send_text(reply, 405, 'use POST')
-    if (!Object.hasOwn(handlers, method)) return send_text(reply, 404, `no bridge call named ${method}`)
-
-    // An empty body means no arguments; anything other than a JSON array is refused.
-    const args: unknown = request.body ?? []
-    if (!Array.isArray(args)) return send_text(reply, 400, 'the body must be a JSON array of arguments')
-
-    const handler = (handlers as Record<string, (...args: unknown[]) => unknown>)[method]!
-    const result = await handler(...args)
-    if (!is_read_only(method)) stream.announce_change(stream.client_id_of(request))
-
-    if (result === undefined) return reply.code(204).send()
-    // Fastify would send a string as bare text, which the caller could not tell from JSON.
-    return reply.type('application/json').send(JSON.stringify(result))
-  } })
+  register_call_table(api, '', handlers, { is_read_only, on_change: (client_id) => stream.announce_change(client_id) })
 }
 
 // Devices sync at api/sync/exchange, snapshot and replace; the server's data is backed up before a device replaces it.
