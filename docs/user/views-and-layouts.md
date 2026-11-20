@@ -35,7 +35,8 @@ The switch at the top of a view shows its tasks in one of five layouts:
   duration, estimate and time spent. Filter by title, date and tag, sort by several columns at once, and show, hide, reorder and resize
   columns. **Scroll the table sideways** keeps column widths instead of shrinking them.
 - **Board** — a column per heading of the view's grouping, or *To do* and *Done* without one. Dragging a card between
-  columns changes its tag, date or done state.
+  columns, or Alt and an arrow key, changes its tag, date or done state. The arrow keys move between cards and Enter
+  opens one. On a phone the columns stand one under another.
 - **Calendar** — month, week or day. Drag a task to move its dates, or pull an edge to change how long it runs.
   **Time slots** and **Time labels** set the step of the week and day views.
 - **Gantt** — a timeline by day, week or month, with arrows for tasks that wait on others. Drag and resize bars to

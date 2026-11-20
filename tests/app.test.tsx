@@ -114,6 +114,55 @@ describe('the table layout', () => {
 })
 
 // ============================================================================
+// Board
+// ============================================================================
+
+describe('the board layout', () => {
+  const board_card = (title: string) => within(screen.getByRole('grid', { name: 'Board' })).getByText(title).closest('li')!
+  const board_cells = () => within(screen.getByRole('grid', { name: 'Board' })).getAllByRole('gridcell')
+
+  // Starts a drag and lets the board take it up once the browser has pictured the card.
+  async function drag_card(title: string): Promise<void> {
+    fireEvent.dragStart(board_card(title), { dataTransfer: { setData: () => {} } })
+    await act(() => new Promise((resolve) => setTimeout(resolve)))
+  }
+
+  test('moves every picked card dragged together into Done', async () => {
+    const { tasks_api } = await show_app({ task_layout: 'board' })
+
+    fireEvent.click(board_card('Buy milk'), { ctrlKey: true })
+    fireEvent.click(board_card('Write report'), { ctrlKey: true })
+    await drag_card('Buy milk')
+    fireEvent.dragOver(board_cells()[1]!)
+    fireEvent.drop(board_cells()[1]!)
+
+    expect(tasks_api.set_task_done).toHaveBeenCalledWith('milk', true, expect.any(String), expect.anything())
+    expect(tasks_api.set_task_done).toHaveBeenCalledWith('report', true, expect.any(String), expect.anything())
+  })
+
+  test('swaps the tag of a card moved between tag columns', async () => {
+    const { tasks_api } = await show_app({ task_layout: 'board', task_grouping: 'group:context' })
+
+    await drag_card('Buy milk')
+    fireEvent.drop(board_cells()[1]!)
+
+    expect(tasks_api.untag_task).toHaveBeenCalledWith('milk', 'home')
+    expect(tasks_api.tag_task).toHaveBeenCalledWith('milk', 'work')
+  })
+
+  test('tags a card dropped on a tag in the sidebar', async () => {
+    const { tasks_api } = await show_app({ task_layout: 'board' })
+
+    await drag_card('Buy milk')
+    const work_row = within(screen.getByRole('tree', { name: 'Tags' })).getByText('Work').closest('.tree-row')!
+    fireEvent.dragOver(work_row, { dataTransfer: {} })
+    fireEvent.drop(work_row, { dataTransfer: {} })
+
+    expect(tasks_api.tag_task).toHaveBeenCalledWith('milk', 'work')
+  })
+})
+
+// ============================================================================
 // Removing
 // ============================================================================
 

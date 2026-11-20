@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type DragEvent, type FormEvent, type MouseEvent } from 'react'
+import { useState, type CSSProperties, type DragEvent, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { set_drag_badge } from '@x-tech-laboratories/x-libs/web/drag'
@@ -87,8 +87,8 @@ export function row_tint_style(task: Task, actions: TaskActions): CSSProperties 
   return tint_tag && (tag_color_style(tint_tag) as CSSProperties)
 }
 
-// A click on a row opens its details, or picks it with Ctrl, Shift or a bulk selection under way; its checkbox and buttons do their own thing.
-export function click_task(task: Task, actions: TaskActions, event: MouseEvent): void {
+// A click or Enter on a row opens its details, or picks it with Ctrl, Shift or a bulk selection under way; its checkbox and buttons do their own thing.
+export function click_task(task: Task, actions: TaskActions, event: MouseEvent | KeyboardEvent): void {
   if ((event.target as HTMLElement).closest('input, button, a')) return
   if (event.shiftKey) actions.on_pick_range(task)
   else if (event.ctrlKey || event.metaKey) actions.on_pick(task, true)

@@ -52,6 +52,9 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Changed
 
+- Draw the board with X-Libs' shared board: arrow keys walk the cards, Enter opens one, Alt and an arrow moves it,
+  a tinted row setting tints the cards too, and phones list the columns one under another
+- Draw the shared look from Halon 0.29 and X-Libs 0.67
 - Date ranges are rules picked from lists: before, after or between points such as now, start of today,
   start of tomorrow or end of this week, with a choice of which ends count
 - Word a relationship's waiting choice as which task depends on the other

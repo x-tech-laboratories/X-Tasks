@@ -245,8 +245,8 @@ matches the same way. **Syntax help** in that menu, and the Syntax section of Se
 ## Board, calendar and Gantt
 
 The switch at the top of a view shows its tasks as a list, a table, a board, a calendar or a Gantt chart. The board
-puts its columns by the view's grouping, or To do and Done without one, and dragging a card between columns changes
-its tag, date or done state. The calendar uses [FullCalendar](https://fullcalendar.io) and the Gantt chart
+puts its columns by the view's grouping, or To do and Done without one, and dragging a card between columns, or Alt
+and an arrow key, changes its tag, date or done state; it is X-Libs' `Board`. The calendar uses [FullCalendar](https://fullcalendar.io) and the Gantt chart
 [Frappe Gantt](https://github.com/frappe/gantt); in both, dragging a task moves its dates and pulling an edge changes
 how long it runs. Each view keeps its own layout, or every view shares one, as Settings › Layout chooses.
 
