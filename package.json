@@ -21,6 +21,7 @@
     "hash-password": "node src/server/hash_password.ts",
     "build:android": "npm run typecheck && vite build -c vite.android.config.ts && cap sync android",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "lint": "oxlint"
   },
   "dependencies": {
@@ -54,6 +55,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
+    "@vitest/coverage-v8": "^5.1.1",
     "electron": "^43.0.0",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
