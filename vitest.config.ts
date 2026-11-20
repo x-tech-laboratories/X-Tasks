@@ -14,6 +14,17 @@ export default defineConfig({
     }
   },
   test: {
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx']
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      thresholds: {
+        autoUpdate: (new_threshold) => Math.floor(new_threshold),
+        lines: 51,
+        statements: 48,
+        functions: 38,
+        branches: 49
+      }
+    }
   }
 })
