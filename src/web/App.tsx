@@ -53,7 +53,7 @@ import {
   EMPTY_TABLE_FILTERS, has_table_filters, ordered_columns, sort_task_tree, tag_ranks, task_passes_filters, without_column_filter, type LastDoneOf, type SortContext, type StreakOf,
   type TableColumn, type TableFilters
 } from './table'
-import { by_position, children_of, in_tree_order, moves_for_drop, subtree_ids, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/tree'
+import { by_position, children_of, in_tree_order, move_for_drop, moves_for_drop, subtree_ids, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/tree'
 import {
   chain_tag_ids_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, my_day_for_new_task, my_day_since, nest_tasks, rule_tags_of, tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type TaskNode, type View
 } from './views'
@@ -105,6 +105,8 @@ export function App({ account }: { account?: SignedInAccount }) {
   // On a phone the sidebar is a drawer over the tasks, open only while this is set.
   const [is_sidebar_open, set_is_sidebar_open] = useState(false)
   const [multibar_text, set_multibar_text] = useState('')
+  // Checklist rows made or moved while searching stay in the results until the bar's text changes, so the row being typed in never vanishes.
+  const [checklist_kept_ids, set_checklist_kept_ids] = useState<string[]>([])
   const [dragged_task, set_dragged_task] = useState<Task | null>(null)
   const [selected_task_id, set_selected_task_id] = useState<string | null>(null)
   // Tasks picked for a bulk action, apart from the one whose details are open.
@@ -916,7 +918,8 @@ export function App({ account }: { account?: SignedInAccount }) {
     // The bar searches every open task, so one can be put into My Day from anywhere.
     const found_tasks = search ? tasks.filter((task) => !task.is_done && query_matches(search.query, task, search_context)) : null
     // Each task found keeps its open subtasks under it.
-    const found_ids = new Set(found_tasks?.flatMap((task) => [...subtree_ids(task.id, tasks)]))
+    const kept_tasks = found_tasks ? tasks.filter((task) => checklist_kept_ids.includes(task.id)) : []
+    const found_ids = new Set(found_tasks && [...found_tasks, ...kept_tasks].flatMap((task) => [...subtree_ids(task.id, tasks)]))
     const found_with_subtasks = tasks.filter((task) => found_ids.has(task.id) && !task.is_done)
     // Enter puts the first task found into My Day, or adds the typed task there when none was found.
     submit_multibar.current = () => {
@@ -927,10 +930,45 @@ export function App({ account }: { account?: SignedInAccount }) {
       set_task_my_day(first_outside, today)
       set_multibar_text('')
     }
+    const keep_in_results = (task_id: string): void => {
+      if (found_tasks) set_checklist_kept_ids((ids) => [...ids, task_id])
+    }
+
+    // Enter adds an empty task right below the row, beside it; one at the top of My Day joins My Day so it shows.
+    const add_checklist_task_after = async (task: Task, is_top: boolean): Promise<Task> => {
+      const parent = tasks.find((each) => each.id === task.parent_id)
+      const tag_ids = parent ? (settings.subtasks_inherit_tags ? parent.tag_ids : []) : tag_ids_for_new_task(selected_view, tags, tag_groups)
+      const added_task = await window.x_tasks.add_task('', task.parent_id, tag_ids, is_top && !found_tasks ? today : null)
+      const move = move_for_drop(added_task, task, 'after', [...tasks_ref.current, added_task])
+      set_tasks((current_tasks) => [...current_tasks, { ...added_task, ...move }].sort(by_position))
+      void window.x_tasks.move_task(added_task.id, move.parent_id, move.position)
+      keep_in_results(added_task.id)
+      return { ...added_task, ...move }
+    }
+
+    const move_checklist_task = (task: Task, target: Task, placement: DropPlacement): void => {
+      const move = move_for_drop(task, target, placement, tasks)
+      set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, ...move } : each)).sort(by_position))
+      void window.x_tasks.move_task(task.id, move.parent_id, move.position)
+      keep_in_results(task.id)
+    }
+
+    // Backspace on an emptied row deletes it, with the usual undo unless it never had a title, as does leaving a new row blank.
+    const remove_checklist_task = (task: Task): void => {
+      const current_task = tasks_ref.current.find((each) => each.id === task.id)
+      if (!current_task) return
+      if (current_task.title !== '') return remove_task(current_task)
+      set_tasks((current_tasks) => current_tasks.filter((each) => each.id !== task.id))
+      void window.x_tasks.remove_task(task.id)
+    }
+
     return (
       <ChecklistPage
         text={multibar_text}
-        on_text={set_multibar_text}
+        on_text={(text) => {
+          set_checklist_kept_ids([])
+          set_multibar_text(text)
+        }}
         on_submit={() => set_multibar_submits((count) => count + 1)}
         quick_add={typed_task}
         found={found_tasks && nest_tasks(found_with_subtasks, tasks)}
@@ -943,6 +981,19 @@ export function App({ account }: { account?: SignedInAccount }) {
         on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
         on_toggle={toggle_task}
         on_add={() => void add_typed_task()}
+        on_rename={rename_task}
+        on_add_after={add_checklist_task_after}
+        on_indent={(task, above) => {
+          // Tab makes the task the last subtask of the row above, opening that row if it was collapsed.
+          if (settings.collapsed_task_ids.includes(above.id)) set_task_collapsed(above, false)
+          move_checklist_task(task, above, 'inside')
+        }}
+        on_outdent={(task, parent, lands_on_top) => {
+          // Shift+Tab puts the task after its parent; one that comes out to the top of My Day joins it so it stays in the list.
+          move_checklist_task(task, parent, 'after')
+          if (lands_on_top && !found_tasks && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
+        }}
+        on_remove={remove_checklist_task}
       />
     )
   }

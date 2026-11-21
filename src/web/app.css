@@ -72,6 +72,10 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .task_list.checklist > .task_item:first-child > .task { border-top: 0; }
 .task_list.checklist .task { cursor: default; }
 .task_list.checklist .task_title { flex: 1; white-space: normal; overflow-wrap: anywhere; }
+/* Each title is a field that reads as plain text, growing a line at a time as it wraps; the row being typed in is marked. */
+.checklist_title { box-sizing: border-box; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; line-height: inherit; resize: none; field-sizing: content; outline: none; }
+.checklist_title::placeholder { color: var(--text-tertiary); }
+.task_list.checklist .task:focus-within { box-shadow: inset 2px 0 0 var(--accent); }
 .checklist_my_day { flex: none; color: var(--text-tertiary); }
 .checklist_my_day.is_added { color: var(--accent); }
 

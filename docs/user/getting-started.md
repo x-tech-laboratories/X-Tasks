@@ -56,6 +56,18 @@ Linux sidebar. Typing searches every open task, each with its open subtasks unde
 it into today's list or takes it out. **Enter** puts the first task found into My Day, or adds what you typed there
 as a new task when nothing matches.
 
+The rows edit like a checklist in a note. Click a title to type into it; it saves when you leave the row.
+
+| Key               | In a row                                                                  |
+| ----------------- | ------------------------------------------------------------------------- |
+| **Enter**         | Adds an empty task below, beside the row; on an empty subtask, unnests it |
+| **Tab**           | Makes the task a subtask of the row above                                 |
+| **Shift+Tab**     | Moves a subtask out to sit after its parent, into My Day at the top level |
+| **Backspace**     | On an empty row, deletes the task, with Undo if it had a title            |
+| **Up** / **Down** | Moves to the row above or below                                           |
+
+A new row left empty is dropped.
+
 ## Android
 
 Download the [latest APK](https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks.apk) and
