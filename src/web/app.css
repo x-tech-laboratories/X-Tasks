@@ -62,6 +62,19 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .focus_subtasks ul { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .focus_subtasks label { display: flex; align-items: center; gap: var(--space-3); }
 
+/* The checklist page, for a narrow strip: the bar on top, then a plain list of checkboxes, each row's title wrapping rather than cut off. */
+.checklist_page { display: flex; flex-direction: column; gap: var(--space-5); box-sizing: border-box; min-height: 100dvh; padding: var(--space-5); }
+.checklist_page .multibar { flex: none; min-width: 0; }
+.checklist_page .add_task_row { margin-bottom: 0; }
+.checklist_heading { display: flex; flex-direction: column; margin: 0; color: var(--text-heading); font-size: var(--text-h3); }
+.checklist_subtitle { color: var(--text-secondary); font-size: var(--text-caption); font-weight: 400; }
+.task_list.checklist { overflow: hidden; border: var(--border-width) solid var(--border-default); border-radius: var(--radius-default); background: var(--surface-default); }
+.task_list.checklist > .task_item:first-child > .task { border-top: 0; }
+.task_list.checklist .task { cursor: default; }
+.task_list.checklist .task_title { flex: 1; white-space: normal; overflow-wrap: anywhere; }
+.checklist_my_day { flex: none; color: var(--text-tertiary); }
+.checklist_my_day.is_added { color: var(--accent); }
+
 /* The worklog: a week picked above a grid of each task's time per day, its totals along the foot. */
 .worklog_stepper { margin-bottom: var(--space-6); }
 .worklog_week { min-width: 11em; text-align: center; font-variant-numeric: tabular-nums; }

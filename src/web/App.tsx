@@ -42,6 +42,7 @@ import { TaskTable } from './TaskTable'
 import { WorklogPage } from './WorklogPage'
 import { AwayDialog, PomodoroChip, TimerBar } from './TimeTracking'
 import { FocusView } from './FocusView'
+import { ChecklistPage } from './ChecklistPage'
 import { pomodoro_ended_message, pomodoro_seconds, type PomodoroState } from '@shared/pomodoro'
 import { FRESH_IDLE_WATCH, step_idle_watch, type AwaySpan } from './idle'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
@@ -98,6 +99,8 @@ export function App({ account }: { account?: SignedInAccount }) {
   const running_timers = running_entries(time_entries, settings?.allow_several_timers ?? false)
   const is_timing = (task: Task): boolean => running_timers.some((entry) => entry.task_id === task.id)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
+  // ?checklist in the address shows only the checklist page, kept on My Day.
+  const [is_checklist] = useState(() => new URLSearchParams(window.location.search).has('checklist'))
   const [is_settings_open, set_is_settings_open] = useState(false)
   // On a phone the sidebar is a drawer over the tasks, open only while this is set.
   const [is_sidebar_open, set_is_sidebar_open] = useState(false)
@@ -153,7 +156,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
-      set_selected_view(view_from_address(window.location.search, loaded_tags) ?? launch_view(loaded_settings, loaded_tags))
+      set_selected_view(is_checklist ? { kind: 'my_day' } : (view_from_address(window.location.search, loaded_tags) ?? launch_view(loaded_settings, loaded_tags)))
       // A main process older than this screen leaves out newer settings, so their defaults fill the gaps.
       set_settings({ ...DEFAULT_SETTINGS, ...loaded_settings })
     })
@@ -908,6 +911,41 @@ export function App({ account }: { account?: SignedInAccount }) {
   const searched_tasks = settings.search_scope === 'all' ? tasks : view_tasks
   const visible_tasks = search ? searched_tasks.filter((task) => query_matches(search.query, task, search_context)) : view_tasks
   const remaining_count = visible_tasks.filter((task) => !task.is_done).length
+
+  if (is_checklist) {
+    // The bar searches every open task, so one can be put into My Day from anywhere.
+    const found_tasks = search ? tasks.filter((task) => !task.is_done && query_matches(search.query, task, search_context)) : null
+    // Each task found keeps its open subtasks under it.
+    const found_ids = new Set(found_tasks?.flatMap((task) => [...subtree_ids(task.id, tasks)]))
+    const found_with_subtasks = tasks.filter((task) => found_ids.has(task.id) && !task.is_done)
+    // Enter puts the first task found into My Day, or adds the typed task there when none was found.
+    submit_multibar.current = () => {
+      if (!found_tasks) return
+      if (found_tasks.length === 0) return void add_typed_task()
+      const first_outside = found_tasks.find((task) => !is_in_my_day(task, shown_since))
+      if (!first_outside) return
+      set_task_my_day(first_outside, today)
+      set_multibar_text('')
+    }
+    return (
+      <ChecklistPage
+        text={multibar_text}
+        on_text={set_multibar_text}
+        on_submit={() => set_multibar_submits((count) => count + 1)}
+        quick_add={typed_task}
+        found={found_tasks && nest_tasks(found_with_subtasks, tasks)}
+        my_day={nest_tasks(view_tasks, tasks)}
+        today={today}
+        tags={tags}
+        collapsed_ids={settings.collapsed_task_ids}
+        on_set_collapsed={set_task_collapsed}
+        is_in_my_day={(task) => is_in_my_day(task, shown_since)}
+        on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
+        on_toggle={toggle_task}
+        on_add={() => void add_typed_task()}
+      />
+    )
+  }
   const spent_seconds_of = (task: Task): number => total_seconds(task_entries(time_entries, task.id), parse_local(now))
   // Estimated time left on the open tasks shown, and in My Day the time spent today on any task.
   const estimate_left = estimate_left_seconds(visible_tasks, time_entries, parse_local(now))
