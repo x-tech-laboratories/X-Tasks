@@ -153,10 +153,12 @@ one: a built-in view such as `?view=my_day`, `upcoming`, `all`, `active`, `compl
 
 ### In the Linux sidebar
 
-The [linux-sidebar](https://github.com/BeatLink/linux-sidebar) `web` plugin shows the whole app in a
-docked strip: set its address to the server with `?view=my_day`. The page then takes the sidebar's
-colours and font from the `--sidebar-*` CSS variables the plugin hands it, and below 700 pixels it
-uses the phone layout, where each task's date and tags wrap onto the lines below its title.
+The [linux-sidebar](https://github.com/BeatLink/linux-sidebar) `web` plugin shows the app in a
+docked strip. Set its address to the server with `?checklist` for a page holding only a search bar and My Day as
+checkboxes: typing searches every open task, **+ My Day** puts one into today's list, and **Enter** puts the first one
+found there, or adds the typed task to My Day when nothing matches. `?view=my_day` shows the whole app instead.
+Either way the page takes the sidebar's colours and font from the `--sidebar-*` CSS variables the plugin hands it,
+and the whole app below 700 pixels uses the phone layout, where each task's date and tags wrap under its title.
 
 ## Sync
 

@@ -51,6 +51,10 @@ You can open a particular view straight from the address by adding `?view=`:
 | `?view=reports`               | Reports                                |
 | `?view=Work,Home`             | The tasks tagged Work and Home         |
 
+`?checklist` opens a page with nothing but a search bar and My Day as checkboxes, made for a narrow strip such as the
+Linux sidebar. Typing searches every open task, and **+ My Day** on a row puts it into today's list. **Enter** puts the
+first task found into My Day, or adds what you typed there as a new task when nothing matches.
+
 ## Android
 
 Download the [latest APK](https://github.com/x-tech-laboratories/X-Tasks/releases/latest/download/x-tasks.apk) and
