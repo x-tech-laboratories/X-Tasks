@@ -44,8 +44,8 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     }),
     list_tag_groups: vi.fn(async () => data.tag_groups ?? []),
     list_tags: vi.fn(async () => data.tags ?? []),
-    add_task: vi.fn(async (title: string, parent_id: string | null, tag_ids: string[]) => {
-      const task = make_task({ id: `added-${tasks.length}`, title, parent_id, tag_ids, position: tasks.length + 1 })
+    add_task: vi.fn(async (title: string, parent_id: string | null, tag_ids: string[], my_day_on: string | null = null) => {
+      const task = make_task({ id: `added-${tasks.length}`, title, parent_id, tag_ids, my_day_on, position: tasks.length + 1 })
       tasks.push(task)
       return task
     }),
@@ -59,6 +59,7 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     set_task_notes: vi.fn(async () => undefined),
     set_task_schedule: vi.fn(async () => undefined),
     move_task: vi.fn(async () => undefined),
+    set_task_title: vi.fn(async () => undefined),
     move_tag: vi.fn(async () => undefined),
     move_tag_group: vi.fn(async () => undefined),
     on_database_changed: () => () => undefined
