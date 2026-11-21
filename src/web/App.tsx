@@ -915,6 +915,9 @@ export function App({ account }: { account?: SignedInAccount }) {
   if (is_checklist) {
     // The bar searches every open task, so one can be put into My Day from anywhere.
     const found_tasks = search ? tasks.filter((task) => !task.is_done && query_matches(search.query, task, search_context)) : null
+    // Each task found keeps its open subtasks under it.
+    const found_ids = new Set(found_tasks?.flatMap((task) => [...subtree_ids(task.id, tasks)]))
+    const found_with_subtasks = tasks.filter((task) => found_ids.has(task.id) && !task.is_done)
     // Enter puts the first task found into My Day, or adds the typed task there when none was found.
     submit_multibar.current = () => {
       if (!found_tasks) return
@@ -930,10 +933,12 @@ export function App({ account }: { account?: SignedInAccount }) {
         on_text={set_multibar_text}
         on_submit={() => set_multibar_submits((count) => count + 1)}
         quick_add={typed_task}
-        found_tasks={found_tasks}
+        found={found_tasks && nest_tasks(found_with_subtasks, tasks)}
         my_day={nest_tasks(view_tasks, tasks)}
         today={today}
         tags={tags}
+        collapsed_ids={settings.collapsed_task_ids}
+        on_set_collapsed={set_task_collapsed}
         is_in_my_day={(task) => is_in_my_day(task, shown_since)}
         on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
         on_toggle={toggle_task}

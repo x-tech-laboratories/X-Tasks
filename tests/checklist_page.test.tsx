@@ -24,11 +24,13 @@ const tasks = [
   make_task({ id: 'milk', title: 'Buy milk', position: 1, my_day_on: today }),
   make_task({ id: 'eggs', title: 'Buy eggs', parent_id: 'milk', position: 1 }),
   make_task({ id: 'report', title: 'Write report', position: 2 }),
+  make_task({ id: 'intro', title: 'Draft the intro', parent_id: 'report', position: 1 }),
+  make_task({ id: 'sources', title: 'List sources', parent_id: 'report', position: 2, is_done: true }),
   make_task({ id: 'bread', title: 'Buy bread', position: 3, is_done: true })
 ]
 
-async function show_checklist() {
-  const bridge = install_fake_bridge({ tasks: tasks.map((task) => ({ ...task })), tags: [], tag_groups: [], settings: { launch_view: 'all' } })
+async function show_checklist(settings: Parameters<typeof install_fake_bridge>[0]['settings'] = {}) {
+  const bridge = install_fake_bridge({ tasks: tasks.map((task) => ({ ...task })), tags: [], tag_groups: [], settings: { launch_view: 'all', ...settings } })
   render(<App />)
   await screen.findByRole('heading', { name: /My Day/ })
   await act(async () => {})
@@ -49,7 +51,7 @@ describe('the checklist page', () => {
   test('shows My Day as checkboxes, subtasks under their parent, and nothing of the full app', async () => {
     await show_checklist()
 
-    const list = screen.getByRole('list')
+    const list = screen.getAllByRole('list')[0]!
     expect(within(list).getByText('Buy milk')).toBeTruthy()
     expect(within(list).getByText('Buy eggs')).toBeTruthy()
     expect(within(list).queryByText('Write report')).toBeNull()
@@ -71,7 +73,7 @@ describe('the checklist page', () => {
     type_in_bar('report')
     const row = (await screen.findByText('Write report')).closest('li')!
     expect(screen.queryByText('Buy bread')).toBeNull()
-    fireEvent.click(within(row).getByRole('button', { name: '+ My Day' }))
+    fireEvent.click(within(row).getAllByRole('button', { name: 'Add to My Day' })[0]!)
 
     expect(tasks_api.set_task_my_day).toHaveBeenCalledWith('report', today)
   })
@@ -96,6 +98,28 @@ describe('the checklist page', () => {
 
     await act(async () => {})
     expect(tasks_api.add_task).toHaveBeenCalledWith('Call the plumber', null, [], today)
+  })
+
+  test('a task found keeps its open subtasks under it', async () => {
+    await show_checklist()
+
+    type_in_bar('report')
+    const row = (await screen.findByText('Write report')).closest('li')!
+
+    expect(within(row).getByText('Draft the intro')).toBeTruthy()
+    expect(within(row).queryByText('List sources')).toBeNull()
+  })
+
+  test('the chevron collapses a task with subtasks, and a collapsed one shows none', async () => {
+    const { settings_api } = await show_checklist()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }))
+    expect(settings_api.set_setting).toHaveBeenCalledWith('collapsed_task_ids', ['milk'])
+
+    cleanup()
+    await show_checklist({ collapsed_task_ids: ['milk'] })
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeTruthy()
+    expect(screen.queryByText('Buy eggs')).toBeNull()
   })
 
   test('a task put into My Day can be taken out', async () => {

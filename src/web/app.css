@@ -72,7 +72,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .task_list.checklist > .task_item:first-child > .task { border-top: 0; }
 .task_list.checklist .task { cursor: default; }
 .task_list.checklist .task_title { flex: 1; white-space: normal; overflow-wrap: anywhere; }
-.checklist_my_day { flex: none; }
+.checklist_my_day { flex: none; color: var(--text-tertiary); }
+.checklist_my_day.is_added { color: var(--accent); }
 
 /* The worklog: a week picked above a grid of each task's time per day, its totals along the foot. */
 .worklog_stepper { margin-bottom: var(--space-6); }
