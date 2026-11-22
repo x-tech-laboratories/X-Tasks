@@ -7,7 +7,10 @@
 /* The theme button sits in the sidebar's foot instead. */
 .topbar > #theme { display: none; }
 
-/* The bar takes the rest of the top bar, keeping room to type beside running timers. */
+/* The bar and running timers share one box heading the main pane, so a timer started with a task open never lands after the task details' header. */
+.main_tools { display: flex; flex: 1; align-items: center; gap: var(--space-4); min-width: 0; }
+
+/* The bar takes the rest of the main pane's header, keeping room to type beside running timers. */
 .multibar { display: flex; flex: 1; align-items: center; gap: var(--space-4); min-width: min(16em, 40%); }
 .multibar input.filter { flex: 1; min-width: 0; }
 

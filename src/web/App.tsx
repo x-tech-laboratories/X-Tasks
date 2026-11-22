@@ -1534,7 +1534,7 @@ export function App({ account }: { account?: SignedInAccount }) {
       on_logout={account?.sign_out}
       theme={theme}
       tools={
-        <>
+        <div className="main_tools">
           {multibar}
           {pomodoro && focus_task_id !== pomodoro.task_id && (
             <PomodoroChip pomodoro={pomodoro} phase_seconds={pomodoro_phase_seconds} on_open={() => set_focus_task_id(pomodoro.task_id)} />
@@ -1549,7 +1549,7 @@ export function App({ account }: { account?: SignedInAccount }) {
               on_stop={() => stop_task_timer({ id: entry.task_id })}
             />
           ))}
-        </>
+        </div>
       }
       sidebar={sidebar}
       sidebar_foot={<SidebarFoot on_open_settings={open_settings} />}
