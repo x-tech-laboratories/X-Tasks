@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        electron = pkgs.electron_43;
+        electron = pkgs.electron_45;
         nodejs = pkgs.nodejs_24;
 
         # The Android SDK is unfree and needs its license accepted, so only the Android shells use this package set.
