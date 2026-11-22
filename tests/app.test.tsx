@@ -295,6 +295,20 @@ describe('the timer', () => {
     expect(tasks_api.stop_timer).toHaveBeenCalled()
   })
 
+  test('started with a task open, sits beside the search bar, ahead of the task details header', async () => {
+    await show_app()
+    fireEvent.click(screen.getByText('Buy milk'))
+    const header = document.querySelector('.topbar > .task_detail_header')!
+    expect(header).toBeTruthy()
+
+    const row = screen.getAllByText('Buy milk').map((each) => each.closest('.task')).find(Boolean) as HTMLElement
+    fireEvent.click(within(row).getByRole('button', { name: 'Start timer' }))
+
+    const timer = await screen.findByRole('status', { name: 'Running timer' })
+    expect(timer.parentElement).toBe(document.querySelector('.multibar')!.parentElement)
+    expect(timer.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   test('keeps the first timer running when several are allowed, each stopped on its own', async () => {
     const { tasks_api } = await show_app({ allow_several_timers: true })
     const row_of = (title: string) => screen.getAllByText(title).map((each) => each.closest('.task')).find(Boolean) as HTMLElement

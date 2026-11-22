@@ -77,6 +77,7 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 - Tables and task views fit the pane; the phone sidebar runs from the top bar to the bottom of the
   screen
 - Stop tracking a `node_modules` symlink
+- A timer started with a task open stays beside the search bar instead of landing after the task details header
 
 ## 0.2.0 — 2026-11-07
 
