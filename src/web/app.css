@@ -131,6 +131,8 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 /* The title keeps some room, so a crowded row cuts off its last chips rather than the title. */
 .task_title_cell { display: flex; flex: 1; align-items: center; gap: var(--space-3); min-width: min(8em, 40%); }
 .task_title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* In the list the title fills its cell, so the marks after it line up on the right beside the date and tags. */
+.task .task_title { flex: 1; }
 .task_row_end { display: flex; flex: none; align-items: center; gap: var(--space-2); }
 .task_mark { flex: none; color: var(--text-tertiary); font-size: var(--text-caption); }
 .repeat_marker { flex: none; width: 16px; color: var(--text-tertiary); font-size: var(--text-caption); text-align: center; }
