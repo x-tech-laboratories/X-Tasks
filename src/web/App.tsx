@@ -46,7 +46,7 @@ import { ChecklistPage } from './ChecklistPage'
 import { pomodoro_ended_message, pomodoro_seconds, type PomodoroState } from '@shared/pomodoro'
 import { FRESH_IDLE_WATCH, step_idle_watch, type AwaySpan } from './idle'
 import { coming_repeats, group_by_date, is_within_ranges, range_of, shown_ranges } from './dates'
-import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, with_view_grouping } from './grouping'
+import { group_by_tag, grouping_choices, grouping_tag_group, saved_grouping, view_key, view_of_key, with_view_grouping } from './grouping'
 import { format_local, parse_local } from '@x-tech-laboratories/x-libs/dates'
 import { next_schedule, overdue_repeat_schedule, recurrence_anchor, rescheduled, task_date_of, with_recurrence } from '@shared/schedule'
 import {
@@ -55,7 +55,7 @@ import {
 } from './table'
 import { by_position, children_of, in_tree_order, move_for_drop, moves_for_drop, subtree_ids, type DropPlacement, type TreeMove } from '@x-tech-laboratories/x-libs/web/tree'
 import {
-  chain_tag_ids_of, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, my_day_for_new_task, my_day_since, nest_tasks, rule_tags_of, tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type TaskNode, type View
+  CHECKLIST_VIEW_KINDS, chain_tag_ids_of, checklist_view, comes_due_between, falls_after_today, is_due_by, is_in_my_day, launch_view, my_day_for_new_task, my_day_since, nest_tasks, rule_tags_of, tag_ids_for_new_task, tag_path, task_is_in_view, view_from_address, view_title, view_with_tag_toggled, view_without_tags, type TaskNode, type View
 } from './views'
 
 // ============================================================================
@@ -99,7 +99,7 @@ export function App({ account }: { account?: SignedInAccount }) {
   const running_timers = running_entries(time_entries, settings?.allow_several_timers ?? false)
   const is_timing = (task: Task): boolean => running_timers.some((entry) => entry.task_id === task.id)
   const [selected_view, set_selected_view] = useState<View>({ kind: 'all' })
-  // ?checklist in the address shows only the checklist page, kept on My Day.
+  // ?checklist in the address shows only the checklist page, on the view picked in its heading.
   const [is_checklist] = useState(() => new URLSearchParams(window.location.search).has('checklist'))
   const [is_settings_open, set_is_settings_open] = useState(false)
   // On a phone the sidebar is a drawer over the tasks, open only while this is set.
@@ -158,7 +158,9 @@ export function App({ account }: { account?: SignedInAccount }) {
     void window.x_tasks.list_tag_groups().then(set_tag_groups)
     void Promise.all([window.x_tasks.list_tags(), window.x_settings.get_settings()]).then(([loaded_tags, loaded_settings]) => {
       set_tags(loaded_tags)
-      set_selected_view(is_checklist ? { kind: 'my_day' } : (view_from_address(window.location.search, loaded_tags) ?? launch_view(loaded_settings, loaded_tags)))
+      const addressed_view = view_from_address(window.location.search, loaded_tags)
+      const checklist_settings = is_checklist ? { ...DEFAULT_SETTINGS, ...loaded_settings, ...(addressed_view && { checklist_view: addressed_view }) } : null
+      set_selected_view(checklist_settings ? checklist_view(checklist_settings, loaded_tags) : (addressed_view ?? launch_view(loaded_settings, loaded_tags)))
       // A main process older than this screen leaves out newer settings, so their defaults fill the gaps.
       set_settings({ ...DEFAULT_SETTINGS, ...loaded_settings })
     })
@@ -938,7 +940,7 @@ export function App({ account }: { account?: SignedInAccount }) {
     const add_checklist_task_after = async (task: Task, is_top: boolean): Promise<Task> => {
       const parent = tasks.find((each) => each.id === task.parent_id)
       const tag_ids = parent ? (settings.subtasks_inherit_tags ? parent.tag_ids : []) : tag_ids_for_new_task(selected_view, tags, tag_groups)
-      const added_task = await window.x_tasks.add_task('', task.parent_id, tag_ids, is_top && !found_tasks ? today : null)
+      const added_task = await window.x_tasks.add_task('', task.parent_id, tag_ids, is_top && !found_tasks ? my_day_for_new_task(selected_view, today) : null)
       const move = move_for_drop(added_task, task, 'after', [...tasks_ref.current, added_task])
       set_tasks((current_tasks) => [...current_tasks, { ...added_task, ...move }].sort(by_position))
       void window.x_tasks.move_task(added_task.id, move.parent_id, move.position)
@@ -951,6 +953,21 @@ export function App({ account }: { account?: SignedInAccount }) {
       set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, ...move } : each)).sort(by_position))
       void window.x_tasks.move_task(task.id, move.parent_id, move.position)
       keep_in_results(task.id)
+    }
+
+    // A task dragged out to the top of My Day joins it, so it stays in the list.
+    const drop_checklist_task = (task: Task, target: Task, placement: DropPlacement): void => {
+      if (subtree_ids(task.id, tasks).has(target.id)) return
+      move_checklist_task(task, target, placement)
+      const lands_on_top = placement !== 'inside' && target.parent_id === null
+      if (lands_on_top && selected_view.kind === 'my_day' && !found_tasks && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
+    }
+
+    // The heading picks the view by its key, offering the plain views and then each tag.
+    const select_checklist_view = (key: string): void => {
+      const view = view_of_key(key)
+      set_selected_view(view)
+      void change_setting('checklist_view', view)
     }
 
     // Backspace on an emptied row deletes it, with the usual undo unless it never had a title, as does leaving a new row blank.
@@ -972,7 +989,12 @@ export function App({ account }: { account?: SignedInAccount }) {
         on_submit={() => set_multibar_submits((count) => count + 1)}
         quick_add={typed_task}
         found={found_tasks && nest_tasks(found_with_subtasks, tasks)}
-        my_day={nest_tasks(view_tasks, tasks)}
+        listed={nest_tasks(view_tasks, tasks)}
+        view_key={view_key(selected_view)}
+        view_choices={CHECKLIST_VIEW_KINDS.map((kind) => [kind, view_title({ kind } as View, tags)])}
+        tag_choices={[...tags].sort((first, second) => tag_path(first, tags).localeCompare(tag_path(second, tags))).map((tag) => [view_key({ kind: 'tag', tag_ids: [tag.id] }), tag_path(tag, tags)])}
+        current_title={view_title(selected_view, tags)}
+        on_select_view={select_checklist_view}
         today={today}
         tags={tags}
         collapsed_ids={settings.collapsed_task_ids}
@@ -991,8 +1013,9 @@ export function App({ account }: { account?: SignedInAccount }) {
         on_outdent={(task, parent, lands_on_top) => {
           // Shift+Tab puts the task after its parent; one that comes out to the top of My Day joins it so it stays in the list.
           move_checklist_task(task, parent, 'after')
-          if (lands_on_top && !found_tasks && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
+          if (lands_on_top && selected_view.kind === 'my_day' && !found_tasks && !is_in_my_day(task, shown_since)) set_task_my_day(task, today)
         }}
+        on_move={drop_checklist_task}
         on_remove={remove_checklist_task}
       />
     )

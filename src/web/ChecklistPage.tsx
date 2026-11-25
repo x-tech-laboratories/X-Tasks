@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { SearchBox } from '@x-tech-laboratories/x-libs/web/react/controls'
+import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
+import { SearchBox, Select } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Toasts } from '@x-tech-laboratories/x-libs/web/react/toasts'
-import { ChevronDownIcon, ChevronRightIcon, Icon, SunIcon } from '@x-tech-laboratories/x-libs/web/react/icons'
+import { ChevronDownIcon, ChevronRightIcon, DragIcon, Icon, SunIcon } from '@x-tech-laboratories/x-libs/web/react/icons'
 import { cx } from '@x-tech-laboratories/x-libs/web/dom'
 import { parse_local } from '@x-tech-laboratories/x-libs/dates'
+import { placement_at, type DropPlacement } from '@x-tech-laboratories/x-libs/web/tree'
 import type { Tag, Task } from '@shared/tasks'
 import { AddTaskRow } from './SyntaxHelp'
 import type { QuickAdd } from './syntax'
@@ -13,8 +14,8 @@ import type { TaskNode } from './views'
 // Checklist page
 // ============================================================================
 
-// The page opened with ?checklist, for a narrow strip such as the Linux sidebar: one bar that searches and adds, and My Day as checkboxes.
-// The rows edit like a checklist in a note: titles are typed into in place, Enter adds a row below, Tab and Shift+Tab nest and unnest, Backspace on an empty row deletes it.
+// The page opened with ?checklist, for a narrow strip such as the Linux sidebar: one bar that searches and adds, and a view picked in the heading as checkboxes.
+// The rows edit like a checklist in a note: titles are typed into in place, Enter adds a row below, Tab and Shift+Tab nest and unnest, Backspace on an empty row deletes it, and the grip drags a row.
 export interface ChecklistPageProps {
   text: string
   on_text: (text: string) => void
@@ -22,7 +23,13 @@ export interface ChecklistPageProps {
   // The task the typed text would add, and the open tasks it found with their open subtasks; both null while nothing is typed.
   quick_add: QuickAdd | null
   found: TaskNode[] | null
-  my_day: TaskNode[]
+  listed: TaskNode[]
+  // The picked view as a key, the plain views and the tags offered for it as key and name, and the picked view's name.
+  view_key: string
+  view_choices: [string, string][]
+  tag_choices: [string, string][]
+  current_title: string
+  on_select_view: (key: string) => void
   today: string
   tags: Tag[]
   collapsed_ids: string[]
@@ -37,6 +44,8 @@ export interface ChecklistPageProps {
   on_indent: (task: Task, above: Task) => void
   // lands_on_top says the task comes out to the top of the list.
   on_outdent: (task: Task, parent: Task, lands_on_top: boolean) => void
+  // Drops a dragged task before, inside or after another.
+  on_move: (task: Task, target: Task, placement: DropPlacement) => void
   on_remove: (task: Task) => void
 }
 
@@ -51,6 +60,8 @@ interface Editor {
   open_ids: string[]
   inputs: Map<string, HTMLTextAreaElement>
   focus: (target: FocusTarget) => void
+  dragged: TaskNode | null
+  set_dragged: (node: TaskNode | null) => void
 }
 
 // The row to type in next, with the caret at a character or at the end.
@@ -60,15 +71,16 @@ interface FocusTarget {
 }
 
 export function ChecklistPage(props: ChecklistPageProps) {
-  const { text, on_text, on_submit, quick_add, found, my_day, today, tags, on_add } = props
-  const left_count = all_tasks_in(my_day).filter((task) => !task.is_done).length
-  const shown = found ?? my_day
+  const { text, on_text, on_submit, quick_add, found, listed, today, tags, on_add, view_key } = props
+  const left_count = all_tasks_in(listed).filter((task) => !task.is_done).length
+  const shown = found ?? listed
   const [focus_target, set_focus_target] = useState<FocusTarget | null>(null)
+  const [dragged, set_dragged] = useState<TaskNode | null>(null)
   const inputs = useRef(new Map<string, HTMLTextAreaElement>())
   const place_of = new Map<string, Place>()
   const open_ids: string[] = []
   place_rows(shown, null, props.collapsed_ids, place_of, open_ids)
-  const editor: Editor = { place_of, open_ids, inputs: inputs.current, focus: set_focus_target }
+  const editor: Editor = { place_of, open_ids, inputs: inputs.current, focus: set_focus_target, dragged, set_dragged }
 
   // A row moved or added draws anew, so the caret goes into it once it is on screen, before a blur on the old one is looked at.
   useLayoutEffect(() => {
@@ -99,17 +111,19 @@ export function ChecklistPage(props: ChecklistPageProps) {
       ) : (
         <>
           <h1 className="checklist_heading">
-            My Day
+            <span className="checklist_view">
+              <Select bare label="View" options={props.view_choices} groups={[{ label: 'Tags', options: props.tag_choices }]} value={view_key} on_change={props.on_select_view} />
+            </span>
             <span className="checklist_subtitle">
               {parse_local(today).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · {left_count} left
             </span>
           </h1>
           <ul className="task_list checklist">
-            {my_day.map((node) => (
+            {listed.map((node) => (
               <ChecklistRow key={node.task.id} node={node} editor={editor} {...props} />
             ))}
           </ul>
-          {my_day.length === 0 && <p className="empty">Nothing in My Day yet. Search above to add tasks.</p>}
+          {listed.length === 0 && <p className="empty">{view_key === 'my_day' ? 'Nothing in My Day yet. Search above to add tasks.' : `No open tasks in ${props.current_title}.`}</p>}
         </>
       )}
       {/* The page stands without the app's shell, so it shows the Undo after a deletion itself. */}
@@ -118,16 +132,56 @@ export function ChecklistPage(props: ChecklistPageProps) {
   )
 }
 
-// A chevron when the task has subtasks, its checkbox and title, then the sun that puts it into My Day or takes it out.
+// A grip to drag it by, a chevron when the task has subtasks, its checkbox and title, then the sun that puts it into My Day or takes it out.
 function ChecklistRow(props: ChecklistPageProps & { node: TaskNode; editor: Editor }) {
-  const { node, collapsed_ids, is_in_my_day, on_set_my_day, on_set_collapsed, on_toggle } = props
+  const { node, editor, collapsed_ids, is_in_my_day, on_set_my_day, on_set_collapsed, on_toggle, on_move } = props
   const { task, children } = node
   const is_collapsed = collapsed_ids.includes(task.id)
   const is_added = is_in_my_day(task)
+  const [shown_placement, set_shown_placement] = useState<DropPlacement | null>(null)
+  const row = useRef<HTMLDivElement>(null)
+  const can_drop_here = editor.dragged !== null && !all_tasks_in([editor.dragged]).some((each) => each.id === task.id)
+
+  function start_drag(event: DragEvent): void {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', task.title)
+    if (row.current) event.dataTransfer.setDragImage(row.current, 0, row.current.offsetHeight / 2)
+    editor.set_dragged(node)
+  }
+
+  function placement_of(event: DragEvent): DropPlacement {
+    const box = event.currentTarget.getBoundingClientRect()
+    return placement_at(box.height > 0 ? (event.clientY - box.top) / box.height : 0.5, true)
+  }
+
+  function drag_over(event: DragEvent): void {
+    if (!can_drop_here) return
+    event.preventDefault()
+    set_shown_placement(placement_of(event))
+  }
+
+  function drop(event: DragEvent): void {
+    event.preventDefault()
+    set_shown_placement(null)
+    if (!editor.dragged || !can_drop_here) return
+    const placement = placement_of(event)
+    if (placement === 'inside' && is_collapsed) on_set_collapsed(task, false)
+    on_move(editor.dragged.task, task, placement)
+    editor.set_dragged(null)
+  }
 
   return (
     <li className="task_item">
-      <div className={cx('task', task.is_done && 'is_done')}>
+      <div
+        ref={row}
+        className={cx('task', task.is_done && 'is_done', editor.dragged?.task.id === task.id && 'is_dragged', shown_placement && `drop-${shown_placement}`)}
+        onDragOver={drag_over}
+        onDragLeave={() => set_shown_placement(null)}
+        onDrop={drop}
+      >
+        <span className="checklist_grip" draggable onDragStart={start_drag} onDragEnd={() => editor.set_dragged(null)} title="Drag to move" aria-hidden="true">
+          <Icon icon={DragIcon} />
+        </span>
         {children.length > 0 ? (
           <button type="button" className="icon tree-toggle" onClick={() => on_set_collapsed(task, !is_collapsed)} aria-label={is_collapsed ? 'Expand' : 'Collapse'} aria-expanded={!is_collapsed}>
             <Icon icon={is_collapsed ? ChevronRightIcon : ChevronDownIcon} />

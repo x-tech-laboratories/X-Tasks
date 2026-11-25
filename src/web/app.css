@@ -71,6 +71,12 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 .checklist_page .add_task_row { margin-bottom: 0; }
 .checklist_heading { display: flex; flex-direction: column; margin: 0; color: var(--text-heading); font-size: var(--text-h3); }
 .checklist_subtitle { color: var(--text-secondary); font-size: var(--text-caption); font-weight: 400; }
+.checklist_view select { max-width: 100%; padding-inline-start: 0; border-color: transparent; background-color: transparent; color: inherit; font: inherit; }
+.checklist_view select:hover, .checklist_view select:focus-visible { border-color: var(--border-default); }
+/* The grip shows on hovering a row and is what drags it, so the title stays free to select text in. */
+.checklist_grip { display: inline-flex; flex: none; align-self: center; color: var(--text-tertiary); cursor: grab; opacity: 0; }
+.task_list.checklist .task:hover .checklist_grip, .task_list.checklist .task:focus-within .checklist_grip { opacity: 1; }
+@media (hover: none) { .checklist_grip { opacity: 1; } }
 .task_list.checklist { overflow: hidden; border: var(--border-width) solid var(--border-default); border-radius: var(--radius-default); background: var(--surface-default); }
 .task_list.checklist > .task_item:first-child > .task { border-top: 0; }
 .task_list.checklist .task { cursor: default; }

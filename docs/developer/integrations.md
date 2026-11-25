@@ -51,7 +51,7 @@ A note whose title is already on the list is skipped, unless the existing task i
 
 The [linux-sidebar](https://github.com/BeatLink/linux-sidebar) `web` plugin can show the app in a docked strip: set its
 address to the server with `?checklist` for the checklist page (`src/web/ChecklistPage.tsx`), a search bar over My Day
-as checkboxes, or with `?view=my_day` for the whole app. The page then takes the sidebar's colours and font from the
+or another view picked in its heading as checkboxes, or with `?view=my_day` for the whole app. The page then takes the sidebar's colours and font from the
 `--sidebar-*` CSS variables the plugin provides, and below 700 pixels it uses the phone layout.
 
 ## Quick-add and search syntaxes

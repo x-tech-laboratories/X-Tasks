@@ -161,6 +161,19 @@ export function view_from_address(search: string, tags: Tag[]): View | null {
   return tag_ids.length > 0 ? { kind: 'tag', tag_ids } : null
 }
 
+// The views the checklist page can list: those of plain open tasks, and any one tag.
+export const CHECKLIST_VIEW_KINDS: View['kind'][] = ['my_day', 'upcoming', 'active', 'all']
+
+// The checklist's saved view, or My Day when it names a tag deleted since or a view the page cannot list.
+export function checklist_view(settings: Settings, tags: Tag[]): View {
+  const saved = settings.checklist_view
+  if (saved.kind === 'tag') {
+    const kept_ids = saved.tag_ids.filter((tag_id) => tags.some((tag) => tag.id === tag_id))
+    return kept_ids.length > 0 ? { kind: 'tag', tag_ids: kept_ids } : { kind: 'my_day' }
+  }
+  return CHECKLIST_VIEW_KINDS.includes(saved.kind) ? saved : { kind: 'my_day' }
+}
+
 function view_without_missing_tags(tag_ids: string[], tags: Tag[]): View {
   const kept_ids = tag_ids.filter((tag_id) => tags.some((tag) => tag.id === tag_id))
   return kept_ids.length > 0 ? { kind: 'tag', tag_ids: kept_ids } : { kind: 'all' }

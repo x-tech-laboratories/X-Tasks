@@ -275,6 +275,8 @@ export interface Settings {
   // The swatches, as #rrggbb, offered when picking a tag colour; any other colour can still be picked.
   tag_colors: string[]
   last_view: View
+  // The view the checklist page lists, picked from its heading.
+  checklist_view: View
   // The tasks whose subtasks are folded away, kept so they stay folded after a restart.
   collapsed_task_ids: string[]
   // When set, completing a task whose subtasks all end up done folds them away.
@@ -389,6 +391,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   tag_colors: ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#db2777', '#64748b'],
   last_view: { kind: 'all' },
+  checklist_view: { kind: 'my_day' },
   collapsed_task_ids: [],
   collapse_completed_branches: false,
   collapsed_sidebar_ids: [],
@@ -410,7 +413,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 // Settings that belong to one device and never sync: its window layout, its MCP endpoint, its backups, its Pomodoro and how it runs in the background.
 export const DEVICE_ONLY_SETTINGS: readonly (keyof Settings)[] = [
-  'sidebar_width', 'detail_width', 'table_column_widths', 'last_view', 'collapsed_task_ids', 'collapsed_sidebar_ids',
+  'sidebar_width', 'detail_width', 'table_column_widths', 'last_view', 'checklist_view', 'collapsed_task_ids', 'collapsed_sidebar_ids',
   'mcp_enabled', 'mcp_port', 'auto_backup', 'auto_backups_to_keep', 'show_tray_icon', 'reminded_until',
   'pomodoro', 'start_at_login', 'keep_running_in_background'
 ]

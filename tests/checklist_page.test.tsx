@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import '@x-tech-laboratories/x-libs/web/react/test_stubs'
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { format_local } from '@x-tech-laboratories/x-libs/dates'
 
 import { App } from '../src/web/App.tsx'
@@ -32,7 +32,7 @@ const tasks = [
 async function show_checklist(settings: Parameters<typeof install_fake_bridge>[0]['settings'] = {}) {
   const bridge = install_fake_bridge({ tasks: tasks.map((task) => ({ ...task })), tags: [], tag_groups: [], settings: { launch_view: 'all', ...settings } })
   render(<App />)
-  await screen.findByRole('heading', { name: /My Day/ })
+  await screen.findByRole('combobox', { name: 'View' })
   await act(async () => {})
   return bridge
 }
@@ -216,5 +216,82 @@ describe('editing the checklist like a note', () => {
     expect(document.activeElement).toBe(title_field('Buy eggs'))
     fireEvent.keyDown(title_field('Buy eggs'), { key: 'ArrowUp' })
     expect(document.activeElement).toBe(title_field('Buy milk'))
+  })
+})
+
+// ============================================================================
+// Views and dragging
+// ============================================================================
+
+function row_of(title: string): HTMLElement {
+  return screen.getByDisplayValue(title).closest('.task') as HTMLElement
+}
+
+// Drags a row by its grip onto another, landing at a fraction of the way down the target row.
+function drag_onto(dragged_title: string, target_title: string, fraction_down: number): void {
+  const data_transfer = { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' }
+  const target = row_of(target_title)
+  target.getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) })
+  fireEvent.dragStart(row_of(dragged_title).querySelector('.checklist_grip')!, { dataTransfer: data_transfer })
+  for (const make_event of [createEvent.dragOver, createEvent.drop]) {
+    const event = make_event(target, { dataTransfer: data_transfer })
+    Object.defineProperty(event, 'clientY', { value: fraction_down * 40 })
+    fireEvent(target, event)
+  }
+}
+
+describe('the checklist view and dragging', () => {
+  test('the heading picks another view, which lists its tasks and is saved', async () => {
+    const { settings_api } = await show_checklist()
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'View' }), { target: { value: 'all' } })
+
+    expect(await screen.findByDisplayValue('Write report')).toBeTruthy()
+    expect(settings_api.set_setting).toHaveBeenCalledWith('checklist_view', { kind: 'all' })
+  })
+
+  test('the saved view opens with the page', async () => {
+    await show_checklist({ checklist_view: { kind: 'all' } })
+
+    expect(screen.getByDisplayValue('Write report')).toBeTruthy()
+    expect((screen.getByRole('combobox', { name: 'View' }) as HTMLSelectElement).value).toBe('all')
+  })
+
+  test('a row dragged onto the middle of another becomes its subtask', async () => {
+    const { tasks_api } = await show_checklist({ checklist_view: { kind: 'all' } })
+
+    drag_onto('Write report', 'Buy milk', 0.5)
+
+    expect(tasks_api.move_task).toHaveBeenCalledWith('report', 'milk', 2)
+  })
+
+  test('a subtask dragged above a My Day row comes out to the top and joins My Day', async () => {
+    const { tasks_api } = await show_checklist()
+
+    drag_onto('Buy eggs', 'Buy milk', 0.1)
+
+    expect(tasks_api.move_task).toHaveBeenCalledWith('eggs', null, 0)
+    expect(tasks_api.set_task_my_day).toHaveBeenCalledWith('eggs', today)
+  })
+
+  test('a row cannot be dropped onto its own subtask', async () => {
+    const { tasks_api } = await show_checklist()
+
+    drag_onto('Buy milk', 'Buy eggs', 0.5)
+
+    expect(tasks_api.move_task).not.toHaveBeenCalled()
+  })
+})
+
+describe('the checklist view from the address', () => {
+  test('?view= picks the view, and one the checklist cannot list falls back to My Day', async () => {
+    window.history.replaceState(null, '', '/?checklist&view=all')
+    await show_checklist()
+    expect((screen.getByRole('combobox', { name: 'View' }) as HTMLSelectElement).value).toBe('all')
+    cleanup()
+
+    window.history.replaceState(null, '', '/?checklist&view=reports')
+    await show_checklist()
+    expect((screen.getByRole('combobox', { name: 'View' }) as HTMLSelectElement).value).toBe('my_day')
   })
 })
