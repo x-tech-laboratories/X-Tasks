@@ -228,7 +228,7 @@ describe('removing a task', () => {
     expect(screen.queryByText('Buy milk')).toBeNull()
     fireEvent.click(await screen.findByRole('button', { name: 'Undo' }))
 
-    await screen.findByText('Buy milk')
+    await screen.findByText('Buy milk', { selector: '.task_title' })
     expect(tasks_api.remove_task).not.toHaveBeenCalled()
   })
 
@@ -512,6 +512,30 @@ describe('the worklog', () => {
 })
 
 // ============================================================================
+// Task details
+// ============================================================================
+
+describe('the task details', () => {
+  test("the Parent field moves a task under another one or to the top level, but never under itself", async () => {
+    const { tasks_api } = await show_app()
+
+    fireEvent.click(screen.getByText('Outline'))
+    const details = await screen.findByRole('complementary', { name: 'Task details' })
+    const parent = within(details).getByRole('combobox', { name: 'Parent' }) as HTMLSelectElement
+    expect(parent.value).toBe('report')
+    expect((within(parent).getByRole('option', { name: /Outline/ }) as HTMLOptionElement).disabled).toBe(true)
+
+    fireEvent.change(parent, { target: { value: 'milk' } })
+    await waitFor(() => expect(tasks_api.move_task).toHaveBeenLastCalledWith('outline', 'milk', 2))
+    expect(parent.value).toBe('milk')
+
+    fireEvent.change(parent, { target: { value: '' } })
+    await waitFor(() => expect(tasks_api.move_task).toHaveBeenLastCalledWith('outline', null, expect.any(Number)))
+    expect(parent.value).toBe('')
+  })
+})
+
+// ============================================================================
 // Shortcuts
 // ============================================================================
 
@@ -533,7 +557,7 @@ describe('shortcuts', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
     fireEvent.keyDown(document.body, { key: 'z', code: 'KeyZ', ctrlKey: true })
 
-    await screen.findByText('Buy milk')
+    await screen.findByText('Buy milk', { selector: '.task_title' })
     expect(tasks_api.remove_task).not.toHaveBeenCalled()
   })
   test('Enter in the search bar opens the first task found', async () => {
