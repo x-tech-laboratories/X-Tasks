@@ -11,9 +11,11 @@ import type { McpStatus, Settings } from '@shared/settings'
 import { can_link, links_of, type Task } from '@shared/tasks'
 import { entry_seconds, running_entries, task_entries, total_seconds } from '@shared/time_tracking'
 import {
-  add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_task, set_task_done, set_task_my_day, set_task_estimate, set_task_reminders, set_task_notes, set_task_schedule,
-  set_task_title, start_timer, stop_timer, tag_task, unlink_tasks, untag_task, list_time_entries
+  add_tag, add_tag_group, add_task, get_settings, link_tasks, list_tag_groups, list_tags, list_tasks, move_task, remove_tag, remove_tag_group, remove_task, set_task_done, set_task_my_day,
+  set_task_estimate, set_task_reminders, set_task_notes, set_task_schedule, set_task_title, start_timer, stop_timer, tag_task, unlink_tasks, untag_task, update_tag, update_tag_group,
+  list_time_entries
 } from '@shared/task_database'
+import type { Tag, TagGroup } from '@shared/tasks'
 
 // ============================================================================
 // Task helpers
@@ -45,6 +47,31 @@ function check_plain_tag(tag_id: string): void {
   if (!tag) throw new Error(`no tag with id ${tag_id}`)
   if (tag.rule) throw new Error(`tag ${tag.name} is a rule tag, which applies itself`)
 }
+
+function find_tag_group(group_id: string): TagGroup {
+  const group = list_tag_groups().find((each) => each.id === group_id)
+  if (!group) throw new Error(`no tag group with id ${group_id}`)
+  return group
+}
+
+function find_tag(tag_id: string): Tag {
+  const tag = list_tags().find((each) => each.id === tag_id)
+  if (!tag) throw new Error(`no tag with id ${tag_id}`)
+  return tag
+}
+
+function describe_tag(tag: Tag): object {
+  const { id, name, group_id, parent_id, rule, color, icon } = tag
+  return { id, name, group_id, parent_id, is_rule_tag: rule !== null, color, icon }
+}
+
+const tag_color = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, 'use #rrggbb')
+  .nullable()
+  .describe('A colour as #rrggbb; null clears it')
+
+const tag_icon = z.string().nullable().describe('An icon name; null clears it')
 
 // Each task with its tags and links named, so a client need not look the ids up.
 function describe_tasks(tasks: Task[]): object[] {
@@ -125,7 +152,7 @@ function as_text(value: unknown): { content: { type: 'text'; text: string }[] } 
 // Tools
 // ============================================================================
 
-function create_mcp_server(on_change: () => void): McpServer {
+export function create_mcp_server(on_change: () => void): McpServer {
   const server = new McpServer({ name: 'x-tasks', version: '0.1.0' })
 
   // Wraps a tool that writes, so the open window loads the new data afterwards.
@@ -158,6 +185,101 @@ function create_mcp_server(on_change: () => void): McpServer {
         }))
       )
     }
+  )
+
+  server.registerTool(
+    'add_tag_group',
+    {
+      description: 'Adds a group of tags, such as Area. A one-tag-per-task group lets a task hold only one of its tags. Rule groups are set up in the app.',
+      inputSchema: {
+        name: z.string().trim().min(1),
+        is_single_choice: z.boolean().default(false).describe('Let a task hold only one tag from this group')
+      }
+    },
+    changing(({ name, is_single_choice }) => {
+      const group = add_tag_group(name, false)
+      if (is_single_choice) update_tag_group(group.id, name, false, true)
+      return find_tag_group(group.id)
+    })
+  )
+
+  server.registerTool(
+    'update_tag_group',
+    {
+      description: 'Renames a tag group or changes whether a task may hold only one of its tags. Fields left out stay as they are.',
+      inputSchema: {
+        group_id: z.string(),
+        name: z.string().trim().min(1).optional(),
+        is_single_choice: z.boolean().optional().describe('Let a task hold only one tag from this group; a rule group cannot')
+      }
+    },
+    changing(({ group_id, name, is_single_choice }) => {
+      const group = find_tag_group(group_id)
+      if (group.is_rule && is_single_choice) throw new Error(`${group.name} is a rule group, which cannot limit a task to one tag`)
+      update_tag_group(group_id, name ?? group.name, group.is_rule, is_single_choice ?? group.is_single_choice)
+      return find_tag_group(group_id)
+    })
+  )
+
+  server.registerTool(
+    'remove_tag_group',
+    {
+      description: 'Deletes a tag group and all its tags for good. Tasks stay and only lose those tags.',
+      inputSchema: { group_id: z.string() },
+      annotations: { destructiveHint: true }
+    },
+    changing(({ group_id }) => {
+      const group = find_tag_group(group_id)
+      remove_tag_group(group_id)
+      return { removed: group.name }
+    })
+  )
+
+  server.registerTool(
+    'add_tag',
+    {
+      description: 'Adds a tag to a tag group, or a sub-tag when parent_id is given. Rule tags are set up in the app.',
+      inputSchema: {
+        group_id: z.string(),
+        name: z.string().trim().min(1),
+        parent_id: z.string().optional().describe('The tag to put this one under, in the same group'),
+        color: tag_color.optional(),
+        icon: tag_icon.optional()
+      }
+    },
+    changing(({ group_id, name, parent_id, color, icon }) => {
+      const group = find_tag_group(group_id)
+      if (group.is_rule) throw new Error(`${group.name} is a rule group, whose tags are set up in the app`)
+      if (parent_id && find_tag(parent_id).group_id !== group_id) throw new Error(`tag ${parent_id} is in another group`)
+      return describe_tag(add_tag(name, group_id, parent_id ?? null, null, color ?? null, icon ?? null, true))
+    })
+  )
+
+  server.registerTool(
+    'update_tag',
+    {
+      description: "Renames a tag or changes its colour or icon. Fields left out stay as they are; a rule tag's rule is kept.",
+      inputSchema: { tag_id: z.string(), name: z.string().trim().min(1).optional(), color: tag_color.optional(), icon: tag_icon.optional() }
+    },
+    changing(({ tag_id, name, color, icon }) => {
+      const tag = find_tag(tag_id)
+      update_tag(tag_id, name ?? tag.name, tag.rule, color === undefined ? tag.color : color, icon === undefined ? tag.icon : icon, tag.shows_on_rows)
+      return describe_tag(find_tag(tag_id))
+    })
+  )
+
+  server.registerTool(
+    'remove_tag',
+    {
+      description: 'Deletes a tag and its sub-tags for good. Tasks stay and only lose those tags.',
+      inputSchema: { tag_id: z.string() },
+      annotations: { destructiveHint: true }
+    },
+    changing(({ tag_id }) => {
+      const tag = find_tag(tag_id)
+      remove_tag(tag_id)
+      return { removed: tag.name }
+    })
   )
 
   server.registerTool(

@@ -7,6 +7,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- MCP tools to add, rename and remove tag groups and tags, so AI assistants can set up a group such as Phase
+  and its tags; rule groups and rule tags are still set up in the app
 - A checklist page at `?checklist` for the Linux sidebar: My Day as checkboxes under one bar that searches every open
   task to put into My Day, or adds a new task to it
 - Checklist rows that edit like a note: titles typed into in place, Enter for a new row below, Tab and Shift+Tab to
