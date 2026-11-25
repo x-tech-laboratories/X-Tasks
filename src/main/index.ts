@@ -62,9 +62,12 @@ function ensure_daemon(replace_other_build = false): Promise<unknown> {
 // Given by the daemon when this process connects, so the window is not told about its own changes.
 let client_id = ''
 
+// Settles once the daemon answers; the window opens without waiting for it, so every call waits here instead.
+let daemon_ready: Promise<unknown> = Promise.resolve()
+
 // One call to the daemon, as the page made it.
 function call(method: string, args: unknown[]): Promise<unknown> {
-  return call_daemon(socket_path, `/api/${method}`, args, { [CLIENT_ID_HEADER]: client_id })
+  return daemon_ready.then(() => call_daemon(socket_path, `/api/${method}`, args, { [CLIENT_ID_HEADER]: client_id }))
 }
 
 // Every call in a table, passed on to the daemon under a path of its own.
@@ -264,22 +267,24 @@ function start_app(): void {
   launch_task_id = first_argument(process.argv, task_id_from_link)
 
   app.whenReady().then(async () => {
-    try {
-      await ensure_daemon(true)
-    } catch (error) {
-      dialog.showErrorBox('X-Tasks could not start', `${error instanceof Error ? error.message : String(error)}\n\nSee ${log_file}.`)
-      app.exit(1)
-      return
-    }
+    // The window opens while the daemon starts, so a slow start shows the page loading rather than nothing.
+    daemon_ready = ensure_daemon(true)
     register_bridge_handlers()
-    follow_daemon()
-    // The page's light and dark colours follow the theme, so it is set before the window opens.
-    await apply_window_settings().catch(() => undefined)
     create_main_window()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) create_main_window()
     })
+
+    try {
+      await daemon_ready
+    } catch (error) {
+      dialog.showErrorBox('X-Tasks could not start', `${error instanceof Error ? error.message : String(error)}\n\nSee ${log_file}.`)
+      app.exit(1)
+      return
+    }
+    follow_daemon()
+    await apply_window_settings().catch(() => undefined)
   })
 
   app.on('will-quit', () => {
