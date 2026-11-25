@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { DateTimeField, TreePicker, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
+import { subtree_ids } from '@x-tech-laboratories/x-libs/web/tree'
 import { RichText } from '@x-tech-laboratories/x-libs/web/react/rich_text'
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import type { HistoryMark, RoutineStreak } from '@shared/streaks'
@@ -42,6 +43,8 @@ interface TaskDetailProps {
   // The task gets the relationship to the other, by its inverse name when is_inverse is set.
   on_link: (task: Task, other: Task, relationship_id: string, is_inverse: boolean) => void
   on_unlink: (task: Task, other: Task) => void
+  // The task moves under the parent, or to the top level for null.
+  on_set_parent: (task: Task, parent_id: string | null) => void
   durations: TaskDuration[]
   on_toggle: (task: Task) => void
   on_rename: (task: Task, title: string) => void
@@ -71,7 +74,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, on_set_parent, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_show_history, on_focus, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_set_reminders, on_close, streak, history
 }: TaskDetailProps) {
   const [title_draft, set_title_draft] = useState(task.title)
@@ -218,6 +221,21 @@ export function TaskDetail({
           <button aria-pressed={is_in_my_day} onClick={() => on_set_my_day(task, !is_in_my_day)}>
             {is_in_my_day ? '☀ Added to My Day' : '☀ Add to My Day'}
           </button>
+        )
+      case 'parent':
+        return (
+          <label className="field">
+            <span className="field-label">Parent</span>
+            <TreeSelect
+              label="Parent"
+              items={tasks}
+              name_of={(each) => each.title}
+              value={task.parent_id ?? ''}
+              blank_label="None"
+              disabled_ids={[...subtree_ids(task.id, tasks)]}
+              on_change={(parent_id) => on_set_parent(task, parent_id || null)}
+            />
+          </label>
         )
       case 'start':
         return <DateTimeField label="Start" value={task.start_at} on_change={change_start} />

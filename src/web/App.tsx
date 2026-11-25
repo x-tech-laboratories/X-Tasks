@@ -12,7 +12,7 @@ import { Shell } from '@x-tech-laboratories/x-libs/web/react/shell'
 import { ResizeHandle } from '@x-tech-laboratories/x-libs/web/react/split'
 import { toast, undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
-import { EMPTY_RULE, can_link, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
+import { EMPTY_RULE, can_link, task_and_ancestors, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
 import { completions_after, task_history, task_streak, type RoutineStreak } from '@shared/streaks'
 import { due_reminders, reminder_body } from '@shared/reminders'
 import { break_message, estimate_left_seconds, FRESH_BREAK_COUNT, step_break_reminder, running_entries, seconds_by_day, short_time_label, stopped_entries, task_entries, total_seconds, type TimeEntry } from '@shared/time_tracking'
@@ -728,6 +728,17 @@ export function App({ account }: { account?: SignedInAccount }) {
       )
     )
     void window.x_tasks.untag_task(task.id, tag.id)
+  }
+
+  // The details' Parent field: a task goes in as its new parent's last subtask, or to the top level just after its old top-level task.
+  function set_task_parent(task: Task, parent_id: string | null): void {
+    if (parent_id === task.parent_id) return
+    const parent = tasks.find((each) => each.id === parent_id)
+    if (parent && subtree_ids(task.id, tasks).has(parent.id)) return
+    const top_task = task_and_ancestors(task, tasks).at(-1)!
+    const move = parent ? move_for_drop(task, parent, 'inside', tasks) : move_for_drop(task, top_task, 'after', tasks)
+    set_tasks((current_tasks) => current_tasks.map((each) => (each.id === task.id ? { ...each, ...move } : each)).sort(by_position))
+    void window.x_tasks.move_task(task.id, move.parent_id, move.position)
   }
 
   // Two tasks share one link, kept by the task the relationship's name reads from; a task never waits on itself through others.
@@ -1620,6 +1631,7 @@ export function App({ account }: { account?: SignedInAccount }) {
               relationships={settings.task_relationships}
               on_link={link_tasks}
               on_unlink={unlink_tasks}
+              on_set_parent={set_task_parent}
               durations={settings.task_durations}
               on_toggle={tick_task}
               on_rename={rename_task}
