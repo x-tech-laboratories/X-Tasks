@@ -56,7 +56,11 @@ Linux sidebar. Typing searches every open task, each with its open subtasks unde
 it into today's list or takes it out. **Enter** puts the first task found into My Day, or adds what you typed there
 as a new task when nothing matches.
 
-The rows edit like a checklist in a note. Click a title to type into it; it saves when you leave the row.
+The heading picks the list the page shows: My Day, Upcoming, Active, All tasks, or the tasks of any one tag. The page
+remembers the pick, and `?checklist&view=Work` opens it on the Work tag.
+
+The rows edit like a checklist in a note. Click a title to type into it; it saves when you leave the row. Drag a row by
+the grip on its left onto another: the top or bottom edge puts it above or below, the middle makes it a subtask.
 
 | Key               | In a row                                                                  |
 | ----------------- | ------------------------------------------------------------------------- |

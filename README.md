@@ -159,7 +159,9 @@ docked strip. Set its address to the server with `?checklist` for a page holding
 checkboxes, subtasks under chevrons: typing searches every open task, the sun on a row puts it into My Day or takes it
 out, and **Enter** puts the first one found there, or adds the typed task to My Day when nothing matches.
 Its rows edit like a checklist in a note: titles are typed into in place, **Enter** adds a row below, **Tab** and
-**Shift+Tab** nest and unnest, and **Backspace** on an empty row deletes it.
+**Shift+Tab** nest and unnest, **Backspace** on an empty row deletes it, and the grip on a row drags it above, below or
+into another. The heading picks the list shown in place of My Day: Upcoming, Active, All tasks or any tag, kept for next
+time; `?checklist&view=Work` opens it on a tag.
 `?view=my_day` shows the whole app instead.
 Either way the page takes the sidebar's colours and font from the `--sidebar-*` CSS variables the plugin hands it,
 and the whole app below 700 pixels uses the phone layout, where each task's date and tags wrap under its title.

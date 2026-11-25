@@ -13,6 +13,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
   task to put into My Day, or adds a new task to it
 - Checklist rows that edit like a note: titles typed into in place, Enter for a new row below, Tab and Shift+Tab to
   nest and unnest, Backspace to delete an empty row, and the arrow keys to move between rows
+- Checklist rows dragged by a grip above, below or into another row, and a heading that switches the checklist from My
+  Day to Upcoming, Active, All tasks or a tag, remembered for next time
 - Reminders at times of a task's own, any number of them, set in its details or by AI assistants, moving with a repeat
 - Phone notifications for due tasks and the end of each Pomodoro phase, handed to Android ahead of time so they come
   with the app closed, opening the task when tapped
