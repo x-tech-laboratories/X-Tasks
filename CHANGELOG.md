@@ -71,6 +71,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Fixed
 
+- After an upgrade the app no longer keeps using the old build's daemon: opening the app replaces a daemon of
+  another build, and a window stopped from outside, as by an upgrade, quits instead of starting the old daemon again
 - Later repeats of a timed task in the calendar keep its start time instead of showing one hour
 - A timed task repeating within the day, such as every 3 hours, keeps its length on each repeat
   instead of stretching back to the first start

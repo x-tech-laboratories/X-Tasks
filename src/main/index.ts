@@ -14,6 +14,7 @@ import type { Settings } from '@shared/settings'
 import { TAKE_LAUNCH_TASK_CHANNEL, task_id_from_link, type Task } from '@shared/tasks'
 import { entry_seconds, running_entries, type TimeEntry } from '@shared/time_tracking'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, HELLO_EVENT } from '@shared/web_api'
+import { respawn_unless_quitting } from './daemon_respawn'
 import { tray_view } from './tray_menu'
 
 // ============================================================================
@@ -46,12 +47,15 @@ const own_command = (args: string[]): string[] =>
 // Daemon
 // ============================================================================
 
-function ensure_daemon(): Promise<unknown> {
+// Opening the app replaces a daemon an older or newer build left running, such as one from before an upgrade. Only
+// opening does: two windows of different builds that both replaced on reconnecting would stop each other's daemon in turn.
+function ensure_daemon(replace_other_build = false): Promise<unknown> {
   return start_daemon({
     socket_path,
     script: join(__dirname, 'daemon.js'),
     env: { X_TASKS_DB: database_path, X_TASKS_SOCKET: socket_path, X_TASKS_ICON: icon_path },
-    log_file
+    log_file,
+    replace_other_build
   })
 }
 
@@ -105,7 +109,7 @@ function follow_daemon(): void {
       // A reconnect may have missed changes, so the windows fetch again.
       on_connect: announce_change,
       on_disconnect: () => {
-        if (!is_quitting) void ensure_daemon().catch((error: unknown) => console.error(error))
+        respawn_unless_quitting(() => is_quitting, ensure_daemon, (error) => console.error(error))
       }
     }
   )
@@ -261,7 +265,7 @@ function start_app(): void {
 
   app.whenReady().then(async () => {
     try {
-      await ensure_daemon()
+      await ensure_daemon(true)
     } catch (error) {
       dialog.showErrorBox('X-Tasks could not start', `${error instanceof Error ? error.message : String(error)}\n\nSee ${log_file}.`)
       app.exit(1)
@@ -284,6 +288,16 @@ function start_app(): void {
     tray.stop()
   })
 
+  // Stopped from outside, as systemd does when an upgrade restarts the app, the window quits as if asked, rather than
+  // starting the daemon it just saw stop again from the old build.
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) {
+    process.on(signal, () => {
+      is_quitting = true
+      stop_following()
+      app.quit()
+    })
+  }
+
   // Closing the window ends only the window, or leaves the app in the tray; the daemon runs on either way.
   app.on('window-all-closed', () => {
     if (!tray.is_shown()) app.quit()
@@ -293,7 +307,7 @@ function start_app(): void {
 // `x-tasks --daemon`, as the login entry runs it, starts only the daemon.
 async function start_daemon_alone(): Promise<void> {
   try {
-    await ensure_daemon()
+    await ensure_daemon(true)
     app.exit(0)
   } catch (error) {
     console.error(error instanceof Error ? error.message : error)
