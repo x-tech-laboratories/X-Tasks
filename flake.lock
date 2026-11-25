@@ -37,7 +37,8 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "x-webview": "x-webview"
       }
     },
     "systems": {
@@ -52,6 +53,29 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "x-webview": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795591762,
+        "narHash": "sha256-v+8Q+oH9x9yq6DmG0G+J7F/c/kZVmoqc2bgjKghxDH4=",
+        "owner": "x-tech-laboratories",
+        "repo": "X-WebView",
+        "rev": "4322f0354364ac5beda6d7a2f364fd104247c85a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "x-tech-laboratories",
+        "repo": "X-WebView",
         "type": "github"
       }
     }

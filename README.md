@@ -27,6 +27,7 @@ npm run dev      # hot-reloading dev build
 npm run app      # build once and launch
 npm run build    # typecheck and production build
 nix build        # the packaged app, in ./result/bin/x-tasks
+nix build .#webview  # the same app on X-WebView, for Linux phones such as the PinePhone
 npm run dist     # an AppImage and a Flatpak bundle, in dist/
 ```
 
