@@ -4,10 +4,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    x-webview = {
+      url = "github:x-tech-laboratories/X-WebView";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, x-webview }:
+    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
       let
         pkgs = import nixpkgs { inherit system; };
         electron = pkgs.electron_45;
@@ -146,6 +151,15 @@
           ];
 
           meta.mainProgram = "x-tasks";
+        };
+
+        # The desktop app run on the system WebKit by X-WebView, for Linux phones such as the PinePhone that Chromium cannot draw on.
+        packages.webview = x-webview.lib.${system}.wrap_app {
+          name = "x-tasks";
+          app = "${self.packages.${system}.default}/lib/x-tasks";
+          share = self.packages.${system}.default;
+          environment.X_TASKS_LAUNCHER = "x-tasks";
+          path = [ pkgs.libnotify pkgs.xdg-utils ];
         };
 
         # The web app and the server that hosts it, run with plain Node.
