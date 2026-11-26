@@ -17,7 +17,7 @@ import {
 type BridgeApi = TasksApi & SettingsApi
 
 // Each bridge call the web page can make, answered the same way the desktop app's main process answers it.
-type BridgeHandlers = {
+export type BridgeHandlers = {
   [Method in WebMethod]: BridgeApi[Method] extends (...args: infer Args) => Promise<infer Result>
     ? (...args: Args) => Result | Promise<Result>
     : never

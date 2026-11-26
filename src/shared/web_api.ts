@@ -4,14 +4,14 @@ import { SERVED_SETTINGS_METHODS, tasks_bridge } from './bridges'
 // Web bridge contract
 // ============================================================================
 
-// The bridge calls the web server answers, each posted to API_PATH and its name with the arguments as a JSON array.
+// The bridge calls the web server answers, each posted to API_PATH and its name with the arguments as a JSON list.
 export const WEB_TASKS_METHODS = tasks_bridge.method_names
 export const WEB_SETTINGS_METHODS = SERVED_SETTINGS_METHODS
 
 export type WebMethod = (typeof WEB_TASKS_METHODS)[number] | (typeof WEB_SETTINGS_METHODS)[number]
 
 // Paths relative to the page, so the app also works when a proxy serves it under a folder.
-export const API_PATH = 'api/'
+export const API_PATH = 'api/call/'
 export const EVENTS_PATH = 'api/events'
 
 // The header naming which open page made a call, so the server tells every other page about the change but not that one.

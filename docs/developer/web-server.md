@@ -53,12 +53,16 @@ syncs over https.
 ## HTTP API
 
 Every bridge call the page makes is also an HTTP endpoint. Send the token as an `Authorization: Bearer` header and
-`POST /api/<call>` with the arguments as a JSON array:
+`POST /api/call/<call>` with the arguments as a JSON list in order or by name as a JSON object:
 
 ```sh
 curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '[]' https://tasks.example.org/api/list_tasks
+  -d '[]' https://tasks.example.org/api/call/list_tasks
+curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"task_id": "t1", "title": "Water the plants"}' https://tasks.example.org/api/call/set_task_title
 ```
+
+The older path, `POST /api/<call>`, still answers in both forms for programs and installed pages written before it.
 
 The calls are the ones listed in `src/shared/web_api.ts` (from `TASKS_METHODS` and the served settings methods in
 `src/shared/bridges.ts`), such as `list_tasks`, `add_task`, `set_task_done`, `tag_task`, `list_tags` and

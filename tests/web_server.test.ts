@@ -113,10 +113,13 @@ describe('bridge calls', () => {
     expect(response.json()).toMatchObject({ title: 'Water the plants' })
   })
 
-  it('refuses a body that is not a JSON array', async () => {
-    const response = await app.inject({ method: 'POST', url: '/api/list_tasks', headers: { ...bearer, 'content-type': 'application/json' }, payload: '{"a":1}' })
-    expect(response.statusCode).toBe(400)
-    expect(response.body).toBe('send the arguments as a JSON list')
+  it('refuses a body that is neither a JSON list nor an object, and names it does not know', async () => {
+    const text = await app.inject({ method: 'POST', url: '/api/list_tasks', headers: { ...bearer, 'content-type': 'application/json' }, payload: '"a"' })
+    expect(text.statusCode).toBe(400)
+    expect(text.body).toBe('send the arguments as a JSON list or object')
+    const unknown = await app.inject({ method: 'POST', url: '/api/list_tasks', headers: { ...bearer, 'content-type': 'application/json' }, payload: '{"a":1}' })
+    expect(unknown.statusCode).toBe(400)
+    expect(unknown.body).toBe('unknown argument a')
   })
 
   it('refuses a call that is not POST and a call that does not exist', async () => {
@@ -167,6 +170,56 @@ describe('item calls', () => {
     const refused = await post(reader, 'add_task', ['Not allowed', null, [], null])
     expect(refused.statusCode).toBe(403)
     expect(refused.json()).toEqual({ error: 'This token can only read.' })
+  })
+})
+
+// ============================================================================
+// The standard path and the older one
+// ============================================================================
+
+describe('call paths', () => {
+  async function post(path: string, headers: Record<string, string>, body: unknown) {
+    return app.inject({ method: 'POST', url: path, headers: { ...headers, 'content-type': 'application/json' }, payload: JSON.stringify(body) })
+  }
+
+  async function reader_token(): Promise<{ authorization: string }> {
+    const cookie = (await sign_in({ name: 'admin', password: PASSWORD })).cookies.find((candidate) => candidate.name === SESSION_COOKIE)!
+    const response = await app.inject({ method: 'POST', url: '/api/account/tokens', cookies: { [SESSION_COOKIE]: cookie.value }, payload: { name: 'path reader', read_only: true } })
+    return { authorization: `Bearer ${response.json().token}` }
+  }
+
+  it.each(['/api/call/', '/api/'])('answers at %s with the arguments as a list or by name', async (prefix) => {
+    const listed = await post(`${prefix}add_task`, bearer, [`Listed at ${prefix}`, null, [], null])
+    expect(listed.statusCode).toBe(200)
+    const named = await post(`${prefix}add_task`, bearer, { title: `Named at ${prefix}`, parent_id: null, tag_ids: [], my_day_on: null })
+    expect(named.statusCode).toBe(200)
+    const task_id = named.json().id as string
+
+    expect((await post(`${prefix}set_task_title`, bearer, { task_id, title: `Renamed at ${prefix}` })).statusCode).toBe(204)
+    const titles = (await post(`${prefix}list_tasks`, bearer, {})).json().map((task: { title: string }) => task.title)
+    expect(titles).toEqual(expect.arrayContaining([`Listed at ${prefix}`, `Renamed at ${prefix}`]))
+
+    const missing = await post(`${prefix}set_task_title`, bearer, { task_id })
+    expect(missing.statusCode).toBe(400)
+    expect(missing.body).toBe('missing argument title')
+  })
+
+  it('takes the item calls by name too', async () => {
+    const response = await post('/api/call/search_items', bearer, { query: 'Renamed at' })
+    expect(response.statusCode).toBe(200)
+    expect(response.json().length).toBeGreaterThan(0)
+  })
+
+  it.each(['/api/call/', '/api/'])('lets a read-only token read at %s in both forms and refuses it a change', async (prefix) => {
+    const reader = await reader_token()
+    expect((await post(`${prefix}list_tasks`, reader, [])).statusCode).toBe(200)
+    expect((await post(`${prefix}list_tags`, reader, {})).statusCode).toBe(200)
+    expect((await post(`${prefix}get_items`, reader, { ids: [] })).statusCode).toBe(200)
+
+    expect((await post(`${prefix}add_task`, reader, ['Not allowed', null, [], null])).statusCode).toBe(403)
+    const named = await post(`${prefix}add_task`, reader, { title: 'Not allowed', parent_id: null, tag_ids: [], my_day_on: null })
+    expect(named.statusCode).toBe(403)
+    expect(named.json()).toEqual({ error: 'This token can only read.' })
   })
 })
 
