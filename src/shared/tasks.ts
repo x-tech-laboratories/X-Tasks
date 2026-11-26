@@ -1,3 +1,5 @@
+import { item_link, parse_item_link } from '@x-tech-laboratories/x-libs/items'
+
 import type { TaskRelationship } from './settings'
 import type { TimeEntry } from './time_tracking'
 import type { PomodoroState } from './pomodoro'
@@ -236,18 +238,18 @@ export function task_and_ancestors(task: Task, all_tasks: Task[]): Task[] {
 // Task links
 // ============================================================================
 
-// A link such as x-tasks://task/<id> opens that task in the desktop app from any other program.
+// A link such as x-tasks://task/<id> opens that task in the desktop app from any other program; the id is
+// percent-encoded, as X-Libs' item links have it.
 export const TASK_LINK_SCHEME = 'x-tasks'
 
-const TASK_LINK_PATTERN = /^x-tasks:\/\/task\/([\w-]+)\/?$/i
-
 export function task_link(task_id: string): string {
-  return `${TASK_LINK_SCHEME}://task/${task_id}`
+  return item_link(TASK_LINK_SCHEME, 'task', task_id)
 }
 
-// The task a link names, or null when the text is not a task link.
+// The task a link names, or null when the text is not a task link; a slash after the id, as older links had, is fine.
 export function task_id_from_link(text: string): string | null {
-  return TASK_LINK_PATTERN.exec(text)?.[1] ?? null
+  const link = parse_item_link(text.trim().replace(/\/$/, ''), TASK_LINK_SCHEME)
+  return link !== null && link.kind.toLowerCase() === 'task' ? link.id : null
 }
 
 // ============================================================================

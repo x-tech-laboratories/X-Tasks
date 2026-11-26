@@ -23,12 +23,13 @@ MCP server** is on. It listens on loopback only.
 | `link_tasks`   | Links two tasks by a relationship                                                     |
 | `unlink_tasks` | Removes the link between two tasks                                                    |
 | `remove_task`  | Deletes a task and all its subtasks                                                   |
+| `list_item_kinds`, `search_items`, `get_items`, `list_item_changes` | The read-only [item calls](/developer/web-server/#items-for-other-apps) every X-app answers |
 
 Changes made through MCP are announced to the page, so it updates at once.
 
 ## Task links
 
-The desktop app handles `x-tasks://task/<id>` links: **Copy link** in a task's menu makes one, and opening it brings
+The desktop app handles `x-tasks://task/<id>` links, the id percent-encoded as X-Libs' `item_link` makes it: **Copy link** in a task's menu makes one, and opening it brings
 the app forward with that task's details open, or starts it. The Nix package's desktop entry registers the scheme.
 Only the app on the default database takes links from later launches, so a run with `X_TASKS_DB` set never hands its
 link to another window.

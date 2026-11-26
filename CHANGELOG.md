@@ -7,6 +7,9 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Added
 
+- The four read-only item calls every X-app answers, `list_item_kinds`, `search_items`, `get_items` and
+  `list_item_changes`, on the server's API, the daemon and the MCP endpoint, so another program can search tasks,
+  read them and follow every change, deletions included; a read-only token may make them and the other read calls
 - MCP tools to add, rename and remove tag groups and tags, so AI assistants can set up a group such as Phase
   and its tags; rule groups and rule tags are still set up in the app
 - A checklist page at `?checklist` for the Linux sidebar: My Day as checkboxes under one bar that searches every open

@@ -137,6 +137,40 @@ describe('bridge calls', () => {
 })
 
 // ============================================================================
+// Item calls
+// ============================================================================
+
+describe('item calls', () => {
+  // A throwaway token made on the account page for a program, read-only.
+  async function read_only_token(): Promise<{ authorization: string }> {
+    const cookie = (await sign_in({ name: 'admin', password: PASSWORD })).cookies.find((candidate) => candidate.name === SESSION_COOKIE)!
+    const response = await app.inject({ method: 'POST', url: '/api/account/tokens', cookies: { [SESSION_COOKIE]: cookie.value }, payload: { name: 'reader', read_only: true } })
+    expect(response.statusCode).toBe(201)
+    return { authorization: `Bearer ${response.json().token}` }
+  }
+
+  async function post(headers: Record<string, string>, method: string, args: unknown[]) {
+    return app.inject({ method: 'POST', url: `/api/${method}`, headers: { ...headers, 'content-type': 'application/json' }, payload: JSON.stringify(args) })
+  }
+
+  it('answers the four calls to a read-only token and refuses it a change', async () => {
+    await post(bearer, 'add_task', ['Read the item calls', null, [], null])
+    const reader = await read_only_token()
+
+    expect((await post(reader, 'list_item_kinds', [])).json()).toEqual([{ kind: 'task', label: 'Task' }])
+    const [found] = (await post(reader, 'search_items', ['item calls'])).json()
+    expect(found).toMatchObject({ kind: 'task', title: 'Read the item calls', link: `x-tasks://task/${found.id}` })
+    expect((await post(reader, 'get_items', [[found.id]])).json()).toEqual([found])
+    expect((await post(reader, 'list_item_changes', [null, 100])).json().map((change: { id: string }) => change.id)).toContain(found.id)
+    expect((await post(reader, 'list_tasks', [])).statusCode).toBe(200)
+
+    const refused = await post(reader, 'add_task', ['Not allowed', null, [], null])
+    expect(refused.statusCode).toBe(403)
+    expect(refused.json()).toEqual({ error: 'This token can only read.' })
+  })
+})
+
+// ============================================================================
 // Sync calls
 // ============================================================================
 

@@ -109,7 +109,7 @@ function apply_snapshot(database: SqlDatabase, task_id: string, snapshot: TaskSn
 
 // Every write that touches a task, however it was made, cascades included, saves one version of it; the versions sync,
 // keeping the task_versions(task_id) table every device already has.
-const task_history = create_history<TaskSnapshot>({
+export const task_history = create_history<TaskSnapshot>({
   name: 'task',
   item_table: 'tasks',
   item_column: 'task_id',

@@ -4,7 +4,7 @@ import { register_call_table } from '@x-tech-laboratories/x-libs/server/call_tab
 import { register_open_cors } from '@x-tech-laboratories/x-libs/server/cors'
 import { EventStream } from '@x-tech-laboratories/x-libs/server/events'
 import { register_error_replies, register_lenient_json_body } from '@x-tech-laboratories/x-libs/server/replies'
-import { register_accounts } from '@x-tech-laboratories/x-libs/server/account_sign_in'
+import { calls_under, register_accounts } from '@x-tech-laboratories/x-libs/server/account_sign_in'
 import { AccountStore } from '@x-tech-laboratories/x-libs/server/account_store'
 import type { Accounts } from '@x-tech-laboratories/x-libs/server/passwords'
 import type { SqlDatabase } from '@x-tech-laboratories/x-libs/sql'
@@ -14,6 +14,7 @@ import { register_web_folder } from '@x-tech-laboratories/x-libs/server/web_fold
 import { create_bridge_handlers, type BridgeContext } from './bridge_handlers.ts'
 import { create_backup } from '../daemon/database_backups'
 import { open_database } from '@shared/task_database'
+import { task_item_methods } from '@shared/task_items'
 import { task_sync } from '@shared/task_sync'
 
 // ============================================================================
@@ -41,9 +42,9 @@ const MAX_SYNC_BODY_BYTES = 256 * 1024 * 1024
 // Every open page's event stream, told when the data changed.
 export const changes = new EventStream()
 
-// Calls that only read never change what other pages show.
-function is_read_only(method: string): boolean {
-  return method.startsWith('list_') || method.startsWith('get_')
+// Calls that only read never change what other pages show, and a read-only token may make them.
+export function is_read_only(method: string): boolean {
+  return method.startsWith('list_') || method.startsWith('get_') || method.startsWith('search_')
 }
 
 // ============================================================================
@@ -77,10 +78,11 @@ export async function build_app(options: AppOptions): Promise<FastifyInstance> {
   register_lenient_json_body(app)
   register_error_replies(app)
   const accounts = new AccountStore({ database: current_database, app_name: 'X-Tasks', declared: options.declared, token_prefix: 'xtk' })
-  await register_accounts(app, { accounts, cookie_name: 'x_tasks_session' })
+  await register_accounts(app, { accounts, cookie_name: 'x_tasks_session', call_of: calls_under('/api'), is_read_only })
 
   const context: BridgeContext = { announce_change_to_all: () => changes.announce_change() }
-  const handlers = create_bridge_handlers(context)
+  // The item calls are for other programs; the page has no use for them.
+  const handlers = { ...create_bridge_handlers(context), ...task_item_methods }
 
   await app.register(
     async (api) => {
