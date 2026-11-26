@@ -40,8 +40,8 @@
 
 .task_pane { min-width: 0; }
 /* Every layout takes the whole pane; the wide ones scroll inside it. */
-/* A task view fills the main pane without scrolling it; its list, table, board, calendar or chart scrolls instead. */
-body.contained main.task_main:not(.with-side-pane):has(> .main-pane > .task_pane > :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view)) { display: flex; flex-direction: column; padding-bottom: 0; overflow: hidden; }
+/* A task view fills the main pane without scrolling it; its list, table, board, calendar or chart scrolls instead.
+   The Shell's main is always a grid of the main pane and the details pane, which takes no room while closed. */
 body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; padding-bottom: var(--space-7); overflow: hidden; }
 .main-pane > .task_pane:has(> :is(.task_list, .table-wrap, .board, .calendar_view, .gantt_view)) { display: flex; flex: 1; flex-direction: column; min-height: 0; }
 .task_pane > * { flex: none; }
@@ -200,10 +200,11 @@ body.contained .main-pane:has(> .task_pane > :is(.task_list, .table-wrap, .board
 /* ========================================================================== */
 
 /* The details fill the side pane, the notes taking the room left over. */
-.task_detail { display: flex; flex: 1; flex-direction: column; gap: var(--space-6); min-height: 0; }
+/* The details' sections lay out in the side pane's body as its own children. */
+.task_detail { display: contents; }
 .task_detail .field { display: flex; }
-.task_detail_header button { flex: none; }
-.task_detail_header input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
+.side-pane-head button { flex: none; }
+.side-pane-head input.task_detail_title { flex: 1; min-width: 0; border-color: transparent; background: transparent; color: var(--text-heading); font-size: var(--text-h3); font-weight: 600; }
 .recurrence_button { display: block; overflow: hidden; font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .task_detail_notes { flex: 1; min-height: 160px; }
 .task_detail_notes .rich-text { flex: 1; }

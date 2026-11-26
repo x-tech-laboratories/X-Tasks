@@ -63,6 +63,9 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Changed
 
+- The task details pane is X-Libs' Shell side pane: it looks and resizes as before, with its width still a synced
+  setting; on phones its checkbox and title sit at the top of the pane rather than in the top bar, and closing it
+  puts focus back where it was
 - Draw the board with X-Libs' shared board: arrow keys walk the cards, Enter opens one, Alt and an arrow moves it,
   a tinted row setting tints the cards too, and phones list the columns one under another, cards still moving between them
 - Draw the shared look from Halon 0.30 and X-Libs 0.68

@@ -1,5 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { Fragment, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 
 import { DateTimeField, TreePicker, TreeSelect } from '@x-tech-laboratories/x-libs/web/react/controls'
 import { Dialog } from '@x-tech-laboratories/x-libs/web/react/dialog'
@@ -46,8 +45,6 @@ interface TaskDetailProps {
   // The task moves under the parent, or to the top level for null.
   on_set_parent: (task: Task, parent_id: string | null) => void
   durations: TaskDuration[]
-  on_toggle: (task: Task) => void
-  on_rename: (task: Task, title: string) => void
   on_set_notes: (task: Task, notes: string) => void
   on_tag: (task: Task, tag: Tag) => void
   on_untag: (task: Task, tag: Tag) => void
@@ -74,10 +71,9 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({
-  task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, on_set_parent, durations, on_toggle, on_rename, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
+  task, tag_groups, tags, date_field, sections, subtask_count, tasks, relationships, on_link, on_unlink, on_set_parent, durations, on_set_notes, on_set_schedule, on_set_done_at, on_tag, on_untag, on_reschedule,
   is_in_my_day, on_set_my_day, on_remove, on_show_history, on_focus, time_entries, is_timing, on_start_timer, on_stop_timer, on_remove_time_entry, on_set_estimate, on_set_reminders, on_close, streak, history
 }: TaskDetailProps) {
-  const [title_draft, set_title_draft] = useState(task.title)
   const [notes_draft, set_notes_draft] = useState(task.notes)
   const [is_picking_recurrence, set_is_picking_recurrence] = useState(false)
   const [is_notes_open, set_is_notes_open] = useState(false)
@@ -85,13 +81,6 @@ export function TaskDetail({
 
   // Escape closes the panel even from its fields, each of which saves on blur first; a dialog open over it keeps Escape for itself.
   use_shortcuts([{ keys: 'escape', when: 'always', run: on_close }])
-
-  // An emptied title puts the old one back rather than saving a blank task.
-  function commit_title(): void {
-    const title = title_draft.trim()
-    if (!title) set_title_draft(task.title)
-    else if (title !== task.title) on_rename(task, title)
-  }
 
   function commit_notes(): void {
     if (notes_draft !== task.notes) on_set_notes(task, notes_draft)
@@ -132,26 +121,6 @@ export function TaskDetail({
     const due_at = chosen && task.start_at ? due_after(task.start_at, chosen) : task.due_at
     on_set_schedule(task, { ...schedule, due_at, are_dates_linked: duration_id !== UNSET })
   }
-
-  // The checkbox, title and close button sit in the top bar above the pane, so they stay put while the pane scrolls.
-  const [topbar, set_topbar] = useState<Element | null>(null)
-  useEffect(() => set_topbar(document.querySelector('.topbar')), [])
-  const header = (
-        <header className="side-pane-head task_detail_header">
-          <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
-          <input
-            className="task_detail_title"
-            value={title_draft}
-            onChange={(event) => set_title_draft(event.currentTarget.value)}
-            onBlur={commit_title}
-            onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
-            aria-label="Title"
-          />
-          <button className="icon remove" onClick={on_close} aria-label="Close details">
-            ×
-          </button>
-        </header>
-  )
 
   // One tag group's tags: a single choice for a one-tag-per-task group, or chips and a picker for adding more.
   function render_group(group: TagGroup): ReactNode {
@@ -334,43 +303,77 @@ export function TaskDetail({
   }
 
   return (
-    <aside className="task_detail" aria-label="Task details">
-      {topbar ? createPortal(header, topbar) : header}
-      <div className="side-pane-body">
-        {sections.map((section) => <Fragment key={section}>{render_section(section)}</Fragment>)}
+    <div className="task_detail">
+      {sections.map((section) => <Fragment key={section}>{render_section(section)}</Fragment>)}
 
-        {is_notes_open && (
-          <Dialog title="Notes" subtitle={task.title} full on_close={close_notes} buttons={<button className="accent solid" onClick={close_notes}>Done</button>}>
-            <div className="task_detail_notes_dialog" onKeyDown={blur_on_escape}>
-              <RichText label="Notes" value={notes_draft} on_change={set_notes_draft} on_blur={commit_notes} placeholder="Add notes" autofocus />
-            </div>
-          </Dialog>
-        )}
+      {is_notes_open && (
+        <Dialog title="Notes" subtitle={task.title} full on_close={close_notes} buttons={<button className="accent solid" onClick={close_notes}>Done</button>}>
+          <div className="task_detail_notes_dialog" onKeyDown={blur_on_escape}>
+            <RichText label="Notes" value={notes_draft} on_change={set_notes_draft} on_blur={commit_notes} placeholder="Add notes" autofocus />
+          </div>
+        </Dialog>
+      )}
 
-        {is_picking_recurrence && (
-          <RecurrencePicker
-            recurrence={task.recurrence}
-            anchor={recurrence_anchor(schedule, date_field)}
-            on_save={(recurrence) => on_set_schedule(task, with_recurrence(schedule, recurrence, undefined, date_field))}
-            on_close={() => set_is_picking_recurrence(false)}
-          />
-        )}
+      {is_picking_recurrence && (
+        <RecurrencePicker
+          recurrence={task.recurrence}
+          anchor={recurrence_anchor(schedule, date_field)}
+          on_save={(recurrence) => on_set_schedule(task, with_recurrence(schedule, recurrence, undefined, date_field))}
+          on_close={() => set_is_picking_recurrence(false)}
+        />
+      )}
 
-        <footer className="task_detail_footer">
-          <span className="muted small">
-            Created {new Date(task.created_at).toLocaleDateString()}
-            {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
-          </span>
-          <span className="task_detail_actions">
-            <button onClick={() => on_focus(task)}>Focus</button>
-            <button onClick={() => on_show_history(task)}>History</button>
-            <button className="danger" onClick={() => on_remove(task)}>
-              Delete
-            </button>
-          </span>
-        </footer>
-      </div>
-    </aside>
+      <footer className="task_detail_footer">
+        <span className="muted small">
+          Created {new Date(task.created_at).toLocaleDateString()}
+          {subtask_count > 0 && ` · ${subtask_count} ${subtask_count === 1 ? 'subtask' : 'subtasks'}`}
+        </span>
+        <span className="task_detail_actions">
+          <button onClick={() => on_focus(task)}>Focus</button>
+          <button onClick={() => on_show_history(task)}>History</button>
+          <button className="danger" onClick={() => on_remove(task)}>
+            Delete
+          </button>
+        </span>
+      </footer>
+    </div>
+  )
+}
+
+// ============================================================================
+// Head
+// ============================================================================
+
+interface TaskDetailHeadProps {
+  task: Task
+  on_toggle: (task: Task) => void
+  on_rename: (task: Task, title: string) => void
+}
+
+// The checkbox and the editable title, in the head of the Shell's side pane: in the top bar above the pane on wide
+// screens, so they stay put while the pane scrolls, and at the pane's top on phones.
+export function TaskDetailHead({ task, on_toggle, on_rename }: TaskDetailHeadProps) {
+  const [title_draft, set_title_draft] = useState(task.title)
+
+  // An emptied title puts the old one back rather than saving a blank task.
+  function commit_title(): void {
+    const title = title_draft.trim()
+    if (!title) set_title_draft(task.title)
+    else if (title !== task.title) on_rename(task, title)
+  }
+
+  return (
+    <>
+      <input type="checkbox" checked={task.is_done} onChange={() => on_toggle(task)} aria-label={task.is_done ? 'Mark as not done' : 'Mark as done'} />
+      <input
+        className="task_detail_title"
+        value={title_draft}
+        onChange={(event) => set_title_draft(event.currentTarget.value)}
+        onBlur={commit_title}
+        onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.currentTarget.blur()}
+        aria-label="Title"
+      />
+    </>
   )
 }
 
