@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { item_link, type ItemChange } from '@x-tech-laboratories/x-libs/items'
+import { item_link, item_text_max_bytes, type ItemChange } from '@x-tech-laboratories/x-libs/items'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { create_mcp_server } from '../src/daemon/mcp_server'
@@ -48,7 +48,7 @@ function add(title: string, notes = ''): string {
 
 describe('list_item_kinds', () => {
   it('names tasks', async () => {
-    expect(await items.list_item_kinds()).toEqual([{ kind: 'task', label: 'Task' }])
+    expect(await items.list_item_kinds()).toEqual([{ kind: 'task', label: 'Task', has_text: true }])
   })
 })
 
@@ -84,6 +84,30 @@ describe('get_items', () => {
     const id = add('Call the bank')
     const [item] = await items.get_items([id])
     expect(item).toMatchObject({ status: '', snippet: '', detail: {} })
+  })
+})
+
+describe('get_item_texts', () => {
+  it("gives a task's whole notes as Markdown, leaving out tasks with no notes and ids that are gone", async () => {
+    const notes = '# Plan\n\n- [ ] buy **milk**\n\n' + 'more '.repeat(100)
+    const with_notes = add('Shop', notes)
+    const without = add('Empty')
+    const gone = add('Gone', 'soon gone')
+    tick()
+    remove_task(gone)
+
+    const texts = await items.get_item_texts([with_notes, without, gone, 'unknown'])
+    expect(texts).toEqual([{ id: with_notes, text: notes, format: 'markdown', changed_at: expect.any(String), is_truncated: false }])
+    const [item] = await items.get_items([with_notes])
+    expect(texts[0]!.changed_at).toBe(item!.changed_at)
+  })
+
+  it('cuts notes longer than the cap and marks them cut', async () => {
+    const id = add('Long', 'ü'.repeat(item_text_max_bytes))
+    const [text] = await items.get_item_texts([id])
+    expect(text!.is_truncated).toBe(true)
+    expect(new TextEncoder().encode(text!.text).length).toBe(item_text_max_bytes)
+    await expect(items.get_item_texts(Array.from({ length: 101 }, (_, index) => `id${index}`))).rejects.toThrow('at most 100 ids')
   })
 })
 
@@ -233,21 +257,22 @@ describe('item tools over MCP', () => {
     return JSON.parse(result.content[0]!.text)
   }
 
-  it('offers the four calls as read-only tools beside the existing ones', async () => {
+  it('offers the five calls as read-only tools beside the existing ones', async () => {
     const { tools } = await client.listTools()
     const by_name = new Map(tools.map((tool) => [tool.name, tool]))
 
-    for (const name of ['list_item_kinds', 'search_items', 'get_items', 'list_item_changes']) expect(by_name.get(name)?.annotations?.readOnlyHint).toBe(true)
+    for (const name of ['list_item_kinds', 'search_items', 'get_items', 'list_item_changes', 'get_item_texts']) expect(by_name.get(name)?.annotations?.readOnlyHint).toBe(true)
     expect(by_name.has('list_tasks')).toBe(true)
   })
 
   it('answers each call as the shared methods do', async () => {
     const id = add('Fix the bike', 'new chain')
 
-    expect(await call('list_item_kinds', {})).toEqual([{ kind: 'task', label: 'Task' }])
+    expect(await call('list_item_kinds', {})).toEqual([{ kind: 'task', label: 'Task', has_text: true }])
     expect(await call('search_items', { query: 'chain' })).toMatchObject([{ id, snippet: 'new chain' }])
     expect(await call('get_items', { ids: [id] })).toMatchObject([{ id, title: 'Fix the bike' }])
     expect(await call('list_item_changes', { since: '2000-01-01T00:00:00Z', limit: 5 })).toMatchObject([{ id, is_deleted: false }])
     await expect(call('list_item_changes', { since: 'yesterday' })).rejects.toThrow()
+    expect(await call('get_item_texts', { ids: [id] })).toMatchObject([{ id, text: 'new chain', format: 'markdown', is_truncated: false }])
   })
 })

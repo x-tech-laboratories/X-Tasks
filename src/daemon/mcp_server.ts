@@ -505,7 +505,7 @@ export function create_mcp_server(on_change: () => void): McpServer {
 // Items for other apps
 // ============================================================================
 
-// The four item calls every X-app answers, with the descriptions their X-Libs api_spec gives them.
+// The item calls every X-app answers, the text call included, with the descriptions their X-Libs api_spec gives them.
 function register_item_tools(server: McpServer): void {
   const { methods, api } = task_item_calls
   const read_only = { readOnlyHint: true }
@@ -533,6 +533,12 @@ function register_item_tools(server: McpServer): void {
       annotations: read_only
     },
     async ({ since, limit }) => as_text(await methods.list_item_changes(since, limit))
+  )
+
+  server.registerTool(
+    'get_item_texts',
+    { description: api.get_item_texts.description, inputSchema: { ids: z.array(z.string()).max(100).describe("The items' ids.") }, annotations: read_only },
+    async ({ ids }) => as_text(await methods.get_item_texts(ids))
   )
 }
 

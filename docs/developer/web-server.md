@@ -72,15 +72,16 @@ The calls are the ones listed in `src/shared/web_api.ts` (from `TASKS_METHODS` a
 
 Like every X-app, the server answers four read-only calls that let another program read tasks without knowing the
 calls above, each answering with the same item shape (`id`, `kind`, `title`, `snippet`, `link`, `status`,
-`changed_at`, `detail`). They come from X-Libs `items` (`src/shared/task_items.ts`), and a read-only token may make
+`changed_at`, `detail`), and the optional fifth, `get_item_texts`, for a task's whole notes. They come from X-Libs `items` (`src/shared/task_items.ts`), and a read-only token may make
 them, as it may every `list_` and `get_` call.
 
 | Call                                 | Answers                                                                                                   |
 | :----------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| `list_item_kinds()`                  | `[{ kind: "task", label: "Task" }]`                                                                       |
+| `list_item_kinds()`                  | `[{ kind: "task", label: "Task", has_text: true }]`                                                       |
 | `search_items(query, limit)`         | Tasks whose title or notes hold every word, done ones too: the title above the notes, open before done   |
 | `get_items(ids)`                     | Those tasks as they are now; an id left out is gone                                                       |
 | `list_item_changes(since, limit)`    | Tasks changed after `since`, oldest first, from the task history; a deleted one as `id`, `kind`, `is_deleted` |
+| `get_item_texts(ids)`                | Each task's whole notes as `id`, `text`, `format` (`markdown`), `changed_at` and `is_truncated`, cut to 256 KB; a task with no notes, or gone, is left out |
 
 A task's `status` is `done` or empty, its `snippet` is its notes as plain text, its `link` is `x-tasks://task/<id>`,
 and `detail` holds `due`, `start`, `repeats`, `done_at`, `my_day`, `estimate_minutes`, `parent` and `tags` where the
@@ -88,7 +89,7 @@ task has them. Pass the last `changed_at` seen as `since` next time to miss no c
 
 ```sh
 curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '["groceries", 10]' https://tasks.example.org/api/search_items
+  -d '["groceries", 10]' https://tasks.example.org/api/call/search_items
 ```
 
 | Path              | Purpose                                                         |

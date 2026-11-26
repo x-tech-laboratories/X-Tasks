@@ -160,15 +160,17 @@ describe('item calls', () => {
     return app.inject({ method: 'POST', url: `/api/${method}`, headers: { ...headers, 'content-type': 'application/json' }, payload: JSON.stringify(args) })
   }
 
-  it('answers the four calls to a read-only token and refuses it a change', async () => {
-    await post(bearer, 'add_task', ['Read the item calls', null, [], null])
+  it('answers the item calls to a read-only token and refuses it a change', async () => {
+    const added = (await post(bearer, 'add_task', ['Read the item calls', null, [], null])).json()
+    await post(bearer, 'set_task_notes', [added.id, 'The **whole** notes'])
     const reader = await read_only_token()
 
-    expect((await post(reader, 'list_item_kinds', [])).json()).toEqual([{ kind: 'task', label: 'Task' }])
+    expect((await post(reader, 'list_item_kinds', [])).json()).toEqual([{ kind: 'task', label: 'Task', has_text: true }])
     const [found] = (await post(reader, 'search_items', ['item calls'])).json()
     expect(found).toMatchObject({ kind: 'task', title: 'Read the item calls', link: `x-tasks://task/${found.id}` })
     expect((await post(reader, 'get_items', [[found.id]])).json()).toEqual([found])
     expect((await post(reader, 'list_item_changes', [null, 100])).json().map((change: { id: string }) => change.id)).toContain(found.id)
+    expect((await post(reader, 'get_item_texts', [[found.id]])).json()).toMatchObject([{ id: found.id, text: 'The **whole** notes', format: 'markdown', is_truncated: false }])
     expect((await post(reader, 'list_tasks', [])).statusCode).toBe(200)
 
     const refused = await post(reader, 'add_task', ['Not allowed', null, [], null])
@@ -213,6 +215,7 @@ describe('call paths', () => {
     expect((await post(`${prefix}list_tasks`, reader, [])).statusCode).toBe(200)
     expect((await post(`${prefix}list_tags`, reader, {})).statusCode).toBe(200)
     expect((await post(`${prefix}get_items`, reader, { ids: [] })).statusCode).toBe(200)
+    expect((await post(`${prefix}get_item_texts`, reader, { ids: [] })).statusCode).toBe(200)
 
     expect((await post(`${prefix}add_task`, reader, ['Not allowed', null, [], null])).statusCode).toBe(403)
     const named = await post(`${prefix}add_task`, reader, { title: 'Not allowed', parent_id: null, tag_ids: [], my_day_on: null })
