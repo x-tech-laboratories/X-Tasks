@@ -65,7 +65,8 @@ let client_id = ''
 // Settles once the daemon answers; the window opens without waiting for it, so every call waits here instead.
 let daemon_ready: Promise<unknown> = Promise.resolve()
 
-// One call to the daemon, as the page made it.
+// One call to the daemon, as the page made it. It stays on the daemon's older /api/<name> path, which every build's
+// daemon answers, since after an upgrade the window may meet the previous build's daemon still running.
 function call(method: string, args: unknown[]): Promise<unknown> {
   return daemon_ready.then(() => call_daemon(socket_path, `/api/${method}`, args, { [CLIENT_ID_HEADER]: client_id }))
 }

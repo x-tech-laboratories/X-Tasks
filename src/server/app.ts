@@ -12,6 +12,7 @@ import { register_sync_routes } from '@x-tech-laboratories/x-libs/server/sync_ro
 import { register_web_folder } from '@x-tech-laboratories/x-libs/server/web_folder'
 
 import { create_bridge_handlers, type BridgeContext } from './bridge_handlers.ts'
+import { call_params } from './call_params.ts'
 import { create_backup } from '../daemon/database_backups'
 import { open_database } from '@shared/task_database'
 import { task_item_methods } from '@shared/task_items'
@@ -51,10 +52,15 @@ export function is_read_only(method: string): boolean {
 // Bridge and sync routes
 // ============================================================================
 
-// Each handler answers a POST to its name, with its arguments as a JSON array; a call that changes anything tells every other open page or window.
+// Each handler answers POST /api/call/<name>, the Application Standard's path, with its arguments as a JSON list in order
+// or by name as a JSON object; a call that changes anything tells every other open page or window.
 // The desktop app's daemon answers its window the same way.
 export function register_bridge_calls(api: FastifyInstance, handlers: object, stream: EventStream): void {
-  register_call_table(api, '', handlers, { is_read_only, on_change: (client_id) => stream.announce_change(client_id) })
+  const options = { is_read_only, on_change: (client_id: string) => stream.announce_change(client_id), params: call_params }
+  register_call_table(api, '/call', handlers, options)
+  // Kept for older clients: X-Tasks answered at /api/<name> before the standard named one path, and installed pages,
+  // phones, other programs and an older build's daemon may still call there.
+  register_call_table(api, '', handlers, options)
 }
 
 // Devices sync at api/sync/exchange, snapshot and replace; the server's data is backed up before a device replaces it.
@@ -78,7 +84,7 @@ export async function build_app(options: AppOptions): Promise<FastifyInstance> {
   register_lenient_json_body(app)
   register_error_replies(app)
   const accounts = new AccountStore({ database: current_database, app_name: 'X-Tasks', declared: options.declared, token_prefix: 'xtk' })
-  await register_accounts(app, { accounts, cookie_name: 'x_tasks_session', call_of: calls_under('/api'), is_read_only })
+  await register_accounts(app, { accounts, cookie_name: 'x_tasks_session', call_of: calls_under('/api/call', '/api'), is_read_only })
 
   const context: BridgeContext = { announce_change_to_all: () => changes.announce_change() }
   // The item calls are for other programs; the page has no use for them.
