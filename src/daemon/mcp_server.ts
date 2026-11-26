@@ -16,6 +16,7 @@ import {
   list_time_entries
 } from '@shared/task_database'
 import type { Tag, TagGroup } from '@shared/tasks'
+import { task_item_calls } from '@shared/task_items'
 
 // ============================================================================
 // Task helpers
@@ -496,7 +497,43 @@ export function create_mcp_server(on_change: () => void): McpServer {
     })
   )
 
+  register_item_tools(server)
   return server
+}
+
+// ============================================================================
+// Items for other apps
+// ============================================================================
+
+// The four item calls every X-app answers, with the descriptions their X-Libs api_spec gives them.
+function register_item_tools(server: McpServer): void {
+  const { methods, api } = task_item_calls
+  const read_only = { readOnlyHint: true }
+  const limit = z.number().int().min(1).max(100).optional().describe('How many items at most.')
+
+  server.registerTool('list_item_kinds', { description: api.list_item_kinds.description, annotations: read_only }, async () => as_text(await methods.list_item_kinds()))
+
+  server.registerTool(
+    'search_items',
+    { description: api.search_items.description, inputSchema: { query: z.string().describe('The words to look for.'), limit }, annotations: read_only },
+    async ({ query, limit }) => as_text(await methods.search_items(query, limit))
+  )
+
+  server.registerTool(
+    'get_items',
+    { description: api.get_items.description, inputSchema: { ids: z.array(z.string()).max(100).describe("The items' ids.") }, annotations: read_only },
+    async ({ ids }) => as_text(await methods.get_items(ids))
+  )
+
+  server.registerTool(
+    'list_item_changes',
+    {
+      description: api.list_item_changes.description,
+      inputSchema: { since: z.string().datetime({ offset: true }).nullable().optional().describe('An ISO time; leave it out for every item.'), limit },
+      annotations: read_only
+    },
+    async ({ since, limit }) => as_text(await methods.list_item_changes(since, limit))
+  )
 }
 
 // ============================================================================

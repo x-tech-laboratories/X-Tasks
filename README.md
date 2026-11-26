@@ -95,7 +95,9 @@ claude mcp add --transport http x-tasks http://127.0.0.1:3917/mcp
 ```
 
 It offers tools to list tasks and tags, add, update, move, complete, reopen, tag, untag and remove tasks, to add,
-update and remove tag groups and plain tags, and to list, start and stop timers.
+update and remove tag groups and plain tags, and to list, start and stop timers. The four read-only item calls every
+X-app answers, `list_item_kinds`, `search_items`, `get_items` and `list_item_changes`, are tools there too, and calls
+on the server's API that a read-only token may make.
 
 ### Importing Trilium notes
 

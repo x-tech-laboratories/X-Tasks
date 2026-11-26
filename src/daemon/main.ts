@@ -11,6 +11,7 @@ import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
 import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
 
 import { close_task_database, get_settings, has_changed_elsewhere } from '@shared/task_database'
+import { task_item_methods } from '@shared/task_items'
 import { create_task_sync_client } from '@shared/task_sync_client'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, HELLO_EVENT } from '@shared/web_api'
 import { create_bridge_handlers, restart_mcp_server } from '../server/bridge_handlers'
@@ -70,6 +71,7 @@ function create_handlers(shut_down: () => void) {
       announce_change()
     },
     ...sync_device_methods(sync),
+    ...task_item_methods,
     // Stops once the answer has gone back.
     stop_daemon: () => void setTimeout(shut_down, 0)
   }
