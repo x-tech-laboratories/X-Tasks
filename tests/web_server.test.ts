@@ -143,15 +143,19 @@ describe('bridge calls', () => {
 // Item calls
 // ============================================================================
 
-describe('item calls', () => {
-  // A throwaway token made on the account page for a program, read-only.
-  async function read_only_token(): Promise<{ authorization: string }> {
+// A throwaway token made on the account page for a program, read-only; made once, as sign-ins per name are limited.
+let made_reader: Promise<{ authorization: string }> | undefined
+function read_only_token(): Promise<{ authorization: string }> {
+  made_reader ??= (async () => {
     const cookie = (await sign_in({ name: 'admin', password: PASSWORD })).cookies.find((candidate) => candidate.name === SESSION_COOKIE)!
     const response = await app.inject({ method: 'POST', url: '/api/account/tokens', cookies: { [SESSION_COOKIE]: cookie.value }, payload: { name: 'reader', read_only: true } })
     expect(response.statusCode).toBe(201)
     return { authorization: `Bearer ${response.json().token}` }
-  }
+  })()
+  return made_reader
+}
 
+describe('item calls', () => {
   async function post(headers: Record<string, string>, method: string, args: unknown[]) {
     return app.inject({ method: 'POST', url: `/api/${method}`, headers: { ...headers, 'content-type': 'application/json' }, payload: JSON.stringify(args) })
   }
@@ -182,12 +186,6 @@ describe('call paths', () => {
     return app.inject({ method: 'POST', url: path, headers: { ...headers, 'content-type': 'application/json' }, payload: JSON.stringify(body) })
   }
 
-  async function reader_token(): Promise<{ authorization: string }> {
-    const cookie = (await sign_in({ name: 'admin', password: PASSWORD })).cookies.find((candidate) => candidate.name === SESSION_COOKIE)!
-    const response = await app.inject({ method: 'POST', url: '/api/account/tokens', cookies: { [SESSION_COOKIE]: cookie.value }, payload: { name: 'path reader', read_only: true } })
-    return { authorization: `Bearer ${response.json().token}` }
-  }
-
   it.each(['/api/call/', '/api/'])('answers at %s with the arguments as a list or by name', async (prefix) => {
     const listed = await post(`${prefix}add_task`, bearer, [`Listed at ${prefix}`, null, [], null])
     expect(listed.statusCode).toBe(200)
@@ -211,7 +209,7 @@ describe('call paths', () => {
   })
 
   it.each(['/api/call/', '/api/'])('lets a read-only token read at %s in both forms and refuses it a change', async (prefix) => {
-    const reader = await reader_token()
+    const reader = await read_only_token()
     expect((await post(`${prefix}list_tasks`, reader, [])).statusCode).toBe(200)
     expect((await post(`${prefix}list_tags`, reader, {})).statusCode).toBe(200)
     expect((await post(`${prefix}get_items`, reader, { ids: [] })).statusCode).toBe(200)
