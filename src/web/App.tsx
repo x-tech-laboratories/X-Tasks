@@ -8,8 +8,7 @@ import { open_context_menu, type MenuItem } from '@x-tech-laboratories/x-libs/we
 import { use_shortcuts } from '@x-tech-laboratories/x-libs/web/react/shortcuts'
 import { toggled, with_range } from '@x-tech-laboratories/x-libs/web/selection'
 import { use_now } from '@x-tech-laboratories/x-libs/web/react/time'
-import { Shell } from '@x-tech-laboratories/x-libs/web/react/shell'
-import { ResizeHandle } from '@x-tech-laboratories/x-libs/web/react/split'
+import { Shell, shell_labels, type ShellLabels } from '@x-tech-laboratories/x-libs/web/react/shell'
 import { toast, undoable, type Undoable } from '@x-tech-laboratories/x-libs/web/react/toasts'
 import { DEFAULT_SETTINGS, DETAIL_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE, type Settings, type TaskGrouping, type TaskRelationship, type ViewLayout } from '@shared/settings'
 import { EMPTY_RULE, can_link, task_and_ancestors, waits_on_by_task, type Completion, type CompletionLogChange, type Tag, type TagGroup, type TagRule, type Task, type TaskSchedule } from '@shared/tasks'
@@ -35,7 +34,7 @@ import { GroupDialog } from './GroupDialog'
 import { SettingsPage } from './SettingsPage'
 import { TaskHistoryDialog } from './TaskHistory'
 import { Sidebar, SidebarFoot } from './Sidebar'
-import { TaskDetail } from './TaskDetail'
+import { TaskDetail, TaskDetailHead } from './TaskDetail'
 import { ordered_detail_sections } from './detail_sections'
 import { RepeatItem, TaskItem, type TaskActions } from './TaskItem'
 import { TaskTable } from './TaskTable'
@@ -76,6 +75,9 @@ const BREAK_CHECK_MS = 30_000
 
 // Removed tasks wait this long before the database deletes them, so the removal can be undone.
 const UNDO_DELAY_MS = 8000
+
+// The details pane's buttons keep the names they had before the pane moved into the Shell.
+const SHELL_LABELS: ShellLabels = { ...shell_labels, close_side_pane: () => 'Close details', resize_side_pane: () => 'Resize task details' }
 
 // ============================================================================
 // App
@@ -892,12 +894,6 @@ export function App({ account }: { account?: SignedInAccount }) {
   }, [completions])
   const last_done_of: LastDoneOf = (task) => last_done_by_task_id.get(task.id) ?? null
 
-  // The details pane's width reaches main's grid through the body, since the Shell gives main only a class.
-  const detail_width = settings?.detail_width
-  useEffect(() => {
-    if (detail_width !== undefined) document.body.style.setProperty('--side-pane-width', `${detail_width}px`)
-  }, [detail_width])
-
   useEffect(() => {
     if (multibar_submits) submit_multibar.current()
   }, [multibar_submits])
@@ -1597,68 +1593,67 @@ export function App({ account }: { account?: SignedInAccount }) {
       }}
       menu_open={is_sidebar_open}
       on_menu_open_change={set_is_sidebar_open}
-      main_class={cx('task_main', selected_task && 'with-side-pane')}
+      main_class="task_main"
+      labels={SHELL_LABELS}
+      // Given open or closed, so the task view keeps its place and its state as a task opens and closes.
+      side_pane={{
+        title: 'Task details',
+        open: selected_task !== null,
+        on_open_change: (open) => {
+          if (!open) set_selected_task_id(null)
+        },
+        head: selected_task && <TaskDetailHead key={selected_task.id} task={selected_task} on_toggle={tick_task} on_rename={rename_task} />,
+        width: {
+          default_width: DEFAULT_SETTINGS.detail_width,
+          min: DETAIL_WIDTH_RANGE.min,
+          max: DETAIL_WIDTH_RANGE.max,
+          width: settings.detail_width,
+          on_change: (width, done) => (done ? void change_setting('detail_width', width) : show_setting('detail_width', width))
+        },
+        content: selected_task && (
+          <TaskDetail
+            key={selected_task.id}
+            task={selected_task}
+            tag_groups={tag_groups}
+            tags={tags}
+            date_field={settings.task_date_field}
+            sections={ordered_detail_sections(settings.task_detail_order, tag_groups).filter((section) => !settings.hidden_task_detail_sections.includes(section))}
+            subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
+            tasks={tasks}
+            relationships={settings.task_relationships}
+            on_link={link_tasks}
+            on_unlink={unlink_tasks}
+            on_set_parent={set_task_parent}
+            durations={settings.task_durations}
+            on_set_notes={set_task_notes}
+            on_tag={tag_task}
+            on_untag={untag_task}
+            on_set_schedule={set_task_schedule}
+            on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
+            streak={streak_by_task_id.get(selected_task.id) ?? null}
+            history={task_history(selected_task, tasks, completions)}
+            on_reschedule={(task) => set_rescheduling_task_ids([task.id])}
+            is_in_my_day={is_in_my_day(selected_task, shown_since)}
+            on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
+            on_remove={remove_task}
+            on_show_history={(task) => set_history_open({ task_id: task.id, version_id: null })}
+            on_focus={(task) => set_focus_task_id(task.id)}
+            time_entries={task_entries(time_entries, selected_task.id)}
+            is_timing={is_timing(selected_task)}
+            on_start_timer={start_task_timer}
+            on_stop_timer={stop_task_timer}
+            on_remove_time_entry={remove_time_entry}
+            on_set_estimate={set_task_estimate}
+            on_set_reminders={set_task_reminders}
+            on_close={() => set_selected_task_id(null)}
+          />
+        )
+      }}
       contained
       view_key={is_settings_open ? 'settings' : view_key(selected_view)}
     >
-      <div className="main-pane">
-        <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
-        <div className={cx('task_pane', is_wide && !is_settings_open && `is_wide is_${layout}`)}>{task_pane}</div>
-      </div>
-
-        {selected_task && (
-          <div className="side-pane">
-            <ResizeHandle
-              side="right"
-              size={settings.detail_width}
-              min={DETAIL_WIDTH_RANGE.min}
-              max={DETAIL_WIDTH_RANGE.max}
-              default_size={DEFAULT_SETTINGS.detail_width}
-              on_resize={(width) => show_setting('detail_width', width)}
-              on_resize_end={(width) => void change_setting('detail_width', width)}
-              label="Resize task details"
-              class_name="detail_resize"
-            />
-            <TaskDetail
-              key={selected_task.id}
-              task={selected_task}
-              tag_groups={tag_groups}
-              tags={tags}
-              date_field={settings.task_date_field}
-              sections={ordered_detail_sections(settings.task_detail_order, tag_groups).filter((section) => !settings.hidden_task_detail_sections.includes(section))}
-              subtask_count={subtree_ids(selected_task.id, tasks).size - 1}
-              tasks={tasks}
-              relationships={settings.task_relationships}
-              on_link={link_tasks}
-              on_unlink={unlink_tasks}
-              on_set_parent={set_task_parent}
-              durations={settings.task_durations}
-              on_toggle={tick_task}
-              on_rename={rename_task}
-              on_set_notes={set_task_notes}
-              on_tag={tag_task}
-              on_untag={untag_task}
-              on_set_schedule={set_task_schedule}
-              on_set_done_at={(task, done_at) => save_task_done(task, task.is_done, done_at, done_at === null ? { kind: 'remove' } : { kind: 'retime' })}
-              streak={streak_by_task_id.get(selected_task.id) ?? null}
-              history={task_history(selected_task, tasks, completions)}
-              on_reschedule={(task) => set_rescheduling_task_ids([task.id])}
-              is_in_my_day={is_in_my_day(selected_task, shown_since)}
-              on_set_my_day={(task, is_added) => set_task_my_day(task, is_added ? today : null)}
-              on_remove={remove_task}
-              on_show_history={(task) => set_history_open({ task_id: task.id, version_id: null })}
-              on_focus={(task) => set_focus_task_id(task.id)}
-              time_entries={task_entries(time_entries, selected_task.id)}
-              is_timing={is_timing(selected_task)}
-              on_start_timer={start_task_timer}
-              on_stop_timer={stop_task_timer}
-              on_remove_time_entry={remove_time_entry}
-              on_set_estimate={set_task_estimate}
-              on_set_reminders={set_task_reminders}
-              on_close={() => set_selected_task_id(null)}
-            />
-          </div>
-        )}
+      <SyntaxPreview problems={[...(typed_task?.problems ?? []), ...(search?.problems.map((problem) => `Search: ${problem}`) ?? [])]} />
+      <div className={cx('task_pane', is_wide && !is_settings_open && `is_wide is_${layout}`)}>{task_pane}</div>
 
       {rescheduling_tasks.length > 0 && (
         <ReschedulePopup

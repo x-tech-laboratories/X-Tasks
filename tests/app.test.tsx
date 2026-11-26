@@ -298,7 +298,7 @@ describe('the timer', () => {
   test('started with a task open, sits beside the search bar, ahead of the task details header', async () => {
     await show_app()
     fireEvent.click(screen.getByText('Buy milk'))
-    const header = document.querySelector('.topbar > .task_detail_header')!
+    const header = document.querySelector('.topbar > .side-pane-head')!
     expect(header).toBeTruthy()
 
     const row = screen.getAllByText('Buy milk').map((each) => each.closest('.task')).find(Boolean) as HTMLElement
@@ -516,6 +516,42 @@ describe('the worklog', () => {
 // ============================================================================
 
 describe('the task details', () => {
+  test('open in the side pane, with the checkbox and editable title in the top bar, and close by button or Escape', async () => {
+    const { tasks_api } = await show_app()
+
+    fireEvent.click(screen.getByText('Buy milk'))
+    const head = document.querySelector('.topbar > .side-pane-head') as HTMLElement
+    const title = within(head).getByRole('textbox', { name: 'Title' }) as HTMLInputElement
+    expect(title.value).toBe('Buy milk')
+    expect(within(head).getByRole('checkbox', { name: 'Mark as done' })).toBeTruthy()
+
+    fireEvent.change(title, { target: { value: 'Buy oat milk' } })
+    fireEvent.keyDown(title, { key: 'Enter' })
+    fireEvent.blur(title)
+    await waitFor(() => expect(tasks_api.set_task_title).toHaveBeenCalledWith('milk', 'Buy oat milk'))
+
+    fireEvent.click(within(head).getByRole('button', { name: 'Close details' }))
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Task details' })).toBeNull())
+    expect(document.querySelector('main.task_main')!.classList.contains('with-side-pane')).toBe(true)
+
+    fireEvent.click(screen.getAllByText('Write report')[0]!)
+    const details = await screen.findByRole('complementary', { name: 'Task details' })
+    fireEvent.keyDown(within(details).getByRole('button', { name: 'Delete' }), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Task details' })).toBeNull())
+  })
+
+  test('resizing the pane by keyboard saves its width as the synced setting', async () => {
+    const { settings_api } = await show_app({ detail_width: 400 })
+
+    fireEvent.click(screen.getByText('Buy milk'))
+    const handle = await screen.findByRole('separator', { name: 'Resize task details' })
+    fireEvent.keyDown(handle, { key: 'ArrowLeft' })
+
+    await waitFor(() => expect(settings_api.set_setting).toHaveBeenCalledWith('detail_width', expect.any(Number)))
+    const width = (settings_api.set_setting.mock.calls.find(([key]: unknown[]) => key === 'detail_width') as unknown[])[1] as number
+    expect(width).toBeGreaterThan(400)
+  })
+
   test("the Parent field moves a task under another one or to the top level, but never under itself", async () => {
     const { tasks_api } = await show_app()
 
