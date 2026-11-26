@@ -20,9 +20,9 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       thresholds: {
         autoUpdate: (new_threshold) => Math.floor(new_threshold),
-        lines: 56,
-        statements: 53,
-        functions: 43,
+        lines: 57,
+        statements: 54,
+        functions: 45,
         branches: 54
       }
     }
