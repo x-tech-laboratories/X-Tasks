@@ -23,7 +23,7 @@ MCP server** is on. It listens on loopback only.
 | `link_tasks`   | Links two tasks by a relationship                                                     |
 | `unlink_tasks` | Removes the link between two tasks                                                    |
 | `remove_task`  | Deletes a task and all its subtasks                                                   |
-| `list_item_kinds`, `search_items`, `get_items`, `list_item_changes` | The read-only [item calls](/developer/web-server/#items-for-other-apps) every X-app answers |
+| `list_item_kinds`, `search_items`, `get_items`, `list_item_changes`, `get_item_texts` | The read-only [item calls](/developer/web-server/#items-for-other-apps) every X-app answers |
 
 Changes made through MCP are announced to the page, so it updates at once.
 

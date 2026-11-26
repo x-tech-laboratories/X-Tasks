@@ -9,8 +9,9 @@ import type { TaskSnapshot } from './versions'
 // Items for other apps
 // ============================================================================
 
-// The four read-only calls every X-app answers about its items, so another program reads X-Tasks without knowing its
-// other calls: list_item_kinds, search_items, get_items and list_item_changes, each task an item of kind task.
+// The read-only calls every X-app answers about its items, so another program reads X-Tasks without knowing its other
+// calls: list_item_kinds, search_items, get_items and list_item_changes, each task an item of kind task, and
+// get_item_texts, a task's whole notes as Markdown.
 
 // What an item says about a task, whether it is read from the tasks as they are or from a version in the history.
 type TaskFacts = Pick<TaskSnapshot, 'title' | 'notes' | 'is_done' | 'done_at' | 'start_at' | 'due_at' | 'recurrence' | 'my_day_on' | 'estimate_minutes' | 'parent_id' | 'tag_ids'>
@@ -120,7 +121,7 @@ export function search_tasks(query: string, limit: number): ItemFields[] {
 
 export const task_item_calls = item_calls(
   {
-    kinds: [{ kind: 'task', label: 'Task' }],
+    kinds: [{ kind: 'task', label: 'Task', has_text: true }],
     search: search_tasks,
     get: (ids) => {
       const all_tasks = list_tasks()
@@ -131,6 +132,13 @@ export const task_item_calls = item_calls(
     changes: (since, limit) => {
       const names = current_names(list_tasks())
       return history_item_changes<TaskSnapshot>([{ kind: 'task', history: task_history, item: (snapshot) => item_of(snapshot, names) }], open_database)(since, limit)
+    },
+    // A task's notes as written, Markdown; the title is the item's already. A task with no notes is left out.
+    text: (ids) => {
+      const wanted = new Set(ids)
+      const tasks = list_tasks().filter((task) => wanted.has(task.id) && task.notes.trim() !== '')
+      const times = changed_times()
+      return tasks.map((task) => ({ id: task.id, text: task.notes, format: 'markdown' as const, changed_at: times.get(task.id) ?? task.created_at }))
     }
   },
   { scheme: TASK_LINK_SCHEME }
