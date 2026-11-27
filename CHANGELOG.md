@@ -79,6 +79,8 @@ AppImage and Flatpak are released together, as `v1.0.<build>` on every push to `
 
 ### Fixed
 
+- The server refuses an API call without a session even when its path is percent-encoded, such as `/%61pi/...`,
+  with X-Libs 0.90.0
 - After an upgrade the app no longer keeps using the old build's daemon: opening the app replaces a daemon of
   another build, and a window stopped from outside, as by an upgrade, quits instead of starting the old daemon again
 - Later repeats of a timed task in the calendar keep its start time instead of showing one hour

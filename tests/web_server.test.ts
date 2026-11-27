@@ -62,6 +62,13 @@ describe('signing in', () => {
     expect(response.json()).toEqual({ error: 'Sign in first.' })
   })
 
+  it('refuses an API call without a session whose path is percent-encoded', async () => {
+    const response = await app.inject({ method: 'POST', url: '/%61pi/list_tasks' })
+    expect([400, 401]).toContain(response.statusCode)
+    const call = await app.inject({ method: 'POST', url: '/%61pi/call/list_tasks' })
+    expect([400, 401]).toContain(call.statusCode)
+  })
+
   it('sets a session cookie that ends with the browser on the right password', async () => {
     const response = await sign_in({ name: 'admin', password: PASSWORD })
     expect(response.statusCode).toBe(204)
