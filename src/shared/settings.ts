@@ -1,7 +1,7 @@
 import type { CertificateClient } from '@x-tech-laboratories/x-libs/certificate_protocol'
 import { backup_naming, type Backup } from '@x-tech-laboratories/x-libs/backups'
 import type { DatePoint, DateRule } from '@x-tech-laboratories/x-libs/date_ranges'
-import type { SyncCredentials, SyncDirection, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
+import type { PairingCode, PeerListening, SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { PomodoroState } from './pomodoro'
 import type { View } from './tasks'
 
@@ -465,11 +465,15 @@ export interface SettingsApi {
   get_backup_folder?: () => Promise<string>
   choose_backup_folder?: () => Promise<string>
   get_mcp_status: () => Promise<McpStatus>
+  // This copy's sync with its paired devices; in a browser, the server's own, which only an admin may change.
   get_sync_status: () => Promise<SyncStatus>
-  // Signs this device in with a name and password, takes a token given by hand, or keeps its sign-in when given null.
-  connect_sync: (server_url: string, credentials: SyncCredentials | string | null, direction: SyncDirection) => Promise<SyncStatus>
-  disconnect_sync: () => Promise<SyncStatus>
+  create_pairing_code: () => Promise<PairingCode>
+  pair_device: (code: string) => Promise<SyncStatus>
+  remove_device: (device: string) => Promise<SyncStatus>
   sync_now: () => Promise<SyncStatus>
+  // Only on the desktop: whether paired devices may connect to this computer, and on which port.
+  get_peer_listening?: () => Promise<PeerListening>
+  set_peer_listening?: (on: boolean, port?: number) => Promise<PeerListening>
   // Server certificates the device trusts, such as a home server's self-signed one; a browser uses its own.
   certificates?: CertificateClient
   // Only on the desktop: closes the window and stops the app running in the background too, until it is opened again.

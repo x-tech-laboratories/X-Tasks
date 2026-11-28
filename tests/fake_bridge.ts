@@ -70,7 +70,7 @@ export function install_fake_bridge(data: { tasks?: Task[]; tags?: Tag[]; tag_gr
     set_setting: vi.fn(async <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void (settings[key] = value)),
     get_database_path: vi.fn(async () => '/tmp/tasks.db'),
     get_idle_seconds: vi.fn(async () => 0),
-    get_sync_status: vi.fn(async () => ({ state: 'off' as const, server_url: '', last_synced_at: '', pending_changes: 0, error: '' }))
+    get_sync_status: vi.fn(async () => ({ state: 'off' as const, device: 'ABCDEFGHIJKLMNOP', name: 'X-Tasks on laptop', addresses: [], peers: [], last_synced_at: '', pending_changes: 0, error: '' }))
   }
 
   window.x_tasks = tasks_api as unknown as TasksApi

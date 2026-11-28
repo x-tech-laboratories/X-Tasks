@@ -7,12 +7,13 @@ import { create_certificate_trust } from '@x-tech-laboratories/x-libs/certificat
 import { daemon_socket_path, DaemonRunningError, listen_on_socket } from '@x-tech-laboratories/x-libs/local_daemon'
 import { EventStream } from '@x-tech-laboratories/x-libs/server/events'
 import { register_error_replies, register_lenient_json_body } from '@x-tech-laboratories/x-libs/server/replies'
-import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_client'
 import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
+import { sync_device_methods } from '@x-tech-laboratories/x-libs/sync_peer'
+import { keep_listening_for_peers } from '@x-tech-laboratories/x-libs/sync_peer_listening'
 
 import { close_task_database, get_settings, has_changed_elsewhere } from '@shared/task_database'
 import { task_item_methods } from '@shared/task_items'
-import { create_task_sync_client } from '@shared/task_sync_client'
+import { create_task_sync_peer } from '@shared/task_sync_peer'
 import { CHANGED_EVENT, CLIENT_ID_HEADER, HELLO_EVENT } from '@shared/web_api'
 import { create_bridge_handlers, restart_mcp_server } from '../server/bridge_handlers'
 import { register_bridge_calls } from '../server/app'
@@ -46,14 +47,16 @@ const UNUSED_CHECK_MS = 5000
 const changes = new EventStream({ hello_event: HELLO_EVENT, changed_event: CHANGED_EVENT, client_id_header: CLIENT_ID_HEADER })
 const announce_change = (): void => changes.announce_change()
 
-// Trusted server certificates and the sync server and token live beside the database, so a scratch database never syncs with the real server.
-// Node's own https honours the trusted certificates, so sync goes through Node's fetch.
+// Trusted certificates, the sync keys and paired devices, and letting other devices connect live beside the database, so a
+// scratch database never syncs with the real devices. Node's own https honours the trusted certificates, so sync goes through Node's fetch.
 const certificates = create_certificate_trust({ file: join(dirname(database_path), 'trusted-certificates.json'), use_in_node: true })
-const sync = create_task_sync_client(
-  file_sync_storage({ file: join(dirname(database_path), 'sync.json'), back_up_before_download: () => create_backup().then(() => undefined) }),
-  `X-Tasks on ${hostname()}`,
-  announce_change
-)
+const listening = keep_listening_for_peers({ peer: () => sync, app: 'x-tasks', file: join(dirname(database_path), 'sync-listening.json'), default_port: 3928 })
+const sync = create_task_sync_peer({
+  storage: file_sync_storage({ file: join(dirname(database_path), 'sync-peers.json'), back_up_before_replace: () => create_backup().then(() => undefined) }),
+  device_name: `X-Tasks on ${hostname()}`,
+  on_remote_change: announce_change,
+  addresses: () => listening.addresses()
+})
 
 // ============================================================================
 // Calls
@@ -63,7 +66,7 @@ function create_handlers(shut_down: () => void) {
   const context = { announce_change_to_all: announce_change }
   return {
     ...create_bridge_handlers(context),
-    // The restored data brings its own MCP settings, and sync asks which copy to keep.
+    // The restored data brings its own MCP settings, and then reaches every paired device.
     restore_backup: async (name: string) => {
       await restore_backup(name)
       void restart_mcp_server(context)
@@ -71,6 +74,7 @@ function create_handlers(shut_down: () => void) {
       announce_change()
     },
     ...sync_device_methods(sync),
+    ...listening.methods,
     ...task_item_methods,
     // Stops once the answer has gone back.
     stop_daemon: () => void setTimeout(shut_down, 0)
@@ -110,6 +114,7 @@ async function main(): Promise<void> {
     for (const timer of timers) clearInterval(timer)
     stop_notices()
     sync.stop()
+    void listening.stop()
     void daemon
       .close()
       .then(() => stop_mcp_server())
@@ -130,6 +135,7 @@ async function main(): Promise<void> {
 
   void restart_mcp_server({ announce_change_to_all: announce_change })
   schedule_automatic_backups()
+  await listening.start()
   sync.start()
   stop_notices = keep_giving_notices({ icon_path, announce_change, on_error: (message) => console.error(message) })
 

@@ -28,11 +28,11 @@ afterEach(() => {
 // Backups
 // ============================================================================
 
-it('restores a backup in place of the current tasks, after backing those up, and starts sync over', async () => {
+it('restores a backup in place of the current tasks, after backing those up, and makes every paired device match it', async () => {
   add_task('Before', null, [], null)
   const before = await create_backup()
   add_task('After', null, [], null)
-  task_sync.write_state(open_database(), { server_generation: 'from-the-server' })
+  const generation_before = task_sync.read_state(open_database()).generation
 
   // A backup taken in the same second as the first keeps it, so the restore's own backup waits for the next.
   await new Promise((resolve) => setTimeout(resolve, 1100))
@@ -40,5 +40,7 @@ it('restores a backup in place of the current tasks, after backing those up, and
 
   expect(list_tasks().map((task) => task.title)).toEqual(['Before'])
   expect(await list_backups()).toHaveLength(2)
-  expect(task_sync.read_state(open_database()).server_generation).toBe('')
+  const state = task_sync.read_state(open_database())
+  expect(state.generation).not.toBe(generation_before)
+  expect(state.claim_generation).toBe(state.generation)
 })

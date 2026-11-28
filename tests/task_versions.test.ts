@@ -143,7 +143,7 @@ describe('syncing history', () => {
   it('brings another device its versions, marked as made elsewhere, without recording its own', () => {
     const task = add_task('Buy milk', null, [], null)
     set_task_title(task.id, 'Buy oat milk')
-    const { changes } = task_sync.collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_changes_since(open_database(), 0, '')
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
 
@@ -156,7 +156,7 @@ describe('syncing history', () => {
 
   it('records changes made here to a synced task, after the synced ones', () => {
     const task = add_task('Buy milk', null, [], null)
-    const { changes } = task_sync.collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_changes_since(open_database(), 0, '')
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
     task_sync.apply_changes(open_database(), changes)
@@ -171,7 +171,7 @@ describe('syncing history', () => {
     set_task_title(task.id, 'Buy bread')
     const created = list_task_versions(task.id).at(-1)!
     restore_task_version(created.id)
-    const { changes } = task_sync.collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_changes_since(open_database(), 0, '')
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
 
@@ -182,7 +182,7 @@ describe('syncing history', () => {
 
   it('leaves no task waiting for a version once changes from another device are applied', () => {
     const task = add_task('Buy milk', null, [], null)
-    const { changes } = task_sync.collect_unpushed_changes(open_database())
+    const { changes } = task_sync.collect_changes_since(open_database(), 0, '')
     close_task_database()
     attach_task_database(new DatabaseSync(':memory:'), ':memory:')
 

@@ -133,8 +133,7 @@ from the accounts file `X_TASKS_PASSWORD_HASH_FILE` names; they add other users 
 lasts until it is signed out from Your account (`#/account`), where each user also changes their
 password, turns on a second factor, sees where they are signed in and makes tokens.
 
-The desktop and Android apps sync by signing in from **Settings → Sync** with the same name and
-password; each device gets a token of its own, which Stop syncing gives back. Other programs send a
+Sync needs no account: devices pair with each other, as [Sync](#sync) sets out. Other programs send a
 token made on Your account as an `Authorization: Bearer` header and call `POST /api/<call>` with the
 arguments as a JSON array, using the calls listed in `src/shared/web_api.ts`.
 
@@ -171,24 +170,24 @@ and the whole app below 700 pixels uses the phone layout, where each task's date
 
 ## Sync
 
-The desktop app keeps its own database and syncs it with a server, so it works offline and sends
-its changes once the server can be reached. Set it up under **Sync** in Settings with the server's
-address and token, and choose once whose tasks to keep: the first device sends its own, and later
-ones take the server's. Either choice backs up the data it replaces.
+Every copy of the tasks, on the desktop, a phone or a server, works offline and syncs with the
+devices it is paired with. On a device the other can reach (a server, or a desktop with **Let other
+devices connect** on), press **Show pairing code** under **Sync** in Settings, and enter the code on
+the other device. The two copies merge, and the devices each knew are introduced to each other.
 
 Each value a task, tag or setting holds is synced on its own, and the latest edit of it wins, so
 editing a task's title on one device and its notes on another keeps both. A subtask added under a
 task deleted elsewhere goes too. Window layout, the MCP endpoint and backup settings stay with each
-device. The server address and token are kept in `sync.json` beside the database.
+device. The device's keys and paired devices are kept in `sync-peers.json` beside the database.
 
-Restoring a backup, on a device or the server, stops sync on the devices it affects until someone
-chooses again which copy to keep.
+Restoring a backup, on a device or the server, makes every paired device match the restored copy,
+each backing itself up first.
 
 ## Android
 
 The Android app is the same page inside a Capacitor WebView. It keeps its own database on the
 phone, SQLite compiled to WebAssembly and saved in the app's storage after each change, and syncs
-with the web server under **Sync** in Settings, as the desktop app does. On a narrow screen the
+with its paired devices under **Sync** in Settings, as the desktop app does. On a narrow screen the
 sidebar becomes a drawer behind the menu button, and a task's details fill the screen.
 
 A phone has no daemon, so the app hands Android its notices ahead of time through Capacitor's local notifications
@@ -232,7 +231,7 @@ for testing through `adb reverse tcp:3918 tcp:3918`. For a server whose certific
 private or self-signed authority, paste that authority's PEM certificate under **Trusted certificate
 authority** in the Sync settings; the app then accepts certificates it signed, and still refuses
 expired ones or ones for another host. The phone keeps no backups of its
-own; before it takes the server's tasks it saves its old ones in the app's storage.
+own; before another device's restore replaces its tasks it saves its old ones in the app's storage.
 
 ## Selecting several tasks
 
@@ -282,7 +281,7 @@ later launches, so a run with `X_TASKS_DB` set never hands its link to another w
 - `src/main` — the Electron main process: the window, the tray, and passing the page's calls to the daemon
 - `src/server` — the Fastify web server: `main.ts` starts it, `app.ts` builds the routes, which the daemon reuses
 - `src/shared/task_database.ts` — the task database, run unchanged by the daemon, the server and the phone
-- `src/shared/task_sync.ts` — which tables sync, on the X-Libs `sync_engine`; `src/shared/task_sync_client.ts` syncs a device with the server through the X-Libs `sync_client`, and the server answers through `server/sync_routes`
+- `src/shared/task_sync.ts` — which tables sync, on the X-Libs `sync_engine`; `src/shared/task_sync_peer.ts` makes each copy an X-Libs `sync_peer`, which the server answers at `api/sync/peer`
 - `src/preload` — the bridge that exposes `window.x_tasks` to the page; in a browser,
   `src/web/web_bridge.ts` sets up the same bridge over HTTP
 - `src/web` — the React interface; `src/web/android` holds the Android app's database and bridge

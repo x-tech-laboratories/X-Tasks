@@ -4,8 +4,9 @@ sidebar:
   order: 4
 ---
 
-Each desktop and Android install owns a full database and syncs it with one `x-tasks-server`. The server is the hub;
-devices never talk to each other.
+Each desktop daemon, Android install and `x-tasks-server` owns a full database and is a **peer** of the others. There is
+no hub: every peer syncs with the peers it is paired with and passes on what it took from the others, so peers that
+never reach each other still end up alike.
 
 ## Cells
 
@@ -17,22 +18,26 @@ When two devices change the same cell, the **newest write wins** on every device
 edits to different fields of the same task always merge. Batches are applied parents first: groups before their tags,
 tasks before their tags, completions and time entries.
 
-## Protocol
+## Peers
 
-The server answers under `api/sync/`:
+X-Libs' `sync_peer`, set up in `src/shared/task_sync_peer.ts`, runs in the desktop daemon, on the phone and in the server.
+Two devices pair through a one-time code that carries the reachable one's address and public key; every call between
+them is then sealed with both devices' keys (tweetnacl's box), so it needs no account or token. Each peer keeps a cursor
+per paired device, exchanges changes on a timer and after local writes, and holds a waiting call open to hear of the
+other's changes at once. The list of paired devices travels with each exchange, so devices are introduced to each other
+and a removal reaches every one.
 
-| Call              | Method | Does                                                                                       |
-| :---------------- | :----- | :----------------------------------------------------------------------------------------- |
-| `snapshot`        | GET    | Every cell the server holds, with its generation and cursor                                 |
-| `exchange`        | POST   | The device sends its changes since its last sync and receives the server's since its cursor |
-| `replace`         | POST   | Replaces the server's data with the device's (the "send my tasks" choice)                   |
+| Who answers         | Where                                   | Turned on by                                       |
+| :------------------ | :-------------------------------------- | :------------------------------------------------- |
+| `x-tasks-server`    | `api/sync/peer`, open without sign-in   | always; `X_TASKS_SYNC_ADDRESS` names its address    |
+| The desktop daemon  | its own port, announced by mDNS         | **Let other devices connect** (`sync-listening.json`) |
+| A phone             | nobody; it reaches out                  |                                                    |
 
-The **generation** changes whenever a server's data is replaced or restored. A device that sees a new generation stops
-syncing until its user chooses again whose tasks to keep; either choice backs up the data it replaces first.
+The server's own pairing calls are at `api/sync/<call>`, which only an admin may make. Each device keeps its keys
+and paired devices in `sync-peers.json` beside the database, or in local storage on a phone.
 
-X-Libs' `sync_client`, set up in `src/shared/task_sync_client.ts` and run by the desktop daemon and the phone, drives the device side: it exchanges changes on a timer and after local writes, keeps
-working offline and catches up when the server is reachable again. It also listens on the server's event stream, so it
-pulls other devices' changes promptly. The server address and token are kept in `sync.json` beside the database.
+A restore runs `forget_history`: the copy starts a new generation and makes each paired device match it once, removing
+what the backup did not have. The receiving device backs itself up first.
 
 ## What is synced
 

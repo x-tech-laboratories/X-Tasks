@@ -4,14 +4,13 @@ import { CommitInput, Segmented, Select, Switch } from '@x-tech-laboratories/x-l
 import { PageHeading, RowActions, SettingRow, SettingsPage as SettingsSections, Stack, moved, type SettingsCategory } from '@x-tech-laboratories/x-libs/web/react/layout'
 import { use_resource } from '@x-tech-laboratories/x-libs/web/react/states'
 import { TrustedCertificates } from '@x-tech-laboratories/x-libs/web/react/certificates'
-import { SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
+import { PeerListeningSettings, SyncSettings } from '@x-tech-laboratories/x-libs/web/react/sync_settings'
 import { BackupSettings } from '@x-tech-laboratories/x-libs/web/react/backup_settings'
 import type { BackupClient } from '@x-tech-laboratories/x-libs/backup_protocol'
 import { DATE_POINTS, date_point_label, type DateComparison, type DatePoint, type Inclusivity } from '@x-tech-laboratories/x-libs/date_ranges'
 import { describe_rule } from '@x-tech-laboratories/x-libs/recurrence'
 
 import { HISTORY_DAYS_RANGE, MCP_PORT_RANGE, UPCOMING_REPEAT_DAYS_RANGE, IDLE_PROMPT_MINUTES_RANGE, BREAK_REMINDER_MINUTES_RANGE, BREAK_MINUTES_RANGE, POMODORO_MINUTES_RANGE, POMODORO_ROUNDS_RANGE, REMINDER_LEAD_MINUTES_RANGE, type DateRange, type DateRangeSplit, type GroupingMemory, type LaunchView, type LayoutMemory, type TaskLayout, type ViewLayout, type OverdueRepeatReschedule, type RescheduleOption, type SearchScope, type Settings, type SyntaxId, type TagMatch, type TagScope, type TagSelection, type TaskDateField, type TaskDuration, type TaskGrouping, type TaskRelationship, type ThemeChoice, DURATION_UNITS, task_duration } from '@shared/settings'
-import type { SyncDirection } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { Tag, TagGroup, Task } from '@shared/tasks'
 import { detail_section_name, ordered_detail_sections, type TaskDetailSection } from './detail_sections'
 import { grouping_choices, view_of_key } from './grouping'
@@ -821,16 +820,15 @@ export function SettingsPage({ settings, tags, tag_groups, tasks, on_change, on_
             </>
           )
         },
-        ...(window.x_settings.host !== 'web'
-          ? [
-              {
-                id: 'sync',
-                heading: 'Sync',
-                hint: "Keeps this device's tasks in step with an X-Tasks server and every device connected to it. Changes made offline are sent when the server can be reached.",
-                content: <SyncEditor />
-              }
-            ]
-          : []),
+        {
+          id: 'sync',
+          heading: 'Sync',
+          hint:
+            window.x_settings.host === 'web'
+              ? "Keeps the server's tasks in step with your devices. Only an admin may pair or remove a device."
+              : "Keeps this device's tasks in step with your other devices. Changes made offline are sent when they can be reached.",
+          content: <SyncEditor />
+        },
         ...(window.x_settings.host !== 'android' ? [{ id: 'mcp', heading: 'MCP server', content: <McpEditor settings={settings} on_change={on_change} /> }] : [])
       ]
     }
@@ -1311,11 +1309,6 @@ function McpEditor({ settings, on_change }: McpEditorProps) {
 
 const SYNC_STATUS_POLL_MS = 2000
 
-const CONFIRM_DIRECTION: Record<SyncDirection, string> = {
-  download: "Replace every task, tag and shared setting on this device with the server's? A backup of this device is taken first.",
-  upload: "Replace every task, tag and shared setting on the server with this device's? Other devices will have to choose again. The server takes a backup first."
-}
-
 // Rereads the sync status every few seconds, since syncing goes on in the background.
 function poll_sync_status(listener: () => void): () => void {
   const timer = setInterval(listener, SYNC_STATUS_POLL_MS)
@@ -1323,15 +1316,19 @@ function poll_sync_status(listener: () => void): () => void {
 }
 
 function SyncEditor() {
+  const { certificates, get_peer_listening, set_peer_listening } = window.x_settings
+  const listening = get_peer_listening && set_peer_listening ? { get_peer_listening, set_peer_listening } : null
   return (
     <SyncSettings
       device={window.x_settings}
       subscribe={poll_sync_status}
       data_name="tasks"
-      placeholder="https://tasks.example.org/"
-      confirm_text={CONFIRM_DIRECTION}
-      certificates={window.x_settings.certificates}
-      extra={() => window.x_settings.certificates && <TrustedCertificates certificates={window.x_settings.certificates} />}
+      extra={
+        <>
+          {listening && <PeerListeningSettings listening={listening} />}
+          {certificates && <TrustedCertificates certificates={certificates} />}
+        </>
+      }
     />
   )
 }

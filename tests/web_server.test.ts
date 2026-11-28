@@ -232,36 +232,6 @@ describe('call paths', () => {
 })
 
 // ============================================================================
-// Sync calls
-// ============================================================================
-
-describe('sync calls', () => {
-  it('gives the snapshot on GET', async () => {
-    const response = await app.inject({ method: 'GET', url: '/api/sync/snapshot', headers: bearer })
-    expect(response.statusCode).toBe(200)
-    expect(response.json()).toMatchObject({ generation: expect.any(String), changes: expect.any(Array) })
-  })
-
-  it('refuses an exchange whose changes are not a list', async () => {
-    const snapshot = await app.inject({ method: 'GET', url: '/api/sync/snapshot', headers: bearer })
-    const response = await app.inject({
-      method: 'POST', url: '/api/sync/exchange', headers: { ...bearer, 'content-type': 'application/json' },
-      payload: JSON.stringify({ generation: snapshot.json().generation, cursor: 0, site: 'phone', changes: 'nope' })
-    })
-    expect(response.statusCode).toBe(400)
-    expect(response.body).toBe('send site, generation, cursor and a list of changes')
-  })
-
-  it('answers 409 when the device follows another generation', async () => {
-    const response = await app.inject({
-      method: 'POST', url: '/api/sync/exchange', headers: { ...bearer, 'content-type': 'application/json' },
-      payload: JSON.stringify({ generation: 'stale', cursor: 0, site: 'phone', changes: [] })
-    })
-    expect(response.statusCode).toBe(409)
-  })
-})
-
-// ============================================================================
 // Static files and events
 // ============================================================================
 

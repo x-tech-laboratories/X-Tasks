@@ -70,8 +70,9 @@ The same app runs in three places, with the same features and the same look:
 
 ## Sync between all your devices
 
-The desktop and Android apps keep their own copy of your tasks and **sync** it with your X-Tasks server whenever it
-can be reached, so you can keep working offline and your changes go up once you are back online. Sync works value by
+The desktop and Android apps keep their own copy of your tasks and **sync** it with your other devices, your X-Tasks
+server among them, whenever they can reach each other, so you can keep working offline and your changes go out once you
+are back online. Sync works value by
 value: edit a task's title on your phone and its notes on your laptop, and both edits are kept. Browser pages open on
 the server update by themselves the moment anything changes. See [Sync and backups](/user/sync-and-backups/).
 

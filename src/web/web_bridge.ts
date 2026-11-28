@@ -1,6 +1,5 @@
 import { settings_bridge, tasks_bridge } from '@shared/bridges'
 import type { SettingsApi } from '@shared/settings'
-import type { SyncStatus } from '@x-tech-laboratories/x-libs/sync_protocol'
 import type { TasksApi } from '@shared/tasks'
 import { LoginNeeded } from '@x-tech-laboratories/x-libs/web/states'
 import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } from '@shared/web_api'
@@ -11,6 +10,9 @@ import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } f
 
 // Given by the server when the page connects, so the page is not told about its own changes.
 let client_id = ''
+
+// Where the server answers its own sync calls.
+const SYNC_DEVICE_PATH = 'api/sync/'
 
 // A signed-out page shows the sign-in form rather than stale tasks.
 async function call_server(method: string, args: unknown[]): Promise<unknown> {
@@ -71,7 +73,13 @@ function download_text(file_name: string, text: string): boolean {
   return true
 }
 
-const NO_SYNC: SyncStatus = { state: 'off', server_url: '', user: '', last_synced_at: '', pending_changes: 0, error: '' }
+// The server's own sync calls, which only an admin may make.
+async function call_server_sync(method: string, args: unknown[]): Promise<never> {
+  const response = await fetch(`${SYNC_DEVICE_PATH}${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args) })
+  if (response.status === 401) throw new LoginNeeded('Sign in first.')
+  if (!response.ok) throw new Error(await response.text())
+  return (await response.json()) as never
+}
 
 // Gives the page the same window.x_tasks and window.x_settings the desktop app's preload does, backed by the web server.
 export function install_web_bridge(): void {
@@ -91,11 +99,14 @@ export function install_web_bridge(): void {
     show_backup_folder: () => Promise.resolve(),
     save_text_file: (file_name, text) => Promise.resolve(download_text(file_name, text)),
     get_idle_seconds: () => Promise.resolve(0),
-    // A page served by the server already works on the server's tasks, so it has nothing to sync.
-    get_sync_status: () => Promise.resolve(NO_SYNC),
-    connect_sync: () => Promise.reject(new Error('a browser page cannot sync')),
-    disconnect_sync: () => Promise.resolve(NO_SYNC),
-    sync_now: () => Promise.resolve(NO_SYNC)
+    // A page served by the server works on the server's tasks, so its sync is the server's own, which an admin pairs devices with.
+    get_sync_status: () => call_server_sync('get_sync_status', []),
+    create_pairing_code: () => call_server_sync('create_pairing_code', []),
+    pair_device: (code) => call_server_sync('pair_device', [code]),
+    remove_device: (device) => call_server_sync('remove_device', [device]),
+    sync_now: () => call_server_sync('sync_now', []),
+    get_peer_listening: undefined,
+    set_peer_listening: undefined
   }
 
   window.x_tasks = tasks_api
