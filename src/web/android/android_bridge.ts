@@ -13,7 +13,7 @@ import {
 } from '@shared/task_database'
 import { request_back } from '../back_navigation'
 import { android_backups, back_up_before_upgrade } from './android_backups'
-import { create_task_sync_client } from '@shared/task_sync_client'
+import { create_task_sync_peer } from '@shared/task_sync_peer'
 import { keep_phone_notices } from './phone_notices'
 
 // ============================================================================
@@ -29,8 +29,8 @@ const BEFORE_SYNC_FILE = 'tasks-before-sync.db'
 // Sync storage
 // ============================================================================
 
-// The server and token stay in the app's private storage; the copy taken before the server's tasks replace this device's goes beside the database.
-const SYNC_CONFIG_KEY = 'x-tasks-sync'
+// The phone's keys and paired devices stay in the app's private storage; the copy taken before another device's restore replaces this one's goes beside the database.
+const SYNC_PEERS_KEY = 'x-tasks-sync-peers'
 
 
 // ============================================================================
@@ -69,9 +69,13 @@ export async function install_android_bridge(): Promise<void> {
   })
 
   const change_listeners = new Set<() => void>()
-  const sync = create_task_sync_client(local_sync_storage({ key: SYNC_CONFIG_KEY, back_up_before_download: () => files.write(BEFORE_SYNC_FILE, database.export_bytes()) }), 'X-Tasks on Android', () => {
-    for (const listener of change_listeners) listener()
-    notices.refresh()
+  const sync = create_task_sync_peer({
+    storage: local_sync_storage({ key: SYNC_PEERS_KEY, back_up_before_replace: () => files.write(BEFORE_SYNC_FILE, database.export_bytes()) }),
+    device_name: 'X-Tasks on Android',
+    on_remote_change: () => {
+      for (const listener of change_listeners) listener()
+      notices.refresh()
+    }
   })
   const tasks_api: TasksApi = {
     list_tasks: answer(list_tasks),
@@ -158,8 +162,9 @@ export async function install_android_bridge(): Promise<void> {
     choose_backup_folder: backups.choose_folder,
     get_mcp_status: () => Promise.resolve(MCP_OFF),
     get_sync_status: answer(sync.get_status),
-    connect_sync: sync.connect,
-    disconnect_sync: answer(sync.disconnect),
+    create_pairing_code: answer(sync.create_pairing_code),
+    pair_device: sync.pair_device,
+    remove_device: answer(sync.remove_device),
     sync_now: sync.sync_now,
     certificates: phone_certificates()
   }

@@ -5,7 +5,7 @@ sidebar:
 ---
 
 The Android app is the same page inside a Capacitor WebView. It keeps its own database on the phone — SQLite compiled
-to WebAssembly, saved in the app's storage after each change — and syncs with the web server as the desktop app does.
+to WebAssembly, saved in the app's storage after each change — and syncs with its paired devices as the desktop app does.
 
 ## Building
 

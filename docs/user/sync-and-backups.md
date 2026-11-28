@@ -12,27 +12,25 @@ X-Tasks is the same app in three places:
 - the **web app**, served to any browser by an X-Tasks server from the server's database;
 - the **Android app**, with its own database on your phone.
 
-The desktop and Android apps work fully offline. **Sync** keeps them in step with a server, so every device — and every
-browser signed in to that server — shows the same tasks, tags and settings.
+Every copy works fully offline. **Sync** keeps the copies in step with each other, so every device, and every browser
+signed in to a server, shows the same tasks, tags and settings. There is no central copy: each device syncs with the
+devices it is paired with, and passes on what it took from the others.
 
 ## Sync
 
-### Setting it up
+### Pairing two devices
 
-1. Open **Settings › Data › Sync** on the device.
-2. Enter the **Server address**, such as `https://tasks.example.org/`, and the **Access token** the server was set up
-   with.
-3. Choose once **whose tasks to keep**:
-   - On your **first** device, send its own tasks to the server.
-   - On every **later** device, use the server's tasks.
+1. On a device the other can reach, open **Settings › Data › Sync** and press **Show pairing code**. A server can always
+   be reached; an admin finds its Sync section in the browser. A desktop can be reached once **Let other devices
+   connect** is on.
+2. On the other device, paste the code under **Pair with a device** and press **Pair**. The code works once, for ten
+   minutes.
 
-   Either way, the data being replaced is backed up first.
-4. Press **Start syncing**.
+The two copies merge: nothing is replaced and nothing is asked. The devices each was paired with are introduced to the
+other, so a phone paired with your laptop also syncs with your server.
 
-![The Sync settings: server address, access token, whose tasks to keep, and a trusted certificate authority](/assets/screenshots/settings-sync.png)
-
-From then on, the device syncs by itself. Changes made offline are kept and sent once the server can be reached
-again.
+From then on, each device syncs by itself. Changes made offline are kept and sent once another device can be reached
+again. **Remove** next to a paired device stops it syncing with every device.
 
 ### How changes are merged
 
@@ -44,17 +42,15 @@ Your [history](/user/history/) syncs along with everything else.
 
 Some things stay with each device: window layout, the MCP server setting and backup settings.
 
-### Private certificates
+### Safety
 
-Android only connects over https. If your server's certificate comes from a private or self-signed authority, paste
-that authority's certificate under **Trusted certificate authority** in the Sync settings, on the phone or the
-desktop. The app then accepts
-certificates it signed, and still refuses expired ones or ones for another server.
+Every message between two devices is sealed with both devices' keys, so nobody else can read or change it, even on
+plain http at home. Sync needs no password: a device is trusted because you paired it.
 
 ### Restoring and sync
 
-Restoring a backup, on a device or on the server, pauses sync on the devices it affects until you choose again whose
-tasks to keep.
+Restoring a backup, on a device or on the server, makes every paired device match the restored tasks. Each of them
+backs itself up first.
 
 ## Backups
 

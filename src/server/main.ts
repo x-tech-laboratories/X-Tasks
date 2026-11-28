@@ -3,8 +3,9 @@ import { fileURLToPath } from 'node:url'
 
 import { read_server_config } from '@x-tech-laboratories/x-libs/server/config'
 import { load_accounts } from '@x-tech-laboratories/x-libs/server/passwords'
+import { file_sync_storage } from '@x-tech-laboratories/x-libs/sync_file_storage'
 
-import { schedule_automatic_backups } from '../daemon/database_backups'
+import { create_backup, schedule_automatic_backups } from '../daemon/database_backups'
 import { stop_mcp_server } from '../daemon/mcp_server'
 import { open_task_database } from '../daemon/node_task_database'
 import { close_task_database, has_changed_elsewhere } from '@shared/task_database'
@@ -24,7 +25,10 @@ function read_config() {
     default_port: 3918,
     secret: false,
     web_folder_default: join(dirname(fileURLToPath(import.meta.url)), '../web'),
-    options: { database: { variable: 'X_TASKS_DB', help: 'the task database; it is made if missing', placeholder: '<file>', required: true } }
+    options: {
+      database: { variable: 'X_TASKS_DB', help: 'the task database; it is made if missing', placeholder: '<file>', required: true },
+      sync_address: { variable: 'X_TASKS_SYNC_ADDRESS', help: "where paired devices reach this server's sync, such as https://tasks.example.org/api/", placeholder: '<url>' }
+    }
   })
 }
 
@@ -44,7 +48,11 @@ async function main(): Promise<void> {
   const database_path = config.values.database!
   open_task_database(database_path)
 
-  const app = await build_app({ web_folder: config.web_folder, declared: load_accounts('X_TASKS_PASSWORD_HASH_FILE') })
+  const sync = {
+    storage: file_sync_storage({ file: join(dirname(database_path), 'sync-peers.json'), back_up_before_replace: () => create_backup().then(() => undefined) }),
+    address: config.values.sync_address ?? null
+  }
+  const app = await build_app({ web_folder: config.web_folder, declared: load_accounts('X_TASKS_PASSWORD_HASH_FILE'), sync })
   void restart_mcp_server({ announce_change_to_all: () => changes.announce_change() })
   watch_for_outside_changes()
   schedule_automatic_backups()

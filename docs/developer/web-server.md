@@ -96,7 +96,8 @@ curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
 | :---------------- | :-------------------------------------------------------------- |
 | `api/<call>`      | A bridge call                                                   |
 | `api/events`      | A server-sent event stream: `hello` with the client id, then `changed` |
-| `api/sync/<call>` | The [sync protocol](/developer/sync/#protocol)                         |
+| `api/sync/peer`   | Paired devices' sealed [sync](/developer/sync/#peers) calls, open without sign-in |
+| `api/sync_device/<call>` | The server's own pairing calls, for an admin                |
 | `login`           | Browser sign-in                                                 |
 
 Paths are relative, so the app also works when a proxy serves it under a sub-folder. A page sends its client id in

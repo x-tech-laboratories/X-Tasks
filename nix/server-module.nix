@@ -33,6 +33,13 @@ in
       description = "The accounts file: one `name:hash` line per admin, from `npm run hash-password`, such as a sops secret. Admins add other users on the Users page.";
     };
 
+    syncAddress = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "https://tasks.example.org/api/";
+      description = "Where paired devices reach this server's sync, through its reverse proxy; without it the server only reaches out to devices that let others connect.";
+    };
+
     openFirewall = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -53,6 +60,8 @@ in
         X_TASKS_HOST = cfg.host;
         X_TASKS_PORT = toString cfg.port;
         X_TASKS_PASSWORD_HASH_FILE = "%d/password-hash";
+      } // lib.optionalAttrs (cfg.syncAddress != null) {
+        X_TASKS_SYNC_ADDRESS = cfg.syncAddress;
       };
 
       serviceConfig = {
