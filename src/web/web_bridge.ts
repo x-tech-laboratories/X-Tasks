@@ -12,7 +12,7 @@ import { API_PATH, CHANGED_EVENT, CLIENT_ID_HEADER, EVENTS_PATH, HELLO_EVENT } f
 let client_id = ''
 
 // Where the server answers its own sync calls.
-const SYNC_DEVICE_PATH = 'api/sync_device/'
+const SYNC_DEVICE_PATH = 'api/sync/'
 
 // A signed-out page shows the sign-in form rather than stale tasks.
 async function call_server(method: string, args: unknown[]): Promise<unknown> {

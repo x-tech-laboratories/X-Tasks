@@ -81,7 +81,7 @@ export async function build_app(options: AppOptions): Promise<FastifyInstance> {
     call_of: calls_under('/api/call', '/api'),
     is_read_only,
     open_paths: ['/api/sync/peer'],
-    needed: (_method, path) => (path.startsWith('/api/sync_device/') ? { role: accounts.top_role } : 'any')
+    needed: (_method, path) => (path.startsWith('/api/sync/') ? { role: accounts.top_role } : 'any')
   })
   const sync_options = options.sync
   const sync = sync_options
@@ -111,7 +111,7 @@ export async function build_app(options: AppOptions): Promise<FastifyInstance> {
       changes.register(api, '/events')
       if (sync) {
         register_sync_peer_routes(api, sync)
-        register_call_table(api, '/sync_device', sync_device_methods(sync), { is_read_only })
+        register_call_table(api, '/sync', sync_device_methods(sync), { is_read_only })
       }
       register_bridge_calls(api, handlers, changes)
     },

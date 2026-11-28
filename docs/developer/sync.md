@@ -33,7 +33,7 @@ and a removal reaches every one.
 | The desktop daemon  | its own port, announced by mDNS         | **Let other devices connect** (`sync-listening.json`) |
 | A phone             | nobody; it reaches out                  |                                                    |
 
-The server's own pairing calls are at `api/sync_device/<call>`, which only an admin may make. Each device keeps its keys
+The server's own pairing calls are at `api/sync/<call>`, which only an admin may make. Each device keeps its keys
 and paired devices in `sync-peers.json` beside the database, or in local storage on a phone.
 
 A restore runs `forget_history`: the copy starts a new generation and makes each paired device match it once, removing

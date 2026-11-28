@@ -75,11 +75,11 @@ describe('sync with the server as a paired device', () => {
   it('refuses a device it does not know, and gives only an admin a pairing code', async () => {
     const stranger = await app.inject({ method: 'POST', url: '/api/sync/peer', headers: { 'content-type': 'application/octet-stream', [peer_device_header]: 'NOBODY' }, payload: Buffer.alloc(64) })
     expect(stranger.statusCode).toBe(403)
-    expect((await app.inject({ method: 'POST', url: '/api/sync_device/create_pairing_code', payload: [] })).statusCode).toBe(401)
+    expect((await app.inject({ method: 'POST', url: '/api/sync/create_pairing_code', payload: [] })).statusCode).toBe(401)
   })
 
   it('pairs a phone through the code, takes its tasks, and runs the task history hook on them', async () => {
-    const made = await app.inject({ method: 'POST', url: '/api/sync_device/create_pairing_code', headers: json_headers, payload: '[]' })
+    const made = await app.inject({ method: 'POST', url: '/api/sync/create_pairing_code', headers: json_headers, payload: '[]' })
     const offer = decode_pairing_offer((made.json() as { code: string }).code)
     server_key = offer.public_key
     server_device = offer.device
@@ -96,7 +96,7 @@ describe('sync with the server as a paired device', () => {
     expect(list_tasks().find((task) => task.id === 'task-from-phone')?.title).toBe('Sent by the phone')
     expect(open_database().prepare('SELECT count(*) AS count FROM task_versions_pending').get()).toEqual({ count: 0 })
 
-    const status = (await app.inject({ method: 'POST', url: '/api/sync_device/get_sync_status', headers: json_headers, payload: '[]' })).json() as { peers: { name: string }[] }
+    const status = (await app.inject({ method: 'POST', url: '/api/sync/get_sync_status', headers: json_headers, payload: '[]' })).json() as { peers: { name: string }[] }
     expect(status.peers.map((peer) => peer.name)).toEqual(['Phone'])
   })
 })
